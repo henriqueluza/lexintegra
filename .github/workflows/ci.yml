@@ -1,12 +1,12 @@
 name: CI
 
-# Roda em todo PR e em todo push que nao seja na main (a main tem o workflow de
-# deploy, que reexecuta a mesma verificacao antes de publicar).
+# So em pull request. Um push para branch com PR aberto disparava a mesma
+# verificacao duas vezes, gastando o dobro dos 2.000 minutos mensais gratuitos
+# (arquitetura, secao 11). A main e coberta pelo workflow de deploy, que reexecuta
+# lint e testes antes de publicar.
 on:
   pull_request:
-  push:
-    branches-ignore:
-      - main
+  workflow_dispatch:
 
 # Cancela execucoes antigas do mesmo branch: nao ha valor em terminar a CI de um
 # commit que ja foi substituido.

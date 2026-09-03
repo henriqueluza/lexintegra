@@ -2,18 +2,15 @@ packages:
   - 'apps/*'
   - 'packages/*'
 
-allowBuilds:
-  '@parcel/watcher': set this to true or false
-  esbuild: set this to true or false
-  lmdb: set this to true or false
-  msgpackr-extract: set this to true or false
-  unrs-resolver: set this to true or false
-
 # Scripts de build de dependencia rodam so para o que precisa de binario nativo.
 # Lista explicita em vez de liberar geral.
-onlyBuiltDependencies:
-  - '@parcel/watcher'
-  - esbuild
-  - lmdb
-  - msgpackr-extract
-  - unrs-resolver
+#
+# A chave e `allowBuilds`, em forma de MAPA. O `onlyBuiltDependencies` em lista,
+# do pnpm 10, e aceito por `pnpm config get` mas ignorado pelo install no pnpm 11 —
+# um install limpo falha com ERR_PNPM_IGNORED_BUILDS mesmo parecendo configurado.
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: true
+  unrs-resolver: true

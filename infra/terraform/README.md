@@ -31,14 +31,23 @@ roles/datastore.owner                  roles/iam.serviceAccountAdmin
 roles/run.admin                        roles/resourcemanager.projectIamAdmin
 roles/secretmanager.admin              roles/serviceusage.serviceUsageAdmin
 roles/cloudkms.admin                   roles/firebasehosting.admin
-roles/artifactregistry.admin
+roles/artifactregistry.admin           roles/iam.workloadIdentityPoolAdmin
 ```
 
-Os quatro da coluna da direita, das últimas linhas (`serviceAccountAdmin`,
-`projectIamAdmin`, `serviceUsageAdmin`, `firebasehosting.admin`), foram acrescentados
-na Etapa 2: sem eles o Terraform não consegue criar a service account de runtime da
-API, conceder IAM de projeto a ela, gerir APIs habilitadas, nem publicar o Hosting
-pelo pipeline.
+Os cinco da coluna da direita, das últimas linhas, foram acrescentados na Etapa 2:
+sem eles o Terraform não consegue criar a service account de runtime da API,
+conceder IAM de projeto a ela, gerir APIs habilitadas, publicar o Hosting pelo
+pipeline, nem sequer **ler** o pool de Workload Identity para importá-lo — o
+primeiro plan real no CI falhou exatamente com `iam.workloadIdentityPools.get`
+negado, e `serviceAccountAdmin` não cobre esse recurso.
+
+**Nota sobre a autorreferência.** O pool, o provider, a service account do CI e o
+binding de `workloadIdentityUser` *são* o caminho de autenticação do pipeline, e são
+geridos pelo Terraform que roda autenticado por eles. Os quatro levam
+`prevent_destroy`: sem isso, um plan mal revisado poderia destruir a única forma de
+o CI voltar a rodar. A alternativa — tirá-los do Terraform, como se fez com os
+papéis de projeto — foi descartada porque importá-los era requisito explícito da
+etapa; a trava é o que torna o import seguro.
 
 **Autenticação: Workload Identity Federation, sem chave JSON.** Pool `github-pool`,
 provider `github-provider`, com condição de atributo restringindo a
