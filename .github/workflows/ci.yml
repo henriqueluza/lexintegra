@@ -1,0 +1,134 @@
+name: CI
+
+# So em pull request. Um push para branch com PR aberto disparava a mesma
+# verificacao duas vezes, gastando o dobro dos 2.000 minutos mensais gratuitos
+# (arquitetura, secao 11). A main e coberta pelo workflow de deploy, que reexecuta
+# lint e testes antes de publicar.
+on:
+  pull_request:
+  workflow_dispatch:
+
+# Cancela execucoes antigas do mesmo branch: nao ha valor em terminar a CI de um
+# commit que ja foi substituido.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write # necessario para o Workload Identity Federation
+  pull-requests: write # para comentar o plano do Terraform no PR
+
+env:
+  GCP_PROJECT_ID: plataforma-juridica-36bda
+  GCP_REGION: southamerica-east1
+  # Nao ha segredo de GCP para cadastrar no GitHub: com Workload Identity
+  # Federation nenhuma credencial de longa duracao existe. Estes valores nao sao
+  # sensiveis e ficam inline de proposito, para o workflow ser auditavel sozinho.
+  WIF_PROVIDER: projects/616781378293/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+  WIF_SERVICE_ACCOUNT: terraform-ci@plataforma-juridica-36bda.iam.gserviceaccount.com
+
+jobs:
+  qualidade:
+    name: Lint, testes e build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint (ESLint + dependency-cruiser)
+        run: pnpm lint
+
+      - name: Testes unitarios com limiar de cobertura
+        run: pnpm test:coverage
+
+      - name: Build
+        run: pnpm build
+
+      - name: Conferir que o build do Angular foi mesmo pre-renderizado
+        # ADR-09: se o HTML servido vier vazio, o link compartilhado no WhatsApp e
+        # no LinkedIn chega sem titulo nem descricao. Falhar aqui e mais barato do
+        # que descobrir depois de publicado.
+        run: |
+          arquivo=apps/web/dist/web/browser/index.html
+          test -f "$arquivo" || { echo "index.html nao foi gerado"; exit 1; }
+          grep -q 'ng-server-context="ssg"' "$arquivo" \
+            || { echo "index.html nao foi pre-renderizado"; exit 1; }
+          echo "Pre-renderizacao confirmada."
+
+  terraform:
+    name: Terraform (validate e plan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Autenticar no Google Cloud (sem chave JSON)
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.0
+
+      - name: Formatacao
+        run: terraform fmt -check -recursive
+        working-directory: infra/terraform
+
+      - name: Init
+        run: terraform init -input=false
+        working-directory: infra/terraform
+
+      - name: Validate
+        run: terraform validate -no-color
+        working-directory: infra/terraform
+
+      - name: Plan
+        id: plan
+        run: terraform plan -input=false -no-color -lock-timeout=5m
+        working-directory: infra/terraform
+        continue-on-error: true
+
+      - name: Publicar o plano no PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        env:
+          PLANO: ${{ steps.plan.outputs.stdout }}
+        with:
+          script: |
+            const plano = process.env.PLANO || '(sem saida)';
+            const corpo = [
+              '### Terraform plan',
+              '',
+              'Revisar antes do merge. Enquanto os blocos de `import` existirem em',
+              '`imports.tf`, o criterio e: **nenhum recurso importado pode aparecer',
+              'como "will be created"** — um create ali significa import errado.',
+              '',
+              '<details><summary>Plano completo</summary>',
+              '',
+              '```terraform',
+              plano.length > 60000 ? plano.slice(0, 60000) + '\n... (truncado)' : plano,
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: corpo,
+            });
+
+      - name: Falhar se o plan falhou
+        if: steps.plan.outcome == 'failure'
+        run: exit 1

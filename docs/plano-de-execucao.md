@@ -149,6 +149,47 @@ Diferente da verificação do Google, não há revisão pública nem espera de s
 - **Hooks de `PreToolUse`:** já implementados e commitados em `.claude/settings.json` + `.claude/hooks/block-dangerous.sh` — ver detalhamento abaixo, na subseção "Bloquear ativamente".
 - **Incidente registrado:** a chave de API original do Resend foi colada acidentalmente em texto puro numa conversa com o agente durante a configuração; foi revogada e substituída antes de entrar em uso. Nenhuma ação corretiva adicional pendente.
 
+### Registro de execução — passo 7 (Terraform, pipeline e esqueletos)
+
+*Escrito pelo agente na branch `feat/fundacao-infraestrutura`. O que segue é o que foi verificado, não o que foi planejado.*
+
+**Correções ao registro anterior, apuradas por auditoria `gcloud` read-only:**
+
+- **O Firestore não existia.** `gcloud firestore databases describe "(default)"` devolvia `NOT_FOUND`. Ele é **criado** pelo Terraform (`firestore.tf`), não importado — a premissa de que tudo da Etapa 2 seria import estava errada nesse ponto.
+- **`gs://lexintegra-tfstate` (sem sufixo) existe neste projeto**, vazio, com acesso uniforme ligado. O registro acima dizia que o nome estava em uso globalmente por terceiros; não está — é um bucket do próprio projeto, sobra do bootstrap. Não entra no Terraform. Convém removê-lo à mão para não haver dois buckets de state parecidos convidando a erro.
+- **A `terraform-ci` não tinha permissão suficiente** para o escopo da etapa. Faltavam `iam.serviceAccountAdmin`, `resourcemanager.projectIamAdmin`, `serviceusage.serviceUsageAdmin` e `firebasehosting.admin`. Concedidos manualmente — é IAM de produção, fora do alcance do agente.
+- O versionamento do bucket de state **está mesmo ligado**, como o registro dizia.
+
+**Decisões tomadas nesta execução:**
+
+- **Sem staging.** O item 0.2.8 continua formalmente em aberto, mas a Etapa 2 foi escrita só para produção. O Terraform está organizado por arquivo temático, de modo que um segundo ambiente caiba depois sem reescrita.
+- **Deploy automático no merge**, resolvendo a contradição entre o critério de aceite desta etapa ("um commit trivial na branch principal chega em produção sem intervenção manual") e a subseção "Só você" abaixo ("deploy sai do pipeline, com aprovação"). **Vale o critério de aceite.** O gate de aprovação manual — GitHub Environment com *required reviewer* — fica para a Etapa 12, quando houver dado real em produção. A proteção hoje é a revisão humana do PR mais os hooks de `PreToolUse`, que barram deploy pelo terminal.
+- **O IAM de bootstrap da `terraform-ci` fica fora do Terraform**, de propósito: seriam os papéis que dão ao pipeline o direito de rodar, geridos pelo próprio pipeline. Um plan mal revisado poderia revogar o acesso do CI a si mesmo, sem caminho de volta.
+- **Firebase Hosting fica fora do Terraform.** O domínio já está conectado e verificado à mão; os recursos Firebase do provider são beta, e importar um domínio verificado manualmente é fonte de drift sem ganho. O Hosting é governado por `firebase.json` mais a CLI no pipeline.
+- **A imagem do Cloud Run é publicada pelo `terraform apply`**, com `TF_VAR_api_image`, nunca por `gcloud run deploy`. Duas ferramentas escrevendo o mesmo serviço produzem drift a cada apply.
+
+**Descoberta técnica que muda o esqueleto.** O **NestJS 12 é ESM-only** (`"type": "module"`, sem build CommonJS). `apps/api` e `packages/shared` usam `module: nodenext`, o que exige extensão `.js` explícita nos imports relativos e `import type` para tipos. O Jest roda com `NODE_OPTIONS=--experimental-vm-modules`.
+
+**Verificado localmente, não só escrito:**
+
+| O quê | Resultado |
+|---|---|
+| `pnpm quality` (ESLint + dependency-cruiser + cobertura) | Verde. 22 testes, cobertura acima do limiar nos três pacotes |
+| `terraform fmt` e `terraform validate` | Verde |
+| `terraform plan` | Verde. `11 to import, 36 to add, 2 to change, **0 to destroy**`, com nenhum recurso importado aparecendo como `will be created` |
+| Imagem da API (`docker build` e `docker run`) | Constrói (257 MB), sobe como usuário não-root, `/api/health` devolve 200 com o `commitSha` |
+| Prefixo global `/api` | `/api/health` responde 200; `/health` responde 404, como esperado |
+| Ausência de CORS | Nenhum cabeçalho `Access-Control-*` na resposta (ADR-15) |
+| Pré-renderização do Angular | `dist/web/browser/index.html` sai com `ng-server-context="ssg"` e o conteúdo da landing no HTML |
+| Source maps | Gerados como `hidden`, sem `sourceMappingURL` no bundle; o deploy os arquiva no bucket privado e os remove antes de publicar |
+
+**Duas armadilhas que a primeira execução real do pipeline revelou, e que os testes locais não pegavam:**
+
+1. **`pnpm install --frozen-lockfile` falhava em máquina limpa.** A chave correta no pnpm 11 é `allowBuilds`, em forma de mapa; o `onlyBuiltDependencies` em lista, do pnpm 10, é aceito por `pnpm config get` mas ignorado pelo install. Localmente passava só porque o install era no-op sobre `node_modules` já populado.
+2. **O Terraform 1.16 honra apenas o primeiro bloco `import` de um recurso com `for_each`**, descartando os demais em silêncio — sem erro e sem warning, com o recurso aparecendo como `will be created`. Foi o critério de revisão ("nenhum importado pode aparecer como create") que pegou isso; sem ele, o apply teria falhado por conflito num binding que já existia. A forma correta é um único bloco `import` com `for_each`. Detalhado em `infra/terraform/README.md`.
+
+**Pendente para fechar a etapa:** abrir o PR, revisar o `terraform plan` que o CI comenta — critério: **nenhum recurso de `imports.tf` pode aparecer como "will be created"** —, fazer o merge, e conferir o smoke test. Depois do primeiro apply verde, remover `infra/terraform/imports.tf`.
+
 ### Só você — Etapa 2
 
 **Impossível delegar**

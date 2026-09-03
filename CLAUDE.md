@@ -2,31 +2,40 @@
 
 Plataforma jurídica de comercialização e acompanhamento de produtos jurídicos. Marca própria, dissociada do escritório cliente.
 
-Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs) e `docs/plano-execucao.md` (etapas e critérios de aceite). **Consulte-os antes de propor mudança estrutural.** Este arquivo é resumo operacional, não a fonte completa.
+Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `docs/plano-de-execucao.md` (etapas e critérios de aceite) e `docs/design.md` (decisão de direção visual da Etapa 1 e o que ela implica para implementação). **Consulte-os antes de propor mudança estrutural.** Este arquivo é resumo operacional, não a fonte completa.
 
 ## Estado atual do projeto
 
 *Seção transitória — atualizar ou remover conforme o projeto avança. Não é fonte de verdade permanente; é o que uma sessão nova precisa saber para não repetir trabalho ou perguntas já resolvidas.*
 
 **Concluído:**
+
 - Nome definido: LexIntegra. Domínio `lexintegra.com.br` comprado e ativo.
+- **Etapa 1 (direção visual) decidida** — ver `docs/design.md`. Direção A (Cátedra) para páginas públicas/landing; Direção B (Pauta) para módulos internos autenticados. Direção C (Margem) descartada. **Verificado na Etapa 2:** `docs/prototipos/` contém `direcao-A-catedra.html` e `direcao-B-pauta.html`. `direcao-C-margem.html` e `LexIntegra-tres-direcoes-visuais.pdf`, citados em `design.md`, **não estão versionados** — ou são adicionados, ou a referência em `design.md` é corrigida.
 - Projeto Firebase/GCP criado, nome de exibição `plataforma-juridica`, **ID real do projeto: `plataforma-juridica-36bda`** (use este ID, não o nome de exibição, em comandos gcloud/terraform/CI). Plano Blaze ativo, conta de faturamento do escritório vinculada.
 - Conta AbacatePay do escritório criada, documentos de verificação enviados. Chave de API **Dev** (`abc_dev_...`) já obtida e armazenada no Secret Manager (`abacatepay-api-key-dev`) — permite testes de integração mesmo antes da aprovação final da conta.
 - Conta Resend criada, subdomínio `notificacoes.lexintegra.com.br` adicionado. Registros DNS (DKIM, dois CNAMEs de tracking, DMARC) cadastrados no Registro.br; verificação em andamento/concluída — confirmar status atual no painel do Resend antes de assumir. Chave de API armazenada no Secret Manager (`resend-api-key`) — **a chave original foi exposta acidentalmente e revogada; a que está em uso é uma chave nova, gerada depois do incidente.**
 - Paleta de cores extraída do portfólio da B&C (ADR-10); vinho `#6C0C0C`, dourado `#A8783C`.
 
 **Etapa 2 — infraestrutura provisionada (ver ADR-15 para a topologia de domínio):**
+
 - Repositório GitHub: `henriqueluza/lexintegra`, conectado via SSH.
 - Firebase Hosting: domínio `lexintegra.com.br` conectado e verificado (registro A + TXT). Deploy funcional via `firebase deploy --only hosting`.
-- Cloud Run: serviço `api-lexintegra` (região `southamerica-east1`), atualmente rodando a imagem placeholder `gcr.io/cloudrun/hello` com `--allow-unauthenticated`. **Será substituído pelo esqueleto NestJS real** — manter o mesmo nome de serviço e região, não criar um serviço novo com nome diferente.
+- Cloud Run: serviço `api-lexintegra` (região `southamerica-east1`), com `--allow-unauthenticated`. O esqueleto NestJS real foi escrito na Etapa 2 e substitui a imagem placeholder `gcr.io/cloudrun/hello` no primeiro deploy pelo pipeline. **O serviço é gerido pelo Terraform** (`infra/terraform/cloud_run.tf`) e a imagem é publicada por `terraform apply` com `TF_VAR_api_image`, nunca por `gcloud run deploy` — duas ferramentas escrevendo o mesmo serviço geram drift. Manter o mesmo nome e região.
 - Roteamento API: **sem subdomínio próprio.** `lexintegra.com.br/api` e `lexintegra.com.br/api/**` são roteados por rewrite do Firebase Hosting para o Cloud Run (ver `firebase.json` e ADR-15). Isso existe porque Domain Mapping do Cloud Run não está disponível em `southamerica-east1`. Não reintroduzir `api.lexintegra.com.br` sem revisitar essa decisão.
-- Terraform: bucket de state já criado e versionado em `gs://lexintegra-tfstate-36bda` (nome com sufixo porque `lexintegra-tfstate` sem sufixo já estava em uso globalmente por terceiros). Backend do Terraform deve apontar para este bucket.
-- Service account do CI: `terraform-ci@plataforma-juridica-36bda.iam.gserviceaccount.com`, com papéis `storage.admin`, `datastore.owner`, `run.admin`, `secretmanager.admin`, `cloudkms.admin`, `artifactregistry.admin`, `iam.serviceAccountUser`. **Autenticação via Workload Identity Federation, sem chave JSON**: pool `github-pool`, provider `github-provider`, condição de atributo restrita ao repositório `henriqueluza/lexintegra`. Nome completo do provider para uso no workflow do GitHub Actions: `projects/616781378293/locations/global/workloadIdentityPools/github-pool/providers/github-provider`.
-- Secret Manager: secrets `resend-api-key` e `abacatepay-api-key-dev` já criados, com acesso de leitura concedido à service account padrão do Compute (`616781378293-compute@developer.gserviceaccount.com`), usada pelo Cloud Run. Quando uma service account de runtime dedicada for criada para a API (em vez da default do Compute), replicar essa concessão de acesso para ela.
+- Terraform: bucket de state criado e versionado em `gs://lexintegra-tfstate-36bda`. Backend do Terraform aponta para ele, prefixo `etapa-2`. (O registro anterior dizia que `lexintegra-tfstate` sem sufixo estava tomado por terceiros; **não estava** — ele existe neste mesmo projeto, vazio. Ver o item de bucket sobrando abaixo.)
+- Service account do CI: `terraform-ci@plataforma-juridica-36bda.iam.gserviceaccount.com`, com papéis `storage.admin`, `datastore.owner`, `run.admin`, `secretmanager.admin`, `cloudkms.admin`, `artifactregistry.admin`, `iam.serviceAccountUser` (bootstrap) mais `iam.serviceAccountAdmin`, `resourcemanager.projectIamAdmin`, `serviceusage.serviceUsageAdmin`, `firebasehosting.admin` e `iam.workloadIdentityPoolAdmin` (acrescentados na Etapa 2). **Autenticação via Workload Identity Federation, sem chave JSON**: pool `github-pool`, provider `github-provider`, condição de atributo restrita ao repositório `henriqueluza/lexintegra`. Nome completo do provider para uso no workflow do GitHub Actions: `projects/616781378293/locations/global/workloadIdentityPools/github-pool/providers/github-provider`.
+- Secret Manager: secrets `resend-api-key` e `abacatepay-api-key-dev` já criados, com acesso de leitura concedido à service account padrão do Compute (`616781378293-compute@developer.gserviceaccount.com`), usada pelo Cloud Run até a Etapa 2. **Resolvido:** a service account de runtime dedicada `api-lexintegra-run@…` foi criada e recebeu a mesma concessão.
 - Hooks de bloqueio: `.claude/settings.json` + `.claude/hooks/block-dangerous.sh` já commitados, bloqueando `terraform apply`/`destroy`, `firebase deploy`/`gcloud run deploy` diretos, `delete` de recurso de nuvem, e leitura de `.env`/chave de service account. `terraform plan` permanece livre.
-- **Terraform ainda não escrito.** O que existe acima foi provisionado manualmente (bootstrap), fora do Terraform, exatamente porque o Terraform não pode se autoprovisionar. **O código Terraform a ser escrito deve importar esses recursos existentes (`terraform import`), não recriá-los do zero** — um `apply` que tente criar o bucket, a service account ou os secrets vai falhar por conflito.
+- **Terraform escrito na Etapa 2**, em `infra/terraform/` — ver o `README.md` de lá antes de mexer. Os recursos do bootstrap são **importados** por blocos `import` em `imports.tf`, não recriados; um `apply` que tentasse criá-los falharia por conflito. `imports.tf` é temporário e deve ser removido depois do primeiro apply verde.
+- **Firestore não existia** no bootstrap (verificado: `NOT_FOUND`). É criado pelo Terraform, não importado.
+- **Service account de runtime dedicada criada**: `api-lexintegra-run@plataforma-juridica-36bda.iam.gserviceaccount.com`, com acesso de leitura aos dois secrets. Substitui a service account padrão do Compute, que tinha `roles/editor` no projeto inteiro. A concessão antiga foi mantida nesta rodada de propósito e sai num commit seguinte, depois de a nova identidade estar provada em produção.
+- **Papéis acrescentados a `terraform-ci` na Etapa 2** (o bootstrap não os tinha): `iam.serviceAccountAdmin`, `resourcemanager.projectIamAdmin`, `serviceusage.serviceUsageAdmin`, `firebasehosting.admin`, `iam.workloadIdentityPoolAdmin`. Sem eles o Terraform não cria a service account de runtime, não concede IAM de projeto, não gere APIs, o pipeline não publica o Hosting e o plan nem consegue ler o pool de Workload Identity para importá-lo.
+- **Pipeline no GitHub Actions**: `.github/workflows/ci.yml` (lint, testes com limiar, build, `terraform plan` comentado no PR) e `deploy.yml` (push na `main` → imagem para o Artifact Registry, `terraform apply`, Hosting, smoke test contra `/api/health` comparando o `commitSha`). Autenticação por Workload Identity Federation; nenhum segredo de GCP cadastrado no GitHub.
+- **Bucket sobrando:** `gs://lexintegra-tfstate` (sem sufixo) existe no projeto, vazio e sem uso — o registro anterior dizia que o nome estava tomado por terceiros, e não estava. Não é gerido pelo Terraform; convém remover à mão.
 
 **Aguardando resposta externa, não bloqueiam Etapas 1 e 2:**
+
 - Aprovação final da AbacatePay para modo de produção (chave `abc_prod_...`) — bloqueia a Etapa 8, não antes.
 - Verificação completa de domínio no Resend — confirmar status atual; bloqueia a Etapa 7, não antes.
 
@@ -34,7 +43,7 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs) e `d
 
 **Pendência conhecida na identidade visual:** a logo original enviada tem o wordmark do nome de trabalho anterior embutido na arte — precisa ser refeita com "LexIntegra" antes de uso público (ver ADR-10). As cores extraídas continuam válidas.
 
-**Próximo trabalho recomendado:** Etapa 1 (três direções visuais) segue em paralelo. Etapa 2 está com o bootstrap manual completo (passos 1-6 do plano de execução) — falta delegar ao agente o Terraform completo, o pipeline de CI e os esqueletos Angular/NestJS reais (passo 7), e validar o critério de aceite (passo 8).
+**Próximo trabalho recomendado:** Etapa 2 escrita e verificada localmente (`pnpm quality` verde, imagem da API construída e testada, Angular pré-renderizando). Falta validar o critério de aceite em produção: abrir o PR, revisar o `terraform plan` no comentário do CI, e fazer o merge para o pipeline publicar. Depois disso, remover `infra/terraform/imports.tf` e seguir para a Etapa 3 (sistema de design implementado).
 
 ## Stack
 
@@ -49,17 +58,31 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs) e `d
 ## Estrutura
 
 ```
-apps/web/          Angular
-apps/api/          NestJS
-apps/scanner/      ClamAV em contêiner, sem lógica de domínio
+apps/web/          Angular 22, pré-renderização estática das rotas públicas
+apps/api/          NestJS 12 (ESM-only), prefixo global /api
+apps/scanner/      ClamAV em contêiner, sem lógica de domínio (Etapa 11, ainda não existe)
 packages/shared/   tipos e schemas compartilhados
-infra/terraform/
+infra/terraform/   ver o README de lá antes de mexer
+.github/workflows/ ci.yml e deploy.yml
 docs/
 .claude/
   settings.json     registro dos hooks de PreToolUse
   hooks/
     block-dangerous.sh
 ```
+
+**Notas de plataforma que não são óbvias no código:**
+
+- **NestJS 12 é ESM-only** (`"type": "module"`, sem build CommonJS). `apps/api` e
+  `packages/shared` usam `module: nodenext`, o que exige extensão `.js` explícita
+  nos imports relativos e `import type` para tipos (por causa de
+  `isolatedModules`). Jest roda com `NODE_OPTIONS=--experimental-vm-modules`.
+- **O prefixo global `/api` no NestJS não é decorativo.** O rewrite do Firebase
+  Hosting encaminha o caminho completo, então `lexintegra.com.br/api/health`
+  chega ao Cloud Run como `/api/health`. Removê-lo quebra produção enquanto
+  continua funcionando em localhost.
+- **Source maps do Angular são `hidden`** e vão para `gs://lexintegra-sourcemaps-36bda`
+  no deploy, nunca publicados com o bundle (ADR-08).
 
 ## Comandos
 
@@ -124,15 +147,15 @@ Anamnese e arquivos podem conter dado sensível. Não logue conteúdo de documen
 
 ## Trabalho por etapa
 
-- Uma etapa por branch, uma etapa por PR. Não comece a seguinte com a anterior aberta.
-- Comece em plan mode. Cole o escopo e o critério de aceite da etapa em `docs/plano-execucao.md`.
+- Uma etapa por branch, uma etapa por PR. Não comece a seguinte com a anterior aberta. Nomeie a branch como `feat/nome-descritivo` (sem número de etapa no nome) — ex.: `feat/fundacao-infraestrutura` para a Etapa 2. O número da etapa fica no PR e no commit, não no nome da branch.
+- Comece em plan mode. Cole o escopo e o critério de aceite da etapa em `docs/plano-de-execucao.md`.
 - A etapa fecha quando `pnpm quality` e `pnpm test` passam e o PR é revisado por um humano.
 - Escreva o teste antes quando a regra for de negócio (saldo de reunião, intervalo mínimo, transição de status, assinatura do webhook). Esses são alvos de análise de mutação.
 - **Antes de escrever Terraform para a Etapa 2**, verifique a seção "Etapa 2 — infraestrutura provisionada" acima: vários recursos já existem e foram criados manualmente durante o bootstrap. O código deve importá-los (`terraform import`), não recriá-los.
 
 ## Quando parar e perguntar
 
-Há decisões de produto ainda em aberto listadas em `docs/plano-execucao.md`, Etapa 0, seção 0.2. **Não invente resposta para elas.** Se uma tarefa depender de uma decisão pendente, pare e pergunte. Exemplos: tipos e tamanho aceitos no upload do advogado, ponto de partida exato da retenção de 30 dias, tipografia oficial da marca.
+Há decisões de produto ainda em aberto listadas em `docs/plano-de-execucao.md`, Etapa 0, seção 0.2. **Não invente resposta para elas.** Se uma tarefa depender de uma decisão pendente, pare e pergunte. Exemplos: tipos e tamanho aceitos no upload do advogado, ponto de partida exato da retenção de 30 dias, tipografia oficial da marca.
 
 Pare também quando: a mudança exigir novo serviço externo, alterar custo recorrente, tocar regra de segurança do Firestore de forma não trivial, ou contradizer qualquer regra da seção acima.
 

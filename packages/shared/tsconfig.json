@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "types": ["jest"],
+    "isolatedModules": true
+  },
+  "include": ["src/**/*"],
+  "exclude": [
+    "**/*.integration-spec.ts",
+    "**/*.spec.ts",
+    "dist",
+    "node_modules"
+  ]
+}

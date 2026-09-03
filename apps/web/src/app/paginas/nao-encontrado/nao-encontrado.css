@@ -1,0 +1,25 @@
+.erro {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--s3);
+  padding: var(--s7) var(--s5);
+  max-width: 62rem;
+  margin: 0 auto;
+}
+
+.codigo {
+  font-family: var(--fonte-display);
+  font-weight: 300;
+  font-size: 4.125rem;
+  color: var(--ouro-500);
+  margin: 0;
+}
+
+h1 {
+  font-family: var(--fonte-display);
+  font-weight: 300;
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  margin: 0;
+}
