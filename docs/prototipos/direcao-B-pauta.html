@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LexIntegra — Direção B: Pauta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --papel:#F4F4F1; --branco:#FFFFFF; --painel:#FAFAF8;
+  --tinta:#1C1B1E; --grafite:#414045; --fraco:#6E6D73; --fraquissimo:#96959B;
+  --borda:#DEDEDA; --borda-forte:#C6C6C1;
+  --vinho:#6C0C0C; --vinho-claro:#8A1A1A; --vinho-bg:#F7EAEA;
+  --ouro:#8A7639; --ouro-bg:#F5F1E2;
+  --azul:#3B4B7A; --azul-bg:#DEE2EE;
+  --verde:#2F6B45; --verde-bg:#E4EFE7;
+  --r:5px;
+  --ui:"Archivo",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--papel);color:var(--tinta);font-family:var(--ui);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+.wrap{max-width:1200px;margin:0 auto;padding:0 28px}
+a{color:inherit;text-decoration:none}
+svg{display:block}
+.icon{width:18px;height:18px;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:butt;stroke-linejoin:miter}
+.icon-s{width:15px;height:15px}
+.rot{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fraquissimo)}
+
+.faixa{background:var(--tinta);color:#EDEDEA;padding:9px 0;position:sticky;top:0;z-index:50}
+.faixa .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.faixa b{font-weight:500;font-size:13px}
+.faixa nav{display:flex;gap:6px}
+.faixa nav a{font-size:12px;padding:5px 11px;border:1px solid rgba(255,255,255,.22);border-radius:var(--r)}
+.faixa nav a:hover{background:rgba(255,255,255,.1)}
+
+.marca{display:flex;align-items:center;gap:9px}
+.marca-mark{width:22px;height:22px;stroke:var(--vinho);stroke-width:1.6;fill:none}
+.marca-nome{font-size:19px;font-weight:700;letter-spacing:-.025em}
+.marca-nome i{font-style:normal;font-weight:400;color:var(--fraco)}
+
+.topo{background:var(--branco);border-bottom:1px solid var(--borda);position:sticky;top:35px;z-index:40}
+.topo .wrap{display:flex;align-items:center;gap:36px;height:60px}
+.topo-links{display:flex;gap:26px;font-size:14px;color:var(--grafite)}
+.topo-links a:hover{color:var(--vinho)}
+.topo .fim{margin-left:auto;display:flex;gap:10px;align-items:center}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:var(--ui);font-size:14px;font-weight:500;padding:9px 16px;border-radius:var(--r);border:1px solid var(--borda-forte);background:var(--branco);color:var(--grafite);cursor:pointer;line-height:1.2}
+.btn:hover{border-color:var(--fraco);background:var(--painel)}
+.btn-1{background:var(--vinho);border-color:var(--vinho);color:#fff}
+.btn-1:hover{background:var(--vinho-claro);border-color:var(--vinho-claro)}
+.btn-sm{padding:6px 11px;font-size:13px}
+.btn-txt{border-color:transparent;background:transparent;color:var(--vinho);padding-left:0;padding-right:8px}
+.btn-txt:hover{background:transparent;text-decoration:underline;border-color:transparent}
+
+/* hero */
+.hero{padding:56px 0 44px}
+.hero .wrap{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:start}
+.hero h1{font-size:clamp(32px,3.8vw,45px);line-height:1.1;letter-spacing:-.03em;font-weight:600;max-width:15ch}
+.hero .sub{margin-top:18px;font-size:17px;color:var(--grafite);max-width:46ch;line-height:1.6}
+.destaques{margin-top:30px;display:flex;flex-direction:column;gap:9px}
+.destaque{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;color:var(--grafite)}
+.destaque svg{color:var(--verde);flex-shrink:0;margin-top:3px}
+.cartao{background:var(--branco);border:1px solid var(--borda);border-radius:10px;padding:24px}
+.cartao h2{font-size:18px;font-weight:600;letter-spacing:-.015em}
+.cartao .desc{font-size:13.5px;color:var(--fraco);margin-top:5px;line-height:1.5}
+label{display:block;font-size:12.5px;font-weight:500;color:var(--grafite);margin-bottom:5px}
+input,textarea{width:100%;background:var(--branco);border:1px solid var(--borda-forte);border-radius:var(--r);padding:9px 11px;font-family:var(--ui);font-size:14.5px;color:var(--tinta);outline:none}
+input::placeholder{color:var(--fraquissimo)}
+input:focus{border-color:var(--vinho);box-shadow:0 0 0 3px var(--vinho-bg)}
+.campo+.campo{margin-top:13px}
+.lgpd{margin-top:14px;font-size:12px;color:var(--fraco);line-height:1.5}
+.lgpd a{color:var(--vinho);text-decoration:underline}
+
+.barra-num{background:var(--branco);border-top:1px solid var(--borda);border-bottom:1px solid var(--borda)}
+.barra-num .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
+.barra-num div{background:var(--branco);padding:20px 22px 20px 0}
+.barra-num div+div{border-left:1px solid var(--borda);padding-left:22px}
+.barra-num b{display:block;font-size:30px;font-weight:600;letter-spacing:-.03em;line-height:1}
+.barra-num small{display:block;margin-top:6px;font-size:12.5px;color:var(--fraco);line-height:1.45}
+
+section{padding:60px 0}
+.sec-topo{display:flex;align-items:center;gap:14px;margin-bottom:26px}
+.sec-topo h2{font-size:23px;font-weight:600;letter-spacing:-.02em}
+.sec-topo .rot{margin-left:auto}
+
+.passos{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.passo{background:var(--branco);border:1px solid var(--borda);border-radius:var(--r);padding:16px 18px}
+.passo .n{width:22px;height:22px;border-radius:50%;background:var(--azul-bg);color:var(--azul);font-size:12px;font-weight:600;display:grid;place-items:center;margin-bottom:11px}
+.passo h3{font-size:15px;font-weight:600;margin-bottom:5px}
+.passo p{font-size:13.5px;color:var(--fraco);line-height:1.5}
+
+/* tabela de serviços */
+.tabela{background:var(--branco);border:1px solid var(--borda);border-radius:8px;overflow:hidden}
+.tab-cab,.tab-linha{display:grid;grid-template-columns:2.2fr 1fr .8fr .9fr;gap:16px;align-items:center;padding:11px 18px}
+.tab-cab{background:var(--painel);border-bottom:1px solid var(--borda)}
+.tab-linha+.tab-linha{border-top:1px solid var(--borda)}
+.tab-linha:hover{background:var(--painel)}
+.tab-linha .nome{font-size:14.5px;font-weight:500}
+.tab-linha .nome span{display:block;font-size:12.5px;color:var(--fraco);font-weight:400;margin-top:2px}
+.tab-linha .val{font-size:15px;font-weight:600}
+.tab-linha .col{font-size:13.5px;color:var(--fraco)}
+.trava{position:relative}
+.trava .tabela{filter:blur(3.5px);opacity:.5;user-select:none}
+.trava-aviso{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:24px}
+.trava-aviso .caixa{background:var(--branco);border:1px solid var(--borda-forte);border-radius:8px;padding:20px 26px;max-width:420px}
+.trava-aviso p{font-size:14px;color:var(--grafite);margin:10px 0 14px;line-height:1.5}
+
+footer{background:var(--branco);border-top:1px solid var(--borda);padding:26px 0;font-size:13px;color:var(--fraco)}
+footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+
+/* ============= ÁREA DO CLIENTE ============= */
+.app{background:var(--papel);border-top:3px solid var(--tinta)}
+.app-topo{background:var(--branco);border-bottom:1px solid var(--borda)}
+.app-topo .wrap{display:flex;align-items:center;gap:30px;height:54px}
+.app-nav{display:flex;gap:3px;font-size:13.5px}
+.app-nav a{padding:6px 11px;border-radius:var(--r);color:var(--fraco);font-weight:500}
+.app-nav a.on{background:var(--vinho-bg);color:var(--vinho)}
+.busca{margin-left:auto;display:flex;align-items:center;gap:8px;border:1px solid var(--borda-forte);border-radius:var(--r);padding:6px 10px;width:230px;color:var(--fraquissimo);font-size:13px}
+.busca kbd{margin-left:auto;font-family:var(--ui);font-size:11px;border:1px solid var(--borda);border-radius:3px;padding:1px 5px;color:var(--fraco)}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--azul-bg);color:var(--azul);display:grid;place-items:center;font-size:11px;font-weight:600}
+
+.app-cab{display:flex;align-items:flex-end;gap:16px;padding:24px 0 16px}
+.app-cab h1{font-size:24px;font-weight:600;letter-spacing:-.025em}
+.app-cab .sub{font-size:13.5px;color:var(--fraco);margin-top:2px}
+.filtros{margin-left:auto;display:flex;gap:6px}
+.filtro{font-size:13px;padding:5px 11px;border:1px solid var(--borda-forte);border-radius:99px;background:var(--branco);color:var(--fraco);cursor:pointer}
+.filtro.on{background:var(--tinta);border-color:var(--tinta);color:#fff}
+
+.pedido{background:var(--branco);border:1px solid var(--borda);border-radius:8px;margin-bottom:14px}
+.pedido-cab{display:flex;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid var(--borda);background:var(--painel);border-radius:8px 8px 0 0}
+.pedido-cab h2{font-size:16px;font-weight:600;letter-spacing:-.015em}
+.pedido-cab .ref{font-size:12px;color:var(--fraquissimo);margin-right:2px}
+.pedido-cab .fim{margin-left:auto;display:flex;align-items:center;gap:18px}
+.pedido-cab .valor{font-size:15px;font-weight:600}
+.pedido-cab .valor span{display:block;font-size:11.5px;color:var(--fraco);font-weight:400;text-align:right}
+
+.pedido-corpo{display:grid;grid-template-columns:1fr 296px}
+.principal{padding:0}
+.lateral{border-left:1px solid var(--borda);padding:14px 18px;background:var(--painel);border-radius:0 0 8px 0}
+.grupo+.grupo{margin-top:18px;padding-top:14px;border-top:1px solid var(--borda)}
+.grupo .rot{margin-bottom:9px}
+
+/* linhas de entregável — densidade de tabela */
+.ent-cab{display:grid;grid-template-columns:1fr 132px 96px 116px;gap:14px;padding:8px 18px;background:var(--painel);border-bottom:1px solid var(--borda)}
+.ent{display:grid;grid-template-columns:1fr 132px 96px 116px;gap:14px;align-items:center;padding:11px 18px}
+.ent+.ent{border-top:1px solid var(--borda)}
+.ent:hover{background:var(--painel)}
+.ent h3{font-size:14.5px;font-weight:500}
+.ent .quando{font-size:12.5px;color:var(--fraquissimo)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;padding:3px 9px;border-radius:99px;white-space:nowrap}
+.chip-sol{background:var(--azul-bg);color:var(--azul)}
+.chip-ela{background:var(--ouro-bg);color:var(--ouro)}
+.chip-rev{background:var(--vinho-bg);color:var(--vinho)}
+.chip-ent{background:var(--verde-bg);color:var(--verde)}
+.medidor{display:flex;gap:2px}
+.medidor i{height:4px;width:16px;border-radius:2px;background:var(--borda-forte)}
+.medidor i.on{background:var(--grafite)}
+.ent .acao{text-align:right}
+
+.obs{background:var(--azul-bg);border-radius:var(--r);padding:12px 14px;font-size:13.5px;color:#2A3654;line-height:1.6}
+.obs .quem{margin-top:7px;font-size:12px;color:var(--azul)}
+.obs-vazio{border:1px dashed var(--borda-forte);border-radius:var(--r);padding:14px;font-size:13px;color:var(--fraquissimo);text-align:center}
+
+.metrica{display:flex;align-items:baseline;gap:8px}
+.metrica b{font-size:26px;font-weight:600;letter-spacing:-.03em;line-height:1}
+.metrica span{font-size:12.5px;color:var(--fraco);line-height:1.4}
+.slot{background:var(--branco);border:1px solid var(--borda);border-radius:var(--r);padding:11px 13px;margin-top:10px}
+.slot .dia{font-size:14px;font-weight:600}
+.slot .hora{font-size:12.5px;color:var(--fraco);margin-top:1px}
+.slot .link{margin-top:9px;padding-top:9px;border-top:1px solid var(--borda);display:flex;align-items:center;gap:7px;font-size:13px;color:var(--vinho);font-weight:500}
+.aviso{display:flex;gap:9px;background:var(--ouro-bg);border-radius:var(--r);padding:10px 12px;font-size:13px;color:#5D4E22;line-height:1.5;margin-top:10px}
+.aviso svg{color:var(--ouro);flex-shrink:0;margin-top:2px}
+
+.arq{display:flex;align-items:center;gap:9px;padding:7px 0;font-size:13.5px}
+.arq+.arq{border-top:1px solid var(--borda)}
+.arq .peso{margin-left:auto;font-size:12px;color:var(--fraquissimo)}
+.arq svg{color:var(--fraco);flex-shrink:0}
+.vazio{border:1px dashed var(--borda-forte);border-radius:var(--r);padding:16px;text-align:center}
+.vazio p{font-size:13px;color:var(--fraco);margin-bottom:10px;line-height:1.5}
+.contador{font-size:11.5px;color:var(--fraquissimo);margin-top:8px}
+
+.tokens{padding:44px 0 64px}
+.tok-grade{display:grid;grid-template-columns:repeat(8,1fr);gap:10px}
+.tok{background:var(--branco);border:1px solid var(--borda);border-radius:var(--r);padding:9px}
+.tok .amostra{height:36px;border-radius:3px;margin-bottom:8px;border:1px solid rgba(0,0,0,.06)}
+.tok b{display:block;font-size:11.5px;font-weight:600}
+.tok code{font-size:10.5px;color:var(--fraco);font-family:var(--ui)}
+
+@media(max-width:980px){
+  .hero .wrap,.pedido-corpo{grid-template-columns:1fr}
+  .barra-num .wrap,.passos,.tok-grade{grid-template-columns:repeat(2,1fr)}
+  .topo-links,.busca{display:none}
+  .lateral{border-left:0;border-top:1px solid var(--borda)}
+  .ent-cab{display:none}
+  .ent{grid-template-columns:1fr;gap:7px}
+  .ent .acao{text-align:left}
+  .tab-cab,.tab-linha{grid-template-columns:1fr 1fr}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+:focus-visible{outline:2px solid var(--vinho);outline-offset:2px}
+</style>
+</head>
+<body>
+
+<svg style="position:absolute;width:0;height:0" aria-hidden="true"><defs>
+<symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></symbol>
+<symbol id="i-video" viewBox="0 0 24 24"><path d="M3 7h12v10H3z"/><path d="M15 11l6-3v8l-6-3"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><path d="M5 11h14v9H5z"/><path d="M8 11V8a4 4 0 018 0v3"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16 16l5 5"/></symbol>
+<symbol id="i-mark" viewBox="0 0 24 24"><path d="M8 3H4v18h4M16 3h4v18h-4"/><path d="M12 7v10"/></symbol>
+</defs></svg>
+
+<div class="faixa"><div class="wrap">
+  <b>Direção B — Pauta · clara e operacional</b>
+  <nav><a href="#site">Landing</a><a href="#area">Área do cliente</a><a href="#tokens">Tokens</a></nav>
+</div></div>
+
+<!-- ============ LANDING ============ -->
+<div id="site">
+<header class="topo"><div class="wrap">
+  <a class="marca" href="#site">
+    <svg class="marca-mark" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-mark"/></svg>
+    <span class="marca-nome">Lex<i>Integra</i></span>
+  </a>
+  <nav class="topo-links">
+    <a href="#como">Como funciona</a><a href="#servicos">Serviços</a><a href="#cadastro">Perguntas frequentes</a>
+  </nav>
+  <div class="fim">
+    <a class="btn btn-sm" href="#area">Entrar</a>
+    <a class="btn btn-sm btn-1" href="#cadastro">Criar acesso</a>
+  </div>
+</div></header>
+
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <h1>Contrate o jurídico da empresa e veja onde ele está.</h1>
+      <p class="sub">Escopo fechado, preço na tela e um painel que mostra em que etapa está cada entregável. Sem cobrança por hora e sem ligar para perguntar como vai.</p>
+      <div class="destaques">
+        <div class="destaque"><svg class="icon icon-s"><use href="#i-check"/></svg>Preço fechado, informado antes de você contratar</div>
+        <div class="destaque"><svg class="icon icon-s"><use href="#i-check"/></svg>Reuniões incluídas, marcadas dentro do próprio pedido</div>
+        <div class="destaque"><svg class="icon icon-s"><use href="#i-check"/></svg>Revisões contratadas, contadas na sua tela</div>
+      </div>
+    </div>
+    <form class="cartao" onsubmit="return false">
+      <h2>Criar acesso</h2>
+      <p class="desc">Três campos e você vê o catálogo com os preços. Nada é cobrado agora.</p>
+      <div style="margin-top:18px">
+        <div class="campo"><label for="n">Nome completo</label><input id="n" placeholder="Ana Ribeiro Salgado"></div>
+        <div class="campo"><label for="e">E-mail</label><input id="e" type="email" placeholder="ana@empresa.com.br"></div>
+        <div class="campo"><label for="t">Telefone</label><input id="t" placeholder="(61) 90000-0000"></div>
+      </div>
+      <button class="btn btn-1" style="width:100%;margin-top:16px">Criar acesso</button>
+      <p class="lgpd">Usamos esses dados só para liberar seu acesso e falar sobre o seu pedido. Você pode pedir a exclusão a qualquer momento. <a href="#">Aviso de privacidade</a>.</p>
+    </form>
+  </div>
+</section>
+
+<div class="barra-num"><div class="wrap">
+  <div><b>4</b><small>estados por entregável, do pedido à confirmação</small></div>
+  <div><b>48h</b><small>para a primeira devolutiva depois do pagamento</small></div>
+  <div><b>2</b><small>revisões incluídas na maior parte dos serviços</small></div>
+  <div><b>30</b><small>dias de download garantido depois da entrega</small></div>
+</div></div>
+
+<section id="como">
+  <div class="wrap">
+    <div class="sec-topo"><h2>Como funciona</h2><span class="rot">Quatro passos</span></div>
+    <div class="passos">
+      <div class="passo"><div class="n">1</div><h3>Crie seu acesso</h3><p>Nome, e-mail e telefone. É o que libera a lista de serviços com os preços.</p></div>
+      <div class="passo"><div class="n">2</div><h3>Escolha o serviço</h3><p>Cada serviço mostra o que entra, quantas reuniões inclui e quantas revisões você tem.</p></div>
+      <div class="passo"><div class="n">3</div><h3>Descreva o caso</h3><p>Um formulário guiado e até três arquivos de apoio. O advogado começa com o contexto pronto.</p></div>
+      <div class="passo"><div class="n">4</div><h3>Acompanhe a entrega</h3><p>O estado de cada entregável muda na sua tela. Você confirma o recebimento no fim.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="servicos" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-topo"><h2>Serviços</h2><span class="rot">Catálogo</span></div>
+    <div class="trava">
+      <div class="tabela" aria-hidden="true">
+        <div class="tab-cab"><span class="rot">Serviço</span><span class="rot">Entregáveis</span><span class="rot">Reuniões</span><span class="rot">Preço</span></div>
+        <div class="tab-linha"><div class="nome">Revisão de contrato comercial<span>Minuta revisada e relatório de cláusulas de risco</span></div><div class="col">2 entregáveis</div><div class="col">1 reunião</div><div class="val">R$ 0.000</div></div>
+        <div class="tab-linha"><div class="nome">Parecer de risco trabalhista<span>Diagnóstico das rotinas e plano de correção priorizado</span></div><div class="col">1 entregável</div><div class="col">2 reuniões</div><div class="val">R$ 0.000</div></div>
+        <div class="tab-linha"><div class="nome">Alteração de contrato social<span>Instrumento redigido e orientação de registro</span></div><div class="col">2 entregáveis</div><div class="col">1 reunião</div><div class="val">R$ 0.000</div></div>
+        <div class="tab-linha"><div class="nome">Defesa em processo administrativo<span>Peça de defesa e acompanhamento do prazo</span></div><div class="col">1 entregável</div><div class="col">2 reuniões</div><div class="val">R$ 0.000</div></div>
+      </div>
+      <div class="trava-aviso"><div class="caixa">
+        <svg class="icon" style="width:22px;height:22px;color:var(--vinho);margin:0 auto" aria-hidden="true"><use href="#i-lock"/></svg>
+        <p>Os serviços e os preços aparecem depois que você cria o acesso. Leva menos de um minuto e não pede documento nenhum.</p>
+        <a class="btn btn-1 btn-sm" href="#cadastro">Criar acesso</a>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">
+  <span>LexIntegra · lexintegra.com.br</span>
+  <span>Aviso de privacidade · Termos de serviço</span>
+</div></footer>
+</div>
+
+<!-- ============ ÁREA DO CLIENTE ============ -->
+<div class="app" id="area">
+  <div class="app-topo"><div class="wrap">
+    <a class="marca" href="#area"><svg class="marca-mark" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-mark"/></svg><span class="marca-nome" style="font-size:17px">Lex<i>Integra</i></span></a>
+    <nav class="app-nav">
+      <a href="#area" class="on">Pedidos</a><a href="#area">Serviços</a><a href="#area">Arquivos</a><a href="#area">Empresa</a>
+    </nav>
+    <div class="busca"><svg class="icon icon-s"><use href="#i-search"/></svg>Buscar pedido<kbd>⌘K</kbd></div>
+    <span class="avatar" style="margin-left:12px">AR</span>
+  </div></div>
+
+  <div class="wrap">
+    <div class="app-cab">
+      <div>
+        <h1>Pedidos</h1>
+        <div class="sub">2 em andamento · 1 aguardando sua confirmação</div>
+      </div>
+      <div class="filtros">
+        <span class="filtro on">Em andamento</span><span class="filtro">Concluídos</span><span class="filtro">Todos</span>
+      </div>
+    </div>
+
+    <!-- PEDIDO 1 -->
+    <article class="pedido">
+      <div class="pedido-cab">
+        <span class="ref">#2481</span>
+        <h2>Revisão de contrato comercial</h2>
+        <span class="chip chip-ela">Em andamento</span>
+        <div class="fim">
+          <div class="valor">R$ 0.000<span>Pix · 12 ago 2026</span></div>
+        </div>
+      </div>
+      <div class="pedido-corpo">
+        <div class="principal">
+          <div class="ent-cab"><span class="rot">Entregável</span><span class="rot">Estado</span><span class="rot">Progresso</span><span class="rot" style="text-align:right">Ação</span></div>
+
+          <div class="ent">
+            <div><h3>Minuta revisada</h3><div class="quando">Atualizado ontem, 16h20</div></div>
+            <div><span class="chip chip-ela">Em elaboração</span></div>
+            <div class="medidor"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+            <div class="acao"><span class="quando">2 revisões restantes</span></div>
+          </div>
+
+          <div class="ent">
+            <div><h3>Relatório de cláusulas de risco</h3><div class="quando">Na fila desde 27 ago</div></div>
+            <div><span class="chip chip-sol">Solicitado</span></div>
+            <div class="medidor"><i class="on"></i><i></i><i></i><i></i></div>
+            <div class="acao"><span class="quando">—</span></div>
+          </div>
+
+          <div class="ent">
+            <div><h3>Checklist de assinatura</h3><div class="quando">Entregue em 26 ago · download até 25 set</div></div>
+            <div><span class="chip chip-ent">Entregue</span></div>
+            <div class="medidor"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+            <div class="acao"><button class="btn btn-sm"><svg class="icon icon-s"><use href="#i-doc"/></svg>Baixar</button></div>
+          </div>
+
+          <div style="padding:14px 18px;border-top:1px solid var(--borda)">
+            <div class="rot" style="margin-bottom:8px">Observações do advogado</div>
+            <div class="obs">
+              Precisamos definir se a cláusula de exclusividade vale para todo o território nacional ou só para a região Centro-Oeste. Isso muda o texto do parágrafo terceiro e a exposição da empresa em caso de rescisão. Deixei as duas versões marcadas na minuta.
+              <div class="quem">Carlos Mendes · 31 ago, 16h20</div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="lateral">
+          <div class="grupo">
+            <div class="rot">Reuniões</div>
+            <div class="metrica"><b>1/2</b><span>usadas · válidas<br>até 12 ago 2027</span></div>
+            <div class="slot">
+              <div class="dia">Qui, 4 set</div>
+              <div class="hora">14h00 – 14h45 · Carlos Mendes</div>
+              <div class="link"><svg class="icon icon-s"><use href="#i-video"/></svg>Abrir sala</div>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:9px">
+              <button class="btn btn-sm" style="flex:1">Remarcar</button>
+              <button class="btn btn-sm" style="flex:1">Cancelar</button>
+            </div>
+            <p class="contador">Cancelar com menos de 24h não devolve a reunião ao saldo.</p>
+          </div>
+
+          <div class="grupo">
+            <div class="rot">Arquivos de apoio</div>
+            <div class="arq"><svg class="icon icon-s"><use href="#i-doc"/></svg>contrato-vigente.pdf<span class="peso">1,8 MB</span></div>
+            <div class="arq"><svg class="icon icon-s"><use href="#i-doc"/></svg>proposta-comercial.pdf<span class="peso">640 KB</span></div>
+            <button class="btn btn-sm" style="width:100%;margin-top:10px"><svg class="icon icon-s"><use href="#i-up"/></svg>Enviar arquivo</button>
+            <p class="contador">2 de 3 · jpg ou pdf, até 5 MB cada</p>
+          </div>
+        </aside>
+      </div>
+    </article>
+
+    <!-- PEDIDO 2 -->
+    <article class="pedido" style="margin-bottom:40px">
+      <div class="pedido-cab">
+        <span class="ref">#2467</span>
+        <h2>Parecer de risco trabalhista</h2>
+        <span class="chip chip-rev">Aguarda você</span>
+        <div class="fim"><div class="valor">R$ 0.000<span>Cartão · 4 ago 2026</span></div></div>
+      </div>
+      <div class="pedido-corpo">
+        <div class="principal">
+          <div class="ent-cab"><span class="rot">Entregável</span><span class="rot">Estado</span><span class="rot">Progresso</span><span class="rot" style="text-align:right">Ação</span></div>
+          <div class="ent">
+            <div><h3>Relatório de exposição trabalhista</h3><div class="quando">Atualizado hoje, 09h05 · 1 de 2 revisões usadas</div></div>
+            <div><span class="chip chip-rev">Em revisão</span></div>
+            <div class="medidor"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+            <div class="acao"><button class="btn btn-sm btn-1"><svg class="icon icon-s"><use href="#i-check"/></svg>Confirmar</button></div>
+          </div>
+          <div style="padding:12px 18px;border-top:1px solid var(--borda);display:flex;gap:8px;align-items:center">
+            <span class="quando" style="flex:1">Se ainda não está certo, você pode pedir mais uma revisão antes de confirmar.</span>
+            <button class="btn btn-sm">Pedir revisão</button>
+          </div>
+          <div style="padding:14px 18px;border-top:1px solid var(--borda)">
+            <div class="rot" style="margin-bottom:8px">Observações do advogado</div>
+            <div class="obs-vazio">Nenhuma observação ainda. Elas aparecem aqui quando o advogado precisa de uma decisão sua.</div>
+          </div>
+        </div>
+        <aside class="lateral">
+          <div class="grupo">
+            <div class="rot">Reuniões</div>
+            <div class="metrica"><b>2/2</b><span>usadas ·<br>saldo esgotado</span></div>
+            <div class="aviso"><svg class="icon icon-s"><use href="#i-alert"/></svg><span>A sala da última reunião ainda não foi gerada. Estamos tentando de novo — o link chega por e-mail.</span></div>
+          </div>
+          <div class="grupo">
+            <div class="rot">Arquivos de apoio</div>
+            <div class="vazio">
+              <p>Nenhum arquivo ainda. Anexe holerites ou contratos de trabalho que ajudem a explicar o caso.</p>
+              <button class="btn btn-sm"><svg class="icon icon-s"><use href="#i-up"/></svg>Enviar arquivo</button>
+            </div>
+            <p class="contador">Até 3 · jpg ou pdf, até 5 MB cada</p>
+          </div>
+        </aside>
+      </div>
+    </article>
+  </div>
+
+  <div class="tokens" id="tokens"><div class="wrap">
+    <div class="sec-topo"><h2>Tokens da direção B</h2><span class="rot">Vinho e ouro em papel de trabalho</span></div>
+    <div class="tok-grade">
+      <div class="tok"><div class="amostra" style="background:#F4F4F1"></div><b>papel</b><code>#F4F4F1</code></div>
+      <div class="tok"><div class="amostra" style="background:#FFFFFF"></div><b>superficie</b><code>#FFFFFF</code></div>
+      <div class="tok"><div class="amostra" style="background:#DEDEDA"></div><b>borda</b><code>#DEDEDA</code></div>
+      <div class="tok"><div class="amostra" style="background:#1C1B1E"></div><b>tinta</b><code>#1C1B1E</code></div>
+      <div class="tok"><div class="amostra" style="background:#6C0C0C"></div><b>acao</b><code>#6C0C0C</code></div>
+      <div class="tok"><div class="amostra" style="background:#8A7639"></div><b>em-elaboracao</b><code>#8A7639</code></div>
+      <div class="tok"><div class="amostra" style="background:#DEE2EE"></div><b>informativo</b><code>#DEE2EE</code></div>
+      <div class="tok"><div class="amostra" style="background:#E4EFE7"></div><b>entregue</b><code>#E4EFE7</code></div>
+    </div>
+    <p style="margin-top:16px;font-size:14px;color:var(--fraco);max-width:74ch">
+      Tipografia: Archivo em toda a interface, com numerais tabulares — substituta até a tipografia oficial chegar.
+      Raio 5px, sem sombra, estado em chip colorido mais medidor de quatro segmentos, vinho reservado à ação primária.
+    </p>
+  </div></div>
+</div>
+
+</body>
+</html>
