@@ -1,0 +1,141 @@
+# LexIntegra
+
+Plataforma jurídica de comercialização e acompanhamento de produtos jurídicos. Marca própria, dissociada do escritório cliente.
+
+Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs) e `docs/plano-execucao.md` (etapas e critérios de aceite). **Consulte-os antes de propor mudança estrutural.** Este arquivo é resumo operacional, não a fonte completa.
+
+## Estado atual do projeto
+
+*Seção transitória — atualizar ou remover conforme o projeto avança. Não é fonte de verdade permanente; é o que uma sessão nova precisa saber para não repetir trabalho ou perguntas já resolvidas.*
+
+**Concluído:**
+- Nome definido: LexIntegra. Domínio `lexintegra.com.br` comprado e ativo.
+- Projeto Firebase/GCP criado, nome de exibição `plataforma-juridica`, **ID real do projeto: `plataforma-juridica-36bda`** (use este ID, não o nome de exibição, em comandos gcloud/terraform/CI). Plano Blaze ativo, conta de faturamento do escritório vinculada.
+- Conta AbacatePay do escritório criada, documentos de verificação enviados. Chave de API **Dev** (`abc_dev_...`) já obtida e armazenada no Secret Manager (`abacatepay-api-key-dev`) — permite testes de integração mesmo antes da aprovação final da conta.
+- Conta Resend criada, subdomínio `notificacoes.lexintegra.com.br` adicionado. Registros DNS (DKIM, dois CNAMEs de tracking, DMARC) cadastrados no Registro.br; verificação em andamento/concluída — confirmar status atual no painel do Resend antes de assumir. Chave de API armazenada no Secret Manager (`resend-api-key`) — **a chave original foi exposta acidentalmente e revogada; a que está em uso é uma chave nova, gerada depois do incidente.**
+- Paleta de cores extraída do portfólio da B&C (ADR-10); vinho `#6C0C0C`, dourado `#A8783C`.
+
+**Etapa 2 — infraestrutura provisionada (ver ADR-15 para a topologia de domínio):**
+- Repositório GitHub: `henriqueluza/lexintegra`, conectado via SSH.
+- Firebase Hosting: domínio `lexintegra.com.br` conectado e verificado (registro A + TXT). Deploy funcional via `firebase deploy --only hosting`.
+- Cloud Run: serviço `api-lexintegra` (região `southamerica-east1`), atualmente rodando a imagem placeholder `gcr.io/cloudrun/hello` com `--allow-unauthenticated`. **Será substituído pelo esqueleto NestJS real** — manter o mesmo nome de serviço e região, não criar um serviço novo com nome diferente.
+- Roteamento API: **sem subdomínio próprio.** `lexintegra.com.br/api` e `lexintegra.com.br/api/**` são roteados por rewrite do Firebase Hosting para o Cloud Run (ver `firebase.json` e ADR-15). Isso existe porque Domain Mapping do Cloud Run não está disponível em `southamerica-east1`. Não reintroduzir `api.lexintegra.com.br` sem revisitar essa decisão.
+- Terraform: bucket de state já criado e versionado em `gs://lexintegra-tfstate-36bda` (nome com sufixo porque `lexintegra-tfstate` sem sufixo já estava em uso globalmente por terceiros). Backend do Terraform deve apontar para este bucket.
+- Service account do CI: `terraform-ci@plataforma-juridica-36bda.iam.gserviceaccount.com`, com papéis `storage.admin`, `datastore.owner`, `run.admin`, `secretmanager.admin`, `cloudkms.admin`, `artifactregistry.admin`, `iam.serviceAccountUser`. **Autenticação via Workload Identity Federation, sem chave JSON**: pool `github-pool`, provider `github-provider`, condição de atributo restrita ao repositório `henriqueluza/lexintegra`. Nome completo do provider para uso no workflow do GitHub Actions: `projects/616781378293/locations/global/workloadIdentityPools/github-pool/providers/github-provider`.
+- Secret Manager: secrets `resend-api-key` e `abacatepay-api-key-dev` já criados, com acesso de leitura concedido à service account padrão do Compute (`616781378293-compute@developer.gserviceaccount.com`), usada pelo Cloud Run. Quando uma service account de runtime dedicada for criada para a API (em vez da default do Compute), replicar essa concessão de acesso para ela.
+- Hooks de bloqueio: `.claude/settings.json` + `.claude/hooks/block-dangerous.sh` já commitados, bloqueando `terraform apply`/`destroy`, `firebase deploy`/`gcloud run deploy` diretos, `delete` de recurso de nuvem, e leitura de `.env`/chave de service account. `terraform plan` permanece livre.
+- **Terraform ainda não escrito.** O que existe acima foi provisionado manualmente (bootstrap), fora do Terraform, exatamente porque o Terraform não pode se autoprovisionar. **O código Terraform a ser escrito deve importar esses recursos existentes (`terraform import`), não recriá-los do zero** — um `apply` que tente criar o bucket, a service account ou os secrets vai falhar por conflito.
+
+**Aguardando resposta externa, não bloqueiam Etapas 1 e 2:**
+- Aprovação final da AbacatePay para modo de produção (chave `abc_prod_...`) — bloqueia a Etapa 8, não antes.
+- Verificação completa de domínio no Resend — confirmar status atual; bloqueia a Etapa 7, não antes.
+
+**Ainda faltam, do lado da CONTRATANTE:** ficha de anamnese, tipografia oficial (se houver manual além do PDF), confirmação de licenciamento Microsoft Teams dos advogados, aditivo da cláusula 7ª assinado.
+
+**Pendência conhecida na identidade visual:** a logo original enviada tem o wordmark do nome de trabalho anterior embutido na arte — precisa ser refeita com "LexIntegra" antes de uso público (ver ADR-10). As cores extraídas continuam válidas.
+
+**Próximo trabalho recomendado:** Etapa 1 (três direções visuais) segue em paralelo. Etapa 2 está com o bootstrap manual completo (passos 1-6 do plano de execução) — falta delegar ao agente o Terraform completo, o pipeline de CI e os esqueletos Angular/NestJS reais (passo 7), e validar o critério de aceite (passo 8).
+
+## Stack
+
+- **Frontend:** Angular + TypeScript. Build estático no Firebase Hosting, com pré-renderização das rotas públicas. Servido em `lexintegra.com.br` (domínio raiz).
+- **Backend:** NestJS + TypeScript em contêiner no Cloud Run. Artefato de domínio único. Acessível via `lexintegra.com.br/api/**`, roteado por rewrite do Firebase Hosting (sem subdomínio, sem CORS — ver ADR-15).
+- **Dados:** Firestore (região `southamerica-east1`).
+- **Auth:** Firebase Auth com custom claims.
+- **Assíncrono:** Cloud Tasks e Cloud Scheduler. Padrão outbox.
+- **Externos:** AbacatePay (pagamento, conta do escritório cliente), Resend (e-mail) e Microsoft Graph API (link de reunião do Teams, app-only). O calendário do advogado é **interno** à plataforma; convites ao cliente saem como iCalendar montado no backend.
+- **Infra:** Terraform (backend GCS: `gs://lexintegra-tfstate-36bda`). CI no GitHub Actions com Workload Identity Federation (sem chave JSON de service account).
+
+## Estrutura
+
+```
+apps/web/          Angular
+apps/api/          NestJS
+apps/scanner/      ClamAV em contêiner, sem lógica de domínio
+packages/shared/   tipos e schemas compartilhados
+infra/terraform/
+docs/
+.claude/
+  settings.json     registro dos hooks de PreToolUse
+  hooks/
+    block-dangerous.sh
+```
+
+## Comandos
+
+```
+pnpm dev              # web + api em modo desenvolvimento
+pnpm test             # unitários (Jest na api e na web)
+pnpm test:integration # exige emulador do Firestore rodando
+pnpm test:e2e         # Playwright
+pnpm lint             # ESLint + dependency-cruiser
+pnpm quality          # cobertura, complexidade, dependências
+```
+
+## Regras invioláveis
+
+Estas vêm de decisões registradas nos ADRs. Violá-las é bug, não preferência de estilo.
+
+1. **Nada de Redis, RabbitMQ ou BullMQ.** Trabalho assíncrono vai para Cloud Tasks; recorrente, para Cloud Scheduler. Se algo parecer exigir broker, pare e pergunte.
+
+2. **Nenhum efeito colateral dentro de transação do Firestore.** Transações são reexecutadas sob contenção. Nada de chamada a Resend ou AbacatePay dentro do corpo — apenas escrita no outbox.
+
+3. **Toda notificação nasce no outbox**, escrita na mesma transação que produz o fato de negócio. Nunca envie e-mail direto de um handler.
+
+4. **Idempotência por ID determinístico de documento.** Webhook usa o ID do evento; slot de reunião usa `{advogadoId}_{inícioISO}`. `create` que falha por documento existente é duplicata esperada, não erro.
+
+5. **O pedido carrega snapshot imutável do produto**, tirado no momento do checkout. Nunca referencie o produto vivo a partir de um pedido. Alterar produto não pode afetar pedido existente.
+
+6. **Nenhum arquivo é servido com status diferente de `limpo`.** Essa checagem vive em um único lugar. Uploads vão direto ao bucket de quarentena por URL assinada — o arquivo nunca passa pela API.
+
+7. **O SDK do Firebase no frontend serve só para autenticação.** Nenhuma leitura ou escrita direta no Firestore pelo browser. As regras negam por padrão.
+
+8. **Nenhum valor visual escrito direto em componente.** Cor, espaçamento e tipografia vêm de token.
+
+9. **Segredos vêm do Secret Manager.** Nunca leia, escreva ou imprima `.env` nem chave JSON de conta de serviço. Nenhuma credencial (chave de API, token) deve aparecer em commit, log ou output de comando — se precisar de um valor sensível, referencie o secret pelo nome, nunca peça para o humano colar o valor em texto.
+
+10. **Rotas públicas não chamam a API antes do pré-cadastro.** É a mitigação de cold start; quebrar isso derruba a performance da página de captação.
+
+11. **E-mail vai sempre por trás da interface `EmailTransport`.** Nunca chame o SDK do Resend (ou de qualquer provedor) diretamente de um handler. Produção usa Resend; testes automatizados usam um transporte falso que não toca rede. Reentrega é responsabilidade do outbox, não do transporte — o adaptador só reporta sucesso ou falha.
+
+12. **Convite de calendário é iCalendar montado aqui, sem API externa.** `UID` estável e `SEQUENCE` incrementado a cada alteração são campos persistidos da reunião. Remarcação reusa o `UID`; cancelamento usa `METHOD:CANCEL`.
+
+13. **O link de reunião vem da Microsoft Graph API, nunca é inventado ou fixo.** Uma reunião do Teams por chamada (`POST /users/{advogadoId}/onlineMeetings`), nunca um link reaproveitado de outra reunião. Se a chamada falhar, o slot fica reservado mas a reunião entra em estado "sem link", visível no painel — nunca mostrar link vazio ou de outra reunião como solução alternativa.
+
+14. **Status de entregável é máquina de estados fixa, sem transição manual.** Os quatro estados (`solicitado`, `em_elaboracao`, `em_revisao`, `entregue`) e as transições entre eles são código, não dado configurável. `entregue` só é alcançado por confirmação do cliente após upload — nunca por escrita direta de campo, nem por admin, nem por advogado. O número de revisões permitidas é o único parâmetro por produto; validar no servidor sempre, mesmo que a interface já esconda o botão quando o saldo acabar.
+
+15. **Estorno só é permitido com o pedido em `solicitado`.** A partir de `em_elaboracao`, o endpoint de estorno recusa a operação — validação no servidor, não apenas mensagem de interface.
+
+16. **Upload tem dois fluxos distintos, não um.** Advogado envia entregável (dispara transição de estado). Cliente envia até 3 arquivos de apoio (jpg/pdf, 5 MB cada) associados ao pedido, sem afetar o estado do entregável. Não misture os dois num único endpoint ou numa única validação.
+
+17. **A API é acessada via `/api/**` no mesmo domínio do frontend, não por subdomínio.** Rewrite do Firebase Hosting para o Cloud Run (ver ADR-15). Não criar mapeamento de domínio próprio (`api.lexintegra.com.br`) sem antes verificar se a região do serviço já suporta essa funcionalidade do Cloud Run — na região `southamerica-east1`, não suporta.
+
+## Fronteiras de autorização
+
+Quatro perfis de acesso: público sem identidade, webhook autenticado por assinatura, autenticado (cliente e advogado, separados por claim) e administrativo.
+
+O advogado enxerga **apenas** o que lhe foi distribuído. Isso é validado na regra do Firestore, não só na interface. Toda mudança em regra de segurança exige teste correspondente no emulador, incluindo o caso negativo.
+
+Não há autocadastro em nenhum perfil administrativo.
+
+## LGPD
+
+Anamnese e arquivos podem conter dado sensível. Não logue conteúdo de documento, corpo de requisição de anamnese nem dado pessoal identificável. Toda entidade que guarda dado de titular precisa de caminho conhecido para eliminação.
+
+## Trabalho por etapa
+
+- Uma etapa por branch, uma etapa por PR. Não comece a seguinte com a anterior aberta.
+- Comece em plan mode. Cole o escopo e o critério de aceite da etapa em `docs/plano-execucao.md`.
+- A etapa fecha quando `pnpm quality` e `pnpm test` passam e o PR é revisado por um humano.
+- Escreva o teste antes quando a regra for de negócio (saldo de reunião, intervalo mínimo, transição de status, assinatura do webhook). Esses são alvos de análise de mutação.
+- **Antes de escrever Terraform para a Etapa 2**, verifique a seção "Etapa 2 — infraestrutura provisionada" acima: vários recursos já existem e foram criados manualmente durante o bootstrap. O código deve importá-los (`terraform import`), não recriá-los.
+
+## Quando parar e perguntar
+
+Há decisões de produto ainda em aberto listadas em `docs/plano-execucao.md`, Etapa 0, seção 0.2. **Não invente resposta para elas.** Se uma tarefa depender de uma decisão pendente, pare e pergunte. Exemplos: tipos e tamanho aceitos no upload do advogado, ponto de partida exato da retenção de 30 dias, tipografia oficial da marca.
+
+Pare também quando: a mudança exigir novo serviço externo, alterar custo recorrente, tocar regra de segurança do Firestore de forma não trivial, ou contradizer qualquer regra da seção acima.
+
+## Sobre os limites deste arquivo
+
+Este documento é contexto, não configuração imposta. As proibições que realmente importam — `terraform apply`, `deploy`, `delete` em recurso de nuvem, leitura de credencial, escrita de custom claim, chamada à API de produção do gateway — são barradas por hook de `PreToolUse` em `.claude/hooks/` (já implementado e commitado, ver `.claude/settings.json`). Se um comando for bloqueado, isso é o sistema funcionando: peça ao humano para executar.
