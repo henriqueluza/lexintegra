@@ -1,0 +1,23 @@
+{
+  "hosting": {
+    "public": "public",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "/api",
+        "run": { "serviceId": "api-lexintegra", "region": "southamerica-east1" }
+      },
+      {
+        "source": "/api/**",
+        "run": {
+          "serviceId": "api-lexintegra",
+          "region": "southamerica-east1"
+        }
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
