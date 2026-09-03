@@ -48,14 +48,18 @@ import {
   id = "projects/plataforma-juridica-36bda/secrets/abacatepay-api-key-dev"
 }
 
+# ARMADILHA, custou uma depuracao inteira: quando o recurso usa `for_each`, o
+# Terraform 1.16 honra APENAS O PRIMEIRO bloco `import` daquele endereco. O segundo
+# e descartado em silencio — sem erro, sem warning, e o recurso aparece no plan como
+# "will be created". Comprovado invertendo a ordem dos dois blocos: o ignorado
+# passou a ser o outro. Um `id` proposital invalido no segundo bloco tambem nao
+# gerava erro nenhum, o que confirma que ele nem chega a ser avaliado.
+#
+# A forma correta e um unico bloco com `for_each`, cobrindo todas as instancias.
 import {
-  to = google_secret_manager_secret_iam_member.compute_default["resend"]
-  id = "projects/plataforma-juridica-36bda/secrets/resend-api-key roles/secretmanager.secretAccessor serviceAccount:616781378293-compute@developer.gserviceaccount.com"
-}
-
-import {
-  to = google_secret_manager_secret_iam_member.compute_default["abacatepay"]
-  id = "projects/plataforma-juridica-36bda/secrets/abacatepay-api-key-dev roles/secretmanager.secretAccessor serviceAccount:616781378293-compute@developer.gserviceaccount.com"
+  for_each = local.secrets
+  to       = google_secret_manager_secret_iam_member.compute_default[each.key]
+  id       = "projects/${var.project_id}/secrets/${each.value} roles/secretmanager.secretAccessor serviceAccount:${var.project_number}-compute@developer.gserviceaccount.com"
 }
 
 # Criado pela API v1 (`gcloud run deploy`) e gerido aqui como v2. O import funciona,

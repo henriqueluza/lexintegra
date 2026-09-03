@@ -176,12 +176,17 @@ Diferente da verificação do Google, não há revisão pública nem espera de s
 |---|---|
 | `pnpm quality` (ESLint + dependency-cruiser + cobertura) | Verde. 22 testes, cobertura acima do limiar nos três pacotes |
 | `terraform fmt` e `terraform validate` | Verde |
-| `terraform plan` | **Não executado** — falta ADC na máquina (`gcloud auth application-default login`) |
+| `terraform plan` | Verde. `11 to import, 36 to add, 2 to change, **0 to destroy**`, com nenhum recurso importado aparecendo como `will be created` |
 | Imagem da API (`docker build` e `docker run`) | Constrói (257 MB), sobe como usuário não-root, `/api/health` devolve 200 com o `commitSha` |
 | Prefixo global `/api` | `/api/health` responde 200; `/health` responde 404, como esperado |
 | Ausência de CORS | Nenhum cabeçalho `Access-Control-*` na resposta (ADR-15) |
 | Pré-renderização do Angular | `dist/web/browser/index.html` sai com `ng-server-context="ssg"` e o conteúdo da landing no HTML |
 | Source maps | Gerados como `hidden`, sem `sourceMappingURL` no bundle; o deploy os arquiva no bucket privado e os remove antes de publicar |
+
+**Duas armadilhas que a primeira execução real do pipeline revelou, e que os testes locais não pegavam:**
+
+1. **`pnpm install --frozen-lockfile` falhava em máquina limpa.** A chave correta no pnpm 11 é `allowBuilds`, em forma de mapa; o `onlyBuiltDependencies` em lista, do pnpm 10, é aceito por `pnpm config get` mas ignorado pelo install. Localmente passava só porque o install era no-op sobre `node_modules` já populado.
+2. **O Terraform 1.16 honra apenas o primeiro bloco `import` de um recurso com `for_each`**, descartando os demais em silêncio — sem erro e sem warning, com o recurso aparecendo como `will be created`. Foi o critério de revisão ("nenhum importado pode aparecer como create") que pegou isso; sem ele, o apply teria falhado por conflito num binding que já existia. A forma correta é um único bloco `import` com `for_each`. Detalhado em `infra/terraform/README.md`.
 
 **Pendente para fechar a etapa:** abrir o PR, revisar o `terraform plan` que o CI comenta — critério: **nenhum recurso de `imports.tf` pode aparecer como "will be created"** —, fazer o merge, e conferir o smoke test. Depois do primeiro apply verde, remover `infra/terraform/imports.tf`.
 

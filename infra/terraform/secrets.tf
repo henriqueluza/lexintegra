@@ -29,9 +29,12 @@ resource "google_secret_manager_secret" "abacatepay_api_key_dev" {
 }
 
 locals {
+  # Literais, nao referencias a atributo de recurso: o `for_each` de um bloco de
+  # import precisa ser resolvivel em tempo de plan. A ordem que a referencia dava
+  # de graca vira `depends_on` explicito abaixo.
   secrets = {
-    resend     = google_secret_manager_secret.resend_api_key.secret_id
-    abacatepay = google_secret_manager_secret.abacatepay_api_key_dev.secret_id
+    resend     = "resend-api-key"
+    abacatepay = "abacatepay-api-key-dev"
   }
 }
 
@@ -43,6 +46,11 @@ resource "google_secret_manager_secret_iam_member" "api_runtime" {
   secret_id = each.value
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.api_runtime.email}"
+
+  depends_on = [
+    google_secret_manager_secret.resend_api_key,
+    google_secret_manager_secret.abacatepay_api_key_dev,
+  ]
 }
 
 # --- Acesso da service account padrao do Compute (IMPORTADO) ------------------
@@ -58,4 +66,9 @@ resource "google_secret_manager_secret_iam_member" "compute_default" {
   secret_id = each.value
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${var.project_number}-compute@developer.gserviceaccount.com"
+
+  depends_on = [
+    google_secret_manager_secret.resend_api_key,
+    google_secret_manager_secret.abacatepay_api_key_dev,
+  ]
 }

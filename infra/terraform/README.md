@@ -71,6 +71,31 @@ duração existe em lugar nenhum — não há segredo de GCP cadastrado no GitHu
 | `secrets.tf`           | Containers dos secrets e as concessões de leitura           |
 | `cloud_run.tf`         | Serviço `api-lexintegra`                                    |
 
+## Armadilha do `import` com `for_each`
+
+Quando o recurso usa `for_each`, o Terraform 1.16 honra **apenas o primeiro** bloco
+`import` daquele endereço. O segundo é descartado **em silêncio** — sem erro, sem
+warning — e o recurso aparece no plan como `will be created`.
+
+Isso aconteceu de verdade aqui com `google_secret_manager_secret_iam_member.compute_default`:
+o binding de `resend` importava e o de `abacatepay` planejava criar um binding que já
+existia. Comprovado invertendo a ordem dos blocos — o ignorado passou a ser o outro —
+e um `id` propositalmente inválido no segundo bloco também não gerava erro nenhum.
+
+**Forma correta:** um único bloco com `for_each`, cobrindo todas as instâncias.
+
+```hcl
+import {
+  for_each = local.secrets
+  to       = google_secret_manager_secret_iam_member.compute_default[each.key]
+  id       = "projects/${var.project_id}/secrets/${each.value} roles/... serviceAccount:..."
+}
+```
+
+O `for_each` de um bloco de import precisa ser resolvível em tempo de plan, então
+`local.secrets` é um mapa de **literais**, não de referências a atributo de recurso;
+a ordenação que a referência dava de graça virou `depends_on` explícito.
+
 ## `imports.tf` é temporário
 
 Contém os blocos `import` dos recursos do bootstrap. **Remover num commit seguinte,
@@ -92,11 +117,17 @@ cd infra/terraform && terraform init && terraform plan
 
 ## Riscos registrados
 
-- **Import do Cloud Run.** O serviço foi criado pela API v1 (`gcloud run deploy`) e
-  é gerido aqui como `google_cloud_run_v2_service`. O import funciona, mas pode
-  gerar drift em `launch_stage` e em anotações herdadas. Se o diff for
-  irreconciliável, o fallback é `google_cloud_run_service` (v1) — mantendo **o mesmo
-  nome de serviço e a mesma região**, nunca criando um serviço novo.
+- **Import do Cloud Run — avaliado, risco baixo.** O serviço foi criado pela API v1
+  (`gcloud run deploy`) e é gerido aqui como `google_cloud_run_v2_service`. O plan
+  real mostrou que o único resíduo da v1 é metadado inócuo (`client = "gcloud"` e
+  `client_version`, ambos indo a `null`). O fallback para `google_cloud_run_service`
+  (v1) não foi necessário.
+- **`cpu` é `"1000m"`, não `"1"`.** É a forma que a API devolve; escrever `"1"`
+  produz diferença perpétua no plan.
+- **`startup_cpu_boost` fica explícito.** O serviço já rodava com ele ligado, por
+  padrão do `gcloud`. Com `min-instances = 0`, o cold start é risco aceito
+  (arquitetura, seção 3.1 e risco 7) — deixá-lo cair no import pioraria justamente
+  o que a arquitetura mitiga.
 - **`prevent_destroy`** está ligado no bucket de state, no Firestore, no keyring e na
   chave do KMS e nos secrets. Isso é intencional: são recursos cuja destruição é
   irreversível ou destrói o próprio Terraform.

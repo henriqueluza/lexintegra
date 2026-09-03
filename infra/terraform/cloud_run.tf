@@ -32,10 +32,19 @@ resource "google_cloud_run_v2_service" "api" {
 
       resources {
         limits = {
-          cpu    = "1"
+          # "1000m", nao "1": e a forma que a API devolve. Escrever "1" produz
+          # diferenca perpetua no plan, com o Terraform propondo a mesma mudanca
+          # a cada execucao.
+          cpu    = "1000m"
           memory = "512Mi"
         }
         cpu_idle = true
+
+        # O servico ja rodava com isso ligado, por padrao do `gcloud`. Manter
+        # explicito: com min-instances = 0, o cold start e risco aceito e
+        # documentado (arquitetura, secao 3.1 e risco 7), e desligar o boost de
+        # CPU na inicializacao pioraria justamente o que a arquitetura mitiga.
+        startup_cpu_boost = true
       }
 
       env {
