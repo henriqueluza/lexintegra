@@ -1,0 +1,19 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+allowBuilds:
+  '@parcel/watcher': set this to true or false
+  esbuild: set this to true or false
+  lmdb: set this to true or false
+  msgpackr-extract: set this to true or false
+  unrs-resolver: set this to true or false
+
+# Scripts de build de dependencia rodam so para o que precisa de binario nativo.
+# Lista explicita em vez de liberar geral.
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - esbuild
+  - lmdb
+  - msgpackr-extract
+  - unrs-resolver

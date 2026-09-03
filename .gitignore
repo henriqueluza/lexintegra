@@ -67,3 +67,22 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# --- Etapa 2: monorepo, build e infraestrutura ---
+
+# Builds
+dist/
+out-tsc/
+.angular/
+*.tsbuildinfo
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+
+# Nunca versionar credencial (regra inviolavel 9)
+*-service-account*.json
+application_default_credentials.json

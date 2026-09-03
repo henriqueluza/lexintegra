@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/spec",
+    "module": "preserve",
+    "types": ["jest", "node"]
+  },
+  "include": ["src/**/*.d.ts", "src/**/*.spec.ts", "setup-jest.ts"]
+}

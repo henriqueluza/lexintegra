@@ -1,0 +1,148 @@
+name: Deploy
+
+# Criterio de aceite da Etapa 2: um commit trivial na main chega em producao sem
+# intervencao manual. O gate de aprovacao manual (GitHub Environment com required
+# reviewer) foi adiado para a Etapa 12, quando houver dado real em producao —
+# decisao registrada em docs/plano-de-execucao.md.
+#
+# A protecao que existe hoje: revisao humana do PR antes do merge, e os hooks de
+# PreToolUse, que barram deploy direto do terminal.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Nunca dois deploys concorrentes: o segundo esperaria o lock do state do Terraform
+# de qualquer forma, e cancelar no meio deixaria o lock preso.
+concurrency:
+  group: deploy-producao
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  GCP_PROJECT_ID: plataforma-juridica-36bda
+  GCP_REGION: southamerica-east1
+  WIF_PROVIDER: projects/616781378293/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+  WIF_SERVICE_ACCOUNT: terraform-ci@plataforma-juridica-36bda.iam.gserviceaccount.com
+  REGISTRY: southamerica-east1-docker.pkg.dev
+  BUCKET_SOURCEMAPS: lexintegra-sourcemaps-36bda
+
+jobs:
+  publicar:
+    name: Build, infraestrutura e publicacao
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      # A mesma verificacao da CI. Nada vai para producao sem passar por ela, mesmo
+      # que o PR ja tenha rodado: o merge pode ter combinado dois branches verdes
+      # num resultado quebrado.
+      - name: Lint e testes
+        run: pnpm lint && pnpm test:coverage
+
+      - name: Autenticar no Google Cloud (sem chave JSON)
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v3
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.0
+
+      - name: Terraform init
+        run: terraform init -input=false
+        working-directory: infra/terraform
+
+      # Ovo antes da galinha: a imagem precisa de um repositorio para onde ser
+      # empurrada, e quem cria o repositorio e o Terraform. Esta etapa provisiona
+      # apenas o Artifact Registry (e as APIs de que ele depende); o restante da
+      # infraestrutura sai no apply completo, depois, junto com a imagem nova.
+      - name: Garantir o Artifact Registry
+        run: |
+          terraform apply -input=false -auto-approve -lock-timeout=5m \
+            -target=google_artifact_registry_repository.lexintegra
+        working-directory: infra/terraform
+
+      - name: Autorizar o Docker no Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      - name: Construir e enviar a imagem da API
+        env:
+          IMAGEM: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/api:${{ github.sha }}
+        run: |
+          # Contexto na raiz: o Dockerfile precisa do workspace pnpm inteiro.
+          docker build -f apps/api/Dockerfile -t "$IMAGEM" .
+          docker push "$IMAGEM"
+
+      # Unica fonte de verdade do servico Cloud Run e o Terraform. Nao ha
+      # `gcloud run deploy` neste pipeline: duas ferramentas escrevendo o mesmo
+      # servico produzem drift a cada apply.
+      - name: Aplicar a infraestrutura e publicar a imagem
+        env:
+          TF_VAR_api_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/api:${{ github.sha }}
+          TF_VAR_commit_sha: ${{ github.sha }}
+        run: terraform apply -input=false -auto-approve -lock-timeout=10m
+        working-directory: infra/terraform
+
+      - name: Build do Angular
+        run: pnpm --filter web build
+
+      # ADR-08: source maps ficam em bucket privado e nunca sao publicados junto do
+      # bundle. O build ja os gera sem o comentario sourceMappingURL (hidden), mas
+      # os arquivos existem no diretorio de saida e precisam sair antes do upload.
+      - name: Arquivar os source maps no bucket privado
+        run: |
+          gcloud storage cp "apps/web/dist/web/browser/*.map" \
+            "gs://${BUCKET_SOURCEMAPS}/${{ github.sha }}/" --quiet
+          find apps/web/dist/web/browser -name '*.map' -delete
+          echo "Source maps arquivados e removidos do diretorio de publicacao."
+
+      # A ordem importa: o Cloud Run precisa estar no ar antes do Hosting, porque o
+      # rewrite do Hosting aponta para o servico (ADR-15).
+      - name: Publicar o frontend no Firebase Hosting
+        run: |
+          pnpm dlx firebase-tools@latest \
+            deploy --only hosting \
+            --project "${GCP_PROJECT_ID}" \
+            --non-interactive
+
+      # Isto e o que prova o criterio de aceite. "Sem erro no log" nao serve:
+      # o health devolve o commitSha, e ele precisa ser o deste commit.
+      - name: Smoke test em producao
+        run: |
+          esperado="${{ github.sha }}"
+          for tentativa in $(seq 1 10); do
+            resposta=$(curl -fsS --max-time 30 https://lexintegra.com.br/api/health || true)
+            echo "tentativa ${tentativa}: ${resposta}"
+            if [ "$(printf '%s' "$resposta" | jq -r '.commitSha // empty')" = "$esperado" ]; then
+              echo "Deploy confirmado: /api/health responde com o commit ${esperado}."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "O endpoint de health nao reportou o commit ${esperado} apos 10 tentativas."
+          exit 1
+
+      - name: Conferir que a landing esta servindo HTML pre-renderizado
+        run: |
+          corpo=$(curl -fsS --max-time 30 https://lexintegra.com.br/)
+          printf '%s' "$corpo" | grep -q 'ng-server-context="ssg"' \
+            || { echo "A landing em producao nao esta pre-renderizada."; exit 1; }
+          echo "Landing pre-renderizada confirmada."

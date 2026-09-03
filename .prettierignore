@@ -1,0 +1,12 @@
+pnpm-lock.yaml
+dist
+coverage
+.angular
+docs/prototipos
+infra/terraform/.terraform
+
+# Documentos de projeto: reformatar cria ruido de diff sobre texto que e lido por
+# humano e citado por linha noutros documentos.
+docs/
+CLAUDE.md
+*.md

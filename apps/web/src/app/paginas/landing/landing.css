@@ -1,0 +1,36 @@
+.hero {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--s4);
+  padding: var(--s7) var(--s5);
+  max-width: 62rem;
+  margin: 0 auto;
+}
+
+.marca {
+  font-family: var(--fonte-interface);
+  font-size: 0.8125rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ouro-500);
+  margin: 0;
+}
+
+h1 {
+  font-family: var(--fonte-display);
+  font-weight: 300;
+  font-size: clamp(2rem, 6vw, 3.75rem);
+  line-height: 1.15;
+  margin: 0;
+  max-width: 22ch;
+}
+
+.subtitulo {
+  color: var(--creme-200);
+  max-width: 52ch;
+  margin: 0;
+  padding-top: var(--s3);
+  border-top: 1px solid var(--linha);
+}

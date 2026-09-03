@@ -1,0 +1,15 @@
+{
+  "singleQuote": true,
+  "trailingComma": "all",
+  "printWidth": 80,
+  "overrides": [
+    {
+      "files": "apps/web/**/*.html",
+      "options": { "parser": "angular" }
+    },
+    {
+      "files": "*.html",
+      "options": { "parser": "html" }
+    }
+  ]
+}

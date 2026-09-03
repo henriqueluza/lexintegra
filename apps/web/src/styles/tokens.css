@@ -1,0 +1,59 @@
+/*
+ * Tokens da Direcao A (Catedra), registrados em docs/design.md.
+ *
+ * Regra inviolavel 8: nenhum valor visual escrito direto em componente. Cor,
+ * espacamento e tipografia vem daqui.
+ *
+ * A Etapa 3 substitui este arquivo pelo sistema de design completo (variacoes de
+ * estado, componentes base, acessibilidade). Aqui existe so o vinculo, para que o
+ * esqueleto nao nasca com valor solto no componente e crie divida.
+ *
+ * As familias tipograficas sao substitutas ate o manual de marca da CONTRATANTE
+ * chegar (Etapa 0, item 0.2.1). Estao em token justamente para a troca nao exigir
+ * retrabalho de componente.
+ */
+:root {
+  /* Superficies — vinho profundo */
+  --vinho-900: #26050a;
+  --vinho-800: #340106;
+  --vinho-700: #420c11;
+  --vinho-600: #54151b;
+
+  /* Acento — dourado */
+  --ouro-500: #a8783c;
+  --ouro-400: #c39b5f;
+
+  /* Texto sobre fundo escuro */
+  --creme-50: #f2eee7;
+  --creme-200: #cfc4bb;
+  --creme-400: #9c8b85;
+
+  /* Divisores */
+  --linha: rgba(168, 120, 60, 0.24);
+  --linha-forte: rgba(168, 120, 60, 0.42);
+
+  /* Estados */
+  --ok: #7fa06b;
+  --alerta: #c98a3a;
+  --erro: #c96a63;
+
+  /* Tipografia */
+  --fonte-display: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --fonte-interface:
+    'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --texto-base: 16px;
+
+  /* Escala de espacamento */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 72px;
+  --s9: 112px;
+
+  /* Forma */
+  --raio: 2px;
+}

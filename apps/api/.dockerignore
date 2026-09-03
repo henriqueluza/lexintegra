@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/coverage
+**/.angular
+**/out-tsc
+**/.git
+**/*.md
+infra
+docs
+.github
