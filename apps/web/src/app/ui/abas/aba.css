@@ -1,0 +1,8 @@
+/*
+ * `tabindex="0"` no painel e proposital: quando o conteudo rola, quem navega por
+ * teclado precisa de um alvo focavel para rolar. O anel de foco global marca o
+ * painel inteiro, que e o comportamento esperado do padrao WAI-ARIA de abas.
+ */
+.aba__painel {
+  padding-top: var(--s4);
+}

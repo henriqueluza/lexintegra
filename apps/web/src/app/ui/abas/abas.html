@@ -1,0 +1,25 @@
+<div class="abas">
+  <div class="abas__lista" role="tablist" [attr.aria-label]="rotuloAcessivel()">
+    @for (aba of abas(); track $index) {
+    <button
+      #gatilho
+      class="abas__gatilho"
+      type="button"
+      role="tab"
+      [id]="idGatilho($index)"
+      [attr.aria-controls]="idPainel($index)"
+      [attr.aria-selected]="selecionada() === $index"
+      [attr.aria-disabled]="aba.desabilitada() ? 'true' : null"
+      [tabIndex]="selecionada() === $index ? 0 : -1"
+      [class.abas__gatilho--ativa]="selecionada() === $index"
+      [class.abas__gatilho--inerte]="aba.desabilitada()"
+      (click)="escolher($index)"
+      (keydown)="navegar($event, $index)"
+    >
+      {{ aba.rotulo() }}
+    </button>
+    }
+  </div>
+
+  <ng-content />
+</div>
