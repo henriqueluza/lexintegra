@@ -5,32 +5,7 @@ import type {
   EmailResultado,
   EmailTransport,
 } from './email-transport.js';
-
-/**
- * Endereco de e-mail em texto livre. Usado para tirar destinatario de mensagem de
- * erro de provedor antes que ela seja gravada no outbox ou registrada em log.
- *
- * O caso concreto: a conta de desenvolvimento do Resend responde "You can only
- * send testing emails to your own email address (fulano@dominio.com)". Sem esta
- * limpeza, esse endereco entra no Firestore e no Cloud Logging — dado pessoal
- * identificavel que a secao de LGPD proibe registrar.
- *
- * Heuristica, nao um analisador de RFC 5322 — e a assimetria e deliberada:
- * limpar demais estraga uma mensagem de diagnostico, limpar de menos deixa dado
- * pessoal em log. A classe da parte local exclui os delimitadores comuns para o
- * endereco entre parenteses nao levar os parenteses junto, e o dominio termina em
- * letras para o ponto final da frase nao ser engolido.
- */
-const ENDERECO = /[^\s<>()[\]{},;:"']+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
-
-export function redigirEnderecos(texto: string): string {
-  return texto.replace(ENDERECO, '[e-mail]');
-}
-
-function descrever(erro: unknown): string {
-  if (erro instanceof Error) return redigirEnderecos(erro.message);
-  return redigirEnderecos(String(erro));
-}
+import { descreverErro, redigirEnderecos } from './redigir.js';
 
 /**
  * Adaptador de producao (ADR-07.1). Unico arquivo do projeto que conhece o SDK do
@@ -66,7 +41,7 @@ export class ResendEmailTransport implements EmailTransport {
       return { sucesso: true, idProvedor: data.id };
     } catch (erro) {
       // Rede fora, DNS, timeout. Falha de transporte tambem e resultado.
-      return { sucesso: false, motivo: descrever(erro) };
+      return { sucesso: false, motivo: descreverErro(erro) };
     }
   }
 

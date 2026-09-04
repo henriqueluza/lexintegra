@@ -2,7 +2,8 @@ import type { Resend } from 'resend';
 import { EmailFalsoTransport } from './email-falso.transport.js';
 import type { EmailMensagem } from './email-transport.js';
 import { criarTransporte } from './email.module.js';
-import { redigirEnderecos, ResendEmailTransport } from './resend.transport.js';
+import { redigirEnderecos } from './redigir.js';
+import { ResendEmailTransport } from './resend.transport.js';
 
 type Envio = Parameters<Resend['emails']['send']>[0];
 type Resposta = Awaited<ReturnType<Resend['emails']['send']>>;
