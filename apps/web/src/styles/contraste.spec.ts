@@ -71,6 +71,19 @@ function carregarEscopos(): Record<Direcao, Map<string, string>> {
 
 const ESCOPOS = carregarEscopos();
 
+/*
+ * `--botao-secundario-fundo` e `transparent` na Catedra: o fundo efetivo e a
+ * superficie por tras. O teste precisa do valor pintado, nao do declarado.
+ */
+for (const direcao of ['catedra', 'pauta'] as const) {
+  const escopo = ESCOPOS[direcao];
+  const declarado = escopo.get('--botao-secundario-fundo');
+  escopo.set(
+    '--botao-secundario-fundo-conferido',
+    declarado === 'transparent' ? 'var(--superficie)' : (declarado as string),
+  );
+}
+
 /** Escopo extra: a Catedra reescopa `--acento` em superficie elevada. */
 const CATEDRA_ELEVADA = new Map([
   ...ESCOPOS.catedra,
@@ -209,6 +222,24 @@ const PARES: Record<Direcao, readonly Par[]> = {
       uso: 'botao primario preenchido',
     },
     {
+      frente: '--texto-sobre-acento',
+      fundo: '--acento-forte',
+      alvo: TEXTO,
+      uso: 'botao primario sob o ponteiro (estado hover)',
+    },
+    {
+      frente: '--botao-secundario-cor',
+      fundo: '--botao-secundario-fundo-conferido',
+      alvo: TEXTO,
+      uso: 'botao secundario',
+    },
+    {
+      frente: '--limite-controle',
+      fundo: '--superficie',
+      alvo: CONTROLE,
+      uso: 'borda do botao secundario (WCAG 1.4.11)',
+    },
+    {
       frente: '--estado-erro',
       fundo: '--superficie-elevada',
       alvo: TEXTO,
@@ -282,6 +313,24 @@ const PARES: Record<Direcao, readonly Par[]> = {
       fundo: '--acento',
       alvo: TEXTO,
       uso: 'botao primario preenchido',
+    },
+    {
+      frente: '--texto-sobre-acento',
+      fundo: '--acento-forte',
+      alvo: TEXTO,
+      uso: 'botao primario sob o ponteiro (estado hover)',
+    },
+    {
+      frente: '--botao-secundario-cor',
+      fundo: '--botao-secundario-fundo-conferido',
+      alvo: TEXTO,
+      uso: 'botao secundario',
+    },
+    {
+      frente: '--limite-controle',
+      fundo: '--superficie',
+      alvo: CONTROLE,
+      uso: 'borda do botao secundario (WCAG 1.4.11)',
     },
     {
       frente: '--campo-borda-cor',

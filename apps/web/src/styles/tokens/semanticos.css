@@ -87,10 +87,17 @@
 
   /* --- Camada 3: tokens de componente --- */
 
+  /*
+   * Limite de controle. Compartilhado por campo, selecao e botao secundario:
+   * a WCAG 1.4.11 exige 3:1 para a borda que delimita um controle, e os
+   * divisores decorativos da direcao ficam bem abaixo disso.
+   */
+  --limite-controle: var(--ouro-500);
+
   /* Campo: sublinhado, sem caixa. */
   --campo-fundo: transparent;
   --campo-borda-largura: 0 0 var(--borda-fina) 0;
-  --campo-borda-cor: var(--acento);
+  --campo-borda-cor: var(--limite-controle);
   --campo-preenchimento: var(--s3) 0;
   --campo-rotulo-cor: var(--acento);
   --campo-rotulo-caixa-alta: uppercase;
@@ -101,6 +108,9 @@
   --botao-preenchimento: var(--s3) var(--s5);
   --botao-preenchimento-p: var(--s2) var(--s3);
   --botao-peso: var(--peso-medio);
+  --botao-peso-primario: var(--peso-forte);
+  --botao-secundario-fundo: transparent;
+  --botao-secundario-cor: var(--acento-forte);
 
   /*
    * Selo de estado. A associacao estado→cor e fixa por ADR-11; o que muda entre
@@ -193,10 +203,13 @@
 
   /* --- Camada 3: tokens de componente --- */
 
+  /* Ver a nota em `--limite-controle` na Catedra. */
+  --limite-controle: var(--campo-borda);
+
   /* Campo: caixa branca com borda em volta. */
   --campo-fundo: var(--branco);
   --campo-borda-largura: var(--borda-fina);
-  --campo-borda-cor: var(--campo-borda);
+  --campo-borda-cor: var(--limite-controle);
   --campo-preenchimento: var(--s2) var(--s3);
   --campo-rotulo-cor: var(--texto-2);
   --campo-rotulo-caixa-alta: none;
@@ -207,6 +220,9 @@
   --botao-preenchimento: var(--s2) var(--s4);
   --botao-preenchimento-p: var(--s1) var(--s3);
   --botao-peso: var(--peso-medio);
+  --botao-peso-primario: var(--peso-medio);
+  --botao-secundario-fundo: var(--superficie-elevada);
+  --botao-secundario-cor: var(--texto-2);
 
   /*
    * Selo de estado: pilula preenchida. Este e o componente central da direcao
