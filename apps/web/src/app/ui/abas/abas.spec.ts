@@ -181,6 +181,25 @@ describe('Abas', () => {
 
       expect(hospedeiro.ativa()).toBe(0);
     });
+
+    /**
+     * Grupo em que TODAS as abas estao desabilitadas: a seta nao tem para onde
+     * ir. Sem o caso, a busca circular percorreria a lista inteira e cairia num
+     * indice invalido em vez de simplesmente nao se mover.
+     */
+    it('nao se move quando nao ha nenhuma aba habilitada', () => {
+      const fixture = TestBed.createComponent(TodasInertes);
+      fixture.detectChanges();
+      const raiz = fixture.nativeElement as HTMLElement;
+      const gatilhos = Array.from(
+        raiz.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+      );
+
+      teclar(gatilhos[0], 'ArrowRight');
+      fixture.detectChanges();
+
+      expect(gatilhos[0].getAttribute('aria-selected')).toBe('true');
+    });
   });
 
   it('anuncia qual aba esta selecionada', () => {
@@ -193,3 +212,14 @@ describe('Abas', () => {
     ]);
   });
 });
+
+@Component({
+  imports: [Abas, Aba],
+  template: `
+    <app-abas rotuloAcessivel="Tudo indisponivel">
+      <app-aba rotulo="Uma" [desabilitada]="true"><p>um</p></app-aba>
+      <app-aba rotulo="Duas" [desabilitada]="true"><p>dois</p></app-aba>
+    </app-abas>
+  `,
+})
+class TodasInertes {}

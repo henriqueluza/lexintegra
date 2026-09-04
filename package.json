@@ -20,7 +20,9 @@
     "quality": "pnpm run lint && pnpm run test:coverage",
     "test:coverage": "pnpm --filter \"./apps/*\" --filter \"./packages/*\" test:coverage",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:visual": "pnpm --filter web test:visual",
+    "test:a11y": "pnpm --filter web test:a11y"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

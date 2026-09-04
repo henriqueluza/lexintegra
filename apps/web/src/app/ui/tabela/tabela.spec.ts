@@ -93,6 +93,19 @@ describe('Tabela', () => {
     });
 
     /**
+     * Celula sem valor precisa virar celula vazia, nao a string "undefined" — que
+     * e o que `String(undefined)` produziria, e que ja apareceu em producao em
+     * mais de um sistema.
+     */
+    it('desenha celula vazia quando o dado nao existe', () => {
+      const el = montar({ linhas: [{ nome: 'Sem estado', estado: null }] });
+      const celulas = el.querySelectorAll('tbody tr:first-child td');
+
+      expect(celulas[1].textContent?.trim()).toBe('');
+      expect(celulas[2].textContent?.trim()).toBe('');
+    });
+
+    /**
      * Uma tabela sem nome acessivel chega ao leitor de tela como "tabela, 3
      * colunas, 2 linhas" e nada mais. A legenda fica oculta na tela para nao
      * mudar o desenho, mas existe no DOM.

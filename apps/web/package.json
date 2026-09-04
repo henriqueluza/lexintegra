@@ -10,7 +10,10 @@
     "watch": "ng build --watch --configuration development",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:visual": "../../scripts/visual.sh",
+    "test:visual:gravar": "../../scripts/visual.sh --update-snapshots",
+    "test:a11y": "../../scripts/visual.sh a11y"
   },
   "dependencies": {
     "@angular/common": "^22.1.0",
@@ -29,11 +32,14 @@
     "@angular/build": "^22.1.6",
     "@angular/cli": "^22.1.6",
     "@angular/compiler-cli": "^22.1.0",
+    "@axe-core/playwright": "^4.13.0",
     "@fontsource-variable/archivo": "^5.3.0",
     "@fontsource-variable/source-serif-4": "^5.3.0",
     "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@playwright/test": "^1.62.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.0",
+    "axe-core": "^4.13.0",
     "jest": "^30.5.1",
     "jest-environment-jsdom": "^30.5.1",
     "jest-preset-angular": "^17.0.0",

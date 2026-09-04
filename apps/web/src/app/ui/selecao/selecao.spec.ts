@@ -89,6 +89,15 @@ describe('Selecao', () => {
     expect(controle.value).toBe('trabalhista');
   });
 
+  it('marca como tocado ao sair do campo', () => {
+    const { raiz, controle } = montar();
+    expect(controle.touched).toBe(false);
+
+    select(raiz).dispatchEvent(new Event('blur'));
+
+    expect(controle.touched).toBe(true);
+  });
+
   it('fica desabilitado pelo formulario', () => {
     const { raiz, controle, detectar } = montar();
     controle.disable();

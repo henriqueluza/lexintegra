@@ -84,14 +84,27 @@ for (const direcao of ['catedra', 'pauta'] as const) {
   );
 }
 
-/** Escopo extra: a Catedra reescopa `--acento` em superficie elevada. */
-const CATEDRA_ELEVADA = new Map([
-  ...ESCOPOS.catedra,
-  ...declaracoes(
-    readFileSync(join(PASTA, 'semanticos.css'), 'utf8'),
-    "[data-direcao='catedra'] .superficie-elevada",
-  ),
-]);
+/**
+ * Escopo extra: `.superficie-elevada` reescopa `--acento` para
+ * `--acento-em-elevada`, que cada direcao define. A regra e direcao-agnostica de
+ * proposito — ver a nota longa em `semanticos.css`.
+ */
+const ELEVADA: Record<Direcao, Map<string, string>> = {
+  catedra: new Map([
+    ...ESCOPOS.catedra,
+    ...declaracoes(
+      readFileSync(join(PASTA, 'semanticos.css'), 'utf8'),
+      '.superficie-elevada',
+    ),
+  ]),
+  pauta: new Map([
+    ...ESCOPOS.pauta,
+    ...declaracoes(
+      readFileSync(join(PASTA, 'semanticos.css'), 'utf8'),
+      '.superficie-elevada',
+    ),
+  ]),
+};
 
 // --------------------------------------------------------------------------
 // Cor
@@ -206,8 +219,8 @@ const PARES: Record<Direcao, readonly Par[]> = {
       frente: '--acento',
       fundo: '--superficie-elevada',
       alvo: TEXTO,
-      uso: 'rotulo dentro de cartao ou formulario',
-      escopo: CATEDRA_ELEVADA,
+      uso: 'rotulo dentro de cartao, tabela ou formulario',
+      escopo: ELEVADA.catedra,
     },
     {
       frente: '--acento-forte',
@@ -307,6 +320,20 @@ const PARES: Record<Direcao, readonly Par[]> = {
       fundo: '--superficie-elevada',
       alvo: TEXTO,
       uso: 'acao primaria em texto',
+    },
+    {
+      /*
+       * O mesmo par da Catedra, agora na Pauta. Ele existe porque a primeira
+       * versao do desvio de escopo era `[data-direcao='catedra'] .superficie-elevada`,
+       * e as direcoes se ANINHAM: um cartao da area do cliente continua sendo
+       * descendente do `<html data-direcao="catedra">` e herdava o dourado da
+       * Catedra sobre fundo branco. Este par falharia naquela versao.
+       */
+      frente: '--acento',
+      fundo: '--superficie-elevada',
+      alvo: TEXTO,
+      uso: 'acao dentro de cartao ou tabela, com a direcao aninhada',
+      escopo: ELEVADA.pauta,
     },
     {
       frente: '--texto-sobre-acento',

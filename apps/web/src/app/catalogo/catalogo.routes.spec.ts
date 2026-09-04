@@ -30,6 +30,28 @@ describe('rotas do catalogo', () => {
   });
 
   /**
+   * Resolve de fato cada componente lazy, como `app.routes.spec.ts` faz com as
+   * rotas publicas. Um nome de export errado em `loadComponent` compila, passa no
+   * lint e so quebra quando alguem clica no link — e num catalogo de doze
+   * paginas, e o tipo de coisa que fica quebrada por semanas.
+   */
+  it('resolve todos os componentes de secao', async () => {
+    const comLazy = filhas.filter(
+      (
+        r,
+      ): r is Route & { loadComponent: NonNullable<Route['loadComponent']> } =>
+        typeof r.loadComponent === 'function',
+    );
+    expect(comLazy.length).toBe(PECAS.length);
+
+    for (const rota of comLazy) {
+      await expect(
+        Promise.resolve((rota.loadComponent as () => unknown)()),
+      ).resolves.toBeDefined();
+    }
+  });
+
+  /**
    * O substituto de producao precisa estar VAZIO, e nao so diferente: e a lista
    * vazia que remove os `import()` das secoes do grafo de modulos e faz o
    * empacotador descartar o catalogo inteiro. Uma rota sobrando aqui republicaria

@@ -41,6 +41,8 @@
   --acento: var(--ouro-500);
   --acento-forte: var(--ouro-400);
   --acento-fundo: var(--ouro-100);
+  /* Ver o bloco `.superficie-elevada` no fim deste arquivo. */
+  --acento-em-elevada: var(--ouro-400);
 
   /* Divisores e foco */
   --divisor: var(--linha);
@@ -157,6 +159,8 @@
   --acento: var(--vinho);
   --acento-forte: var(--vinho-claro);
   --acento-fundo: var(--vinho-bg);
+  /* Na Pauta o acento ja passa sobre o branco (12,39:1): nao ha desvio. */
+  --acento-em-elevada: var(--vinho);
 
   /* Divisores e foco */
   --divisor: var(--borda);
@@ -251,18 +255,30 @@
 }
 
 /*
- * DESVIO DE ESCOPO EM SUPERFICIE ELEVADA — Catedra.
+ * DESVIO DE ESCOPO EM SUPERFICIE ELEVADA.
  *
  * `--ouro-500` da 4,70:1 sobre `--vinho-800`, mas cai para 4,19:1 sobre
- * `--vinho-700`, que e o fundo de formulario e de cartao. Como a cor e medida do
- * portfolio da CONTRATANTE (ADR-10), a correcao NAO e mudar o valor: e restringir
- * onde ele pode aparecer. Todo elemento que sobe para a superficie elevada
- * reescopa `--acento` para o dourado claro (6,33:1) — em um lugar so, em vez de
- * cada consumidor precisar lembrar da regra.
+ * `--vinho-700`, que e o fundo de formulario, cartao e tabela na Catedra. Como a
+ * cor foi medida do portfolio da CONTRATANTE (ADR-10), a correcao NAO e mudar o
+ * valor: e restringir onde ele aparece. Todo componente que sobe para a
+ * superficie elevada declara a classe `superficie-elevada` e reescopa `--acento`.
  *
- * A classe e aplicada pelo componente `app-cartao`; o teste de contraste cobre os
- * dois escopos.
+ * A REGRA ABAIXO E DIRECAO-AGNOSTICA DE PROPOSITO, e isso e o ponto.
+ *
+ * A primeira versao era `[data-direcao='catedra'] .superficie-elevada`, e estava
+ * errada: as direcoes se ANINHAM. O `<html>` e sempre `catedra`, e a shell
+ * autenticada poe `pauta` num elemento abaixo dele — entao um cartao dentro da
+ * area do cliente continua sendo descendente de um `[data-direcao='catedra']` e
+ * herdaria o dourado da Catedra sobre fundo branco. O catalogo reproduz
+ * exatamente esse aninhamento, e o axe pegou.
+ *
+ * Com a indirecao, `--acento-em-elevada` vem do bloco de direcao MAIS PROXIMO,
+ * pela heranca normal de custom property, e a regra estrutural nao precisa saber
+ * de direcao nenhuma.
+ *
+ * Licao geral: em `semanticos.css`, seletor que mistura `[data-direcao]` com
+ * descendente e sempre suspeito.
  */
-[data-direcao='catedra'] .superficie-elevada {
-  --acento: var(--ouro-400);
+.superficie-elevada {
+  --acento: var(--acento-em-elevada);
 }

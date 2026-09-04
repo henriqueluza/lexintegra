@@ -67,7 +67,13 @@
   background: #f4f4f1;
 }
 
-.catalogo__link--ativo {
+/*
+ * Especificidade, e nao estilo: `.catalogo__indice a` (0,1,1) vence
+ * `.catalogo__link--ativo` (0,1,0), e o link ativo saia cinza escuro sobre quase
+ * preto. Achado pelo axe na suite de acessibilidade — nenhum teste de componente
+ * pegaria, porque o problema so existe depois de a cascata resolver.
+ */
+.catalogo__indice a.catalogo__link--ativo {
   background: #1c1b1e;
   color: #ffffff;
 }

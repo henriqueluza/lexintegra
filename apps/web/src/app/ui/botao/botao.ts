@@ -1,9 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { Icone, type NomeIcone } from '../icone/icone';
 
 export type VarianteBotao = 'primario' | 'secundario' | 'fantasma' | 'texto';
@@ -46,10 +41,6 @@ export class Botao {
    * chega ao leitor de tela como um controle sem nome.
    */
   readonly rotuloAcessivel = input<string | null>(null);
-
-  protected readonly inerte = computed(
-    () => this.desabilitado() || this.carregando(),
-  );
 
   /**
    * Enquanto carrega o botao continua focavel e clicavel pelo navegador — e a

@@ -55,6 +55,11 @@ export class CelulaTabela {
  * `data-rotulo` — atributo escrito pelo proprio componente, e nao pelo
  * consumidor, para nao existir tabela que esquece de ser responsiva.
  *
+ * A classe `superficie-elevada` no template nao e decorativa: ela reescopa
+ * `--acento`, que na Catedra reprova em contraste sobre o fundo elevado. Todo
+ * componente que pinta `--superficie-elevada` como fundo precisa declara-la — o
+ * botao de acao dentro de uma celula depende disso.
+ *
  * LARGURA DE COLUNA nao e parametro: seria valor visual entrando por input e
  * saindo em `style=`, que e exatamente o que o criterio de aceite da etapa
  * proibe. Quem precisa de largura especifica escreve no CSS do proprio consumidor.
