@@ -9,7 +9,9 @@ Registro da decisão de direção visual (Etapa 1) e o que ela implica para o de
 | Landing page pública | **A — Cátedra** | rotas fora de autenticação: `/`, páginas de marketing |
 | Módulos internos (área do cliente) | **B — Pauta** | tudo atrás de login: pedidos, serviços contratados, arquivos, dados da empresa |
 
-As duas direções foram avaliadas lado a lado na Etapa 1 (ver `LexIntegra-tres-direcoes-visuais.pdf` e os três protótipos `direcao-A-catedra.html`, `direcao-B-pauta.html`, `direcao-C-margem.html`). A direção C — Margem, editorial, foi descartada: perde no critério de densidade de estados, que é o que a área do cliente mais precisa carregar.
+As duas direções foram avaliadas lado a lado na Etapa 1. A direção C — Margem, editorial, foi descartada: perde no critério de densidade de estados, que é o que a área do cliente mais precisa carregar.
+
+**O que está versionado, e o que não está.** `docs/prototipos/` contém `direcao-A-catedra.html` e `direcao-B-pauta.html`. O protótipo da direção descartada (`direcao-C-margem.html`), a versão definitiva da landing (`lexintegra-landing.html`) e o PDF comparativo (`LexIntegra-tres-direcoes-visuais.pdf`) foram produzidos na Etapa 1 mas **não foram versionados** — a referência anterior a eles neste documento apontava para um caminho de sessão (`/mnt/user-data/outputs/`) que não existe no repositório. Ou os arquivos entram em `docs/prototipos/`, ou esta seção é a fonte da decisão.
 
 ### Por que duas direções, não uma
 
@@ -92,11 +94,11 @@ Junto do chip, cada entregável carrega um medidor de quatro segmentos (`.medido
 
 ## O que os protótipos já resolvem — reaproveitar, não redesenhar
 
-Os arquivos abaixo (em `/mnt/user-data/outputs/`, a serem versionados no repositório do projeto) já cobrem, em HTML/CSS estático, os estados que a Etapa 2 em diante vai precisar implementar de fato:
+Os arquivos abaixo já cobrem, em HTML/CSS estático, os estados que a Etapa 2 em diante vai precisar implementar de fato:
 
 - **`direcao-A-catedra.html`** — landing e cadastro na direção A, com a vitrine de serviços "travada" até o cadastro (regra de negócio: catálogo só aparece após criar acesso).
 - **`direcao-B-pauta.html`** — área do cliente completa na direção B: dois pedidos cobrindo os quatro estados de entregável, saldo de reunião esgotado, reunião sem link gerado (regra 13), observação do advogado preenchida e vazia, arquivos em 2 de 3 e estado vazio.
-- **`lexintegra-landing.html`** — versão definitiva da landing em A, com hero de produto (moldura de navegador mostrando a área do cliente).
+- **`lexintegra-landing.html`** — versão definitiva da landing em A, com hero de produto (moldura de navegador mostrando a área do cliente). **Não versionado** (ver acima).
 
 Os experimentos de hero animado (`lexintegra-landing-martelo.html`, `lexintegra-landing-3d.html`) ficam registrados como exploração, não como decisão fechada — nenhum dos dois foi aprovado para produção. Se um deles avançar, a Etapa 6 (performance) precisa medir o custo antes: a versão 3D carrega Three.js (~170KB) no caminho crítico de uma página estática, o que tensiona a regra 10 mesmo sem chamada de API.
 
@@ -105,4 +107,41 @@ Os experimentos de hero animado (`lexintegra-landing-martelo.html`, `lexintegra-
 1. **Dispensa escrita do item 2.1.1** — a direção A herda paleta medida do portfólio do escritório contratante. Publicar sem essa dispensa por escrito expõe a CONTRATADA.
 2. **Tipografia oficial** — Source Serif 4, IBM Plex Sans e Archivo são substitutas. Trocar por tokens de fonte, não por edição manual de cada componente.
 3. **Componentização** — nenhum dos protótipos foi escrito como componente Angular; são referência visual e de comportamento, não código a portar diretamente.
-4. **Auditoria de contraste** — texto terciário sobre fundo vinho (`--creme-400` sobre `--vinho-800`) e chip claro sobre `--papel` em B devem passar por checagem WCAG AA antes da Etapa 6.
+4. ~~**Auditoria de contraste**~~ — **feita na Etapa 3.** Resultado abaixo.
+
+## Auditoria de contraste (Etapa 3)
+
+Os dois pares que este documento listava como suspeitos **não eram os problemas**:
+
+- `--creme-400` sobre `--vinho-800` já dava **5,59:1**, acima de AA.
+- "Chip claro sobre `--papel`" (~1,1:1) não é violação: a WCAG 1.4.11 fala do limite de **controle interativo**, e chip não é controle. O critério que se aplica é o 1.4.1 (uso de cor), atendido enquanto o chip carregar rótulo textual. Isso virou regra dura no componente `app-selo-estado`, com teste: não existe modo "só cor".
+
+Seis outros pares reprovavam, e foram corrigidos:
+
+| Par | Antes | Correção |
+|---|---|---|
+| B, `--ouro` sobre `--ouro-bg` (chip "Em elaboração") | 3,92 | `--ouro`: `#8A7639` → **`#7E6C34`** |
+| B, `--fraquissimo` sobre `--papel` (placeholder, metadado) | 2,70 | rampa desce um degrau: `--fraco` → **`#5A595E`**, `--fraquissimo` → **`#6E6D73`** |
+| A, `--erro` sobre `--vinho-700` (erro dentro do formulário) | 4,43 | `--erro`: `#C96A63` → **`#DC746C`** |
+| A, `--ouro-500` sobre `--vinho-700` (rótulo em cartão) | 4,19 | valor **não muda** (ADR-10): superfície elevada reescopa o acento para `--ouro-400` |
+| A e B, borda de campo (`--linha-forte` / `--borda-forte`) | 1,77 / 1,71 | token dedicado `--limite-controle`; os divisores decorativos ficam como estavam |
+
+`--ouro-500` e os vinhos não foram alterados de propósito: são cores medidas do portfólio da CONTRATANTE (ADR-10), e mexer nelas é decisão de marca, não de implementação. O `--ouro` da direção B **não** é o dourado da marca, então escurecê-lo foi seguro.
+
+A auditoria é hoje um teste (`apps/web/src/styles/contraste.spec.ts`): 57 pares lidos dos arquivos de token de verdade, com `var()` resolvido como o navegador resolve. Um token clareado por engano derruba a suíte.
+
+## Como as duas direções convivem no código (Etapa 3)
+
+Três camadas de token, em `apps/web/src/styles/tokens/`:
+
+1. **Primitivos**, com os nomes deste documento, um arquivo por direção.
+2. **Semânticos** (`--superficie`, `--texto`, `--acento`), definidos dentro de `[data-direcao='catedra']` e `[data-direcao='pauta']`.
+3. **Tokens de componente** (`--campo-borda-largura`, `--selo-raio`), que absorvem as diferenças estruturais.
+
+**Componente nunca lê primitivo.** É isso que permite um único jogo de componentes servir as duas direções: o campo é sublinhado na Cátedra e caixa branca na Pauta sem nenhum ramo dentro do componente.
+
+**As direções se aninham, e isso importa.** O `<html>` é sempre `catedra`; a shell autenticada põe `pauta` num elemento abaixo dele. Consequência prática: **seletor que mistura `[data-direcao]` com descendente é sempre suspeito** — o primeiro desvio de escopo foi escrito assim e vazava o dourado da Cátedra para dentro da área do cliente. O padrão correto é indireção de token (`--acento-em-elevada`), definida em cada bloco de direção, com a regra estrutural agnóstica.
+
+**Escala de espaçamento é única** para as duas direções. Os valores do protótipo da Pauta foram encaixados nela (28→32, 26→24, 18→16, 14→16, 11→12, 9→8).
+
+**Tipografia é servida do próprio domínio** (`@fontsource`), não do CDN do Google: o CDN receberia o IP de todo visitante de uma plataforma jurídica sem necessidade. Continua trocável num token só quando o manual de marca chegar.
