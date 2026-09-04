@@ -1,0 +1,10 @@
+<div
+  class="erro"
+  [class.erro--bloco]="variante() === 'bloco'"
+  [class.erro--linha]="variante() === 'linha'"
+  [attr.role]="variante() === 'bloco' ? 'alert' : null"
+  [attr.id]="id()"
+>
+  <app-icone nome="alerta" tamanho="p" />
+  <span><ng-content /></span>
+</div>

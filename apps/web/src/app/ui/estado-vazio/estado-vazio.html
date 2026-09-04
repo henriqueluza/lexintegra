@@ -1,0 +1,9 @@
+<div class="vazio">
+  @if (icone() !== null) {
+  <app-icone [nome]="icone()!" />
+  } @if (titulo() !== null) {
+  <p class="vazio__titulo">{{ titulo() }}</p>
+  }
+  <p class="vazio__mensagem">{{ mensagem() }}</p>
+  <ng-content />
+</div>
