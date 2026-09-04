@@ -1,0 +1,26 @@
+<div
+  class="cartao"
+  [class.superficie-elevada]="variante() === 'elevado'"
+  [class.cartao--plano]="variante() === 'plano'"
+>
+  @if (titulo() !== null || descricao() !== null || temCabecalhoProjetado()) {
+  <header class="cartao__cabecalho">
+    @if (titulo() !== null) {
+    <h3 class="cartao__titulo">{{ titulo() }}</h3>
+    } @if (descricao() !== null) {
+    <p class="cartao__descricao">{{ descricao() }}</p>
+    }
+    <ng-content select="[appCartaoCabecalho]" />
+  </header>
+  }
+
+  <div class="cartao__corpo">
+    <ng-content />
+  </div>
+
+  @if (temRodape()) {
+  <footer class="cartao__rodape">
+    <ng-content select="[appCartaoRodape]" />
+  </footer>
+  }
+</div>

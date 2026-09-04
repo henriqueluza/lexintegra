@@ -1,0 +1,63 @@
+.cartao {
+  background: var(--superficie-elevada);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio);
+  color: var(--texto);
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+ * Sem fundo proprio: o cartao plano existe para a vitrine em grade de 1px da
+ * Catedra, onde a borda e compartilhada entre vizinhos e o preenchimento
+ * quebraria a continuidade.
+ */
+.cartao--plano {
+  background: transparent;
+}
+
+.cartao__cabecalho {
+  padding: var(--s4) var(--s5);
+  border-bottom: var(--borda-fina) solid var(--divisor);
+}
+
+.cartao__titulo {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t3);
+  font-weight: var(--peso-titulo);
+  line-height: var(--altura-titulo);
+  letter-spacing: var(--letra-titulo);
+}
+
+.cartao__descricao {
+  margin-top: var(--s1);
+  font-size: var(--t-mini);
+  color: var(--texto-3);
+  line-height: var(--altura-densa);
+  max-width: var(--medida-auxiliar);
+}
+
+.cartao__corpo {
+  padding: var(--s5);
+  flex: 1;
+}
+
+.cartao__rodape {
+  padding: var(--s3) var(--s5);
+  border-top: var(--borda-fina) solid var(--divisor);
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .cartao__cabecalho,
+  .cartao__corpo {
+    padding: var(--s4);
+  }
+
+  .cartao__rodape {
+    padding: var(--s3) var(--s4);
+  }
+}
