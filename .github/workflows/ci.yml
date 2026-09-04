@@ -45,7 +45,9 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
-      - name: Lint (ESLint + dependency-cruiser)
+      - name: Lint (ESLint + stylelint + dependency-cruiser)
+        # O stylelint aqui e o criterio de aceite da Etapa 3: nenhuma cor,
+        # espacamento ou tamanho de fonte escrito direto numa tela.
         run: pnpm lint
 
       - name: Testes unitarios com limiar de cobertura
@@ -64,6 +66,79 @@ jobs:
           grep -q 'ng-server-context="ssg"' "$arquivo" \
             || { echo "index.html nao foi pre-renderizado"; exit 1; }
           echo "Pre-renderizacao confirmada."
+
+      - name: Conferir que o catalogo de componentes nao foi publicado
+        # O catalogo e ferramenta de desenvolvimento: a configuracao de producao
+        # troca suas rotas por uma lista vazia (`fileReplacements` no
+        # angular.json). Se alguem remover essa troca, o catalogo passa a ser
+        # servido em lexintegra.com.br/catalogo sem que nada mais quebre.
+        #
+        # Source map fica de fora da busca: ele e `hidden` e nunca vai junto com o
+        # pacote (ADR-08, e o `ignore` de **/*.map no firebase.json).
+        run: |
+          achados=$(grep -rl 'app-secao-\|catalogo__indice' \
+            apps/web/dist/web/browser \
+            --include='*.js' --include='*.html' --include='*.css' || true)
+          if [ -n "$achados" ]; then
+            echo "O catalogo vazou para o pacote de producao:"; echo "$achados"; exit 1
+          fi
+          echo "Catalogo ausente do pacote publicado, como esperado."
+
+  # A versao da imagem precisa ser a MESMA do @playwright/test, porque a imagem
+  # traz os navegadores compilados para aquela versao, e a mesma que
+  # `scripts/visual.sh` usa localmente — e o que garante um unico conjunto de
+  # imagens de referencia. Ler do package.json em vez de repetir aqui: uma
+  # constante duplicada envelhece na primeira atualizacao de dependencia, e o
+  # sintoma seria diferenca de renderizacao dificil de rastrear.
+  versao-playwright:
+    name: Versao do Playwright
+    runs-on: ubuntu-latest
+    outputs:
+      imagem: ${{ steps.ler.outputs.imagem }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: ler
+        run: |
+          versao=$(node -p "require('./apps/web/package.json').devDependencies['@playwright/test'].replace(/^[\^~]/,'')")
+          echo "imagem=mcr.microsoft.com/playwright:v${versao}-noble" >> "$GITHUB_OUTPUT"
+          echo "Imagem: mcr.microsoft.com/playwright:v${versao}-noble"
+
+  visual:
+    name: Acessibilidade e regressao visual
+    needs: versao-playwright
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ needs.versao-playwright.outputs.imagem }}
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Servidor de desenvolvimento, axe e regressao visual
+        # O catalogo e removido do pacote de producao de proposito, entao a suite
+        # roda contra o servidor de desenvolvimento, que o proprio Playwright sobe
+        # (ver `webServer` em playwright.config.ts).
+        run: pnpm exec playwright test
+        working-directory: apps/web
+
+      - name: Guardar as diferencas quando falhar
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-diferencas
+          path: |
+            apps/web/test-results/
+            apps/web/playwright-report/
+          retention-days: 7
 
   terraform:
     name: Terraform (validate e plan)
