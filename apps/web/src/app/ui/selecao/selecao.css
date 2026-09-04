@@ -1,0 +1,79 @@
+.selecao {
+  display: block;
+}
+
+.selecao__rotulo {
+  display: block;
+  font-size: var(--campo-rotulo-tamanho);
+  font-weight: var(--peso-medio);
+  letter-spacing: var(--campo-rotulo-espaco);
+  text-transform: var(--campo-rotulo-caixa-alta);
+  color: var(--campo-rotulo-cor);
+  margin-bottom: var(--s2);
+}
+
+.selecao__obrigatorio {
+  color: var(--estado-erro);
+}
+
+.selecao__caixa {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.selecao__controle {
+  width: 100%;
+  appearance: none;
+  font-family: var(--fonte-interface);
+  font-size: var(--t-menor);
+  line-height: var(--altura-densa);
+  color: var(--texto);
+  background: var(--campo-fundo);
+  border-style: solid;
+  border-width: var(--campo-borda-largura);
+  border-color: var(--campo-borda-cor);
+  border-radius: var(--raio);
+  /* Espaco a direita para a seta desenhada por cima nao cobrir o texto. */
+  padding: var(--campo-preenchimento);
+  padding-right: var(--s6);
+  cursor: pointer;
+  transition: border-color var(--duracao-rapida) ease;
+}
+
+.selecao__controle:hover:not(:disabled) {
+  border-color: var(--acento);
+}
+
+.selecao__controle:focus-visible {
+  border-color: var(--acento-forte);
+}
+
+.selecao__controle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.selecao--invalida .selecao__controle {
+  border-color: var(--estado-erro);
+}
+
+/*
+ * A seta e sobreposta porque `appearance: none` remove a do navegador. Rotacionar
+ * a seta-direita evita um icone so para isto. `pointer-events: none` mantem o
+ * clique chegando ao `<select>`, que e quem abre a lista.
+ */
+.selecao__seta {
+  position: absolute;
+  right: var(--s3);
+  color: var(--texto-3);
+  pointer-events: none;
+  transform: rotate(90deg);
+}
+
+.selecao__dica {
+  margin-top: var(--s2);
+  font-size: var(--t-micro);
+  color: var(--texto-3);
+  line-height: var(--altura-densa);
+}
