@@ -51,6 +51,9 @@ module.exports = {
           '\\.(json|css|html|d\\.ts)$',
           '\\.config\\.(mjs|cjs|js|ts)$',
           '^apps/web/(setup-jest|src/main|src/main\\.server)\\.ts$',
+          // Substituto de producao do catalogo: entra no grafo por
+          // `fileReplacements` do angular.json, nao por import.
+          '^apps/web/src/app/catalogo/catalogo\\.routes\\.prod\\.ts$',
         ],
       },
       to: {},

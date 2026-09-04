@@ -1,0 +1,27 @@
+<app-pagina
+  titulo="Abas"
+  descricao="Use o teclado: Tab entra na lista uma vez só, as setas andam entre as abas e pulam a desabilitada, Home e End vão aos extremos. Mover o foco já troca o painel."
+>
+  <ng-template #estados>
+    <app-amostra rotulo="Três abas, a segunda desabilitada" [larga]="true">
+      <app-abas rotuloAcessivel="Situação dos pedidos">
+        <app-aba rotulo="Em andamento">
+          <p>Dois pedidos em andamento.</p>
+        </app-aba>
+        <app-aba rotulo="Concluídos" [desabilitada]="true">
+          <p>Nenhum pedido concluído ainda.</p>
+        </app-aba>
+        <app-aba rotulo="Todos">
+          <p>Dois pedidos no total.</p>
+        </app-aba>
+      </app-abas>
+    </app-amostra>
+  </ng-template>
+
+  <app-vitrine direcao="catedra">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+  <app-vitrine direcao="pauta">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+</app-pagina>

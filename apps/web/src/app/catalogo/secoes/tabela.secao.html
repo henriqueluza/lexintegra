@@ -1,0 +1,51 @@
+<app-pagina
+  titulo="Tabela"
+  descricao="Com dados, carregando e vazia. Estreite a janela abaixo de 720px: a grade vira lista empilhada e o rótulo da coluna passa a acompanhar cada célula."
+>
+  <ng-template #estados>
+    <app-amostra rotulo="Com dados, célula por template" [larga]="true">
+      <app-tabela
+        [colunas]="COLUNAS"
+        [linhas]="ENTREGAVEIS"
+        legenda="Entregáveis do pedido"
+      >
+        <ng-template appCelulaTabela let-linha let-coluna="coluna">
+          @switch (coluna.chave) { @case ('estado') {
+          <app-selo-estado [estado]="comoEntregavel(linha).estado" />
+          } @case ('acao') {
+          <app-botao variante="texto" tamanho="p">Abrir</app-botao>
+          } @default { {{ linha[coluna.chave] }} } }
+        </ng-template>
+      </app-tabela>
+    </app-amostra>
+
+    <app-amostra rotulo="Carregando" [larga]="true">
+      <app-tabela
+        [colunas]="COLUNAS"
+        [linhas]="VAZIA"
+        [carregando]="true"
+        legenda="Entregáveis do pedido"
+      />
+    </app-amostra>
+
+    <app-amostra rotulo="Vazia, com saída" [larga]="true">
+      <app-tabela
+        [colunas]="COLUNAS"
+        [linhas]="VAZIA"
+        legenda="Entregáveis do pedido"
+        mensagemVazia="Nenhum entregável ainda. Eles aparecem aqui assim que o advogado iniciar o trabalho."
+      >
+        <app-botao appTabelaAcaoVazio variante="secundario" tamanho="p">
+          Ver serviços
+        </app-botao>
+      </app-tabela>
+    </app-amostra>
+  </ng-template>
+
+  <app-vitrine direcao="catedra">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+  <app-vitrine direcao="pauta">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+</app-pagina>

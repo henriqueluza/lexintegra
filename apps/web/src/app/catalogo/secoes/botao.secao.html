@@ -1,0 +1,41 @@
+<app-pagina
+  titulo="Botão"
+  descricao="Quatro variantes, dois tamanhos. Desabilitado e carregando são estados diferentes: o desabilitado fica inerte, o carregando continua focável para não perder o foco no meio de um envio."
+>
+  <ng-template #estados>
+    <app-amostra rotulo="Primário">
+      <app-botao variante="primario">Criar acesso</app-botao>
+    </app-amostra>
+    <app-amostra rotulo="Secundário">
+      <app-botao variante="secundario">Ver serviços</app-botao>
+    </app-amostra>
+    <app-amostra rotulo="Fantasma">
+      <app-botao variante="fantasma">Cancelar</app-botao>
+    </app-amostra>
+    <app-amostra rotulo="Texto">
+      <app-botao variante="texto">Saiba mais</app-botao>
+    </app-amostra>
+    <app-amostra rotulo="Com ícone">
+      <app-botao variante="secundario" icone="enviar">Enviar arquivo</app-botao>
+    </app-amostra>
+    <app-amostra rotulo="Pequeno">
+      <app-botao variante="secundario" tamanho="p">Baixar</app-botao>
+    </app-amostra>
+    <app-amostra rotulo="Desabilitado">
+      <app-botao variante="primario" [desabilitado]="true">Contratar</app-botao>
+    </app-amostra>
+    <app-amostra rotulo="Carregando">
+      <app-botao variante="primario" [carregando]="true">Contratar</app-botao>
+    </app-amostra>
+    <app-amostra rotulo="Só ícone">
+      <app-botao variante="fantasma" icone="fecha" rotuloAcessivel="Fechar" />
+    </app-amostra>
+  </ng-template>
+
+  <app-vitrine direcao="catedra">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+  <app-vitrine direcao="pauta">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+</app-pagina>

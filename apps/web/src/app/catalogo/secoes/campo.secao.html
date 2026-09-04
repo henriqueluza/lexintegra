@@ -1,0 +1,57 @@
+<app-pagina
+  titulo="Campo"
+  descricao="A diferença entre as direções — sublinhado na Cátedra, caixa branca na Pauta — é inteiramente token. O mesmo componente, sem ramo por direção."
+>
+  <ng-template #estados>
+    <app-amostra rotulo="Normal">
+      <app-campo
+        [formControl]="vazio"
+        rotulo="Razão social"
+        marcador="Como consta no CNPJ"
+      />
+    </app-amostra>
+    <app-amostra rotulo="Preenchido">
+      <app-campo [formControl]="preenchido" rotulo="Razão social" />
+    </app-amostra>
+    <app-amostra rotulo="Obrigatório, com dica">
+      <app-campo
+        [formControl]="vazio"
+        rotulo="CNPJ"
+        [obrigatorio]="true"
+        dica="Apenas números."
+      />
+    </app-amostra>
+    <app-amostra rotulo="Erro">
+      <app-campo
+        [formControl]="comErro"
+        rotulo="CNPJ"
+        erro="Informe um CNPJ válido."
+      />
+    </app-amostra>
+    <app-amostra rotulo="Desabilitado">
+      <app-campo [formControl]="inerte" rotulo="Razão social" />
+    </app-amostra>
+    <app-amostra rotulo="Somente leitura">
+      <app-campo
+        [formControl]="leitura"
+        rotulo="CNPJ"
+        [somenteLeitura]="true"
+      />
+    </app-amostra>
+    <app-amostra rotulo="Multilinha" [larga]="true">
+      <app-campo
+        [formControl]="texto"
+        rotulo="Descreva o caso"
+        [multilinha]="true"
+        marcador="Sem dados de terceiros nesta etapa."
+      />
+    </app-amostra>
+  </ng-template>
+
+  <app-vitrine direcao="catedra">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+  <app-vitrine direcao="pauta">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+</app-pagina>

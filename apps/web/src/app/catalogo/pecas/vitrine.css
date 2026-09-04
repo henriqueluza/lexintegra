@@ -1,0 +1,31 @@
+:host {
+  display: block;
+}
+
+.vitrine {
+  background: var(--superficie);
+  color: var(--texto);
+  font-family: var(--fonte-interface);
+  font-size: var(--texto-base);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio);
+  overflow: hidden;
+}
+
+.vitrine__nome {
+  padding: var(--s2) var(--s4);
+  background: var(--superficie-sutil);
+  border-bottom: var(--borda-fina) solid var(--divisor);
+  font-size: var(--t-nano);
+  letter-spacing: var(--letra-caixa-alta);
+  text-transform: uppercase;
+  color: var(--texto-fraco);
+}
+
+.vitrine__palco {
+  padding: var(--s5);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s5);
+  align-items: flex-start;
+}

@@ -1,0 +1,60 @@
+<app-pagina
+  titulo="Tokens"
+  descricao="Os tokens semânticos — o que o componente de fato consome. Comparar --vinho-800 com --papel não diria nada, porque os dois nunca aparecem na mesma tela; o que interessa é ver o mesmo papel resolvido em cada direção."
+>
+  <ng-template #estados>
+    <app-amostra rotulo="--superficie">
+      <span class="amostra-cor amostra-cor--superficie"></span>
+    </app-amostra>
+    <app-amostra rotulo="--superficie-elevada">
+      <span class="amostra-cor amostra-cor--elevada"></span>
+    </app-amostra>
+    <app-amostra rotulo="--superficie-sutil">
+      <span class="amostra-cor amostra-cor--sutil"></span>
+    </app-amostra>
+    <app-amostra rotulo="--acento">
+      <span class="amostra-cor amostra-cor--acento"></span>
+    </app-amostra>
+    <app-amostra rotulo="--acento-forte">
+      <span class="amostra-cor amostra-cor--acento-forte"></span>
+    </app-amostra>
+    <app-amostra rotulo="--limite-controle">
+      <span class="amostra-cor amostra-cor--limite"></span>
+    </app-amostra>
+
+    <app-amostra rotulo="Rampa de texto" [larga]="true">
+      <p class="amostra-texto amostra-texto--1">--texto · principal</p>
+      <p class="amostra-texto amostra-texto--2">--texto-2 · secundário</p>
+      <p class="amostra-texto amostra-texto--3">--texto-3 · terciário</p>
+      <p class="amostra-texto amostra-texto--fraco">--texto-fraco · metadado</p>
+    </app-amostra>
+
+    <app-amostra rotulo="Escala tipográfica" [larga]="true">
+      <p class="amostra-escala amostra-escala--t1">--t-t1 · título de página</p>
+      <p class="amostra-escala amostra-escala--t2">--t-t2 · título de seção</p>
+      <p class="amostra-escala amostra-escala--t3">--t-t3 · título de cartão</p>
+      <p class="amostra-escala amostra-escala--corpo">--t-corpo · corpo</p>
+      <p class="amostra-escala amostra-escala--menor">--t-menor · secundário</p>
+      <p class="amostra-escala amostra-escala--nano">--t-nano · metadado</p>
+    </app-amostra>
+
+    <app-amostra rotulo="Espaçamento (--s1 a --s9)" [larga]="true">
+      <span class="amostra-espaco amostra-espaco--1"></span>
+      <span class="amostra-espaco amostra-espaco--2"></span>
+      <span class="amostra-espaco amostra-espaco--3"></span>
+      <span class="amostra-espaco amostra-espaco--4"></span>
+      <span class="amostra-espaco amostra-espaco--5"></span>
+      <span class="amostra-espaco amostra-espaco--6"></span>
+      <span class="amostra-espaco amostra-espaco--7"></span>
+      <span class="amostra-espaco amostra-espaco--8"></span>
+      <span class="amostra-espaco amostra-espaco--9"></span>
+    </app-amostra>
+  </ng-template>
+
+  <app-vitrine direcao="catedra">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+  <app-vitrine direcao="pauta">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+</app-pagina>

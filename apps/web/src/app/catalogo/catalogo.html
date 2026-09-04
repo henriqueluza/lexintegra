@@ -1,0 +1,30 @@
+<div class="catalogo">
+  <header class="catalogo__topo">
+    <p class="catalogo__marca">LexIntegra · sistema de design</p>
+    <p class="catalogo__aviso">
+      Catálogo de desenvolvimento. Não é publicado em produção.
+    </p>
+  </header>
+
+  <div class="catalogo__corpo">
+    <nav class="catalogo__indice" aria-label="Componentes do sistema">
+      <ul>
+        @for (peca of pecas; track peca.rota) {
+        <li>
+          <a
+            [routerLink]="peca.rota"
+            routerLinkActive="catalogo__link--ativo"
+            #ativo="routerLinkActive"
+            [attr.aria-current]="ativo.isActive ? 'page' : null"
+            >{{ peca.nome }}</a
+          >
+        </li>
+        }
+      </ul>
+    </nav>
+
+    <main class="catalogo__palco">
+      <router-outlet />
+    </main>
+  </div>
+</div>

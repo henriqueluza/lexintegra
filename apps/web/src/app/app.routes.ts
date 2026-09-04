@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { catalogoRoutes } from './catalogo/catalogo.routes';
 
 /**
  * Regra inviolavel 10: rota publica nao chama a API antes do pre-cadastro. E a
@@ -7,6 +8,12 @@ import { Routes } from '@angular/router';
  * dispare HTTP deve entrar nas rotas abaixo.
  */
 export const routes: Routes = [
+  /*
+   * O catalogo de componentes so existe em desenvolvimento: em producao o
+   * angular.json troca `catalogo.routes.ts` por um arquivo que exporta lista
+   * vazia, e o empacotador remove o catalogo do pacote publicado.
+   */
+  ...catalogoRoutes,
   {
     path: '',
     loadComponent: () =>

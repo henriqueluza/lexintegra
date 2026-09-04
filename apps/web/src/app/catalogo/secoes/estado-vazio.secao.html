@@ -1,0 +1,34 @@
+<app-pagina
+  titulo="Estado vazio"
+  descricao="Estado vazio não é ausência de tela: é a tela que explica por que está vazio e o que fazer a respeito. Sem saída, vira beco."
+>
+  <ng-template #estados>
+    <app-amostra rotulo="Só mensagem">
+      <app-estado-vazio mensagem="Nenhum arquivo ainda." />
+    </app-amostra>
+    <app-amostra rotulo="Com ícone e título">
+      <app-estado-vazio
+        icone="documento"
+        titulo="Sem arquivos de apoio"
+        mensagem="Anexe holerites ou contratos que ajudem a explicar o caso."
+      />
+    </app-amostra>
+    <app-amostra rotulo="Com saída">
+      <app-estado-vazio
+        icone="enviar"
+        mensagem="Anexe até 3 arquivos, de 5 MB cada."
+      >
+        <app-botao variante="secundario" tamanho="p" icone="enviar">
+          Enviar arquivo
+        </app-botao>
+      </app-estado-vazio>
+    </app-amostra>
+  </ng-template>
+
+  <app-vitrine direcao="catedra">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+  <app-vitrine direcao="pauta">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+</app-pagina>

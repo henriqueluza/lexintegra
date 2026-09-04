@@ -1,3 +1,16 @@
+/*
+ * O hospedeiro e inline-flex e o <button> ocupa ele inteiro: assim o consumidor
+ * pode dimensionar `app-botao` diretamente, sem precisar saber que ha um button
+ * dentro.
+ */
+:host {
+  display: inline-flex;
+}
+
+:host > .botao {
+  flex: 1;
+}
+
 .botao {
   display: inline-flex;
   align-items: center;

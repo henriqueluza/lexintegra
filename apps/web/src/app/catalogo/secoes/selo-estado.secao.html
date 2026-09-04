@@ -1,0 +1,22 @@
+<app-pagina
+  titulo="Selo de estado"
+  descricao="Os quatro estados da máquina do entregável, na ordem de ESTADOS_ENTREGAVEL. As cores são fixas por ADR-11 e nenhuma tela as recolore. O chip nunca aparece sem rótulo: o fundo contrasta ~1,1:1 com o papel, e é o texto que cumpre a WCAG 1.4.1."
+>
+  <ng-template #estados>
+    @for (estado of ESTADOS; track estado) {
+    <app-amostra [rotulo]="estado">
+      <app-selo-estado [estado]="estado" />
+    </app-amostra>
+    }
+    <app-amostra rotulo="Sem medidor">
+      <app-selo-estado estado="em_revisao" [comMedidor]="false" />
+    </app-amostra>
+  </ng-template>
+
+  <app-vitrine direcao="catedra">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+  <app-vitrine direcao="pauta">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+</app-pagina>

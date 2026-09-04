@@ -35,6 +35,12 @@
           },
           "configurations": {
             "production": {
+              "fileReplacements": [
+                {
+                  "replace": "src/app/catalogo/catalogo.routes.ts",
+                  "with": "src/app/catalogo/catalogo.routes.prod.ts"
+                }
+              ],
               "budgets": [
                 {
                   "type": "initial",

@@ -1,0 +1,26 @@
+:host {
+  display: block;
+}
+
+/* Casca neutra: ver a nota em catalogo.css. */
+.pagina__titulo {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.pagina__descricao {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: #414045;
+  max-width: 68ch;
+  line-height: 1.55;
+}
+
+.pagina__vitrines {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

@@ -1,3 +1,7 @@
+:host {
+  display: block;
+}
+
 .carregando__forma {
   display: flex;
   flex-direction: column;

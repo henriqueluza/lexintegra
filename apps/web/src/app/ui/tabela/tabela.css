@@ -1,3 +1,7 @@
+:host {
+  display: block;
+}
+
 .tabela {
   background: var(--superficie-elevada);
   border: var(--borda-fina) solid var(--divisor);

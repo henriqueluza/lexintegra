@@ -1,3 +1,7 @@
+:host {
+  display: block;
+}
+
 /*
  * Borda tracejada: e a convencao que separa "aqui nao ha nada" de "aqui ha um
  * cartao". Divisor decorativo, nao limite de controle — o contraste baixo e

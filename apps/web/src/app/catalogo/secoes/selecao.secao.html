@@ -1,0 +1,53 @@
+<app-pagina
+  titulo="Seleção"
+  descricao="Um <select> nativo por baixo. O marcador é uma opção desabilitada, não um placeholder — <select> não tem placeholder, e uma opção habilitada com texto de instrução seria escolhível como resposta válida."
+>
+  <ng-template #estados>
+    <app-amostra rotulo="Com marcador">
+      <app-selecao
+        [formControl]="vazia"
+        rotulo="Área do direito"
+        [opcoes]="AREAS"
+        marcador="Escolha uma área"
+      />
+    </app-amostra>
+    <app-amostra rotulo="Escolhida">
+      <app-selecao
+        [formControl]="escolhida"
+        rotulo="Área do direito"
+        [opcoes]="AREAS"
+      />
+    </app-amostra>
+    <app-amostra rotulo="Obrigatória, com dica">
+      <app-selecao
+        [formControl]="vazia"
+        rotulo="Área do direito"
+        [opcoes]="AREAS"
+        [obrigatorio]="true"
+        dica="Pode ser alterada depois."
+      />
+    </app-amostra>
+    <app-amostra rotulo="Erro">
+      <app-selecao
+        [formControl]="comErro"
+        rotulo="Área do direito"
+        [opcoes]="AREAS"
+        erro="Escolha uma área."
+      />
+    </app-amostra>
+    <app-amostra rotulo="Desabilitada">
+      <app-selecao
+        [formControl]="inerte"
+        rotulo="Área do direito"
+        [opcoes]="AREAS"
+      />
+    </app-amostra>
+  </ng-template>
+
+  <app-vitrine direcao="catedra">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+  <app-vitrine direcao="pauta">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+</app-pagina>

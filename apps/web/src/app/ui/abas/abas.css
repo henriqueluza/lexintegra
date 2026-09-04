@@ -1,3 +1,7 @@
+:host {
+  display: block;
+}
+
 .abas__lista {
   display: flex;
   gap: var(--s2);

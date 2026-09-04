@@ -1,0 +1,22 @@
+<app-pagina
+  titulo="Ícone"
+  descricao="Traço de 1,5px, sem preenchimento, terminação reta. As três propriedades que fazem o conjunto parecer da mesma família vivem no CSS do componente, não no ponto de uso. Por padrão o ícone é decorativo e invisível ao leitor de tela."
+>
+  <ng-template #estados>
+    @for (nome of NOMES; track nome) {
+    <app-amostra [rotulo]="nome">
+      <app-icone [nome]="nome" />
+    </app-amostra>
+    }
+    <app-amostra rotulo="Tamanho pequeno">
+      <app-icone nome="documento" tamanho="p" />
+    </app-amostra>
+  </ng-template>
+
+  <app-vitrine direcao="catedra">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+  <app-vitrine direcao="pauta">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+</app-pagina>
