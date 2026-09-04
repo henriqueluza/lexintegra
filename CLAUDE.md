@@ -187,6 +187,15 @@ Há decisões de produto ainda em aberto listadas em `docs/plano-de-execucao.md`
 
 Pare também quando: a mudança exigir novo serviço externo, alterar custo recorrente, tocar regra de segurança do Firestore de forma não trivial, ou contradizer qualquer regra da seção acima.
 
+## Scripts de execução manual apenas
+
+Scripts dentro de `scripts/manual-only/` (ex. `atribuir-admin.js`) nunca devem ser
+executados por sessão de agente — nem sugeridos, nem rodados automaticamente.
+Elevação de privilégio (atribuição de custom claims) é a operação mais sensível
+do sistema e deve ser executada apenas manualmente, pelo desenvolvedor, fora
+desta sessão. Se o contexto da tarefa exigir uma claim atribuída, pare e peça
+para o desenvolvedor rodar o script correspondente ele mesmo.
+
 ## Sobre os limites deste arquivo
 
 Este documento é contexto, não configuração imposta. As proibições que realmente importam — `terraform apply`, `deploy`, `delete` em recurso de nuvem, leitura de credencial, escrita de custom claim, chamada à API de produção do gateway — são barradas por hook de `PreToolUse` em `.claude/hooks/` (já implementado e commitado, ver `.claude/settings.json`). Se um comando for bloqueado, isso é o sistema funcionando: peça ao humano para executar.

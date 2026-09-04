@@ -8,9 +8,18 @@ packages:
 # A chave e `allowBuilds`, em forma de MAPA. O `onlyBuiltDependencies` em lista,
 # do pnpm 10, e aceito por `pnpm config get` mas ignorado pelo install no pnpm 11 —
 # um install limpo falha com ERR_PNPM_IGNORED_BUILDS mesmo parecendo configurado.
+#
+# `false` tambem e uma resposta, e as duas entradas `false` abaixo sao da Etapa 4:
+# firebase-admin traz @firebase/util e protobufjs, e os dois tem script de
+# instalacao. Nenhum dos dois compila binario nativo para o nosso uso — o
+# postinstall do protobufjs so gera artefatos da CLI dele, que nao usamos — e o
+# Dockerfile da API ja instala com --ignore-scripts. Omitir as duas nao e neutro:
+# o install limpo FALHA pedindo uma decisao explicita.
 allowBuilds:
+  '@firebase/util': false
   '@parcel/watcher': true
   esbuild: true
   lmdb: true
   msgpackr-extract: true
+  protobufjs: false
   unrs-resolver: true

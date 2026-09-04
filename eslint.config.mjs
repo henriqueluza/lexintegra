@@ -22,10 +22,41 @@ export default tseslint.config(
       'docs/prototipos/**',
       'infra/**',
       'public/**',
+      /*
+       * Fora do alcance da sessao de agente por politica (ver CLAUDE.md, "Scripts
+       * de execucao manual apenas"): sao os scripts de elevacao de privilegio, e
+       * quem os edita e o desenvolvedor, a mao. Reportar violacao em arquivo que
+       * o agente nao pode abrir para corrigir so produz um `pnpm lint` vermelho
+       * que ninguem tem como fechar.
+       */
+      'scripts/manual-only/**',
     ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    /*
+     * Scripts de apoio da raiz: Node em CommonJS, executados a mao, nunca
+     * empacotados. O `languageOptions` padrao do projeto e o do codigo de
+     * aplicacao (ESM, sem globais de Node), e sem este bloco cada `require` e
+     * cada `process` vira erro de `no-undef`.
+     */
+    files: ['scripts/**/*.js'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: {
+        module: 'writable',
+        require: 'readonly',
+        process: 'readonly',
+        console: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
   {
     // Arquivos de configuracao CommonJS na raiz.
     files: ['**/*.cjs'],
