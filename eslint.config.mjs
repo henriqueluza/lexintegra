@@ -82,6 +82,17 @@ export default tseslint.config(
       ],
       'max-depth': ['error', 4],
       '@typescript-eslint/no-explicit-any': 'error',
+      /*
+       * O prefixo `_` ja e a convencao do projeto para parametro deliberadamente
+       * nao usado — `it.each((_caso, valor) => ...)` aparece em varios testes. O
+       * padrao do preset e `after-used`, que so reclama do ultimo parametro, e
+       * por isso a convencao vinha passando por acidente ate um caso de um
+       * parametro so aparecer. Torna-la explicita e o que a faz valer sempre.
+       */
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/explicit-function-return-type': [
         'warn',
         { allowExpressions: true },
