@@ -1,0 +1,56 @@
+/*
+ * Camada 1 — primitivos da Direcao B (Pauta), registrados em docs/design.md.
+ *
+ * Clara e operacional: prioriza densidade e leitura rapida de estado sobre
+ * impacto visual. Vive atras da fronteira de autenticacao — tudo que roda logado
+ * usa esta direcao.
+ *
+ * Os nomes sao identicos aos de `docs/design.md` de proposito, para o documento
+ * continuar sendo leitura valida do codigo.
+ *
+ * NENHUM componente le um token deste arquivo. Componente le token semantico
+ * (`semanticos.css`), e a direcao ativa decide qual primitivo esta por tras.
+ * Esse desvio e o que permite um jogo unico de componentes servir as duas
+ * direcoes sem `@if (direcao === ...)` dentro de template.
+ */
+:root {
+  /* Superficies */
+  --papel: #f4f4f1;
+  --branco: #ffffff;
+  --painel: #fafaf8;
+
+  /* Rampa de texto — quatro niveis, todos >= 4,5:1 sobre as tres superficies */
+  --tinta: #1c1b1e;
+  --grafite: #414045;
+  --fraco: #6e6d73;
+  --fraquissimo: #96959b;
+
+  /* Divisores */
+  --borda: #dededa;
+  --borda-forte: #c6c6c1;
+
+  /* Acao primaria — unico uso de vinho nesta direcao */
+  --vinho: #6c0c0c;
+  --vinho-claro: #8a1a1a;
+  --vinho-bg: #f7eaea;
+
+  /*
+   * Cores de estado do entregavel. A associacao estado→cor e FIXA (ADR-11,
+   * regra inviolavel 14 e docs/design.md): solicitado azul, em elaboracao ouro,
+   * em revisao vinho, entregue verde. Nenhuma tela recolore ou reordena.
+   *
+   * O `--ouro` daqui NAO e o dourado da marca (`--ouro-500`, medido do portfolio
+   * da CONTRATANTE, ADR-10). E cor de trabalho desta direcao, o que torna
+   * ajuste de contraste nela uma decisao de implementacao, nao de marca.
+   */
+  --ouro: #8a7639;
+  --ouro-bg: #f5f1e2;
+  --azul: #3b4b7a;
+  --azul-bg: #dee2ee;
+  --verde: #2f6b45;
+  --verde-bg: #e4efe7;
+
+  /* Texto sobre os fundos de chip, quando o bloco inteiro e colorido */
+  --azul-texto: #2a3654;
+  --ouro-texto: #5d4e22;
+}

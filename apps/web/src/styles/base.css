@@ -1,0 +1,84 @@
+/*
+ * Base global: reset, tipografia herdada e as duas politicas que precisam valer
+ * em toda a aplicacao — foco visivel e respeito a `prefers-reduced-motion`.
+ *
+ * Este arquivo, junto de `styles/tokens/**`, e o UNICO lugar onde valor visual
+ * literal e permitido. O stylelint desliga a regra de token aqui e a aplica em
+ * todo o resto (ver `.stylelintrc.json`) — e esse par que torna o criterio de
+ * aceite da Etapa 3 verificavel em vez de combinado.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--superficie);
+  color: var(--texto);
+  font-family: var(--fonte-interface);
+  font-size: var(--texto-base);
+  line-height: var(--altura-corpo);
+  -webkit-font-smoothing: antialiased;
+  /*
+   * docs/design.md, Direcao B: numero de pedido e valor nao devem "dancar" ao
+   * atualizar. Ligado globalmente porque a Catedra tambem usa numeral grande
+   * como recurso de hierarquia, e o problema e o mesmo.
+   */
+  font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+figure,
+blockquote {
+  margin: 0;
+}
+
+svg {
+  display: block;
+}
+
+a {
+  color: var(--acento-forte);
+}
+
+/*
+ * Foco visivel em toda a aplicacao. `:focus-visible`, nao `:focus`: o anel
+ * aparece para quem navega por teclado e nao polui o clique de mouse. Componente
+ * nenhum tem permissao de escrever `outline: none` sem repor um indicador
+ * proprio — WCAG 2.4.7.
+ */
+:focus-visible {
+  outline: var(--borda-media) solid var(--foco);
+  outline-offset: var(--foco-deslocamento);
+}
+
+/*
+ * Sob `prefers-reduced-motion`, nada anima. Vale para o esqueleto de
+ * carregamento, para as transicoes de botao e para a rolagem suave.
+ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
