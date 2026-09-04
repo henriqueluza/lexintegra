@@ -1,0 +1,14 @@
+<span class="selo-estado">
+  <span class="selo" [class]="selo().classe">{{ selo().rotulo }}</span>
+
+  @if (comMedidor()) {
+  <span class="medidor" aria-hidden="true">
+    @for (segmento of segmentos(); track segmento.indice) {
+    <span
+      class="medidor__parte"
+      [class.medidor__parte--aceso]="segmento.aceso"
+    ></span>
+    }
+  </span>
+  }
+</span>
