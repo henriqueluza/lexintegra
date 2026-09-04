@@ -1,4 +1,12 @@
-import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+} from '@nestjs/common';
 import {
   esquemaNovoAdvogado,
   type AdvogadoResumo,
@@ -43,5 +51,29 @@ export class AdvogadosController {
     @UsuarioAtual() admin: UsuarioAutenticado,
   ): Promise<AdvogadoResumo> {
     return this.advogados.criar(dados, admin.uid);
+  }
+
+  /**
+   * Suspensao como RECURSO, nao como verbo: `POST` cria a suspensao, `DELETE` a
+   * remove. Um `PATCH` com `{ status }` no corpo convidaria a tratar status como
+   * campo editavel — e status de advogado nao e dado que se digita, e o resultado
+   * de uma operacao com tres efeitos (ver `advogados.service.ts`).
+   */
+  @Post(':uid/suspensao')
+  @HttpCode(200)
+  suspender(
+    @Param('uid') uid: string,
+    @UsuarioAtual() admin: UsuarioAutenticado,
+  ): Promise<AdvogadoResumo> {
+    return this.advogados.suspender(uid, admin.uid);
+  }
+
+  @Delete(':uid/suspensao')
+  @HttpCode(200)
+  reativar(
+    @Param('uid') uid: string,
+    @UsuarioAtual() admin: UsuarioAutenticado,
+  ): Promise<AdvogadoResumo> {
+    return this.advogados.reativar(uid, admin.uid);
   }
 }

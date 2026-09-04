@@ -1,4 +1,10 @@
-import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import type { Auth, UserRecord } from 'firebase-admin/auth';
 import {
   FieldValue,
@@ -106,6 +112,78 @@ export class AdvogadosService {
             : null,
       };
     });
+  }
+
+  /**
+   * Suspensao (item 2.4.6, arquitetura 7.4).
+   *
+   * MARCAR UM CAMPO NAO SUSPENDE NINGUEM. Sao tres efeitos, e a ordem entre os
+   * dois primeiros e uma decisao de seguranca:
+   *
+   *   1. `disabled: true` no Auth — barra login novo.
+   *   2. `revokeRefreshTokens` — derruba as sessoes que ja existem. Sozinho, isso
+   *      nao basta: o ID token que o navegador ja tem continua valido ate expirar,
+   *      e e o `checkRevoked: true` do guard que o recusa (ver
+   *      `autenticacao.guard.ts`).
+   *   3. `status: 'suspenso'` no documento — o registro consultavel.
+   *
+   * Desabilitar ANTES de revogar: se a revogacao falhar depois de desabilitar,
+   * sobra uma sessao viva por ate uma hora e nenhum login novo. Na ordem inversa,
+   * as sessoes morreriam e a pessoa poderia entrar de novo, com acesso completo.
+   *
+   * A claim NAO e removida. Suspenso continua sendo advogado; o que muda e o
+   * acesso. Mexer na claim aqui faria a reativacao precisar reescreve-la — e cada
+   * escrita de claim a mais e uma chance a mais de elevacao de privilegio errada.
+   */
+  async suspender(uid: string, admin: string): Promise<AdvogadoResumo> {
+    return this.alternarAcesso(uid, admin, 'suspenso');
+  }
+
+  async reativar(uid: string, admin: string): Promise<AdvogadoResumo> {
+    return this.alternarAcesso(uid, admin, 'ativo');
+  }
+
+  private async alternarAcesso(
+    uid: string,
+    admin: string,
+    destino: StatusAdvogado,
+  ): Promise<AdvogadoResumo> {
+    const referencia = this.db.collection(COLECAO_ADVOGADOS).doc(uid);
+    const documento = await referencia.get();
+
+    /*
+     * Exigir o documento de advogado e o que impede esta rota de alcancar
+     * qualquer outra conta. Sem essa checagem, `POST /admin/advogados/{uid do
+     * administrador}/suspensao` desabilitaria o unico administrador do sistema —
+     * e como nao ha autocadastro administrativo (item 2.4.2), nao haveria
+     * caminho de volta pela aplicacao.
+     */
+    if (!documento.exists) {
+      throw new NotFoundException('Advogado nao encontrado.');
+    }
+
+    const suspender = destino === 'suspenso';
+    await this.auth.updateUser(uid, { disabled: suspender });
+    if (suspender) await this.auth.revokeRefreshTokens(uid);
+
+    await referencia.update({
+      status: destino,
+      alteradoEm: FieldValue.serverTimestamp(),
+      alteradoPor: admin,
+    });
+    this.log.log(`advogado ${uid} agora esta ${destino}, por ${admin}`);
+
+    const dados = documento.data() as DocumentoAdvogado;
+    return {
+      uid,
+      nome: dados.nome,
+      email: dados.email,
+      status: destino,
+      criadoEm:
+        dados.criadoEm instanceof Timestamp
+          ? dados.criadoEm.toDate().toISOString()
+          : null,
+    };
   }
 
   /**

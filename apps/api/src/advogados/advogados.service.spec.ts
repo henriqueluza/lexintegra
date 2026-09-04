@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import type { Auth } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
 import { NOME_CLAIM_PERFIL } from 'shared';
@@ -72,6 +72,14 @@ class Referencia {
       ),
     );
   }
+
+  update(dados: Record<string, unknown>): Promise<void> {
+    const atual = this.banco.documentos.get(this.caminho);
+    if (atual === undefined) return Promise.reject(new Error('NOT_FOUND'));
+    this.banco.ordemDeEscrita.push(`update ${this.caminho}`);
+    this.banco.documentos.set(this.caminho, { ...atual, ...dados });
+    return Promise.resolve();
+  }
 }
 
 class Transacao {
@@ -106,6 +114,7 @@ interface UsuarioFalso {
   uid: string;
   email: string;
   displayName?: string;
+  disabled?: boolean;
   customClaims?: Record<string, unknown>;
 }
 
@@ -151,6 +160,19 @@ class AuthFalso {
     return usuario === undefined
       ? Promise.reject(new Error('auth/user-not-found'))
       : Promise.resolve(usuario);
+  }
+
+  updateUser(uid: string, dados: { disabled: boolean }): Promise<UsuarioFalso> {
+    const usuario = this.usuarios.get(uid);
+    if (usuario === undefined) return Promise.reject(new Error('nao existe'));
+    usuario.disabled = dados.disabled;
+    this.eventos.push(`updateUser ${uid} disabled=${String(dados.disabled)}`);
+    return Promise.resolve(usuario);
+  }
+
+  revokeRefreshTokens(uid: string): Promise<void> {
+    this.eventos.push(`revokeRefreshTokens ${uid}`);
+    return Promise.resolve();
   }
 
   setCustomUserClaims(
@@ -355,5 +377,107 @@ describe('AdvogadosService.listar', () => {
   it('devolve lista vazia quando nao ha advogado', async () => {
     const { servico } = montar();
     await expect(servico.listar()).resolves.toEqual([]);
+  });
+});
+
+describe('AdvogadosService.suspender', () => {
+  /**
+   * A demonstracao que a etapa pede. Marcar o campo nao suspende ninguem: sem
+   * `revokeRefreshTokens`, o advogado suspenso continua trabalhando com o token
+   * que ja tem, ate ele expirar — ate uma hora.
+   */
+  it('desabilita a conta, revoga os tokens e grava o status', async () => {
+    const { servico, auth, banco } = montar();
+    await servico.criar(NOVO, 'uid-admin');
+    auth.eventos.length = 0;
+
+    const resumo = await servico.suspender('uid-1', 'uid-admin');
+
+    expect(resumo.status).toBe('suspenso');
+    expect(auth.eventos).toEqual([
+      'updateUser uid-1 disabled=true',
+      'revokeRefreshTokens uid-1',
+    ]);
+    expect(banco.documentos.get('advogados/uid-1')).toMatchObject({
+      status: 'suspenso',
+      alteradoPor: 'uid-admin',
+    });
+  });
+
+  /**
+   * A ordem e decisao de seguranca. Revogando primeiro e falhando o
+   * `disabled`, as sessoes morreriam e a pessoa entraria de novo com acesso
+   * completo. Desabilitando primeiro, o pior caso e uma sessao viva por ate uma
+   * hora e nenhum login novo.
+   */
+  it('desabilita antes de revogar', async () => {
+    const { servico, auth } = montar();
+    await servico.criar(NOVO, 'uid-admin');
+    auth.eventos.length = 0;
+
+    await servico.suspender('uid-1', 'uid-admin');
+
+    expect(auth.eventos.indexOf('updateUser uid-1 disabled=true')).toBeLessThan(
+      auth.eventos.indexOf('revokeRefreshTokens uid-1'),
+    );
+  });
+
+  it('mantem a claim de advogado', async () => {
+    const { servico, auth } = montar();
+    await servico.criar(NOVO, 'uid-admin');
+
+    await servico.suspender('uid-1', 'uid-admin');
+
+    expect(auth.usuarios.get('uid-1')?.customClaims).toEqual({
+      [NOME_CLAIM_PERFIL]: 'advogado',
+    });
+  });
+
+  /**
+   * A trava estrutural: sem exigir o documento de advogado, um `POST` com o uid
+   * do administrador desabilitaria o unico administrador do sistema — e nao ha
+   * autocadastro administrativo (item 2.4.2) para desfazer isso.
+   */
+  it('recusa uid que nao e de advogado, sem tocar no Auth', async () => {
+    const { servico, auth } = montar();
+    auth.semear({ uid: 'uid-admin', email: 'admin@escritorio.test' });
+
+    await expect(
+      servico.suspender('uid-admin', 'uid-admin'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(auth.eventos).toEqual([]);
+    expect(auth.usuarios.get('uid-admin')?.disabled).toBeUndefined();
+  });
+});
+
+describe('AdvogadosService.reativar', () => {
+  it('reabilita a conta e volta o status para ativo', async () => {
+    const { servico, auth, banco } = montar();
+    await servico.criar(NOVO, 'uid-admin');
+    await servico.suspender('uid-1', 'uid-admin');
+    auth.eventos.length = 0;
+
+    const resumo = await servico.reativar('uid-1', 'uid-admin');
+
+    expect(resumo.status).toBe('ativo');
+    expect(auth.usuarios.get('uid-1')?.disabled).toBe(false);
+    expect(banco.documentos.get('advogados/uid-1')).toMatchObject({
+      status: 'ativo',
+    });
+  });
+
+  /**
+   * Reativar nao revoga nada: nao ha sessao viva para derrubar, e revogar de
+   * novo so obrigaria a pessoa a entrar duas vezes.
+   */
+  it('nao revoga tokens ao reativar', async () => {
+    const { servico, auth } = montar();
+    await servico.criar(NOVO, 'uid-admin');
+    await servico.suspender('uid-1', 'uid-admin');
+    auth.eventos.length = 0;
+
+    await servico.reativar('uid-1', 'uid-admin');
+
+    expect(auth.eventos).toEqual(['updateUser uid-1 disabled=false']);
   });
 });
