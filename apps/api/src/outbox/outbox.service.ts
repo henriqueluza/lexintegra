@@ -54,6 +54,35 @@ export class OutboxService {
     return id;
   }
 
+  /**
+   * Variante idempotente: le antes de escrever, dentro da mesma transacao.
+   *
+   * Existe porque `registrar` e `registrarSeAusente` servem a necessidades
+   * OPOSTAS, e confundi-las quebraria uma das duas.
+   *
+   * O pedido de redefinicao de senha QUER a falha por duplicata — e ela que
+   * limita o abuso dentro da janela. Ja a criacao de advogado toca tres sistemas
+   * sem transacao comum (Auth, Firestore, outbox), e precisa poder ser repetida
+   * para retomar de onde parou; ali, um `create` que estoura na segunda tentativa
+   * derrubaria junto a escrita do documento do advogado, e a operacao nunca
+   * terminaria.
+   *
+   * A leitura vem antes de qualquer escrita porque o Firestore exige essa ordem
+   * dentro de uma transacao. Quem chamar este metodo depois de um `set` na mesma
+   * transacao recebe erro do proprio SDK.
+   */
+  async registrarSeAusente(
+    transacao: Transaction,
+    evento: { tipo: TipoEvento; destinatarioUid: string },
+    agora?: number,
+  ): Promise<string> {
+    const id = idDoEvento(evento.tipo, evento.destinatarioUid, agora);
+    const existente = await transacao.get(this.referencia(id));
+    if (existente.exists) return id;
+
+    return this.registrar(transacao, evento, agora);
+  }
+
   async ler(id: string): Promise<RegistroOutbox | null> {
     const documento = await this.referencia(id).get();
     return documento.exists ? (documento.data() as RegistroOutbox) : null;

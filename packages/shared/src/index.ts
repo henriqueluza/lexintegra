@@ -6,4 +6,5 @@
  * nas duas pontas — nao ha decisao de modelagem sendo antecipada.
  */
 export * from './estado-entregavel.js';
+export * from './esquemas/advogado.js';
 export * from './perfil.js';
