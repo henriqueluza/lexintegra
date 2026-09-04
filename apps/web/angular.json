@@ -25,7 +25,7 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles/tokens.css", "src/styles.css"],
+            "styles": ["src/styles/index.css"],
             "server": "src/main.server.ts",
             "outputMode": "static",
             "security": {
@@ -35,6 +35,12 @@
           },
           "configurations": {
             "production": {
+              "fileReplacements": [
+                {
+                  "replace": "src/app/catalogo/catalogo.routes.ts",
+                  "with": "src/app/catalogo/catalogo.routes.prod.ts"
+                }
+              ],
               "budgets": [
                 {
                   "type": "initial",

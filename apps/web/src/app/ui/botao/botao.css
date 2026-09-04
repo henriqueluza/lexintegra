@@ -1,0 +1,136 @@
+/*
+ * O hospedeiro e inline-flex e o <button> ocupa ele inteiro: assim o consumidor
+ * pode dimensionar `app-botao` diretamente, sem precisar saber que ha um button
+ * dentro.
+ */
+:host {
+  display: inline-flex;
+}
+
+:host > .botao {
+  flex: 1;
+}
+
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  font-family: var(--fonte-interface);
+  font-size: var(--t-menor);
+  font-weight: var(--botao-peso);
+  line-height: var(--altura-densa);
+  padding: var(--botao-preenchimento);
+  border: var(--borda-fina) solid transparent;
+  border-radius: var(--raio);
+  background: transparent;
+  color: var(--texto);
+  cursor: pointer;
+  transition:
+    background-color var(--duracao-rapida) ease,
+    border-color var(--duracao-rapida) ease,
+    color var(--duracao-rapida) ease;
+}
+
+.botao--p {
+  padding: var(--botao-preenchimento-p);
+  font-size: var(--t-mini);
+}
+
+/* --- primario: acao principal, preenchida com o acento da direcao --- */
+.botao--primario {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: var(--texto-sobre-acento);
+  font-weight: var(--botao-peso-primario);
+}
+
+.botao--primario:hover:not(:disabled):not([aria-disabled='true']) {
+  background: var(--acento-forte);
+  border-color: var(--acento-forte);
+}
+
+/* --- secundario: mesma hierarquia visual, sem preencher --- */
+.botao--secundario {
+  background: var(--botao-secundario-fundo);
+  /*
+   * `--limite-controle`, e nao o divisor decorativo da direcao: esta borda
+   * delimita um controle, e a WCAG 1.4.11 pede 3:1 para ela.
+   */
+  border-color: var(--limite-controle);
+  color: var(--botao-secundario-cor);
+}
+
+.botao--secundario:hover:not(:disabled):not([aria-disabled='true']) {
+  background: var(--acento-fundo);
+  color: var(--texto);
+}
+
+/*
+ * --- fantasma: sem borda, de proposito ---
+ *
+ * O prototipo da Catedra desenhava o botao fantasma com uma borda tenue
+ * (`--linha-forte`, 1,77:1). Borda de controle abaixo de 3:1 reprova na WCAG
+ * 1.4.11, e escurece-la ate passar o tornaria indistinguivel do secundario. A
+ * saida foi tirar a borda: no fantasma quem carrega o contraste e o texto.
+ */
+.botao--fantasma {
+  background: transparent;
+  border-color: transparent;
+  color: var(--texto-2);
+}
+
+.botao--fantasma:hover:not(:disabled):not([aria-disabled='true']) {
+  background: var(--acento-fundo);
+  color: var(--texto);
+}
+
+/* --- texto: acao terciaria, aparencia de link --- */
+.botao--texto {
+  background: transparent;
+  border-color: transparent;
+  color: var(--acento);
+  padding-left: 0;
+  padding-right: var(--s2);
+}
+
+.botao--texto:hover:not(:disabled):not([aria-disabled='true']) {
+  text-decoration: underline;
+}
+
+/* --- indisponivel --- */
+.botao:disabled,
+.botao[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* --- carregando --- */
+.botao__giro {
+  width: var(--icone-p);
+  height: var(--icone-p);
+  border: var(--borda-media) solid currentColor;
+  border-top-color: transparent;
+  border-radius: var(--raio-pilula);
+  animation: botao-giro 700ms linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes botao-giro {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/*
+ * Sob `prefers-reduced-motion` a animacao global de `base.css` congela o giro. Um
+ * anel parado nao comunica nada, entao ele vira um circulo completo — a presenca
+ * do simbolo, e nao o movimento, passa a ser o sinal. Quem usa leitor de tela ja
+ * recebe `aria-busy`.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .botao__giro {
+    border-top-color: currentColor;
+    opacity: 0.6;
+  }
+}

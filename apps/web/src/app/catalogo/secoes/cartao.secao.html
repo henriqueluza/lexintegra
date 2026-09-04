@@ -1,0 +1,33 @@
+<app-pagina
+  titulo="Cartão"
+  descricao="A superfície elevada reescopa o acento: na Cátedra, --ouro-500 dá 4,19:1 sobre o fundo do cartão e reprova em AA, então dentro do cartão o acento passa a ser o dourado claro (6,33:1). Compare o tom do rótulo do rodapé com o da vitrine em volta."
+>
+  <ng-template #estados>
+    <app-amostra rotulo="Elevado, com título e descrição" [larga]="true">
+      <app-cartao
+        titulo="Parecer de risco trabalhista"
+        descricao="Diagnóstico das rotinas e plano de correção priorizado."
+      >
+        <p>Um entregável, duas reuniões, prazo de validade de 90 dias.</p>
+        <app-botao appCartaoRodape variante="texto">Ver detalhes</app-botao>
+      </app-cartao>
+    </app-amostra>
+    <app-amostra rotulo="Só corpo">
+      <app-cartao>
+        <p>Cartão sem cabeçalho nem rodapé.</p>
+      </app-cartao>
+    </app-amostra>
+    <app-amostra rotulo="Plano, para grade de 1px">
+      <app-cartao variante="plano" titulo="Consultoria societária">
+        <p>Sem fundo próprio.</p>
+      </app-cartao>
+    </app-amostra>
+  </ng-template>
+
+  <app-vitrine direcao="catedra">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+  <app-vitrine direcao="pauta">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+</app-pagina>

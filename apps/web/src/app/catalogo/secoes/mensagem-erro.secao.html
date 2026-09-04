@@ -1,0 +1,25 @@
+<app-pagina
+  titulo="Mensagem de erro"
+  descricao="As duas formas não são intercambiáveis. A de linha acompanha um campo e é anunciada por ele, via aria-describedby, no foco. A de bloco é o erro da operação, aparece longe do foco atual e leva role=alert."
+>
+  <ng-template #estados>
+    <app-amostra rotulo="Em linha, no campo">
+      <app-mensagem-erro variante="linha">
+        Informe um CNPJ válido.
+      </app-mensagem-erro>
+    </app-amostra>
+    <app-amostra rotulo="Em bloco, da operação" [larga]="true">
+      <app-mensagem-erro variante="bloco">
+        Não foi possível registrar o pedido. Nada foi cobrado. Tente novamente
+        em alguns instantes.
+      </app-mensagem-erro>
+    </app-amostra>
+  </ng-template>
+
+  <app-vitrine direcao="catedra">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+  <app-vitrine direcao="pauta">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+</app-pagina>

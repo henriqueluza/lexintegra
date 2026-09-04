@@ -1,0 +1,13 @@
+<svg
+  class="icone"
+  [class.icone--p]="tamanho() === 'p'"
+  viewBox="0 0 24 24"
+  focusable="false"
+  [attr.aria-hidden]="decorativo() ? 'true' : null"
+  [attr.role]="decorativo() ? null : 'img'"
+  [attr.aria-label]="rotulo()"
+>
+  @for (traco of tracos(); track traco) {
+  <path [attr.d]="traco" />
+  }
+</svg>

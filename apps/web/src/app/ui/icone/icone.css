@@ -1,0 +1,29 @@
+/*
+ * Hospedeiro inline-flex: como elemento inline padrao, margem vertical e
+ * `flex-shrink` nao teriam efeito, e o icone deformaria dentro de um botao.
+ */
+:host {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+/*
+ * As tres propriedades que definem a familia (docs/design.md): traco fino, sem
+ * preenchimento, terminacao reta. Estao aqui, e nao no ponto de uso, para nao
+ * existir icone fora de familia.
+ */
+.icone {
+  width: var(--icone);
+  height: var(--icone);
+  stroke: currentColor;
+  stroke-width: var(--traco-icone);
+  fill: none;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  flex-shrink: 0;
+}
+
+.icone--p {
+  width: var(--icone-p);
+  height: var(--icone-p);
+}

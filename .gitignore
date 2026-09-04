@@ -86,3 +86,13 @@ crash.log
 # Nunca versionar credencial (regra inviolavel 9)
 *-service-account*.json
 application_default_credentials.json
+
+# Store do pnpm, caso alguma execucao escreva um local (ver scripts/visual.sh)
+.pnpm-store/
+
+# Playwright: relatorio e resultados de execucao. As imagens de REFERENCIA
+# (apps/web/e2e/referencia) sao versionadas de proposito — sao a verdade contra a
+# qual tudo e comparado.
+/apps/web/playwright-report/
+/apps/web/test-results/
+/apps/web/blob-report/

@@ -1,0 +1,51 @@
+<div class="tabela superficie-elevada">
+  @if (carregando()) {
+  <div class="tabela__estado">
+    <app-carregando
+      variante="tabela"
+      [linhas]="4"
+      [rotulo]="'Carregando ' + legenda()"
+    />
+  </div>
+  } @else if (linhas().length === 0) {
+  <div class="tabela__estado">
+    <app-estado-vazio [mensagem]="mensagemVazia()">
+      <ng-content select="[appTabelaAcaoVazio]" />
+    </app-estado-vazio>
+  </div>
+  } @else {
+  <table class="tabela__grade">
+    <caption class="visualmente-oculto">
+      {{ legenda() }}
+    </caption>
+    <thead>
+      <tr>
+        @for (coluna of colunas(); track coluna.chave) {
+        <th scope="col" [class.tabela__fim]="coluna.alinhamento === 'fim'">
+          {{ coluna.rotulo }}
+        </th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (linha of linhas(); track $index) {
+      <tr>
+        @for (coluna of colunas(); track coluna.chave) {
+        <td
+          [attr.data-rotulo]="coluna.rotulo"
+          [class.tabela__fim]="coluna.alinhamento === 'fim'"
+        >
+          @if (celula(); as modelo) {
+          <ng-container
+            [ngTemplateOutlet]="modelo.template"
+            [ngTemplateOutletContext]="{ $implicit: linha, coluna }"
+          />
+          } @else { {{ texto(linha, coluna) }} }
+        </td>
+        }
+      </tr>
+      }
+    </tbody>
+  </table>
+  }
+</div>

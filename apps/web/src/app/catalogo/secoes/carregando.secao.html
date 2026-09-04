@@ -1,0 +1,35 @@
+<app-pagina
+  titulo="Carregamento"
+  descricao="O esqueleto é aria-hidden e o anúncio vem de um role=status com texto: uma sequência de retângulos cinzas não comunica nada a quem usa leitor de tela. Sob prefers-reduced-motion o pulso congela numa opacidade média, para o esqueleto não sumir."
+>
+  <ng-template #estados>
+    <app-amostra rotulo="Linhas de texto">
+      <app-carregando
+        variante="linha"
+        [linhas]="4"
+        rotulo="Carregando pedidos"
+      />
+    </app-amostra>
+    <app-amostra rotulo="Bloco">
+      <app-carregando
+        variante="bloco"
+        [linhas]="1"
+        rotulo="Carregando cartão"
+      />
+    </app-amostra>
+    <app-amostra rotulo="Linhas de tabela" [larga]="true">
+      <app-carregando
+        variante="tabela"
+        [linhas]="4"
+        rotulo="Carregando entregáveis"
+      />
+    </app-amostra>
+  </ng-template>
+
+  <app-vitrine direcao="catedra">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+  <app-vitrine direcao="pauta">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+</app-pagina>

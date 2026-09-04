@@ -1,0 +1,33 @@
+:host {
+  display: block;
+}
+
+.erro {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s2);
+  color: var(--estado-erro);
+  font-size: var(--t-mini);
+  line-height: var(--altura-densa);
+}
+
+.erro--linha {
+  margin-top: var(--s2);
+}
+
+.erro--bloco {
+  padding: var(--s3) var(--s4);
+  background: var(--estado-erro-fundo);
+  border-left: var(--borda-media) solid var(--estado-erro);
+  border-radius: var(--raio);
+  font-size: var(--t-menor);
+}
+
+/*
+ * O icone e decorativo: a cor sozinha nao pode comunicar "isto e um erro"
+ * (WCAG 1.4.1), e quem carrega esse significado e o texto da mensagem, nao a
+ * forma triangular ao lado dele.
+ */
+.erro app-icone {
+  margin-top: var(--s1);
+}

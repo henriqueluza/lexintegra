@@ -14,7 +14,15 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    /*
+     * Aponta para a fonte de `packages/shared`, nao para o `dist`. O `dist` e
+     * gerado e ignorado pelo git: sem isto, `pnpm dev` num clone novo falharia
+     * ate alguem lembrar de construir o pacote antes.
+     */
+    "paths": {
+      "shared": ["../../packages/shared/src/index.ts"]
+    }
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
@@ -29,6 +37,9 @@
     },
     {
       "path": "./tsconfig.spec.json"
+    },
+    {
+      "path": "./tsconfig.e2e.json"
     }
   ]
 }

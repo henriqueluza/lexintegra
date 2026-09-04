@@ -1,0 +1,38 @@
+<div class="selecao" [class.selecao--invalida]="erro() !== null">
+  <label class="selecao__rotulo" [attr.for]="idControle">
+    {{ rotulo() }} @if (obrigatorio()) {
+    <span class="selecao__obrigatorio" aria-hidden="true">*</span>
+    }
+  </label>
+
+  <div class="selecao__caixa">
+    <select
+      class="selecao__controle"
+      [id]="idControle"
+      [value]="valor()"
+      [disabled]="desabilitado()"
+      [attr.aria-required]="obrigatorio() ? 'true' : null"
+      [attr.aria-invalid]="erro() === null ? null : 'true'"
+      [attr.aria-describedby]="descritoPor()"
+      (change)="escolheu($event)"
+      (blur)="saiu()"
+    >
+      @if (marcador() !== null) {
+      <option value="" disabled>{{ marcador() }}</option>
+      } @for (opcao of opcoes(); track opcao.valor) {
+      <option [value]="opcao.valor" [disabled]="opcao.desabilitada ?? false">
+        {{ opcao.rotulo }}
+      </option>
+      }
+    </select>
+    <app-icone class="selecao__seta" nome="seta-direita" tamanho="p" />
+  </div>
+
+  @if (dica() !== null) {
+  <p class="selecao__dica" [id]="idDica">{{ dica() }}</p>
+  } @if (erro() !== null) {
+  <app-mensagem-erro variante="linha" [id]="idErro">
+    {{ erro() }}
+  </app-mensagem-erro>
+  }
+</div>

@@ -1,0 +1,134 @@
+.amostra-cor {
+  display: block;
+  width: var(--s8);
+  height: var(--s7);
+  border: var(--borda-fina) solid var(--divisor-forte);
+  border-radius: var(--raio);
+}
+
+.amostra-cor--superficie {
+  background: var(--superficie);
+}
+
+.amostra-cor--elevada {
+  background: var(--superficie-elevada);
+}
+
+.amostra-cor--sutil {
+  background: var(--superficie-sutil);
+}
+
+.amostra-cor--acento {
+  background: var(--acento);
+}
+
+.amostra-cor--acento-forte {
+  background: var(--acento-forte);
+}
+
+.amostra-cor--limite {
+  background: var(--limite-controle);
+}
+
+.amostra-texto {
+  font-size: var(--t-menor);
+  line-height: var(--altura-densa);
+}
+
+.amostra-texto--1 {
+  color: var(--texto);
+}
+
+.amostra-texto--2 {
+  color: var(--texto-2);
+}
+
+.amostra-texto--3 {
+  color: var(--texto-3);
+}
+
+.amostra-texto--fraco {
+  color: var(--texto-fraco);
+}
+
+.amostra-escala {
+  color: var(--texto);
+  line-height: var(--altura-titulo);
+}
+
+.amostra-escala--t1 {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t1);
+  font-weight: var(--peso-titulo);
+}
+
+.amostra-escala--t2 {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t2);
+  font-weight: var(--peso-titulo);
+}
+
+.amostra-escala--t3 {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t3);
+  font-weight: var(--peso-titulo);
+}
+
+.amostra-escala--corpo {
+  font-size: var(--t-corpo);
+}
+
+.amostra-escala--menor {
+  font-size: var(--t-menor);
+}
+
+.amostra-escala--nano {
+  font-size: var(--t-nano);
+  letter-spacing: var(--letra-caixa-alta);
+  text-transform: uppercase;
+  color: var(--texto-fraco);
+}
+
+.amostra-espaco {
+  display: block;
+  height: var(--s3);
+  background: var(--acento);
+  border-radius: var(--raio);
+  margin-bottom: var(--s1);
+}
+
+.amostra-espaco--1 {
+  width: var(--s1);
+}
+
+.amostra-espaco--2 {
+  width: var(--s2);
+}
+
+.amostra-espaco--3 {
+  width: var(--s3);
+}
+
+.amostra-espaco--4 {
+  width: var(--s4);
+}
+
+.amostra-espaco--5 {
+  width: var(--s5);
+}
+
+.amostra-espaco--6 {
+  width: var(--s6);
+}
+
+.amostra-espaco--7 {
+  width: var(--s7);
+}
+
+.amostra-espaco--8 {
+  width: var(--s8);
+}
+
+.amostra-espaco--9 {
+  width: var(--s9);
+}

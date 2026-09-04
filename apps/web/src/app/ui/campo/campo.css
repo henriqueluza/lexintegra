@@ -1,0 +1,90 @@
+:host {
+  display: block;
+}
+
+.campo {
+  display: block;
+}
+
+.campo__rotulo {
+  display: block;
+  font-size: var(--campo-rotulo-tamanho);
+  font-weight: var(--peso-medio);
+  letter-spacing: var(--campo-rotulo-espaco);
+  text-transform: var(--campo-rotulo-caixa-alta);
+  color: var(--campo-rotulo-cor);
+  margin-bottom: var(--s2);
+}
+
+/*
+ * O asterisco e `aria-hidden` e o estado obrigatorio chega ao leitor de tela por
+ * `aria-required`. Um "*" lido em voz alta no meio do rotulo nao significa nada.
+ */
+.campo__obrigatorio {
+  color: var(--estado-erro);
+}
+
+.campo__controle {
+  width: 100%;
+  font-family: var(--fonte-interface);
+  font-size: var(--t-menor);
+  line-height: var(--altura-densa);
+  color: var(--texto);
+  background: var(--campo-fundo);
+  /*
+   * A diferenca entre as duas direcoes mora nestes dois tokens: a Catedra manda
+   * `0 0 1px 0` e vira sublinhado, a Pauta manda `1px` e vira caixa.
+   */
+  border-style: solid;
+  border-width: var(--campo-borda-largura);
+  border-color: var(--campo-borda-cor);
+  border-radius: var(--raio);
+  padding: var(--campo-preenchimento);
+  transition: border-color var(--duracao-rapida) ease;
+}
+
+.campo__controle::placeholder {
+  color: var(--texto-fraco);
+}
+
+.campo__controle:hover:not(:disabled):not([readonly]) {
+  border-color: var(--acento);
+}
+
+/*
+ * O anel de foco global de base.css ja marca o campo. A borda tambem muda de cor
+ * para quem enxerga o campo mas nao percebe o anel — dois sinais, nao um.
+ */
+.campo__controle:focus-visible {
+  border-color: var(--acento-forte);
+}
+
+.campo__controle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/*
+ * Somente leitura nao e desabilitado: o valor ainda importa, ainda e selecionavel
+ * e ainda entra na tabulacao. O que muda e o convite a editar.
+ */
+.campo__controle[readonly] {
+  color: var(--texto-2);
+  cursor: default;
+}
+
+.campo--invalido .campo__controle {
+  border-color: var(--estado-erro);
+}
+
+.campo__dica {
+  margin-top: var(--s2);
+  font-size: var(--t-micro);
+  color: var(--texto-3);
+  line-height: var(--altura-densa);
+}
+
+textarea.campo__controle {
+  resize: vertical;
+  min-height: var(--s8);
+}

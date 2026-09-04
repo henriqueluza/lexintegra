@@ -13,19 +13,24 @@
     "test": "pnpm --filter \"./apps/*\" --filter \"./packages/*\" test",
     "test:integration": "pnpm --filter api test:integration",
     "test:e2e": "pnpm --filter web test:e2e",
-    "lint": "pnpm run lint:eslint && pnpm run lint:deps",
+    "lint": "pnpm run lint:eslint && pnpm run lint:styles && pnpm run lint:deps",
     "lint:eslint": "eslint .",
+    "lint:styles": "stylelint \"apps/web/src/**/*.css\"",
     "lint:deps": "depcruise apps packages --config .dependency-cruiser.cjs",
     "quality": "pnpm run lint && pnpm run test:coverage",
     "test:coverage": "pnpm --filter \"./apps/*\" --filter \"./packages/*\" test:coverage",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:visual": "pnpm --filter web test:visual",
+    "test:a11y": "pnpm --filter web test:a11y"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
+    "angular-eslint": "^22.2.0",
     "dependency-cruiser": "^17.0.1",
     "eslint": "^9.39.0",
     "prettier": "^3.6.2",
+    "stylelint": "^17.14.1",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.46.2"
   }

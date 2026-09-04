@@ -1,25 +1,28 @@
+/* Ver a nota em landing.css: nenhum valor visual literal. */
 .erro {
   min-height: 100svh;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   justify-content: center;
   gap: var(--s3);
   padding: var(--s7) var(--s5);
-  max-width: 62rem;
+  max-width: var(--largura-conteudo);
   margin: 0 auto;
 }
 
 .codigo {
   font-family: var(--fonte-display);
-  font-weight: 300;
-  font-size: 4.125rem;
-  color: var(--ouro-500);
-  margin: 0;
+  font-weight: var(--peso-leve);
+  font-size: var(--t-numeral);
+  line-height: var(--altura-apertada);
+  color: var(--acento);
 }
 
-h1 {
+.erro h1 {
   font-family: var(--fonte-display);
-  font-weight: 300;
-  font-size: clamp(1.5rem, 4vw, 2.25rem);
-  margin: 0;
+  font-weight: var(--peso-titulo);
+  font-size: var(--t-t1);
+  line-height: var(--altura-titulo);
+  letter-spacing: var(--letra-titulo);
 }

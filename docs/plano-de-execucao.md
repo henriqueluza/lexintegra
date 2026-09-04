@@ -235,6 +235,34 @@ Esta é a etapa em que os hooks de `PreToolUse` precisam existir, porque a parti
 - Julgar se a implementação corresponde à direção aprovada. É comparação visual, e o agente não tem acesso ao seu julgamento estético.
 - Definir o baseline da regressão visual. Uma vez aprovado, ele vira a verdade contra a qual tudo é comparado — aprovar um baseline errado contamina todas as etapas seguintes.
 
+### Registro de execução — Etapa 3
+
+*Escrito pelo agente na branch `feat/sistema-design`. O que segue é o que foi verificado, não o que foi planejado.*
+
+**Correções ao que estava escrito:**
+
+- `lexintegra-landing.html`, `direcao-C-margem.html` e o PDF comparativo, citados em `docs/design.md`, **não estão versionados**. A referência foi corrigida lá; os arquivos não foram inventados.
+- Das duas pendências de contraste que o `design.md` listava, **a primeira já passava** (5,59:1) e **a segunda era falso positivo** (chip não é controle interativo, então a WCAG 1.4.11 não se aplica). A auditoria completa achou **seis outros pares** que reprovavam. Detalhe em `docs/design.md`, seção "Auditoria de contraste".
+
+**Decisões tomadas nesta execução:**
+
+- **Catálogo em rota Angular própria, não Storybook.** O Storybook 10 aceita Angular 22, mas pede `@angular-devkit/build-angular` (webpack), `@angular/platform-browser-dynamic` e `zone.js` como peers — reverteria a escolha zoneless da Etapa 2 e acrescentaria um segundo pipeline de build para manter verde. O catálogo vive em `/catalogo` e é removido do pacote de produção por `fileReplacements`, com um passo no CI conferindo.
+- **Regressão visual em contêiner.** Captura no macOS nunca bate byte a byte com a do Linux do CI. `scripts/visual.sh` e o job do CI usam a mesma imagem oficial do Playwright, com a tag lida do `package.json`, para existir um único conjunto de imagens de referência — o revisado é o comparado.
+- **Escala de espaçamento única** para as duas direções, com os valores da Pauta encaixados nela (28→32, 26→24, 18→16, 14→16, 11→12, 9→8). A alternativa seria uma segunda escala, e componente que precisa saber em qual direção está para escolher o espaçamento certo.
+- **Tipografia self-hosted** via `@fontsource`, saindo do CDN do Google. Motivo principal é LGPD: o CDN receberia o IP de todo visitante de uma plataforma jurídica.
+- **Cobertura do `apps/web` sobe de 60/50/60/60 para 95/88/90/95**, medido em 99,6 / 92,5 / 95,3 / 100. As seções do catálogo ficam fora do denominador — markup declarativo, removido do pacote de produção, verificado pelo Playwright.
+
+**Bug encontrado pela suíte de acessibilidade, que teria chegado a produção:**
+
+O desvio de escopo da superfície elevada estava escrito como `[data-direcao='catedra'] .superficie-elevada`. Como **as direções se aninham** — o `<html>` é sempre `catedra` e a shell autenticada põe `pauta` num elemento abaixo dele —, todo cartão da área do cliente continuaria sendo descendente de um `[data-direcao='catedra']` e herdaria o dourado da Cátedra sobre fundo branco. Corrigido por indireção de token. Regra que fica: **em `semanticos.css`, seletor que mistura `[data-direcao]` com descendente é sempre suspeito.**
+
+**O que ficou de fora, de propósito:**
+
+- Checkbox e rádio. A lista da etapa diz "seleção", e o implementado é `<select>`. Entram quando a Etapa 4 precisar do consentimento LGPD.
+- Link com aparência de botão. Link é navegação, botão é ação, e trocar um pelo outro quebra menu de contexto e leitor de tela; entra como componente próprio quando a Etapa 6 precisar.
+- A logo continua com o wordmark do nome anterior (ADR-10). O ícone `marca` do sistema é a marca gráfica sem texto, e não resolve a pendência.
+
+
 ---
 
 ## Etapa 4 — Identidade e autorização

@@ -1,0 +1,77 @@
+/*
+ * Camada 1 — escalas compartilhadas pelas duas direcoes visuais.
+ *
+ * O que entra aqui e o que NAO muda entre Catedra e Pauta: espacamento, pesos,
+ * alturas de linha, espacamento entre letras, larguras de borda e duracoes. Cor,
+ * tamanho de fonte e familia mudam por direcao e vivem em `semanticos.css`.
+ *
+ * Regra inviolavel 8: nenhum componente escreve valor visual. Estes sao os
+ * numeros de onde tudo desce.
+ */
+:root {
+  /*
+   * Escala de espacamento — docs/design.md, Direcao A.
+   *
+   * A Direcao B foi encaixada nesta mesma escala em vez de ganhar a sua propria:
+   * um jogo unico de componentes serve as duas direcoes porque `--s4` significa a
+   * mesma coisa nos dois lados. Os valores do prototipo B foram arredondados para
+   * o degrau mais proximo (28→32, 26→24, 18→16, 14→16, 11→12, 9→8), diferenca de
+   * 1 a 4px que nao altera a densidade percebida da area do cliente.
+   */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 72px;
+  --s9: 112px;
+
+  /* Pesos tipograficos */
+  --peso-leve: 300;
+  --peso-normal: 400;
+  --peso-medio: 500;
+  --peso-forte: 600;
+  --peso-maximo: 700;
+
+  /* Alturas de linha */
+  --altura-apertada: 1.15;
+  --altura-titulo: 1.25;
+  --altura-densa: 1.5;
+  --altura-corpo: 1.6;
+  --altura-solta: 1.75;
+
+  /* Espacamento entre letras */
+  --letra-titulo: -0.02em;
+  --letra-normal: 0;
+  --letra-rotulo: 0.1em;
+  --letra-caixa-alta: 0.16em;
+
+  /* Larguras de borda e de traco de icone */
+  --borda-fina: 1px;
+  --borda-media: 2px;
+  --borda-grossa: 3px;
+  --traco-icone: 1.5px;
+
+  /*
+   * Medidas de leitura em `ch`, nao em pixel: elas dependem da largura do
+   * caractere da fonte em uso, e o ponto delas e limitar o numero de caracteres
+   * por linha, nao a largura fisica.
+   */
+  --medida-titulo: 23ch;
+  --medida-texto: 52ch;
+  --medida-auxiliar: 40ch;
+
+  /*
+   * Duracoes. Toda transicao que as usa precisa ser cancelada sob
+   * `prefers-reduced-motion` — ver `base.css`.
+   */
+  --duracao-rapida: 120ms;
+  --duracao-normal: 200ms;
+
+  /* Camadas. Faixa estreita e nomeada: `z-index: 9999` avulso e bug futuro. */
+  --camada-base: 0;
+  --camada-fixa: 40;
+  --camada-sobreposta: 50;
+}

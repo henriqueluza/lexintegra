@@ -1,0 +1,27 @@
+/*
+ * Familias tipograficas, hospedadas no proprio dominio.
+ *
+ * Por que nao o CDN do Google Fonts, que os prototipos usavam:
+ *
+ * 1. LGPD. O CDN recebe o IP de todo visitante. Numa plataforma juridica, cujo
+ *    publico chega para contratar servico sobre assunto sensivel, isso e um
+ *    compartilhamento de dado pessoal com terceiro que nao precisa existir.
+ * 2. Caminho critico. O `firebase.json` ja serve `woff2` com
+ *    `max-age=31536000, immutable` do mesmo dominio — uma conexao a menos antes
+ *    do primeiro texto aparecer (ADR-09 e regra inviolavel 10).
+ * 3. Determinismo. A regressao visual compara pixel; fonte que as vezes chega e
+ *    as vezes cai no fallback produz falha intermitente.
+ *
+ * As tres familias sao SUBSTITUTAS ate o manual de marca da CONTRATANTE chegar
+ * (Etapa 0, item 0.2.1). E por isso que nenhum componente escreve nome de fonte:
+ * a troca acontece nos tokens `--fonte-*` de `semanticos.css`, num lugar so.
+ *
+ * Os arquivos variaveis trazem todos os subconjuntos (latin, latin-ext, grego,
+ * cirilico). O `unicode-range` de cada `@font-face` faz o navegador baixar apenas
+ * o que a pagina de fato usa — em pt-BR, latin e latin-ext.
+ */
+@import '@fontsource-variable/source-serif-4/wght.css';
+@import '@fontsource-variable/archivo/wght.css';
+@import '@fontsource/ibm-plex-sans/latin-400.css';
+@import '@fontsource/ibm-plex-sans/latin-500.css';
+@import '@fontsource/ibm-plex-sans/latin-600.css';

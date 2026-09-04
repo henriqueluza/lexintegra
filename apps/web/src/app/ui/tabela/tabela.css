@@ -1,0 +1,100 @@
+:host {
+  display: block;
+}
+
+.tabela {
+  background: var(--superficie-elevada);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio);
+  overflow: hidden;
+}
+
+.tabela__estado {
+  padding: var(--s5);
+}
+
+.tabela__grade {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-menor);
+}
+
+.tabela__grade th {
+  text-align: left;
+  font-size: var(--t-nano);
+  font-weight: var(--peso-forte);
+  letter-spacing: var(--letra-caixa-alta);
+  text-transform: uppercase;
+  color: var(--texto-fraco);
+  background: var(--superficie-sutil);
+  padding: var(--s2) var(--s4);
+  border-bottom: var(--borda-fina) solid var(--divisor);
+  white-space: nowrap;
+}
+
+.tabela__grade td {
+  padding: var(--s3) var(--s4);
+  color: var(--texto-2);
+  vertical-align: middle;
+}
+
+.tabela__grade tbody tr + tr td {
+  border-top: var(--borda-fina) solid var(--divisor);
+}
+
+.tabela__grade tbody tr:hover td {
+  background: var(--superficie-sutil);
+}
+
+.tabela__fim {
+  text-align: right;
+}
+
+/*
+ * Abaixo de 720px a grade vira lista empilhada. Uma tabela de quatro colunas em
+ * 360px ou rola no eixo horizontal — e a pessoa perde a coluna de referencia — ou
+ * espreme cada celula a duas letras.
+ *
+ * O cabecalho some da tela mas continua no DOM: o leitor de tela ainda navega a
+ * tabela como tabela, e quem enxerga passa a ler o rotulo da coluna em
+ * `data-rotulo`, escrito pelo componente.
+ */
+@media (max-width: 720px) {
+  .tabela__grade thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .tabela__grade tbody tr {
+    display: block;
+    padding: var(--s3) var(--s4);
+  }
+
+  .tabela__grade tbody tr + tr {
+    border-top: var(--borda-fina) solid var(--divisor);
+  }
+
+  .tabela__grade td {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s3);
+    padding: var(--s1) 0;
+    text-align: left;
+  }
+
+  .tabela__grade tbody tr + tr td {
+    border-top: 0;
+  }
+
+  .tabela__grade td::before {
+    content: attr(data-rotulo);
+    flex: 0 0 40%;
+    font-size: var(--t-nano);
+    letter-spacing: var(--letra-caixa-alta);
+    text-transform: uppercase;
+    color: var(--texto-fraco);
+  }
+}

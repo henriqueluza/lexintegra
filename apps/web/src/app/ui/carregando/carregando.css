@@ -1,0 +1,60 @@
+:host {
+  display: block;
+}
+
+.carregando__forma {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.carregando__pedaco {
+  display: block;
+  height: var(--s3);
+  border-radius: var(--raio);
+  background: var(--divisor);
+  animation: carregando-pulso 1400ms ease-in-out infinite;
+}
+
+/*
+ * As larguras decrescentes imitam linhas de texto de tamanhos diferentes; um
+ * bloco uniforme parece um erro de layout, nao um carregamento.
+ */
+.carregando__pedaco:nth-child(3n + 2) {
+  width: 82%;
+}
+
+.carregando__pedaco:nth-child(3n) {
+  width: 64%;
+}
+
+.carregando__pedaco--bloco {
+  height: var(--s8);
+  width: 100%;
+}
+
+.carregando__pedaco--tabela {
+  height: var(--s5);
+  width: 100%;
+}
+
+@keyframes carregando-pulso {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/*
+ * `base.css` ja congela a animacao sob `prefers-reduced-motion`. Fixar a opacidade
+ * no meio evita que ela congele no quadro claro, onde o esqueleto quase some.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .carregando__pedaco {
+    opacity: 0.7;
+  }
+}

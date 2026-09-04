@@ -1,0 +1,101 @@
+/*
+ * A casca do catalogo e deliberadamente neutra — cinza de sistema, nenhum token
+ * da Catedra nem da Pauta. Uma casca pintada com uma das duas paletas
+ * contaminaria a comparacao visual que o catalogo existe para permitir.
+ *
+ * Por isso os literais abaixo. Este arquivo esta na lista de excecoes do
+ * stylelint junto com os arquivos de token, e a excecao esta anotada la.
+ */
+.catalogo {
+  min-height: 100vh;
+  background: #ffffff;
+  color: #1c1b1e;
+  font-family: system-ui, sans-serif;
+  font-size: 15px;
+}
+
+.catalogo__topo {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 24px;
+  border-bottom: 1px solid #dededa;
+}
+
+.catalogo__marca {
+  font-weight: 600;
+}
+
+.catalogo__aviso {
+  font-size: 12px;
+  color: #6e6d73;
+}
+
+.catalogo__corpo {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  align-items: start;
+}
+
+.catalogo__indice {
+  position: sticky;
+  top: 0;
+  padding: 16px 12px;
+  border-right: 1px solid #dededa;
+}
+
+.catalogo__indice ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.catalogo__indice a {
+  display: block;
+  padding: 6px 10px;
+  border-radius: 5px;
+  color: #414045;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.catalogo__indice a:hover {
+  background: #f4f4f1;
+}
+
+/*
+ * Especificidade, e nao estilo: `.catalogo__indice a` (0,1,1) vence
+ * `.catalogo__link--ativo` (0,1,0), e o link ativo saia cinza escuro sobre quase
+ * preto. Achado pelo axe na suite de acessibilidade — nenhum teste de componente
+ * pegaria, porque o problema so existe depois de a cascata resolver.
+ */
+.catalogo__indice a.catalogo__link--ativo {
+  background: #1c1b1e;
+  color: #ffffff;
+}
+
+.catalogo__palco {
+  padding: 24px;
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .catalogo__corpo {
+    grid-template-columns: 1fr;
+  }
+
+  .catalogo__indice {
+    position: static;
+    border-right: 0;
+    border-bottom: 1px solid #dededa;
+  }
+
+  .catalogo__indice ul {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}

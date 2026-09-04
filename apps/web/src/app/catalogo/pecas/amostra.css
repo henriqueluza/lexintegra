@@ -1,0 +1,21 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  min-width: var(--s9);
+}
+
+/*
+ * A amostra larga ocupa a linha inteira da vitrine. Precisa valer no hospedeiro,
+ * que e o item de flex — num div interno, `flex-basis` nao teria efeito nenhum.
+ */
+:host(.amostra--larga) {
+  flex: 1 1 100%;
+}
+
+.amostra__rotulo {
+  font-size: var(--t-nano);
+  letter-spacing: var(--letra-caixa-alta);
+  text-transform: uppercase;
+  color: var(--texto-fraco);
+}

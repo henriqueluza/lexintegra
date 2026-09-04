@@ -1,0 +1,45 @@
+<div class="campo" [class.campo--invalido]="erro() !== null">
+  <label class="campo__rotulo" [attr.for]="idControle">
+    {{ rotulo() }} @if (obrigatorio()) {
+    <span class="campo__obrigatorio" aria-hidden="true">*</span>
+    }
+  </label>
+
+  @if (multilinha()) {
+  <textarea
+    class="campo__controle"
+    [id]="idControle"
+    [rows]="linhas()"
+    [value]="valor()"
+    [placeholder]="marcador()"
+    [disabled]="desabilitado()"
+    [readOnly]="somenteLeitura()"
+    [attr.aria-required]="obrigatorio() ? 'true' : null"
+    [attr.aria-invalid]="erro() === null ? null : 'true'"
+    [attr.aria-describedby]="descritoPor()"
+    (input)="digitou($event)"
+    (blur)="saiu()"
+  ></textarea>
+  } @else {
+  <input
+    class="campo__controle"
+    [id]="idControle"
+    [type]="tipo()"
+    [value]="valor()"
+    [placeholder]="marcador()"
+    [disabled]="desabilitado()"
+    [readOnly]="somenteLeitura()"
+    [attr.aria-required]="obrigatorio() ? 'true' : null"
+    [attr.aria-invalid]="erro() === null ? null : 'true'"
+    [attr.aria-describedby]="descritoPor()"
+    (input)="digitou($event)"
+    (blur)="saiu()"
+  />
+  } @if (dica() !== null) {
+  <p class="campo__dica" [id]="idDica">{{ dica() }}</p>
+  } @if (erro() !== null) {
+  <app-mensagem-erro variante="linha" [id]="idErro">
+    {{ erro() }}
+  </app-mensagem-erro>
+  }
+</div>

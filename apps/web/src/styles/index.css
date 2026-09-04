@@ -1,0 +1,11 @@
+/*
+ * Unico arquivo de estilo global registrado em `angular.json`. A ordem abaixo
+ * importa: primitivos antes de semanticos (semantico referencia primitivo), e
+ * base por ultimo (base ja consome semantico).
+ */
+@import './tokens/fontes.css';
+@import './tokens/escala.css';
+@import './tokens/primitivos-catedra.css';
+@import './tokens/primitivos-pauta.css';
+@import './tokens/semanticos.css';
+@import './base.css';

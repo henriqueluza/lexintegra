@@ -1,0 +1,10 @@
+<div
+  class="aba__painel"
+  role="tabpanel"
+  [id]="idPainel()"
+  [attr.aria-labelledby]="idGatilho()"
+  [hidden]="!selecionada()"
+  tabindex="0"
+>
+  <ng-content />
+</div>

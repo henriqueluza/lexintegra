@@ -1,0 +1,284 @@
+/*
+ * Camadas 2 e 3 — tokens semanticos e tokens de componente.
+ *
+ * Esta e a peca central do sistema de design. Componente NUNCA le primitivo
+ * (`--vinho-800`, `--papel`); le papel semantico (`--superficie`, `--texto`), e o
+ * bloco `[data-direcao]` ativo decide qual primitivo esta por tras.
+ *
+ * Sem isso, cada componente base precisaria de duas implementacoes, ou de um
+ * `@if (direcao === 'pauta')` dentro do template — e a Etapa 1 decidiu duas
+ * direcoes justamente por elas terem requisitos de densidade diferentes, nao por
+ * quererem dois sistemas de componentes.
+ *
+ * COMO A DIRECAO E ESCOLHIDA
+ * `data-direcao="catedra"` fica no <html> (ver index.html) e vale para as rotas
+ * publicas. A shell autenticada da Etapa 4 em diante coloca `data-direcao="pauta"`
+ * no seu elemento raiz, e tudo abaixo dela troca — a heranca de custom property
+ * faz o resto. Nenhum componente sabe em qual direcao esta renderizando.
+ *
+ * A camada 3 (tokens de componente, no fim de cada bloco) existe para as
+ * diferencas ESTRUTURAIS entre as direcoes: o campo de formulario da Catedra e um
+ * sublinhado sobre fundo transparente, o da Pauta e uma caixa branca com borda.
+ * Virando valor de token, a diferenca some do componente.
+ */
+
+/* ============================ DIRECAO A — CATEDRA ========================== */
+[data-direcao='catedra'] {
+  /* Superficies */
+  --superficie: var(--vinho-800);
+  --superficie-elevada: var(--vinho-700);
+  --superficie-sutil: var(--vinho-900);
+  --superficie-clara: var(--vinho-600);
+
+  /* Texto */
+  --texto: var(--creme-50);
+  --texto-2: var(--creme-200);
+  --texto-3: var(--creme-400);
+  --texto-fraco: var(--creme-400);
+  --texto-sobre-acento: var(--vinho-900);
+
+  /* Acento */
+  --acento: var(--ouro-500);
+  --acento-forte: var(--ouro-400);
+  --acento-fundo: var(--ouro-100);
+  /* Ver o bloco `.superficie-elevada` no fim deste arquivo. */
+  --acento-em-elevada: var(--ouro-400);
+
+  /* Divisores e foco */
+  --divisor: var(--linha);
+  --divisor-forte: var(--linha-forte);
+  --foco: var(--ouro-400);
+  --foco-deslocamento: 3px;
+
+  /* Estados */
+  --estado-ok: var(--ok);
+  --estado-alerta: var(--alerta);
+  --estado-alerta-fundo: var(--alerta-fundo);
+  --estado-erro: var(--erro);
+  --estado-erro-fundo: var(--erro-fundo);
+
+  /* Forma */
+  --raio: 2px;
+  --raio-pilula: 2px;
+
+  /* Tipografia */
+  --fonte-display:
+    'Source Serif 4 Variable', 'Source Serif 4', Georgia, 'Times New Roman',
+    serif;
+  --fonte-interface:
+    'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --texto-base: 16px;
+  --t-nano: 0.6875rem; /* 11px — metadado em caixa alta */
+  --t-micro: 0.75rem; /* 12px — legenda, rotulo de campo */
+  --t-mini: 0.8125rem; /* 13px — texto auxiliar */
+  --t-menor: 0.875rem; /* 14px — texto secundario, botao */
+  --t-corpo: 1rem; /* 16px */
+  --t-maior: 1.0625rem; /* 17px — subtitulo de hero */
+  --t-t3: 1.3125rem; /* 21px — titulo de cartao */
+  --t-t2: 2rem; /* 32px — titulo de secao */
+  --t-t1: 2.375rem; /* 38px — titulo de pagina */
+  --t-display: clamp(2.375rem, 4.6vw, 3.625rem);
+  --t-numeral: 3.25rem; /* 52px — numeral como recurso de hierarquia */
+  --peso-titulo: var(--peso-leve);
+
+  /* Medidas de layout */
+  --largura-conteudo: 1120px;
+  --icone: 20px;
+  --icone-p: 16px;
+
+  /* --- Camada 3: tokens de componente --- */
+
+  /*
+   * Limite de controle. Compartilhado por campo, selecao e botao secundario:
+   * a WCAG 1.4.11 exige 3:1 para a borda que delimita um controle, e os
+   * divisores decorativos da direcao ficam bem abaixo disso.
+   */
+  --limite-controle: var(--ouro-500);
+
+  /* Campo: sublinhado, sem caixa. */
+  --campo-fundo: transparent;
+  --campo-borda-largura: 0 0 var(--borda-fina) 0;
+  --campo-borda-cor: var(--limite-controle);
+  --campo-preenchimento: var(--s3) 0;
+  --campo-rotulo-cor: var(--acento);
+  --campo-rotulo-caixa-alta: uppercase;
+  --campo-rotulo-espaco: var(--letra-rotulo);
+  --campo-rotulo-tamanho: var(--t-micro);
+
+  /* Botao */
+  --botao-preenchimento: var(--s3) var(--s5);
+  --botao-preenchimento-p: var(--s2) var(--s3);
+  --botao-peso: var(--peso-medio);
+  --botao-peso-primario: var(--peso-forte);
+  --botao-secundario-fundo: transparent;
+  --botao-secundario-cor: var(--acento-forte);
+
+  /*
+   * Selo de estado. A associacao estado→cor e fixa por ADR-11; o que muda entre
+   * direcoes e o TRATAMENTO. Na Catedra o selo e retangular, sem preenchimento,
+   * so borda e texto — coerente com uma direcao que nao usa sombra nem pilula.
+   */
+  --selo-raio: var(--raio-pilula);
+  --selo-preenchimento: var(--s1) var(--s2);
+  --selo-sol-cor: var(--creme-200);
+  --selo-sol-fundo: transparent;
+  --selo-ela-cor: var(--alerta);
+  --selo-ela-fundo: transparent;
+  --selo-rev-cor: var(--ouro-400);
+  --selo-rev-fundo: transparent;
+  --selo-ent-cor: var(--ok);
+  --selo-ent-fundo: transparent;
+  --selo-borda: currentColor;
+  --medidor-vazio: var(--divisor-forte);
+  --medidor-cheio: var(--acento);
+
+  /* Aba: indicador e a borda inferior. */
+  --aba-fundo-ativa: transparent;
+  --aba-cor-ativa: var(--texto);
+  --aba-indicador-cor: var(--acento);
+  --aba-raio: 0;
+}
+
+/* ============================= DIRECAO B — PAUTA =========================== */
+[data-direcao='pauta'] {
+  /* Superficies */
+  --superficie: var(--papel);
+  --superficie-elevada: var(--branco);
+  --superficie-sutil: var(--painel);
+  --superficie-clara: var(--painel);
+
+  /* Texto */
+  --texto: var(--tinta);
+  --texto-2: var(--grafite);
+  --texto-3: var(--fraco);
+  --texto-fraco: var(--fraquissimo);
+  --texto-sobre-acento: var(--branco);
+
+  /* Acento */
+  --acento: var(--vinho);
+  --acento-forte: var(--vinho-claro);
+  --acento-fundo: var(--vinho-bg);
+  /* Na Pauta o acento ja passa sobre o branco (12,39:1): nao ha desvio. */
+  --acento-em-elevada: var(--vinho);
+
+  /* Divisores e foco */
+  --divisor: var(--borda);
+  --divisor-forte: var(--borda-forte);
+  --foco: var(--vinho);
+  --foco-deslocamento: 2px;
+
+  /* Estados */
+  --estado-ok: var(--verde);
+  --estado-alerta: var(--ouro);
+  --estado-alerta-fundo: var(--ouro-bg);
+  --estado-erro: var(--vinho);
+  --estado-erro-fundo: var(--vinho-bg);
+
+  /* Forma */
+  --raio: 5px;
+  --raio-pilula: 999px;
+
+  /*
+   * Familia unica: a Direcao B nao tem display separada. `--fonte-display`
+   * existe para o componente poder pedir "titulo" sem saber a direcao.
+   */
+  --fonte-display: 'Archivo Variable', Archivo, system-ui, sans-serif;
+  --fonte-interface: 'Archivo Variable', Archivo, system-ui, sans-serif;
+
+  --texto-base: 15px;
+  --t-nano: 0.6875rem; /* 11px */
+  --t-micro: 0.75rem; /* 12px */
+  --t-mini: 0.8125rem; /* 13px */
+  --t-menor: 0.875rem; /* 14px */
+  --t-corpo: 0.9375rem; /* 15px — base menor que a da Catedra, por densidade */
+  --t-maior: 1.0625rem; /* 17px */
+  --t-t3: 1.125rem; /* 18px */
+  --t-t2: 1.4375rem; /* 23px */
+  --t-t1: 1.5rem; /* 24px */
+  --t-display: clamp(2rem, 3.8vw, 2.8125rem);
+  --t-numeral: 1.875rem; /* 30px */
+  --peso-titulo: var(--peso-forte);
+
+  /* Medidas de layout */
+  --largura-conteudo: 1200px;
+  --icone: 18px;
+  --icone-p: 15px;
+
+  /* --- Camada 3: tokens de componente --- */
+
+  /* Ver a nota em `--limite-controle` na Catedra. */
+  --limite-controle: var(--campo-borda);
+
+  /* Campo: caixa branca com borda em volta. */
+  --campo-fundo: var(--branco);
+  --campo-borda-largura: var(--borda-fina);
+  --campo-borda-cor: var(--limite-controle);
+  --campo-preenchimento: var(--s2) var(--s3);
+  --campo-rotulo-cor: var(--texto-2);
+  --campo-rotulo-caixa-alta: none;
+  --campo-rotulo-espaco: var(--letra-normal);
+  --campo-rotulo-tamanho: var(--t-micro);
+
+  /* Botao */
+  --botao-preenchimento: var(--s2) var(--s4);
+  --botao-preenchimento-p: var(--s1) var(--s3);
+  --botao-peso: var(--peso-medio);
+  --botao-peso-primario: var(--peso-medio);
+  --botao-secundario-fundo: var(--superficie-elevada);
+  --botao-secundario-cor: var(--texto-2);
+
+  /*
+   * Selo de estado: pilula preenchida. Este e o componente central da direcao
+   * (docs/design.md) e as quatro cores sao FIXAS — solicitado azul, em
+   * elaboracao ouro, em revisao vinho, entregue verde. Nenhuma tela recolore.
+   */
+  --selo-raio: var(--raio-pilula);
+  --selo-preenchimento: var(--s1) var(--s2);
+  --selo-sol-cor: var(--azul);
+  --selo-sol-fundo: var(--azul-bg);
+  --selo-ela-cor: var(--ouro);
+  --selo-ela-fundo: var(--ouro-bg);
+  --selo-rev-cor: var(--vinho);
+  --selo-rev-fundo: var(--vinho-bg);
+  --selo-ent-cor: var(--verde);
+  --selo-ent-fundo: var(--verde-bg);
+  --selo-borda: transparent;
+  --medidor-vazio: var(--borda-forte);
+  --medidor-cheio: var(--grafite);
+
+  /* Aba: indicador e a propria pilula de fundo. */
+  --aba-fundo-ativa: var(--acento-fundo);
+  --aba-cor-ativa: var(--acento);
+  --aba-indicador-cor: transparent;
+  --aba-raio: var(--raio);
+}
+
+/*
+ * DESVIO DE ESCOPO EM SUPERFICIE ELEVADA.
+ *
+ * `--ouro-500` da 4,70:1 sobre `--vinho-800`, mas cai para 4,19:1 sobre
+ * `--vinho-700`, que e o fundo de formulario, cartao e tabela na Catedra. Como a
+ * cor foi medida do portfolio da CONTRATANTE (ADR-10), a correcao NAO e mudar o
+ * valor: e restringir onde ele aparece. Todo componente que sobe para a
+ * superficie elevada declara a classe `superficie-elevada` e reescopa `--acento`.
+ *
+ * A REGRA ABAIXO E DIRECAO-AGNOSTICA DE PROPOSITO, e isso e o ponto.
+ *
+ * A primeira versao era `[data-direcao='catedra'] .superficie-elevada`, e estava
+ * errada: as direcoes se ANINHAM. O `<html>` e sempre `catedra`, e a shell
+ * autenticada poe `pauta` num elemento abaixo dele — entao um cartao dentro da
+ * area do cliente continua sendo descendente de um `[data-direcao='catedra']` e
+ * herdaria o dourado da Catedra sobre fundo branco. O catalogo reproduz
+ * exatamente esse aninhamento, e o axe pegou.
+ *
+ * Com a indirecao, `--acento-em-elevada` vem do bloco de direcao MAIS PROXIMO,
+ * pela heranca normal de custom property, e a regra estrutural nao precisa saber
+ * de direcao nenhuma.
+ *
+ * Licao geral: em `semanticos.css`, seletor que mistura `[data-direcao]` com
+ * descendente e sempre suspeito.
+ */
+.superficie-elevada {
+  --acento: var(--acento-em-elevada);
+}

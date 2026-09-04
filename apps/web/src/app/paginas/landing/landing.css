@@ -1,3 +1,11 @@
+/*
+ * Rota publica, Direcao A (Catedra). Nenhum valor visual literal: cor,
+ * espacamento e tamanho de fonte vem de token, e e isso que o stylelint passa a
+ * exigir de todo CSS de tela.
+ *
+ * O conteudo definitivo desta pagina e a Etapa 6. O que muda aqui na Etapa 3 e
+ * so a origem dos valores.
+ */
 .hero {
   min-height: 100svh;
   display: flex;
@@ -5,32 +13,31 @@
   justify-content: center;
   gap: var(--s4);
   padding: var(--s7) var(--s5);
-  max-width: 62rem;
+  max-width: var(--largura-conteudo);
   margin: 0 auto;
 }
 
 .marca {
   font-family: var(--fonte-interface);
-  font-size: 0.8125rem;
-  letter-spacing: 0.18em;
+  font-size: var(--t-mini);
+  letter-spacing: var(--letra-caixa-alta);
   text-transform: uppercase;
-  color: var(--ouro-500);
-  margin: 0;
+  color: var(--acento);
 }
 
-h1 {
+.hero h1 {
   font-family: var(--fonte-display);
-  font-weight: 300;
-  font-size: clamp(2rem, 6vw, 3.75rem);
-  line-height: 1.15;
-  margin: 0;
-  max-width: 22ch;
+  font-weight: var(--peso-titulo);
+  font-size: var(--t-display);
+  line-height: var(--altura-apertada);
+  letter-spacing: var(--letra-titulo);
+  max-width: var(--medida-titulo);
 }
 
 .subtitulo {
-  color: var(--creme-200);
-  max-width: 52ch;
-  margin: 0;
+  color: var(--texto-2);
+  max-width: var(--medida-texto);
   padding-top: var(--s3);
-  border-top: 1px solid var(--linha);
+  border-top: var(--borda-fina) solid var(--divisor);
+  line-height: var(--altura-solta);
 }

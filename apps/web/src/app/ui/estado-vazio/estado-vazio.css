@@ -1,0 +1,38 @@
+:host {
+  display: block;
+}
+
+/*
+ * Borda tracejada: e a convencao que separa "aqui nao ha nada" de "aqui ha um
+ * cartao". Divisor decorativo, nao limite de controle — o contraste baixo e
+ * proposital e nao cai na WCAG 1.4.11.
+ */
+.vazio {
+  border: var(--borda-fina) dashed var(--divisor-forte);
+  border-radius: var(--raio);
+  padding: var(--s5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s3);
+  text-align: center;
+  color: var(--texto-3);
+}
+
+.vazio app-icone {
+  color: var(--texto-fraco);
+}
+
+.vazio__titulo {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t3);
+  font-weight: var(--peso-titulo);
+  color: var(--texto);
+  line-height: var(--altura-titulo);
+}
+
+.vazio__mensagem {
+  font-size: var(--t-mini);
+  line-height: var(--altura-densa);
+  max-width: var(--medida-auxiliar);
+}

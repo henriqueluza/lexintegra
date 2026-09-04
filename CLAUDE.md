@@ -11,7 +11,7 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 **Concluído:**
 
 - Nome definido: LexIntegra. Domínio `lexintegra.com.br` comprado e ativo.
-- **Etapa 1 (direção visual) decidida** — ver `docs/design.md`. Direção A (Cátedra) para páginas públicas/landing; Direção B (Pauta) para módulos internos autenticados. Direção C (Margem) descartada. **Verificado na Etapa 2:** `docs/prototipos/` contém `direcao-A-catedra.html` e `direcao-B-pauta.html`. `direcao-C-margem.html` e `LexIntegra-tres-direcoes-visuais.pdf`, citados em `design.md`, **não estão versionados** — ou são adicionados, ou a referência em `design.md` é corrigida.
+- **Etapa 1 (direção visual) decidida** — ver `docs/design.md`. Direção A (Cátedra) para páginas públicas/landing; Direção B (Pauta) para módulos internos autenticados. Direção C (Margem) descartada. `docs/prototipos/` contém apenas `direcao-A-catedra.html` e `direcao-B-pauta.html`; a referência a `direcao-C-margem.html`, `lexintegra-landing.html` e ao PDF comparativo foi corrigida em `design.md` na Etapa 3 — os arquivos seguem fora do repositório.
 - Projeto Firebase/GCP criado, nome de exibição `plataforma-juridica`, **ID real do projeto: `plataforma-juridica-36bda`** (use este ID, não o nome de exibição, em comandos gcloud/terraform/CI). Plano Blaze ativo, conta de faturamento do escritório vinculada.
 - Conta AbacatePay do escritório criada, documentos de verificação enviados. Chave de API **Dev** (`abc_dev_...`) já obtida e armazenada no Secret Manager (`abacatepay-api-key-dev`) — permite testes de integração mesmo antes da aprovação final da conta.
 - Conta Resend criada, subdomínio `notificacoes.lexintegra.com.br` adicionado. Registros DNS (DKIM, dois CNAMEs de tracking, DMARC) cadastrados no Registro.br; verificação em andamento/concluída — confirmar status atual no painel do Resend antes de assumir. Chave de API armazenada no Secret Manager (`resend-api-key`) — **a chave original foi exposta acidentalmente e revogada; a que está em uso é uma chave nova, gerada depois do incidente.**
@@ -43,7 +43,18 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 
 **Pendência conhecida na identidade visual:** a logo original enviada tem o wordmark do nome de trabalho anterior embutido na arte — precisa ser refeita com "LexIntegra" antes de uso público (ver ADR-10). As cores extraídas continuam válidas.
 
-**Próximo trabalho recomendado:** Etapa 2 escrita e verificada localmente (`pnpm quality` verde, imagem da API construída e testada, Angular pré-renderizando). Falta validar o critério de aceite em produção: abrir o PR, revisar o `terraform plan` no comentário do CI, e fazer o merge para o pipeline publicar. Depois disso, remover `infra/terraform/imports.tf` e seguir para a Etapa 3 (sistema de design implementado).
+**Etapa 3 — sistema de design implementado (branch `feat/sistema-design`):**
+
+- **Tokens em três camadas**, em `apps/web/src/styles/tokens/`. Primitivos por direção (nomes idênticos aos de `design.md`), semânticos dentro de `[data-direcao='catedra']` e `[data-direcao='pauta']`, e tokens de componente para as diferenças estruturais. **Componente nunca lê primitivo** — é isso que faz um único jogo de componentes servir as duas direções.
+- **As direções se aninham.** O `<html>` é sempre `catedra`; a shell autenticada põe `pauta` abaixo dele. Consequência: **em `semanticos.css`, seletor que mistura `[data-direcao]` com descendente é sempre suspeito** — o primeiro desvio de escopo foi escrito assim e vazava o dourado da Cátedra para dentro da área do cliente. Use indireção de token.
+- **Auditoria de contraste feita e transformada em teste** (`apps/web/src/styles/contraste.spec.ts`, 57 pares). As duas pendências que `design.md` listava não eram os problemas; seis outros pares reprovavam e foram corrigidos. `--ouro-500` e os vinhos **não** mudaram (ADR-10). Detalhe em `docs/design.md`.
+- **Onze componentes base** em `apps/web/src/app/ui/`, cada um com todos os seus estados e teste de componente. `app-selo-estado` importa `EstadoEntregavel` de `packages/shared`: acrescentar um quinto estado lá passa a impedir a compilação do frontend.
+- **Catálogo em `/catalogo`**, só em desenvolvimento — a configuração de produção troca suas rotas por lista vazia (`fileReplacements`), e o CI confere que ele não vazou para o pacote publicado. Abrir com `pnpm --filter web dev`.
+- **Regressão visual e axe em contêiner** (`scripts/visual.sh`, e o mesmo em CI). Precisa de Docker. As imagens de referência ficam em `apps/web/e2e/referencia/`.
+- **`pnpm lint` inclui stylelint**, que é o critério de aceite formal da etapa: nenhuma cor, espaçamento ou tamanho de fonte escrito direto numa tela. As exceções estão listadas em `.stylelintrc.mjs` e qualquer adição a elas afrouxa o critério.
+- **Cobertura do `apps/web`: 95/88/90/95.**
+
+**Próximo trabalho recomendado:** fechar a Etapa 3 (revisão visual do catálogo, aprovação do baseline de regressão visual, PR) e seguir para a Etapa 4 (identidade e autorização). O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde.
 
 ## Stack
 
@@ -59,12 +70,19 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 
 ```
 apps/web/          Angular 22, pré-renderização estática das rotas públicas
+  src/styles/      tokens em três camadas + base global; ÚNICO lugar com valor literal
+  src/app/ui/      componentes base do sistema de design
+  src/app/catalogo/ catálogo navegável, removido do build de produção
+  e2e/             Playwright: regressão visual, axe e aninhamento de direção
+  e2e/referencia/  imagens de referência da regressão visual
 apps/api/          NestJS 12 (ESM-only), prefixo global /api
 apps/scanner/      ClamAV em contêiner, sem lógica de domínio (Etapa 11, ainda não existe)
 packages/shared/   tipos e schemas compartilhados
 infra/terraform/   ver o README de lá antes de mexer
+scripts/visual.sh  roda o Playwright na imagem oficial (precisa de Docker)
 .github/workflows/ ci.yml e deploy.yml
 docs/
+.stylelintrc.mjs   critério de aceite da Etapa 3
 .claude/
   settings.json     registro dos hooks de PreToolUse
   hooks/
@@ -91,9 +109,19 @@ pnpm dev              # web + api em modo desenvolvimento
 pnpm test             # unitários (Jest na api e na web)
 pnpm test:integration # exige emulador do Firestore rodando
 pnpm test:e2e         # Playwright
-pnpm lint             # ESLint + dependency-cruiser
+pnpm lint             # ESLint + stylelint + dependency-cruiser
 pnpm quality          # cobertura, complexidade, dependências
+pnpm test:visual      # regressão visual no contêiner (precisa de Docker)
+pnpm test:a11y        # axe sobre o catálogo, três larguras
 ```
+
+Para abrir o catálogo de componentes: `pnpm --filter web dev` e
+`http://localhost:4200/catalogo`. Ele não existe no build de produção.
+
+Para regravar as imagens de referência da regressão visual:
+`pnpm --filter web test:visual:gravar`. **Não é operação de rotina** — o
+baseline é a verdade contra a qual tudo é comparado, e regravá-lo por engano
+apaga a regressão em vez de acusá-la.
 
 ## Regras invioláveis
 
@@ -113,7 +141,7 @@ Estas vêm de decisões registradas nos ADRs. Violá-las é bug, não preferênc
 
 7. **O SDK do Firebase no frontend serve só para autenticação.** Nenhuma leitura ou escrita direta no Firestore pelo browser. As regras negam por padrão.
 
-8. **Nenhum valor visual escrito direto em componente.** Cor, espaçamento e tipografia vêm de token.
+8. **Nenhum valor visual escrito direto em componente.** Cor, espaçamento e tipografia vêm de token. Verificado por lint em três frentes, porque há três portas: stylelint no CSS, `@angular-eslint/template/no-inline-styles` para `style="..."` no template, e um `no-restricted-syntax` para `styles: [...]` inline no decorador. Componente lê token **semântico** (`--texto`, `--acento`), nunca primitivo (`--vinho-800`, `--papel`).
 
 9. **Segredos vêm do Secret Manager.** Nunca leia, escreva ou imprima `.env` nem chave JSON de conta de serviço. Nenhuma credencial (chave de API, token) deve aparecer em commit, log ou output de comando — se precisar de um valor sensível, referencie o secret pelo nome, nunca peça para o humano colar o valor em texto.
 

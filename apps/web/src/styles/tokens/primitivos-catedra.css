@@ -1,0 +1,56 @@
+/*
+ * Camada 1 — primitivos da Direcao A (Catedra), registrados em docs/design.md.
+ *
+ * Sobria e institucional: vinho profundo, baixa densidade, serifada de peso 300
+ * no hero. Feita para ser lida devagar e converter. Vale em tudo que roda SEM
+ * autenticacao — a fronteira entre as duas direcoes e a fronteira de login.
+ *
+ * As cores foram medidas do portfolio da CONTRATANTE (ADR-10). Nenhum texto,
+ * foto ou logotipo do escritorio foi reaproveitado — so a paleta.
+ *
+ * Consequencia pratica dessa origem: `--ouro-500` e `--vinho-*` sao decisao de
+ * MARCA, nao de implementacao. Quando a auditoria de contraste encontrou um par
+ * insuficiente com `--ouro-500`, a correcao foi restringir onde ele pode ser
+ * usado, nao mudar o valor. Ver `contraste.spec.ts`.
+ *
+ * NENHUM componente le um token deste arquivo. Componente le token semantico
+ * (`semanticos.css`).
+ */
+:root {
+  /* Superficies — vinho profundo */
+  --vinho-900: #26050a;
+  --vinho-800: #340106;
+  --vinho-700: #420c11;
+  --vinho-600: #54151b;
+
+  /* Acento — dourado */
+  --ouro-500: #a8783c;
+  --ouro-400: #c39b5f;
+  --ouro-100: rgba(168, 120, 60, 0.16);
+
+  /* Texto sobre fundo escuro */
+  --creme-50: #f2eee7;
+  --creme-200: #cfc4bb;
+  /*
+   * `#9c8b85` na Etapa 1. Passava sobre `--vinho-800` (5,59:1) mas caia para
+   * 4,30:1 sobre `--vinho-600`. Clareado ate o pior fundo da direcao passar.
+   */
+  --creme-400: #a18f89;
+
+  /* Divisores */
+  --linha: rgba(168, 120, 60, 0.24);
+  --linha-forte: rgba(168, 120, 60, 0.42);
+
+  /* Estados */
+  --ok: #7fa06b;
+  --alerta: #c98a3a;
+  /*
+   * `#c96a63` na Etapa 1: 4,43:1 sobre `--vinho-700`, que e o fundo do
+   * formulario — exatamente onde mensagem de erro aparece. Clareado ate passar
+   * nas quatro superficies. Cor de estado, nao cor de marca: mudar o valor aqui
+   * nao toca o ADR-10.
+   */
+  --erro: #dc746c;
+  --alerta-fundo: rgba(201, 138, 58, 0.08);
+  --erro-fundo: rgba(220, 116, 108, 0.1);
+}

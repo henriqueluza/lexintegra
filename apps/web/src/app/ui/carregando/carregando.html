@@ -1,0 +1,12 @@
+<div class="carregando" role="status" aria-live="polite">
+  <span class="visualmente-oculto">{{ rotulo() }}</span>
+  <div class="carregando__forma" aria-hidden="true">
+    @for (linha of repeticoes(); track linha) {
+    <span
+      class="carregando__pedaco"
+      [class.carregando__pedaco--bloco]="variante() === 'bloco'"
+      [class.carregando__pedaco--tabela]="variante() === 'tabela'"
+    ></span>
+    }
+  </div>
+</div>

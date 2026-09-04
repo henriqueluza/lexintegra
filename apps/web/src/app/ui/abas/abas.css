@@ -1,0 +1,52 @@
+:host {
+  display: block;
+}
+
+.abas__lista {
+  display: flex;
+  gap: var(--s2);
+  border-bottom: var(--borda-fina) solid var(--divisor);
+  overflow-x: auto;
+  /*
+   * Em tela estreita a lista rola no eixo horizontal em vez de quebrar linha:
+   * abas quebradas em duas fileiras perdem a leitura de "quantas abas existem".
+   */
+  scrollbar-width: thin;
+}
+
+.abas__gatilho {
+  font-family: var(--fonte-interface);
+  font-size: var(--t-menor);
+  font-weight: var(--peso-medio);
+  color: var(--texto-3);
+  background: transparent;
+  border: 0;
+  border-bottom: var(--borda-media) solid transparent;
+  border-radius: var(--aba-raio) var(--aba-raio) 0 0;
+  padding: var(--s2) var(--s3);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color var(--duracao-rapida) ease,
+    background-color var(--duracao-rapida) ease;
+}
+
+.abas__gatilho:hover:not([aria-disabled='true']) {
+  color: var(--texto);
+}
+
+/*
+ * O indicador difere por direcao e vem de token: na Catedra e a borda inferior
+ * dourada, na Pauta e a pilula de fundo. A cor sozinha nao carrega o estado —
+ * `aria-selected` faz isso para o leitor de tela (WCAG 1.4.1).
+ */
+.abas__gatilho--ativa {
+  color: var(--aba-cor-ativa);
+  background: var(--aba-fundo-ativa);
+  border-bottom-color: var(--aba-indicador-cor);
+}
+
+.abas__gatilho--inerte {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

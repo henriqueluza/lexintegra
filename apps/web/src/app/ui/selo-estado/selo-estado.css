@@ -1,0 +1,65 @@
+:host {
+  display: inline-block;
+}
+
+.selo-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s3);
+}
+
+.selo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--t-micro);
+  font-weight: var(--peso-medio);
+  line-height: var(--altura-densa);
+  padding: var(--selo-preenchimento);
+  border-radius: var(--selo-raio);
+  border: var(--borda-fina) solid var(--selo-borda);
+  white-space: nowrap;
+}
+
+/*
+ * As quatro cores sao fixas por ADR-11 e docs/design.md: solicitado azul, em
+ * elaboracao ouro, em revisao vinho, entregue verde. O que muda entre direcoes e
+ * o tratamento — pilula preenchida na Pauta, retangulo so com borda na Catedra —
+ * e isso ja esta nos tokens `--selo-*`.
+ */
+.selo--sol {
+  color: var(--selo-sol-cor);
+  background: var(--selo-sol-fundo);
+}
+
+.selo--ela {
+  color: var(--selo-ela-cor);
+  background: var(--selo-ela-fundo);
+}
+
+.selo--rev {
+  color: var(--selo-rev-cor);
+  background: var(--selo-rev-fundo);
+}
+
+.selo--ent {
+  color: var(--selo-ent-cor);
+  background: var(--selo-ent-fundo);
+}
+
+.medidor {
+  display: inline-flex;
+  gap: var(--s1);
+}
+
+.medidor__parte {
+  display: block;
+  width: var(--s4);
+  height: var(--borda-grossa);
+  border-radius: var(--raio);
+  background: var(--medidor-vazio);
+}
+
+.medidor__parte--aceso {
+  background: var(--medidor-cheio);
+}
