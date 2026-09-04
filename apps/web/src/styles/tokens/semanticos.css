@@ -102,9 +102,24 @@
   --botao-preenchimento-p: var(--s2) var(--s3);
   --botao-peso: var(--peso-medio);
 
-  /* Selo de estado: retangular, alinhado ao raio de 2px da direcao. */
+  /*
+   * Selo de estado. A associacao estado→cor e fixa por ADR-11; o que muda entre
+   * direcoes e o TRATAMENTO. Na Catedra o selo e retangular, sem preenchimento,
+   * so borda e texto — coerente com uma direcao que nao usa sombra nem pilula.
+   */
   --selo-raio: var(--raio-pilula);
   --selo-preenchimento: var(--s1) var(--s2);
+  --selo-sol-cor: var(--creme-200);
+  --selo-sol-fundo: transparent;
+  --selo-ela-cor: var(--alerta);
+  --selo-ela-fundo: transparent;
+  --selo-rev-cor: var(--ouro-400);
+  --selo-rev-fundo: transparent;
+  --selo-ent-cor: var(--ok);
+  --selo-ent-fundo: transparent;
+  --selo-borda: currentColor;
+  --medidor-vazio: var(--divisor-forte);
+  --medidor-cheio: var(--acento);
 
   /* Aba: indicador e a borda inferior. */
   --aba-fundo-ativa: transparent;
@@ -181,7 +196,7 @@
   /* Campo: caixa branca com borda em volta. */
   --campo-fundo: var(--branco);
   --campo-borda-largura: var(--borda-fina);
-  --campo-borda-cor: var(--borda-forte);
+  --campo-borda-cor: var(--campo-borda);
   --campo-preenchimento: var(--s2) var(--s3);
   --campo-rotulo-cor: var(--texto-2);
   --campo-rotulo-caixa-alta: none;
@@ -193,13 +208,45 @@
   --botao-preenchimento-p: var(--s1) var(--s3);
   --botao-peso: var(--peso-medio);
 
-  /* Selo de estado: pilula. */
+  /*
+   * Selo de estado: pilula preenchida. Este e o componente central da direcao
+   * (docs/design.md) e as quatro cores sao FIXAS — solicitado azul, em
+   * elaboracao ouro, em revisao vinho, entregue verde. Nenhuma tela recolore.
+   */
   --selo-raio: var(--raio-pilula);
   --selo-preenchimento: var(--s1) var(--s2);
+  --selo-sol-cor: var(--azul);
+  --selo-sol-fundo: var(--azul-bg);
+  --selo-ela-cor: var(--ouro);
+  --selo-ela-fundo: var(--ouro-bg);
+  --selo-rev-cor: var(--vinho);
+  --selo-rev-fundo: var(--vinho-bg);
+  --selo-ent-cor: var(--verde);
+  --selo-ent-fundo: var(--verde-bg);
+  --selo-borda: transparent;
+  --medidor-vazio: var(--borda-forte);
+  --medidor-cheio: var(--grafite);
 
   /* Aba: indicador e a propria pilula de fundo. */
   --aba-fundo-ativa: var(--acento-fundo);
   --aba-cor-ativa: var(--acento);
   --aba-indicador-cor: transparent;
   --aba-raio: var(--raio);
+}
+
+/*
+ * DESVIO DE ESCOPO EM SUPERFICIE ELEVADA — Catedra.
+ *
+ * `--ouro-500` da 4,70:1 sobre `--vinho-800`, mas cai para 4,19:1 sobre
+ * `--vinho-700`, que e o fundo de formulario e de cartao. Como a cor e medida do
+ * portfolio da CONTRATANTE (ADR-10), a correcao NAO e mudar o valor: e restringir
+ * onde ele pode aparecer. Todo elemento que sobe para a superficie elevada
+ * reescopa `--acento` para o dourado claro (6,33:1) — em um lugar so, em vez de
+ * cada consumidor precisar lembrar da regra.
+ *
+ * A classe e aplicada pelo componente `app-cartao`; o teste de contraste cobre os
+ * dois escopos.
+ */
+[data-direcao='catedra'] .superficie-elevada {
+  --acento: var(--ouro-400);
 }

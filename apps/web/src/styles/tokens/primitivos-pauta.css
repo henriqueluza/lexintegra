@@ -22,12 +22,25 @@
   /* Rampa de texto — quatro niveis, todos >= 4,5:1 sobre as tres superficies */
   --tinta: #1c1b1e;
   --grafite: #414045;
-  --fraco: #6e6d73;
-  --fraquissimo: #96959b;
+  /*
+   * A rampa desceu um degrau em relacao a Etapa 1. `--fraquissimo` era `#96959b`
+   * e dava 2,70:1 sobre `--papel` — reprovado, e ele carrega placeholder, data de
+   * atualizacao, peso de arquivo e contador, que sao texto de verdade. Nao da
+   * para ter quatro niveis distinguiveis e todos >= 4,5:1 mantendo o topo da
+   * rampa onde estava, entao `--fraco` assumiu o valor mais escuro e
+   * `--fraquissimo` herdou o antigo `--fraco`.
+   */
+  --fraco: #5a595e;
+  --fraquissimo: #6e6d73;
 
-  /* Divisores */
+  /*
+   * Divisores decorativos. Contraste baixo aqui e proposital e permitido: a
+   * WCAG 1.4.11 fala do limite de CONTROLE, nao de linha de separacao. Borda de
+   * campo, que e limite de controle, usa `--campo-borda` abaixo.
+   */
   --borda: #dededa;
   --borda-forte: #c6c6c1;
+  --campo-borda: #8b8b87;
 
   /* Acao primaria — unico uso de vinho nesta direcao */
   --vinho: #6c0c0c;
@@ -43,7 +56,7 @@
    * da CONTRATANTE, ADR-10). E cor de trabalho desta direcao, o que torna
    * ajuste de contraste nela uma decisao de implementacao, nao de marca.
    */
-  --ouro: #8a7639;
+  --ouro: #7e6c34;
   --ouro-bg: #f5f1e2;
   --azul: #3b4b7a;
   --azul-bg: #dee2ee;

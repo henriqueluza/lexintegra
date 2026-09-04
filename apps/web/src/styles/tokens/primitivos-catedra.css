@@ -31,7 +31,11 @@
   /* Texto sobre fundo escuro */
   --creme-50: #f2eee7;
   --creme-200: #cfc4bb;
-  --creme-400: #9c8b85;
+  /*
+   * `#9c8b85` na Etapa 1. Passava sobre `--vinho-800` (5,59:1) mas caia para
+   * 4,30:1 sobre `--vinho-600`. Clareado ate o pior fundo da direcao passar.
+   */
+  --creme-400: #a18f89;
 
   /* Divisores */
   --linha: rgba(168, 120, 60, 0.24);
@@ -40,7 +44,13 @@
   /* Estados */
   --ok: #7fa06b;
   --alerta: #c98a3a;
-  --erro: #c96a63;
+  /*
+   * `#c96a63` na Etapa 1: 4,43:1 sobre `--vinho-700`, que e o fundo do
+   * formulario — exatamente onde mensagem de erro aparece. Clareado ate passar
+   * nas quatro superficies. Cor de estado, nao cor de marca: mudar o valor aqui
+   * nao toca o ADR-10.
+   */
+  --erro: #dc746c;
   --alerta-fundo: rgba(201, 138, 58, 0.08);
-  --erro-fundo: rgba(201, 106, 99, 0.1);
+  --erro-fundo: rgba(220, 116, 108, 0.1);
 }
