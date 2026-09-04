@@ -9,6 +9,10 @@ packages:
 # do pnpm 10, e aceito por `pnpm config get` mas ignorado pelo install no pnpm 11 —
 # um install limpo falha com ERR_PNPM_IGNORED_BUILDS mesmo parecendo configurado.
 #
+# `re2` vem do firebase-tools e e a excecao `true` da Etapa 4: e o motor de regex
+# nativo que ele usa, sem build nao carrega, e o pacote e devDependency de raiz —
+# nunca entra na imagem da API, que instala com --filter api... --ignore-scripts.
+#
 # `false` tambem e uma resposta, e as duas entradas `false` abaixo sao da Etapa 4:
 # firebase-admin traz @firebase/util e protobufjs, e os dois tem script de
 # instalacao. Nenhum dos dois compila binario nativo para o nosso uso — o
@@ -22,4 +26,5 @@ allowBuilds:
   lmdb: true
   msgpackr-extract: true
   protobufjs: false
+  re2: true
   unrs-resolver: true

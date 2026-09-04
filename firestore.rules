@@ -1,15 +1,24 @@
 rules_version = '2';
 
-// Nega tudo, por padrao e de proposito.
+// Nega tudo, por padrao e de proposito. Esta e a forma FINAL destas regras, nao
+// um estado provisorio a ser afrouxado quando as colecoes existirem.
 //
-// Arquitetura, secao 6.1 e regra inviolavel 7: o SDK do Firebase no frontend serve
-// SO para autenticacao. Nenhuma leitura ou escrita direta no Firestore pelo browser
-// — todo acesso ao banco passa pela API, o que concentra a autorizacao em um lugar
-// auditavel.
+// Arquitetura, secao 6.1, e regra inviolavel 7: o SDK do Firebase no frontend
+// serve SO para autenticacao. Nenhuma leitura ou escrita direta no Firestore pelo
+// browser — todo acesso ao banco passa pela API.
 //
-// As regras reais (perfis por custom claim, advogado enxergando apenas o que lhe
-// foi distribuido) sao a Etapa 4, e cada uma exige teste correspondente no
-// emulador, incluindo o caso negativo.
+// POR QUE NAO HA REGRA POR PERFIL AQUI.
+// A API usa o Admin SDK, que IGNORA as regras. Uma regra que permitisse ao
+// advogado ler o que lhe foi distribuido nunca seria exercitada pelo caminho real
+// do sistema: nenhum codigo de producao a atravessaria, nenhum teste de aplicacao
+// a derrubaria se estivesse errada, e ela ficaria como porta aberta que ninguem
+// visita. A autorizacao por perfil e por atribuicao vive nos guards e nos
+// servicos da API (ver apps/api/src/autenticacao), onde e exercitada a cada
+// requisicao. Aqui fica a prova de que o navegador nao tem caminho nenhum.
+//
+// A suite que exercita este arquivo esta em packages/regras-firestore: quatro
+// perfis x cada caminho do modelo de dados x cinco operacoes, mais um controle
+// positivo que impede a suite de passar verde por um arnes quebrado.
 service cloud.firestore {
   match /databases/{database}/documents {
     match /{document=**} {
