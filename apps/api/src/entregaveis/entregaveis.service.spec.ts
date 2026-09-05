@@ -42,14 +42,20 @@ async function montar(revisoes = 2): Promise<Arranjo> {
     { ...PRODUTO, numeroRevisoesPermitidas: revisoes },
     ADMIN,
   );
-  await banco.runTransaction((transacao) =>
-    pedidos.criar(transacao as unknown as Transaction, {
-      pedidoId: 'pedido-1',
-      clienteId: CLIENTE,
-      pagamentoId: 'pagamento-1',
-      produtoOrigemId,
-    }),
-  );
+  await banco.runTransaction(async (transacao) => {
+    const tr = transacao as unknown as Transaction;
+    pedidos.gravar(
+      tr,
+      await pedidos.preparar(tr, [
+        {
+          pedidoId: 'pedido-1',
+          clienteId: CLIENTE,
+          pagamentoId: 'pagamento-1',
+          produtoOrigemId,
+        },
+      ]),
+    );
+  });
 
   return {
     banco,
@@ -272,14 +278,20 @@ describe('EntregaveisService', () => {
         { ...PRODUTO, numeroRevisoesPermitidas: 0 },
         ADMIN,
       );
-      await banco.runTransaction((transacao) =>
-        pedidos.criar(transacao as unknown as Transaction, {
-          pedidoId: 'pedido-1',
-          clienteId: CLIENTE,
-          pagamentoId: 'pagamento-1',
-          produtoOrigemId,
-        }),
-      );
+      await banco.runTransaction(async (transacao) => {
+        const tr = transacao as unknown as Transaction;
+        pedidos.gravar(
+          tr,
+          await pedidos.preparar(tr, [
+            {
+              pedidoId: 'pedido-1',
+              clienteId: CLIENTE,
+              pagamentoId: 'pagamento-1',
+              produtoOrigemId,
+            },
+          ]),
+        );
+      });
       await entregaveis.iniciarTrabalho(ALVO, ADVOGADO);
       await entregaveis.registrarArquivo(
         ALVO,

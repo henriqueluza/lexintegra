@@ -51,11 +51,23 @@ async function comPedido(
     produtoOrigemId: produtoId,
   };
 
-  await arranjo.banco.runTransaction((transacao) =>
-    arranjo.pedidos.criar(transacao as unknown as Transaction, pedido),
-  );
+  await comprarCom(arranjo, pedido);
 
   return { produtoId, pedido };
+}
+
+/**
+ * As duas fases, sempre nesta ordem. `gravar` so aceita o resultado de
+ * `preparar`, entao o tipo ja impede a inversao — isto aqui e so conveniencia.
+ */
+async function comprarCom(
+  arranjo: Arranjo,
+  ...itens: NovoPedido[]
+): Promise<void> {
+  await arranjo.banco.runTransaction(async (transacao) => {
+    const t = transacao as unknown as Transaction;
+    arranjo.pedidos.gravar(t, await arranjo.pedidos.preparar(t, itens));
+  });
 }
 
 describe('PedidosService', () => {
@@ -157,14 +169,12 @@ describe('PedidosService', () => {
       );
       arranjo.banco.ordemDeEscrita.length = 0;
 
-      await arranjo.banco.runTransaction((transacao) =>
-        arranjo.pedidos.criar(transacao as unknown as Transaction, {
-          pedidoId: 'pedido-1',
-          clienteId: CLIENTE,
-          pagamentoId: 'pagamento-1',
-          produtoOrigemId: produtoId,
-        }),
-      );
+      await comprarCom(arranjo, {
+        pedidoId: 'pedido-1',
+        clienteId: CLIENTE,
+        pagamentoId: 'pagamento-1',
+        produtoOrigemId: produtoId,
+      });
 
       expect(arranjo.banco.ordemDeEscrita).toEqual([
         `get produtos/${produtoId}`,
@@ -185,25 +195,21 @@ describe('PedidosService', () => {
       const arranjo = montar();
       const { pedido } = await comPedido(arranjo);
 
-      await expect(
-        arranjo.banco.runTransaction((transacao) =>
-          arranjo.pedidos.criar(transacao as unknown as Transaction, pedido),
-        ),
-      ).rejects.toThrow('ALREADY_EXISTS');
+      await expect(comprarCom(arranjo, pedido)).rejects.toThrow(
+        'ALREADY_EXISTS',
+      );
     });
 
     it('recusa produto inexistente', async () => {
       const arranjo = montar();
 
       await expect(
-        arranjo.banco.runTransaction((transacao) =>
-          arranjo.pedidos.criar(transacao as unknown as Transaction, {
-            pedidoId: 'pedido-1',
-            clienteId: CLIENTE,
-            pagamentoId: 'pagamento-1',
-            produtoOrigemId: 'nao-existe',
-          }),
-        ),
+        comprarCom(arranjo, {
+          pedidoId: 'pedido-1',
+          clienteId: CLIENTE,
+          pagamentoId: 'pagamento-1',
+          produtoOrigemId: 'nao-existe',
+        }),
       ).rejects.toThrow(NotFoundException);
     });
   });

@@ -35,6 +35,13 @@ interface DocumentoPedido {
   criadoEm: Timestamp | FieldValue;
 }
 
+/** Resultado da fase de leitura. `gravar` so aceita isto, entao nao ha como
+ * escrever um pedido sem ter lido o produto antes. */
+export interface PedidoPreparado {
+  readonly dados: NovoPedido;
+  readonly snapshot: SnapshotProduto;
+}
+
 export interface NovoPedido {
   readonly pedidoId: string;
   readonly clienteId: string;
@@ -71,61 +78,72 @@ export class PedidosService {
   constructor(@Inject(FIRESTORE) private readonly db: Firestore) {}
 
   /**
-   * Congela o produto dentro do pedido e abre um entregavel por item do snapshot.
+   * FASE 1 — so leitura. Congela o produto de cada item do carrinho.
    *
-   * TODA LEITURA ANTES DE QUALQUER ESCRITA — restricao do Firestore, nao estilo.
-   * Por isso o produto e lido na primeira linha, mesmo que so seja usado depois.
+   * O snapshot sai de `congelarProduto`, a MESMA funcao que o CRUD usa para saber
+   * o que escrever. Um campo novo no produto entra nos dois lugares de uma vez,
+   * ou em nenhum — o que nao pode acontecer e o catalogo ganhar campo que o
+   * pedido nao congela e passar a mudar retroativamente.
+   *
+   * Depois daqui o produto vivo NAO e consultado. Nem para preco, nem para nome,
+   * nem para o numero de revisoes: tudo o que o pedido precisa esta dentro dele.
+   */
+  async preparar(
+    transacao: Transaction,
+    itens: readonly NovoPedido[],
+  ): Promise<readonly PedidoPreparado[]> {
+    const preparados: PedidoPreparado[] = [];
+
+    for (const dados of itens) {
+      const produto = await transacao.get(
+        this.db.collection(COLECAO_PRODUTOS).doc(dados.produtoOrigemId),
+      );
+      if (!produto.exists) {
+        throw new NotFoundException('Produto nao encontrado.');
+      }
+      preparados.push({
+        dados,
+        snapshot: congelarProduto(produto.data() as SnapshotProduto),
+      });
+    }
+
+    return preparados;
+  }
+
+  /**
+   * FASE 2 — so escrita. Grava cada pedido e abre um entregavel por item do
+   * snapshot.
    *
    * `create` e nao `set`: o `pedidoId` e deterministico (vem do evento de
    * pagamento), entao a reentrega do webhook estoura por documento existente, que
    * e duplicata esperada e nao erro (regra inviolavel 4).
    */
-  async criar(
-    transacao: Transaction,
-    dados: NovoPedido,
-  ): Promise<SnapshotProduto> {
-    const produto = await transacao.get(
-      this.db.collection(COLECAO_PRODUTOS).doc(dados.produtoOrigemId),
-    );
-    if (!produto.exists) {
-      throw new NotFoundException('Produto nao encontrado.');
-    }
+  gravar(transacao: Transaction, preparados: readonly PedidoPreparado[]): void {
+    for (const { dados, snapshot } of preparados) {
+      const pedido = this.db.collection(COLECAO_PEDIDOS).doc(dados.pedidoId);
 
-    /*
-     * O snapshot sai de `congelarProduto`, a MESMA funcao que o CRUD usa para
-     * saber o que escrever. Um campo novo no produto entra nos dois lugares de
-     * uma vez, ou em nenhum — o que nao pode acontecer e o catalogo ganhar campo
-     * que o pedido nao congela e passar a mudar retroativamente.
-     *
-     * O produto vivo NAO e consultado depois daqui. Nem para preco, nem para
-     * nome, nem para o numero de revisoes: tudo o que o pedido precisa esta
-     * dentro dele a partir deste instante.
-     */
-    const snapshot = congelarProduto(produto.data() as SnapshotProduto);
-    const pedido = this.db.collection(COLECAO_PEDIDOS).doc(dados.pedidoId);
+      transacao.create(pedido, {
+        clienteId: dados.clienteId,
+        pagamentoId: dados.pagamentoId,
+        produtoOrigemId: dados.produtoOrigemId,
+        snapshot,
+        criadoEm: FieldValue.serverTimestamp(),
+      } satisfies DocumentoPedido);
 
-    transacao.create(pedido, {
-      clienteId: dados.clienteId,
-      pagamentoId: dados.pagamentoId,
-      produtoOrigemId: dados.produtoOrigemId,
-      snapshot,
-      criadoEm: FieldValue.serverTimestamp(),
-    } satisfies DocumentoPedido);
+      snapshot.entregaveis.forEach((nome, indice) => {
+        this.abrirEntregavel(
+          transacao,
+          pedido,
+          nome,
+          indice + 1,
+          dados.clienteId,
+        );
+      });
 
-    snapshot.entregaveis.forEach((nome, indice) => {
-      this.abrirEntregavel(
-        transacao,
-        pedido,
-        nome,
-        indice + 1,
-        dados.clienteId,
+      this.log.log(
+        `pedido ${dados.pedidoId} criado para ${dados.clienteId} com ${snapshot.entregaveis.length} entregavel(is)`,
       );
-    });
-
-    this.log.log(
-      `pedido ${dados.pedidoId} criado para ${dados.clienteId} com ${snapshot.entregaveis.length} entregavel(is)`,
-    );
-    return snapshot;
+    }
   }
 
   /**
