@@ -257,13 +257,27 @@ export class AdminProdutos implements OnInit {
     };
   }
 
+  /**
+   * Reusa os controles que ja existem em vez de limpar e recriar.
+   *
+   * `clear()` + `push()` trocava a identidade de todos os controles de uma vez, e
+   * como o `@for` do template rastreia por identidade, o Angular destruia e
+   * recriava a lista inteira de nos do DOM — o que ele mesmo acusa com NG0956.
+   * Aqui so o excedente e removido e so o que falta e criado; o resto recebe
+   * `setValue`.
+   */
   private trocarLista(
     nome: 'entregaveis' | 'textosOrientativos',
     valores: readonly string[],
   ): void {
     const lista = this.lista(nome);
-    lista.clear();
-    for (const valor of valores) lista.push(this.fb.nonNullable.control(valor));
+
+    while (lista.length > valores.length) lista.removeAt(lista.length - 1);
+
+    valores.forEach((valor, indice) => {
+      if (indice < lista.length) lista.at(indice).setValue(valor);
+      else lista.push(this.fb.nonNullable.control(valor));
+    });
   }
 
   private async recarregar(): Promise<void> {

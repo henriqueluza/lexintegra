@@ -54,18 +54,28 @@
         />
       </div>
 
-      <fieldset class="produtos__lista" formArrayName="entregaveis">
+      <!--
+        `[formControl]` com o objeto do controle, e NAO `formArrayName` +
+        `[formControlName]="$index"`.
+
+        Com o indice, `trocarLista` (que faz clear + push ao abrir um produto para
+        editar) deixava a diretiva presa ao controle ANTIGO: o indice nao mudava,
+        entao `ngOnChanges` nao disparava e o campo renderizava vazio com o modelo
+        preenchido. Pior que perder o dado — a tela mentia sobre o que seria
+        salvo, e digitar no campo escrevia num controle ja removido.
+      -->
+      <fieldset class="produtos__lista">
         <legend class="produtos__legenda">Entregaveis</legend>
         <p class="produtos__ajuda">
           Cada item vira um entregavel proprio no pedido, com estado e saldo de
           revisao independentes. Pelo menos um.
         </p>
 
-        @for (controle of lista('entregaveis').controls; track $index) {
+        @for (controle of lista('entregaveis').controls; track controle) {
         <div class="produtos__item">
           <app-campo
             [rotulo]="'Entregavel ' + ($index + 1)"
-            [formControlName]="$index"
+            [formControl]="controle"
           />
           <app-botao
             variante="texto"
@@ -90,18 +100,19 @@
         </div>
       </fieldset>
 
-      <fieldset class="produtos__lista" formArrayName="textosOrientativos">
+      <fieldset class="produtos__lista">
         <legend class="produtos__legenda">Textos orientativos</legend>
         <p class="produtos__ajuda">
           Texto de apoio exibido ao cliente. Opcional.
         </p>
 
-        @for (controle of lista('textosOrientativos').controls; track $index) {
+        @for (controle of lista('textosOrientativos').controls; track controle)
+        {
         <div class="produtos__item">
           <app-campo
             [rotulo]="'Texto ' + ($index + 1)"
             [multilinha]="true"
-            [formControlName]="$index"
+            [formControl]="controle"
           />
           <app-botao
             variante="texto"

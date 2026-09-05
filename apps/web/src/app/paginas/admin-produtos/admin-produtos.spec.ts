@@ -156,6 +156,34 @@ function textoDaTela(fixture: ComponentFixture<AdminProdutos>): string {
   return fixture.nativeElement.textContent as string;
 }
 
+/**
+ * O que os campos MOSTRAM, nao o que o modelo guarda.
+ *
+ * Existe porque a diferenca entre os dois foi um bug real: com
+ * `[formControlName]="$index"`, abrir um produto para editar deixava a diretiva
+ * presa ao controle antigo — o modelo tinha o valor e o campo renderizava vazio.
+ * Todo teste que olhava para `getRawValue()` passava.
+ */
+function valoresRenderizados(
+  fixture: ComponentFixture<AdminProdutos>,
+  rotulo: string,
+): string[] {
+  return [...fixture.nativeElement.querySelectorAll('app-campo')]
+    .filter((campo) =>
+      (campo as HTMLElement)
+        .querySelector('label')
+        ?.textContent?.includes(rotulo),
+    )
+    .map(
+      (campo) =>
+        (
+          (campo as HTMLElement).querySelector(
+            'input, textarea',
+          ) as HTMLInputElement | null
+        )?.value ?? '',
+    );
+}
+
 describe('AdminProdutos', () => {
   describe('listagem', () => {
     it('carrega o catalogo ao abrir, sem filtro', async () => {
@@ -340,6 +368,75 @@ describe('AdminProdutos', () => {
       expect(api.enviados[0].entregaveis).toEqual([
         'Diagnostico',
         'Politica de privacidade',
+      ]);
+    });
+
+    /**
+     * O modelo estar certo nao basta: o administrador precisa VER o que vai
+     * salvar. Com o campo em branco e o modelo preenchido, a tela mente — e
+     * digitar no campo aparentemente vazio escrevia num controle ja descartado.
+     */
+    it('mostra os entregaveis nos campos, e nao so no modelo', async () => {
+      const { fixture } = await montar({ lista: [LGPD] });
+
+      interno(fixture).editar(LGPD);
+      fixture.detectChanges();
+
+      expect(valoresRenderizados(fixture, 'Entregavel')).toEqual([
+        'Diagnostico',
+        'Politica de privacidade',
+      ]);
+      expect(valoresRenderizados(fixture, 'Texto')).toEqual([
+        'Reuna os contratos vigentes.',
+      ]);
+      expect(valoresRenderizados(fixture, 'Preco')).toEqual(['6400,00']);
+    });
+
+    it('esvazia os campos de lista ao cancelar', async () => {
+      const { fixture } = await montar({ lista: [LGPD] });
+
+      interno(fixture).editar(LGPD);
+      fixture.detectChanges();
+      interno(fixture).cancelarEdicao();
+      fixture.detectChanges();
+
+      expect(valoresRenderizados(fixture, 'Entregavel')).toEqual(['']);
+      expect(valoresRenderizados(fixture, 'Texto')).toEqual([]);
+    });
+
+    /**
+     * Remover um item do meio faz os indices seguintes andarem. Com binding por
+     * indice, os campos seguintes mostrariam o valor do vizinho.
+     */
+    it('mostra os valores certos depois de remover um item do meio', async () => {
+      const TRES = {
+        ...LGPD,
+        entregaveis: ['Primeiro', 'Segundo', 'Terceiro'],
+      };
+      const { fixture } = await montar({ lista: [TRES] });
+
+      interno(fixture).editar(TRES);
+      fixture.detectChanges();
+
+      /*
+       * CLICA no botao em vez de chamar `remover` direto. O componente e OnPush e
+       * `remover` nao escreve em signal nenhum — quem o marca para verificacao e
+       * o proprio `(click)` do template. Chamar o metodo por fora testaria um
+       * caminho que a aplicacao nao tem.
+       */
+      const remover = [
+        ...fixture.nativeElement.querySelectorAll('button'),
+      ].find((botao) =>
+        (botao as HTMLButtonElement)
+          .getAttribute('aria-label')
+          ?.includes('Remover entregavel 2'),
+      ) as HTMLButtonElement;
+      remover.click();
+      fixture.detectChanges();
+
+      expect(valoresRenderizados(fixture, 'Entregavel')).toEqual([
+        'Primeiro',
+        'Terceiro',
       ]);
     });
 
