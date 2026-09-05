@@ -54,7 +54,18 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 - **`pnpm lint` inclui stylelint**, que é o critério de aceite formal da etapa: nenhuma cor, espaçamento ou tamanho de fonte escrito direto numa tela. As exceções estão listadas em `.stylelintrc.mjs` e qualquer adição a elas afrouxa o critério.
 - **Cobertura do `apps/web`: 95/88/90/95.**
 
-**Próximo trabalho recomendado:** fechar a Etapa 3 (revisão visual do catálogo, aprovação do baseline de regressão visual, PR) e seguir para a Etapa 4 (identidade e autorização). O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde.
+**Etapa 4 — identidade e autorização (branch `feat/auth`):**
+
+- **Três perfis numa única claim, `role`** (`cliente` | `advogado` | `admin`), definida em `packages/shared/src/perfil.ts`. O nome é em inglês porque a claim do admin global já foi gravada assim, à mão, fora da aplicação — renomear exigiria reescrever a claim de um usuário existente.
+- **Dois guards globais na API**, não por controlador. Rota nova nasce **fechada**: esquecer `@Publico()` dá 401 na primeira chamada; esquecer de proteger daria vazamento silencioso. Só o health e o pedido de redefinição de senha são públicos.
+- **`verifyIdToken(token, true)` — `checkRevoked` ligado em toda requisição.** É a metade que faz a suspensão valer contra sessão já aberta; a outra metade é `revokeRefreshTokens` no serviço. Cada uma sozinha passa nos próprios testes de unidade e não suspende ninguém — só o teste de integração pega isso.
+- **As regras do Firestore negam tudo, e é a forma final delas** (ver `docs/arquitetura.md` 6.1). 244 asserções em `packages/regras-firestore`, mais um controle positivo sem o qual a suíte passaria verde por arnês quebrado. `apps/web` não pode importar `firebase/firestore` — regra de dependency-cruiser.
+- **Outbox mínimo** (`outbox/`), com o despachante separado da escrita: `OutboxService` recebe a transação de fora e não abre a sua; `DespachanteOutbox` só roda depois do commit. O documento **não guarda o link nem o e-mail** — link é credencial viva, endereço é dado pessoal em repouso.
+- **Adaptador do Resend e transporte falso** antecipados da Etapa 7 (ADR-07.1). `RESEND_API_KEY` e `EMAIL_FROM` vêm de variável de ambiente; em produção, ausência é erro de inicialização, não degradação silenciosa.
+- **`pnpm dev` sobe os emuladores junto**, porque a API recusa iniciar sem projeto configurado e sem emulador. `pnpm semear` cria um usuário de cada perfil (só emulador).
+- **Cobertura:** `apps/api` 88/80/85/90, `apps/web` 95/88/90/95.
+
+**Próximo trabalho recomendado:** revisar e abrir o PR da Etapa 4, depois seguir para a Etapa 5 (modelo de dados e administração de produtos). O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde.
 
 ## Stack
 
@@ -76,10 +87,17 @@ apps/web/          Angular 22, pré-renderização estática das rotas públicas
   e2e/             Playwright: regressão visual, axe e aninhamento de direção
   e2e/referencia/  imagens de referência da regressão visual
 apps/api/          NestJS 12 (ESM-only), prefixo global /api
+  src/autenticacao/ guards globais, decoradores e redefinição de senha
+  src/advogados/    provisionamento e suspensão (só admin)
+  src/outbox/       escrita na transação + despachante, separados
+  src/email/        contrato EmailTransport, adaptador Resend, transporte falso
 apps/scanner/      ClamAV em contêiner, sem lógica de domínio (Etapa 11, ainda não existe)
-packages/shared/   tipos e schemas compartilhados
+packages/shared/   tipos e schemas compartilhados (importe por subcaminho: `shared/perfil`)
+packages/regras-firestore/  suíte das regras no emulador — ver o README de lá
 infra/terraform/   ver o README de lá antes de mexer
 scripts/visual.sh  roda o Playwright na imagem oficial (precisa de Docker)
+scripts/emuladores.sh  envolve um comando nos emuladores de Auth e Firestore
+scripts/semear-emulador.mjs  usuários de desenvolvimento; só fala com o emulador
 .github/workflows/ ci.yml e deploy.yml
 docs/
 .stylelintrc.mjs   critério de aceite da Etapa 3
@@ -101,19 +119,37 @@ docs/
   continua funcionando em localhost.
 - **Source maps do Angular são `hidden`** e vão para `gs://lexintegra-sourcemaps-36bda`
   no deploy, nunca publicados com o bundle (ADR-08).
+- **Código do frontend carregado cedo importa `packages/shared` por SUBCAMINHO**
+  (`shared/perfil`), nunca pelo barril. O barril reexporta os schemas zod, e zod
+  entra com todos os locales: um `import { perfilDoToken } from 'shared'` num
+  arquivo alcançado pelo `app.config.ts` levou o pacote inicial de 256 kB para
+  722 kB. O orçamento do `angular.json` é o alarme — se ele voltar a avisar,
+  procure um import de barril antes de qualquer outra coisa.
+- **O SDK do Firebase é carregado por `import()` dinâmico** (`autenticacao/firebase.ts`),
+  pelo mesmo motivo. Um `import { signInWithEmailAndPassword } from 'firebase/auth'`
+  em qualquer arquivo alcançado pelo `app.config.ts` traz meio megabyte de volta
+  para a landing.
+- **A API recusa iniciar sem `GCP_PROJECT_ID` e sem emulador.** É deliberado:
+  um default silencioso faria ela escrever no projeto errado, e o único sintoma
+  seria dado de produção aparecendo onde não deveria.
 
 ## Comandos
 
 ```
-pnpm dev              # web + api em modo desenvolvimento
-pnpm test             # unitários (Jest na api e na web)
-pnpm test:integration # exige emulador do Firestore rodando
+pnpm dev              # emuladores + web + api (precisa de Java)
+pnpm semear           # um usuário de cada perfil no emulador de Auth
+pnpm test             # unitários (Jest na api, na web e em shared)
+pnpm test:integration # sobe os emuladores e roda regras + integração da API
 pnpm test:e2e         # Playwright
 pnpm lint             # ESLint + stylelint + dependency-cruiser
 pnpm quality          # cobertura, complexidade, dependências
 pnpm test:visual      # regressão visual no contêiner (precisa de Docker)
 pnpm test:a11y        # axe sobre o catálogo, três larguras
 ```
+
+Os emuladores rodam sobre a JVM: `pnpm dev` e `pnpm test:integration` precisam
+de **JDK 11 ou mais novo**. `pnpm --filter web dev` continua funcionando sozinho,
+sem Java, para quem só quer o catálogo.
 
 Para abrir o catálogo de componentes: `pnpm --filter web dev` e
 `http://localhost:4200/catalogo`. Ele não existe no build de produção.
@@ -139,7 +175,7 @@ Estas vêm de decisões registradas nos ADRs. Violá-las é bug, não preferênc
 
 6. **Nenhum arquivo é servido com status diferente de `limpo`.** Essa checagem vive em um único lugar. Uploads vão direto ao bucket de quarentena por URL assinada — o arquivo nunca passa pela API.
 
-7. **O SDK do Firebase no frontend serve só para autenticação.** Nenhuma leitura ou escrita direta no Firestore pelo browser. As regras negam por padrão.
+7. **O SDK do Firebase no frontend serve só para autenticação.** Nenhuma leitura ou escrita direta no Firestore pelo browser. As regras negam por padrão — e isso é a forma final delas, não um estado provisório (ver `docs/arquitetura.md` 6.1). Verificado em duas frentes: a suíte de `packages/regras-firestore` prova que o acesso seria negado, e uma regra de dependency-cruiser impede que o import de `firebase/firestore` chegue a existir em `apps/web`.
 
 8. **Nenhum valor visual escrito direto em componente.** Cor, espaçamento e tipografia vêm de token. Verificado por lint em três frentes, porque há três portas: stylelint no CSS, `@angular-eslint/template/no-inline-styles` para `style="..."` no template, e um `no-restricted-syntax` para `styles: [...]` inline no decorador. Componente lê token **semântico** (`--texto`, `--acento`), nunca primitivo (`--vinho-800`, `--papel`).
 
@@ -159,15 +195,21 @@ Estas vêm de decisões registradas nos ADRs. Violá-las é bug, não preferênc
 
 16. **Upload tem dois fluxos distintos, não um.** Advogado envia entregável (dispara transição de estado). Cliente envia até 3 arquivos de apoio (jpg/pdf, 5 MB cada) associados ao pedido, sem afetar o estado do entregável. Não misture os dois num único endpoint ou numa única validação.
 
-17. **A API é acessada via `/api/**` no mesmo domínio do frontend, não por subdomínio.** Rewrite do Firebase Hosting para o Cloud Run (ver ADR-15). Não criar mapeamento de domínio próprio (`api.lexintegra.com.br`) sem antes verificar se a região do serviço já suporta essa funcionalidade do Cloud Run — na região `southamerica-east1`, não suporta.
+17. **Custom claim só é escrita em um lugar.** `AdvogadosService.criar` escreve `role: advogado`, e nada mais na aplicação escreve claim nenhuma. `admin` nunca é escrito por código: o administrador global é provisionado fora da aplicação (item 2.4.2), por script manual em `scripts/manual-only/`. Suspensão **não** mexe na claim — quem foi suspenso continua sendo advogado, o que muda é o acesso.
+
+18. **Rota nova na API nasce fechada.** Os dois guards são globais; abrir exige `@Publico()` explícito, e a superfície administrativa declara `@Perfis('admin')` na classe do controlador, não em cada método. Hoje há exatamente duas rotas públicas, e há teste que as lista nominalmente.
+
+19. **A API é acessada via `/api/**` no mesmo domínio do frontend, não por subdomínio.** Rewrite do Firebase Hosting para o Cloud Run (ver ADR-15). Não criar mapeamento de domínio próprio (`api.lexintegra.com.br`) sem antes verificar se a região do serviço já suporta essa funcionalidade do Cloud Run — na região `southamerica-east1`, não suporta.
 
 ## Fronteiras de autorização
 
 Quatro perfis de acesso: público sem identidade, webhook autenticado por assinatura, autenticado (cliente e advogado, separados por claim) e administrativo.
 
-O advogado enxerga **apenas** o que lhe foi distribuído. Isso é validado na regra do Firestore, não só na interface. Toda mudança em regra de segurança exige teste correspondente no emulador, incluindo o caso negativo.
+O advogado enxerga **apenas** o que lhe foi distribuído. **Onde isso é verificado foi decidido na Etapa 4: nos guards e serviços da API, não nas regras do Firestore.** O Admin SDK ignora as regras, então um `allow` por atribuição seria código que nenhum caminho real atravessa — protegeria menos do que aparenta. As regras negam tudo e provam que o navegador não tem caminho até o banco; a justificativa completa está em `docs/arquitetura.md`, 6.1.
 
-Não há autocadastro em nenhum perfil administrativo.
+Toda mudança em regra de segurança exige teste correspondente no emulador, incluindo o caso negativo — `packages/regras-firestore`, que roda em `pnpm test:integration`.
+
+Não há autocadastro em nenhum perfil administrativo, nem de advogado. Acesso de advogado nasce só pelo endpoint administrativo (item 2.4.3).
 
 ## LGPD
 
