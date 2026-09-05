@@ -36,22 +36,30 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {
     /*
-     * Scripts de apoio da raiz: Node em CommonJS, executados a mao, nunca
-     * empacotados. O `languageOptions` padrao do projeto e o do codigo de
-     * aplicacao (ESM, sem globais de Node), e sem este bloco cada `require` e
-     * cada `process` vira erro de `no-undef`.
+     * Scripts de apoio da raiz: Node, executados a mao, nunca empacotados. O
+     * `languageOptions` padrao do projeto e o do codigo de aplicacao (sem
+     * globais de Node), e sem este bloco cada `process`, `console` e `fetch`
+     * vira erro de `no-undef`.
      */
-    files: ['scripts/**/*.js'],
+    files: ['scripts/**/*.{js,mjs}'],
     languageOptions: {
-      sourceType: 'commonjs',
       globals: {
-        module: 'writable',
-        require: 'readonly',
         process: 'readonly',
         console: 'readonly',
+        fetch: 'readonly',
+        URL: 'readonly',
         __dirname: 'readonly',
         __filename: 'readonly',
       },
+    },
+  },
+  {
+    // Os `.js` da raiz sao CommonJS; os `.mjs` ja sao modulos e nao precisam
+    // desta excecao.
+    files: ['scripts/**/*.js'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: { module: 'writable', require: 'readonly' },
     },
     rules: {
       '@typescript-eslint/no-require-imports': 'off',

@@ -11,6 +11,10 @@
 # teste de regra de seguranca e exatamente o codigo que nao pode escrever em
 # producao por engano.
 #
+# O comando recebido pode ser longo (e o `pnpm dev` inteiro, por exemplo) e pode
+# nunca terminar: `emulators:exec` simplesmente fica no ar junto, que e o que se
+# quer numa sessao de desenvolvimento. Ao encerrar, ele derruba os emuladores.
+#
 # Uso:
 #   scripts/emuladores.sh                 roda a suite de integracao inteira
 #   scripts/emuladores.sh "<comando>"     roda o comando dado

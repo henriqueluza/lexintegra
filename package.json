@@ -8,7 +8,7 @@
     "node": ">=22.22.3"
   },
   "scripts": {
-    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "dev": "scripts/emuladores.sh 'pnpm --parallel --filter \"./apps/*\" dev'",
     "build": "pnpm --filter \"./packages/*\" build && pnpm --filter \"./apps/*\" build",
     "test": "pnpm --filter \"./apps/*\" --filter \"./packages/*\" test",
     "test:integration": "scripts/emuladores.sh",
@@ -22,7 +22,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:visual": "pnpm --filter web test:visual",
-    "test:a11y": "pnpm --filter web test:a11y"
+    "test:a11y": "pnpm --filter web test:a11y",
+    "semear": "scripts/emuladores.sh 'node scripts/semear-emulador.mjs'"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
