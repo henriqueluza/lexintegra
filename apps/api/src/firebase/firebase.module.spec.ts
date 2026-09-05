@@ -45,6 +45,34 @@ describe('bootstrap do Firebase', () => {
     });
 
     /**
+     * A precedencia que custou uma execucao de CI inteira.
+     *
+     * `emulators:exec` injeta `GCLOUD_PROJECT` com o projeto que o emulador
+     * serve, e o emulador emite token com `aud` daquele projeto. Inicializar o
+     * SDK com outro id faz `verifyIdToken` recusar TODO token — e o `ci.yml`
+     * define `GCP_PROJECT_ID` no nivel do workflow, para todos os jobs. Com a
+     * ordem invertida, a suite passava local e falhava so no CI.
+     */
+    it('sob emulador, o projeto do emulador vence GCP_PROJECT_ID', () => {
+      expect(
+        idDoProjeto({
+          GCP_PROJECT_ID: 'plataforma-juridica-36bda',
+          GCLOUD_PROJECT: 'demo-lexintegra',
+          FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
+        }),
+      ).toBe('demo-lexintegra');
+    });
+
+    it('fora do emulador, GCP_PROJECT_ID vence', () => {
+      expect(
+        idDoProjeto({
+          GCP_PROJECT_ID: 'plataforma-juridica-36bda',
+          GCLOUD_PROJECT: 'outro',
+        }),
+      ).toBe('plataforma-juridica-36bda');
+    });
+
+    /**
      * O caso que importa. Um default silencioso fora do emulador faria a API
      * escrever no projeto errado sem nenhum sinal — e o unico sintoma seria dado
      * de producao aparecendo onde nao deveria. Recusar iniciar e barulhento de

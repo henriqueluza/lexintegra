@@ -36,17 +36,39 @@ export function emEmulador(ambiente: NodeJS.ProcessEnv = process.env): boolean {
 }
 
 export function idDoProjeto(ambiente: NodeJS.ProcessEnv = process.env): string {
+  /*
+   * SOB EMULADOR, O PROJETO DO EMULADOR MANDA — e a precedencia importa.
+   *
+   * `firebase emulators:exec` injeta `GCLOUD_PROJECT` com o projeto que o
+   * emulador esta servindo, e o emulador emite ID token com `aud` e `iss`
+   * daquele projeto. Se o SDK for inicializado com OUTRO id, `verifyIdToken`
+   * recusa todo token por incompatibilidade de audiencia — e a mensagem que
+   * chega e "credencial invalida", que nao aponta para nada.
+   *
+   * O caso nao e hipotetico: `ci.yml` define `GCP_PROJECT_ID` no nivel do
+   * workflow, para todos os jobs. Com a ordem invertida, a suite de integracao
+   * passava na maquina do desenvolvedor e falhava so no CI, em exatamente os
+   * cinco testes que emitem token.
+   *
+   * Escrita no Firestore nao percebe a divergencia: o emulador aceita qualquer
+   * projeto para dado. So a verificacao de token expoe o descasamento, o que
+   * torna o sintoma ainda mais estreito do que a causa.
+   */
+  if (emEmulador(ambiente)) {
+    const doEmulador = ambiente['GCLOUD_PROJECT'];
+    return doEmulador === undefined || doEmulador === ''
+      ? 'demo-lexintegra'
+      : doEmulador;
+  }
+
   const id = ambiente['GCP_PROJECT_ID'] ?? ambiente['GCLOUD_PROJECT'];
   if (id !== undefined && id !== '') return id;
 
   /*
-   * Sem projeto configurado, so o emulador e um destino aceitavel. Cair num
-   * default silencioso em producao faria a API escrever no projeto errado — e o
-   * prefixo `demo-` e justamente o que faz o emulador recusar contato com
-   * qualquer projeto real.
+   * Sem projeto configurado e sem emulador. Cair num default silencioso faria a
+   * API escrever no projeto errado, e o unico sintoma seria dado de producao
+   * aparecendo onde nao deveria.
    */
-  if (emEmulador(ambiente)) return 'demo-lexintegra';
-
   throw new Error(
     'GCP_PROJECT_ID nao esta definido e nao ha emulador. Recusando iniciar sem ' +
       'saber em qual projeto escrever.',
