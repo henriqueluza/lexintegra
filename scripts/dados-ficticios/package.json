@@ -1,0 +1,6 @@
+{
+  "name": "dados-ficticios",
+  "private": true,
+  "type": "module",
+  "description": "Nao e um pacote publicavel nem do workspace (pnpm-workspace.yaml so glob 'apps/*' e 'packages/*'). Existe por um motivo so: sem 'type: module' o Node avisa MODULE_TYPELESS_PACKAGE_JSON a cada 'pnpm semear', porque reparsa o .ts para descobrir que e ESM. Aviso que aparece sempre e aviso que todo mundo aprende a ignorar."
+}

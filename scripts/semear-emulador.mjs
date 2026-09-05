@@ -22,9 +22,21 @@
  *
  * Uso:
  *   scripts/emuladores.sh 'node scripts/semear-emulador.mjs'
+ *
+ * Semeia tambem o catalogo de produtos, com os DADOS FICTICIOS de
+ * `scripts/dados-ficticios/` — ver o LEIA-ME de la. As mesmas guardas valem: a
+ * escrita no Firestore vai pela REST do emulador, com `Bearer owner`, que o
+ * servico real recusa.
  */
 
+import { CATALOGO_FICTICIO } from './dados-ficticios/catalogo-produtos.ts';
+import {
+  confirmarEmuladorFirestore,
+  gravarDocumento,
+} from './firestore-emulador.mjs';
+
 const HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+const HOST_FIRESTORE = process.env.FIRESTORE_EMULATOR_HOST;
 const PROJETO = process.env.GCLOUD_PROJECT ?? 'demo-lexintegra';
 
 const SENHA = 'senha-de-desenvolvimento';
@@ -42,6 +54,13 @@ function abortar(mensagem) {
 if (HOST === undefined || HOST === '') {
   abortar(
     'FIREBASE_AUTH_EMULATOR_HOST nao esta definido. Rode por ' +
+      "scripts/emuladores.sh 'node scripts/semear-emulador.mjs'.",
+  );
+}
+
+if (HOST_FIRESTORE === undefined || HOST_FIRESTORE === '') {
+  abortar(
+    'FIRESTORE_EMULATOR_HOST nao esta definido. Rode por ' +
       "scripts/emuladores.sh 'node scripts/semear-emulador.mjs'.",
   );
 }
@@ -113,7 +132,32 @@ async function semear({ email, nome, perfil }) {
   return localId;
 }
 
+/**
+ * Id deterministico e com prefixo que se le. `ficticio-01` reaparece igual a cada
+ * semeadura — entao rodar de novo atualiza em vez de duplicar — e denuncia a
+ * origem do dado a quem abrir o banco procurando entender de onde saiu um produto.
+ */
+async function semearCatalogo() {
+  const agora = new Date();
+
+  for (const [indice, produto] of CATALOGO_FICTICIO.entries()) {
+    const id = `ficticio-${String(indice + 1).padStart(2, '0')}`;
+
+    await gravarDocumento(HOST_FIRESTORE, PROJETO, `produtos/${id}`, {
+      ...produto,
+      ativo: true,
+      criadoEm: agora,
+      criadoPor: 'seed-do-emulador',
+      atualizadoEm: agora,
+      atualizadoPor: 'seed-do-emulador',
+    });
+
+    console.log(`  ${id}  ${produto.nome}`);
+  }
+}
+
 await confirmarEmulador();
+await confirmarEmuladorFirestore(HOST_FIRESTORE, PROJETO);
 
 console.log(`Semeando ${PROJETO} em ${HOST}\n`);
 for (const conta of CONTAS) {
@@ -123,3 +167,10 @@ for (const conta of CONTAS) {
 
 console.log(`\n  Senha de todas: ${SENHA}`);
 console.log('  Sao contas de EMULADOR. Nao existem em lugar nenhum alem dele.');
+
+console.log(`\nCatalogo ficticio em ${HOST_FIRESTORE}\n`);
+await semearCatalogo();
+console.log(
+  '\n  DADOS FICTICIOS. Substituir pelo catalogo real da B&C antes de producao',
+);
+console.log('  (scripts/dados-ficticios/LEIA-ME.md).');
