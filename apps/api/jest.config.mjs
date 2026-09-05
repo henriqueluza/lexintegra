@@ -10,11 +10,16 @@ export default {
   transform: {
     '^.+\\.ts$': [
       'ts-jest',
-      { useESM: true, tsconfig: '<rootDir>/../tsconfig.json' },
+      { useESM: true, tsconfig: '<rootDir>/../tsconfig.spec.json' },
     ],
   },
   // Em nodenext o codigo importa './health.service.js'; o arquivo em disco e .ts.
-  moduleNameMapper: { '^(\\.{1,2}/.*)\\.js$': '$1' },
+  // O mesmo par vale para os imports internos de `packages/shared`.
+  moduleNameMapper: {
+    '^shared$': '<rootDir>/../../../packages/shared/src/index.ts',
+    '^shared/(.*)$': '<rootDir>/../../../packages/shared/src/$1.ts',
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
   moduleFileExtensions: ['js', 'json', 'ts'],
   collectCoverageFrom: [
     '**/*.ts',
