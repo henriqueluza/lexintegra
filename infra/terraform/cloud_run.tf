@@ -62,6 +62,37 @@ resource "google_cloud_run_v2_service" "api" {
         value = var.project_id
       }
 
+      env {
+        name  = "URL_APLICACAO"
+        value = var.url_aplicacao
+      }
+
+      env {
+        name  = "EMAIL_FROM"
+        value = var.email_remetente
+      }
+
+      # A chave chega por referencia ao Secret Manager, nunca como valor no
+      # Terraform: um `env { value = ... }` com a chave a colocaria no state, que
+      # fica no bucket, e no plan comentado no PR (regra inviolavel 9).
+      #
+      # `version = "latest"` de proposito. Fixar um numero obrigaria um commit de
+      # infraestrutura a cada rotacao de chave — e rotacao de credencial precisa
+      # ser rapida, nao passar por revisao de codigo.
+      #
+      # ATENCAO: se o secret nao tiver nenhuma versao, a revisao nao sobe. O
+      # container so recebe o valor na inicializacao, e o Cloud Run trata a
+      # ausencia como falha de deploy.
+      env {
+        name = "RESEND_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.resend_api_key.secret_id
+            version = "latest"
+          }
+        }
+      }
+
       startup_probe {
         http_get {
           path = "/api/health"

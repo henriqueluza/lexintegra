@@ -38,3 +38,22 @@ variable "commit_sha" {
   type        = string
   default     = "local"
 }
+
+variable "email_remetente" {
+  description = <<-EOT
+    Valor de EMAIL_FROM no Cloud Run. Hoje o remetente de desenvolvimento do
+    Resend, que so entrega ao endereco da propria conta.
+
+    Vira `notificacoes@notificacoes.lexintegra.com.br` quando a verificacao do
+    dominio no Resend estiver confirmada — e a troca e SO esta variavel, porque
+    nenhum remetente aparece no codigo (ADR-07.1).
+  EOT
+  type        = string
+  default     = "onboarding@resend.dev"
+}
+
+variable "url_aplicacao" {
+  description = "Base publica usada para montar o link de definicao de senha (ver apps/api/src/outbox/link-de-senha.ts)."
+  type        = string
+  default     = "https://lexintegra.com.br"
+}
