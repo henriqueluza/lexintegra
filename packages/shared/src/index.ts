@@ -7,5 +7,6 @@
  */
 export * from './estado-entregavel.js';
 export * from './esquemas/advogado.js';
+export * from './esquemas/produto.js';
 export * from './esquemas/senha.js';
 export * from './perfil.js';
