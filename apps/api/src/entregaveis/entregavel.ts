@@ -77,3 +77,15 @@ export function idDoEntregavel(ordem: number): string {
 export function idDaTransicao(sequencia: number): string {
   return String(sequencia).padStart(4, '0');
 }
+
+/** O que a API devolve sobre um entregavel. `temArquivo` em vez do arquivo
+ * inteiro: o nome do arquivo e dado do cliente, e a tela so precisa saber se ha
+ * versao esperando decisao. */
+export interface EntregavelResumo {
+  readonly id: string;
+  readonly nome: string;
+  readonly ordem: number;
+  readonly estado: EstadoEntregavel;
+  readonly revisoesUsadas: number;
+  readonly temArquivo: boolean;
+}

@@ -6,11 +6,7 @@ import {
   type Firestore,
   type Transaction,
 } from 'firebase-admin/firestore';
-import {
-  congelarProduto,
-  type EstadoEntregavel,
-  type SnapshotProduto,
-} from 'shared';
+import { congelarProduto, type SnapshotProduto } from 'shared';
 import {
   idDaTransicao,
   idDoEntregavel,
@@ -18,6 +14,7 @@ import {
   SUBCOLECAO_TRANSICOES,
   type DocumentoEntregavel,
   type DocumentoTransicao,
+  type EntregavelResumo,
 } from '../entregaveis/entregavel.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import { COLECAO_PRODUTOS } from '../produtos/produtos.service.js';
@@ -43,15 +40,6 @@ export interface NovoPedido {
   readonly clienteId: string;
   readonly pagamentoId: string;
   readonly produtoOrigemId: string;
-}
-
-export interface EntregavelResumo {
-  readonly id: string;
-  readonly nome: string;
-  readonly ordem: number;
-  readonly estado: EstadoEntregavel;
-  readonly revisoesUsadas: number;
-  readonly temArquivo: boolean;
 }
 
 export interface PedidoResumo {
