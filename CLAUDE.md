@@ -129,6 +129,18 @@ docs/
   pelo mesmo motivo. Um `import { signInWithEmailAndPassword } from 'firebase/auth'`
   em qualquer arquivo alcançado pelo `app.config.ts` traz meio megabyte de volta
   para a landing.
+- **A configuração do Firebase não fica no código.** Em produção vem de
+  `/__/firebase/init.json`, servido pelo próprio Hosting; em desenvolvimento, de
+  uma constante com o projeto do emulador. A `apiKey` do Firebase não é
+  credencial — ela é pública por definição — mas um literal `AIza…` no
+  repositório dispara o scanner de segredos do GitHub, e alerta que ninguém pode
+  fechar treina todo mundo a ignorar alerta de segredo.
+  `apps/web/src/app/sem-segredo-no-codigo.spec.ts` impede a volta.
+- **Projeto do emulador vence `GCP_PROJECT_ID`.** Sob emulador, o SDK precisa ser
+  inicializado com o MESMO projeto que o emulador serve, senão `verifyIdToken`
+  recusa todo token por incompatibilidade de audiência — e a mensagem que chega é
+  "credencial inválida", que não aponta para nada. Vale nos dois lados
+  (`apps/api/src/firebase/firebase.module.ts` e `autenticacao/firebase.ts`).
 - **A API recusa iniciar sem `GCP_PROJECT_ID` e sem emulador.** É deliberado:
   um default silencioso faria ela escrever no projeto errado, e o único sintoma
   seria dado de produção aparecendo onde não deveria.

@@ -11,7 +11,11 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, of } from 'rxjs';
 import { ApiService } from './api.service';
-import { ehDesenvolvimentoLocal } from './firebase';
+import {
+  CAMINHO_CONFIGURACAO,
+  carregarConfiguracao,
+  ehDesenvolvimentoLocal,
+} from './firebase';
 import { rotaInicialDe } from './guardas';
 import { traduzirFalha } from './sessao.service';
 import { anexarToken, ehChamadaDaApi } from './token.interceptor';
@@ -39,6 +43,101 @@ describe('ehDesenvolvimentoLocal', () => {
     'https://meu-localhost.com',
   ])('nao confunde %s com desenvolvimento', (origem) => {
     expect(ehDesenvolvimentoLocal(origem)).toBe(false);
+  });
+});
+
+describe('carregarConfiguracao', () => {
+  function respostaDe(corpo: unknown, ok = true, status = 200): typeof fetch {
+    return (() =>
+      Promise.resolve({
+        ok,
+        status,
+        json: () => Promise.resolve(corpo),
+      })) as unknown as typeof fetch;
+  }
+
+  /**
+   * Em desenvolvimento nao ha Hosting para servir `init.json`, e nao e preciso:
+   * o emulador aceita qualquer chave. Buscar assim mesmo faria `pnpm dev`
+   * depender de rede.
+   */
+  it('nao busca nada em desenvolvimento', async () => {
+    let buscou = false;
+    const buscar = (() => {
+      buscou = true;
+      return Promise.reject(new Error('nao deveria buscar'));
+    }) as unknown as typeof fetch;
+
+    const config = await carregarConfiguracao('http://localhost:4200', buscar);
+
+    expect(buscou).toBe(false);
+    expect(config.projectId).toBe('demo-lexintegra');
+  });
+
+  /**
+   * O `projectId` de desenvolvimento PRECISA ser o do emulador. Divergir faz o
+   * emulador emitir token para um projeto e o SDK validar contra outro — o mesmo
+   * descasamento que quebrou a suite de integracao da API no CI, e que aparece
+   * como "credencial invalida" sem apontar para nada.
+   */
+  it('usa o mesmo projeto com que o emulador e iniciado', async () => {
+    const config = await carregarConfiguracao(
+      'http://127.0.0.1:4200',
+      respostaDe({}),
+    );
+    expect(config.projectId).toBe('demo-lexintegra');
+  });
+
+  it('busca a configuracao servida pelo Hosting em producao', async () => {
+    let caminho = '';
+    const buscar = ((url: string) => {
+      caminho = url;
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            apiKey: 'chave-vinda-do-hosting',
+            authDomain: 'projeto.firebaseapp.com',
+            projectId: 'projeto',
+            storageBucket: 'ignorado',
+          }),
+      });
+    }) as unknown as typeof fetch;
+
+    const config = await carregarConfiguracao(
+      'https://lexintegra.com.br',
+      buscar,
+    );
+
+    expect(caminho).toBe(CAMINHO_CONFIGURACAO);
+    expect(config).toEqual({
+      apiKey: 'chave-vinda-do-hosting',
+      authDomain: 'projeto.firebaseapp.com',
+      projectId: 'projeto',
+    });
+  });
+
+  it('recusa resposta de erro do Hosting', async () => {
+    await expect(
+      carregarConfiguracao('https://x.test', respostaDe(null, false, 404)),
+    ).rejects.toThrow(/404/);
+  });
+
+  /**
+   * Um `init.json` truncado ou servido por um rewrite errado produziria
+   * `initializeApp({})`, e o erro apareceria bem longe daqui — dentro do SDK, na
+   * primeira tentativa de login.
+   */
+  it.each([
+    ['sem apiKey', { authDomain: 'a', projectId: 'p' }],
+    ['sem authDomain', { apiKey: 'k', projectId: 'p' }],
+    ['sem projectId', { apiKey: 'k', authDomain: 'a' }],
+    ['vazio', {}],
+  ])('recusa configuracao %s', async (_caso, corpo) => {
+    await expect(
+      carregarConfiguracao('https://x.test', respostaDe(corpo)),
+    ).rejects.toThrow(/apiKey, authDomain ou projectId/);
   });
 });
 
