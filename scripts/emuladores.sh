@@ -29,7 +29,14 @@ if ! command -v java >/dev/null 2>&1; then
   exit 1
 fi
 
-PADRAO='pnpm --filter regras-firestore --filter api test:integration'
+# AS DUAS SUITES RODAM EM SEQUENCIA, E ISSO NAO E ESTILO.
+#
+# Ha um unico emulador, e as duas limpam o estado dele entre casos: a de regras
+# chama `clearFirestore()`, a da API apaga contas e documentos. Rodando em
+# paralelo — que e o padrao do pnpm com varios `--filter` — uma apaga o dado que
+# a outra acabou de escrever, e o sintoma sao tres ou quatro falhas que mudam de
+# nome a cada execucao. `&&` em vez de dois `--filter` e o que separa as duas.
+PADRAO='pnpm --filter regras-firestore test:integration && pnpm --filter api test:integration'
 COMANDO="${1:-$PADRAO}"
 
 # --project e o mesmo que as variaveis de ambiente injetadas pelo emulators:exec
