@@ -32,3 +32,4 @@ async function bootstrap(): Promise<void> {
 }
 
 void bootstrap();
+// teste do critério de aceite da Etapa 2
