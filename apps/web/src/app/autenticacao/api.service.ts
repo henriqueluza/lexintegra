@@ -2,6 +2,11 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import type { AdvogadoResumo, NovoAdvogado } from 'shared/esquemas/advogado';
+import type {
+  NovoProduto,
+  ProdutoResumo,
+  SituacaoProduto,
+} from 'shared/esquemas/produto';
 
 /**
  * Cliente da API. Todo dado do sistema entra por aqui — regra inviolavel 7: o SDK
@@ -54,6 +59,54 @@ export class ApiService {
    * casos — desfazer isso aqui devolveria ao formulario a capacidade de dizer
    * quem tem conta na plataforma.
    */
+  /* ---------------------------------------------------------------------- */
+  /* Catalogo de produtos                                                     */
+  /* ---------------------------------------------------------------------- */
+
+  listarProdutos(situacao: SituacaoProduto): Promise<ProdutoResumo[]> {
+    return firstValueFrom(
+      this.http.get<ProdutoResumo[]>('/api/admin/produtos', {
+        params: { situacao },
+      }),
+    );
+  }
+
+  criarProduto(dados: NovoProduto): Promise<ProdutoResumo> {
+    return firstValueFrom(
+      this.http.post<ProdutoResumo>('/api/admin/produtos', dados),
+    );
+  }
+
+  editarProduto(id: string, dados: NovoProduto): Promise<ProdutoResumo> {
+    return firstValueFrom(
+      this.http.put<ProdutoResumo>(
+        `/api/admin/produtos/${encodeURIComponent(id)}`,
+        dados,
+      ),
+    );
+  }
+
+  /**
+   * Ativacao e recurso, nao campo: `POST` cria, `DELETE` remove. Nao ha metodo
+   * para excluir produto — o catalogo nao apaga linha, so tira da vitrine.
+   */
+  ativarProduto(id: string): Promise<ProdutoResumo> {
+    return firstValueFrom(
+      this.http.post<ProdutoResumo>(
+        `/api/admin/produtos/${encodeURIComponent(id)}/ativacao`,
+        {},
+      ),
+    );
+  }
+
+  desativarProduto(id: string): Promise<ProdutoResumo> {
+    return firstValueFrom(
+      this.http.delete<ProdutoResumo>(
+        `/api/admin/produtos/${encodeURIComponent(id)}/ativacao`,
+      ),
+    );
+  }
+
   pedirRedefinicaoDeSenha(email: string): Promise<unknown> {
     return firstValueFrom(
       this.http.post('/api/auth/redefinicao-senha', { email }),

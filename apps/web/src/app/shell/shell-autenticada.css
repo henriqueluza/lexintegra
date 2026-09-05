@@ -52,3 +52,42 @@
   margin: 0 auto;
   padding: var(--s5) var(--s4);
 }
+
+/*
+ * A navegacao fica entre a identidade e o botao de sair, e some por completo
+ * quando nao ha itens — nao vira uma barra vazia para cliente e advogado.
+ */
+.shell__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s4);
+  margin-inline-start: auto;
+  margin-inline-end: var(--s4);
+}
+
+.shell__link {
+  color: var(--texto-2);
+  font-size: var(--t-menor);
+  text-decoration: none;
+  padding-block: var(--s2);
+  border-bottom: var(--borda-grossa) solid transparent;
+}
+
+.shell__link:hover {
+  color: var(--texto);
+}
+
+/*
+ * O item ativo se distingue por SUBLINHADO e cor, nunca so por cor: a diferenca
+ * precisa sobreviver a quem nao distingue o acento do texto secundario (o mesmo
+ * criterio do selo de estado, que sempre carrega rotulo textual).
+ */
+.shell__link--ativo {
+  color: var(--acento);
+  border-bottom-color: var(--acento);
+}
+
+.shell__link:focus-visible {
+  outline: var(--borda-grossa) solid var(--foco);
+  outline-offset: var(--s2);
+}

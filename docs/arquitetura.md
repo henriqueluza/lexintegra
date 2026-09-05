@@ -316,6 +316,12 @@ Não existe transição manual de volta de status feita por administrador ou adv
 
 **Consequência para a subcoleção `transicoes`.** Continua existindo, mas agora registra transições de uma máquina de estados fixa, o que a torna mais fácil de testar: o conjunto de transições válidas é finito e conhecido em tempo de compilação, e cada uma tem exatamente um evento de domínio que a dispara.
 
+**Nota da Etapa 5 — `[cliente revisa o PDF renderizado]` não é um estado.** No diagrama acima ele aparece entre `em_elaboracao` e a bifurcação, mas é um momento da interface: o entregável **permanece em `em_elaboracao`** enquanto o cliente decide. Logo, o upload não transiciona nada — ele grava `arquivoAtual` no entregável.
+
+Isso tem uma consequência que precisa estar escrita, porque não se lê no diagrama: **a existência de `arquivoAtual` é a segunda metade da trava de `entregue`**. Sem ela, `confirmar-entrega` seria aceito num entregável em `em_elaboracao` que o advogado nunca tocou — o estado de origem estaria certo e o ADR exige upload *e* confirmação. As duas metades são verificadas no servidor, em `EntregaveisService`, e há uma terceira: só o `clienteId` do pedido pode disparar a confirmação, comparado dentro da transação.
+
+Os eventos de domínio, com a aresta de cada um, vivem em `packages/shared/src/estado-entregavel.ts` (`TRANSICAO_DO_EVENTO`), ao lado do grafo — e um teste prova que os dois cobrem exatamente as mesmas quatro arestas, para que não exista transição sem evento que a dispare.
+
 ### ADR-12 — Estorno, cancelamento e reunião por pedido
 
 **Decisão sobre estorno, confirmada na reunião.** Estorno só é permitido enquanto o pedido está em `solicitado` — antes de qualquer trabalho iniciado. A partir do momento em que o status avança para `em_elaboracao`, o pedido deixa de ser elegível a estorno, porque o serviço passa a ser considerado personalizado e já em execução. Essa regra precisa constar explicitamente nos termos de serviço aceitos no checkout, não só no código.
@@ -400,6 +406,8 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 
 Subcoleções: `clientes/{id}/anamnese`, `pedidos/{id}/entregaveis`, `pedidos/{id}/reunioes`, `pedidos/{id}/entregaveis/{id}/transicoes`.
 
+**Índices compostos.** Um só até aqui: `produtos` por `ativo` + `nome`, para o filtro de situação da listagem administrativa. Declarado em `infra/terraform/firestore.tf`, nunca criado à mão no console — o emulador não exige índice, então uma consulta sem índice declarado passa local e falha em produção. A regra é um índice por consulta que existe, não por consulta imaginável: índice composto custa escrita em toda gravação da coleção.
+
 ### 5.2 O agregado de compra
 
 Como o checkout é um carrinho com vários produtos, o pagamento deixou de ser sinônimo de pedido:
@@ -412,9 +420,29 @@ O webhook precisa criar o pagamento e todos os pedidos numa única transação. 
 
 ### 5.3 Snapshot imutável
 
-O item 2.5.9 exige que alterações de produto não retroajam. No momento da compra, o pedido copia para dentro de si: nome, descrição, preço praticado, lista de entregáveis, textos orientativos, quantidade de reuniões incluídas, prazo de validade para solicitá-las e intervalo mínimo entre elas.
+O item 2.5.9 exige que alterações de produto não retroajam. No momento da compra, o pedido copia para dentro de si os nove campos do produto — todos menos `ativo`, porque tirar um produto da vitrine não cancela a compra de quem já pagou:
+
+| Campo | Tipo |
+|---|---|
+| `nome` | string |
+| `descricao` | string |
+| `precoCentavos` | inteiro, em centavos |
+| `entregaveis` | array de string, ao menos um |
+| `textosOrientativos` | array de string, pode ser vazio |
+| `quantidadeReunioes` | inteiro ≥ 0 |
+| `prazoValidadeReunioesDias` | inteiro > 0, dias a partir da compra |
+| `intervaloMinimoReunioesDias` | inteiro ≥ 0 |
+| `numeroRevisoesPermitidas` | inteiro ≥ 0 (ver 5.6) |
+
+**A unidade está no nome do campo, não só no comentário.** `precoCentavos` e não `preco`; `prazoValidadeReunioesDias` e não `prazoValidadeReunioes`. Trocar reais por centavos não falha em lugar nenhum — só cobra cem vezes menos, e o snapshot congela o engano para sempre.
+
+Uma função só sabe quais campos entram no snapshot: `congelarProduto`, em `packages/shared/src/esquemas/produto.ts`. Ela é usada nos dois lugares que precisam da lista — a escrita do catálogo e o congelamento no pedido — então um campo novo entra nos dois de uma vez, ou em nenhum. Ela lista campo a campo em vez de espalhar o objeto: um spread levaria `ativo`, `id` e os carimbos para dentro do pedido.
+
+O documento do pedido guarda ainda `clienteId`, `pagamentoId`, `criadoEm` e `produtoOrigemId`. **`produtoOrigemId` existe só para auditoria** — nenhum caminho de leitura o resolve para mostrar dado ao cliente. O nome carrega o aviso; `produtoId` convidaria ao contrário.
 
 `produtos` permanece editável. `pedidos` é imutável. Isso resolve o requisito sem versionamento explícito de produto, que seria a solução relacional.
+
+**Como a escrita acontece (Etapa 5).** `PedidosService` expõe duas fases, e não uma: `preparar` só lê, `gravar` só escreve. A restrição do Firestore — toda leitura antes de toda escrita — vale para a *transação inteira*, não para cada chamada, então uma função única que lesse o produto e escrevesse o pedido funcionaria com um item do carrinho e falharia com dois. `gravar` só aceita o resultado de `preparar`, o que faz a ordem ser garantida pelo tipo.
 
 ### 5.4 Saldos isolados
 
@@ -435,6 +463,31 @@ Enquanto o volume estiver na casa das centenas, busca por substring é resolvida
 Ver ADR-11. Os status são fixos no código (`solicitado`, `em_elaboracao`, `em_revisao`, `entregue`), não configuráveis pelo administrador. O que o pedido congela do produto, quanto a isso, é apenas o **número de revisões contratadas** — um inteiro, definido por produto e copiado para o pedido no checkout, seguindo a mesma lógica de imutabilidade do restante do snapshot (5.3).
 
 A subcoleção `transicoes` registra quem mudou, de qual status para qual e quando — nesse caso sempre "o sistema", já que não há transição manual. Deixa de ser luxo quando o cliente vê o progresso — é a defesa em caso de questionamento e serve de trilha de auditoria.
+
+**Forma dos documentos (Etapa 5).**
+
+`pedidos/{id}/entregaveis/{ordem}` — id é a posição no snapshot com zero à esquerda (`001`), determinístico para que reprocessar o webhook não abra um segundo jogo de entregáveis:
+
+| Campo | Papel |
+|---|---|
+| `nome`, `ordem` | copiados de `snapshot.entregaveis[i]` |
+| `estado` | um dos quatro do ADR-11 |
+| `revisoesUsadas` | contador; o limite vem de `pedido.snapshot.numeroRevisoesPermitidas`, nunca do produto vivo |
+| `arquivoAtual` | `null` até o primeiro upload; `{ nome, versao, enviadoPor, enviadoEm }` depois |
+| `transicoes` | quantas transições já foram registradas; dá o id da próxima |
+
+`pedidos/{id}/entregaveis/{id}/transicoes/{sequencia}` — id é a sequência com zero à esquerda (`0001`). Como ele sai do contador lido na mesma transação, duas chamadas concorrentes calculam a mesma sequência e a segunda estoura em vez de sobrescrever a trilha da primeira:
+
+| Campo | Papel |
+|---|---|
+| `de` | estado anterior; `null` só no documento de criação |
+| `para` | estado novo |
+| `evento` | o evento de domínio que disparou |
+| `por` | sempre `'sistema'` — não há transição manual |
+| `atorUid` | quem disparou o evento; é o que sobra de útil numa contestação |
+| `em` | carimbo do servidor |
+
+A trilha registra **mudança de estado**. Upload não muda estado (ver ADR-11), então não entra nela — a trilha do arquivo é `arquivoAtual.versao`.
 
 ---
 

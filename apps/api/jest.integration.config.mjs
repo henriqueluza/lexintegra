@@ -1,8 +1,5 @@
 /**
  * Testes de integracao rodam contra o emulador do Firestore (arquitetura, secao 10).
- * Nao ha nenhum ainda: o modelo de dados e a Etapa 5, e as regras de seguranca a
- * Etapa 4. A configuracao existe para `pnpm test:integration` ser um comando real
- * desde a Etapa 2, e nao uma promessa no CLAUDE.md.
  */
 export default {
   rootDir: 'src',
@@ -24,4 +21,21 @@ export default {
   },
   moduleFileExtensions: ['js', 'json', 'ts'],
   passWithNoTests: true,
+
+  /*
+   * UM ARQUIVO POR VEZ, E ISSO NAO E LENTIDAO ACEITA A TOA.
+   *
+   * O padrao do Jest e um worker por nucleo, com os arquivos de teste em
+   * paralelo. Ha UM emulador, e todo arquivo daqui chama `limparEmuladores()` no
+   * `beforeEach` — em paralelo, um apaga o dado que o outro acabou de escrever.
+   *
+   * Ate a Etapa 4 havia um unico arquivo de integracao na API, entao o problema
+   * nao existia. A Etapa 5 trouxe mais tres, e o sintoma foi uma dezena de falhas
+   * que mudavam de nome a cada execucao — inclusive em testes de advogados que
+   * ninguem tinha tocado.
+   *
+   * E a mesma razao pela qual `scripts/emuladores.sh` roda as duas suites em
+   * sequencia com `&&` em vez de dois `--filter`.
+   */
+  maxWorkers: 1,
 };

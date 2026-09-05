@@ -65,7 +65,20 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 - **`pnpm dev` sobe os emuladores junto**, porque a API recusa iniciar sem projeto configurado e sem emulador. `pnpm semear` cria um usuário de cada perfil (só emulador).
 - **Cobertura:** `apps/api` 88/80/85/90, `apps/web` 95/88/90/95.
 
-**Próximo trabalho recomendado:** revisar e abrir o PR da Etapa 4, depois seguir para a Etapa 5 (modelo de dados e administração de produtos). O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde.
+**Etapa 5 — modelo de dados e administração de produtos (branch `feat/modelo-produtos`):**
+
+- **Coleção `produtos` com CRUD administrativo**, sem exclusão física. Produto sai da vitrine por desativação (`POST`/`DELETE .../ativacao`, ativação como recurso e não campo); a API não expõe `DELETE /produtos/:id`, e há teste que defende a ausência — pedido já comprado referencia o produto pela trilha de auditoria.
+- **A unidade está no nome do campo:** `precoCentavos`, `prazoValidadeReunioesDias`, `intervaloMinimoReunioesDias`. `ativo` fica **fora** do schema de criação e de edição, como `status` fica fora de `esquemaNovoAdvogado` — senão um PUT de preço reativaria em silêncio um produto tirado do ar.
+- **`congelarProduto` é o único lugar que sabe quais campos entram no snapshot**, e é usada nas duas pontas (escrita do catálogo e criação do pedido). Campo novo no produto entra nos dois de uma vez, ou em nenhum.
+- **`PedidosService` tem duas fases, `preparar` (só lê) e `gravar` (só escreve).** Não é estilo: "toda leitura antes de toda escrita" vale para a **transação inteira**, então uma função única funcionaria com um item do carrinho e falharia com dois. Quem achou isso foi o teste de integração — o dublê em memória não impõe a regra.
+- **Máquina de estados aplicada em `EntregaveisService`**, sem `mudarEstado(destino)`: só eventos de domínio, com a aresta vindo de `TRANSICAO_DO_EVENTO` em `packages/shared`. `entregue` tem três travas — vem de `em_elaboracao`, exige `arquivoAtual != null`, e só o `clienteId` do pedido dispara.
+- **Upload não muda estado** (ADR-11: "cliente revisa o PDF" não é estado) e por isso não entra em `transicoes` — a trilha do arquivo é `arquivoAtual.versao`.
+- **Um índice composto**, `produtos` por `ativo` + `nome`, em `infra/terraform/firestore.tf`. Um por consulta que existe, nunca por consulta imaginável.
+- **Dados fictícios isolados** em `scripts/dados-ficticios/catalogo-produtos.ts`, fora de `apps/` e portanto sem caminho até o bundle ou a imagem. Consumidos só pelo seed do emulador e pela suíte de integração, que os valida contra `esquemaNovoProduto`. **Substituir pelo catálogo real da B&C antes de produção** — ver o LEIA-ME de lá.
+- **Integração roda com `maxWorkers: 1`**: há um emulador só, e todo arquivo o limpa no `beforeEach`. Em paralelo, um apaga o dado do outro, e o sintoma são falhas que mudam de nome a cada execução.
+- **Cobertura:** `apps/api` 92/85/93/94, `apps/web` 97/91/92/97, `packages/shared` 95/100/100/95.
+
+**Próximo trabalho recomendado:** revisar e abrir o PR da Etapa 5, depois seguir para a Etapa 6. O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde. O catálogo real da B&C continua pendente do lado da CONTRATANTE — sem ele a Etapa 5 tem o código pronto mas não o entregável formal ("cadastrado de verdade, não com dados fictícios").
 
 ## Stack
 
@@ -89,6 +102,9 @@ apps/web/          Angular 22, pré-renderização estática das rotas públicas
 apps/api/          NestJS 12 (ESM-only), prefixo global /api
   src/autenticacao/ guards globais, decoradores e redefinição de senha
   src/advogados/    provisionamento e suspensão (só admin)
+  src/produtos/     catálogo: CRUD administrativo, sem exclusão
+  src/pedidos/      snapshot imutável; `preparar` lê, `gravar` escreve
+  src/entregaveis/  máquina de estados do ADR-11 e a trilha de transições
   src/outbox/       escrita na transação + despachante, separados
   src/email/        contrato EmailTransport, adaptador Resend, transporte falso
 apps/scanner/      ClamAV em contêiner, sem lógica de domínio (Etapa 11, ainda não existe)
@@ -97,7 +113,8 @@ packages/regras-firestore/  suíte das regras no emulador — ver o README de l�
 infra/terraform/   ver o README de lá antes de mexer
 scripts/visual.sh  roda o Playwright na imagem oficial (precisa de Docker)
 scripts/emuladores.sh  envolve um comando nos emuladores de Auth e Firestore
-scripts/semear-emulador.mjs  usuários de desenvolvimento; só fala com o emulador
+scripts/semear-emulador.mjs  usuários e catálogo de desenvolvimento; só fala com o emulador
+scripts/dados-ficticios/  DADOS FICTÍCIOS — substituir pelo catálogo real da B&C
 .github/workflows/ ci.yml e deploy.yml
 docs/
 .stylelintrc.mjs   critério de aceite da Etapa 3

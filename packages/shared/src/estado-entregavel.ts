@@ -40,3 +40,57 @@ export function transicaoPermitida(
 ): boolean {
   return TRANSICOES_VALIDAS[de].includes(para);
 }
+
+/**
+ * Os eventos de dominio que MUDAM o estado, e a aresta que cada um percorre.
+ *
+ * ADR-11: "cada uma tem exatamente um evento de dominio que a dispara". Este mapa
+ * e essa frase em codigo — o servidor nao aceita um estado de destino vindo do
+ * cliente, aceita um EVENTO, e a aresta sai daqui. E a diferenca entre "mude para
+ * entregue" (que seria transicao manual, proibida) e "o cliente confirmou".
+ *
+ * Vive em `shared` pelo mesmo motivo do mapa acima: a interface precisa decidir
+ * quais acoes oferecer a partir do estado atual, e uma segunda copia divergiria.
+ */
+export const EVENTOS_DE_TRANSICAO = [
+  'iniciar-trabalho',
+  'retomar-trabalho',
+  'confirmar-entrega',
+  'pedir-revisao',
+] as const;
+
+export type EventoDeTransicao = (typeof EVENTOS_DE_TRANSICAO)[number];
+
+export const TRANSICAO_DO_EVENTO: Readonly<
+  Record<
+    EventoDeTransicao,
+    { readonly de: EstadoEntregavel; readonly para: EstadoEntregavel }
+  >
+> = {
+  'iniciar-trabalho': { de: 'solicitado', para: 'em_elaboracao' },
+  'retomar-trabalho': { de: 'em_revisao', para: 'em_elaboracao' },
+  'confirmar-entrega': { de: 'em_elaboracao', para: 'entregue' },
+  'pedir-revisao': { de: 'em_elaboracao', para: 'em_revisao' },
+};
+
+/**
+ * Os dois eventos que NAO mudam estado, e por isso nao aparecem no mapa acima.
+ *
+ * `criar-pedido` e a origem da trilha (nao ha estado anterior). `enviar-arquivo`
+ * e a consequencia direta do ADR-11: no diagrama, "cliente revisa o PDF" nao e
+ * um estado — o entregavel permanece em `em_elaboracao` enquanto o cliente
+ * decide. O upload grava `arquivoAtual`, e e a existencia desse campo que
+ * habilita `confirmar-entrega`. Sem ele, `entregue` seria alcancavel por quem
+ * chamasse a confirmacao antes de existir arquivo.
+ */
+export const EVENTOS_SEM_TRANSICAO = [
+  'criar-pedido',
+  'enviar-arquivo',
+] as const;
+
+export const EVENTOS_ENTREGAVEL = [
+  ...EVENTOS_SEM_TRANSICAO,
+  ...EVENTOS_DE_TRANSICAO,
+] as const;
+
+export type EventoEntregavel = (typeof EVENTOS_ENTREGAVEL)[number];

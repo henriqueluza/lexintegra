@@ -1,6 +1,10 @@
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
-import { aplicacaoFirebase, emEmulador, idDoProjeto } from './firebase/firebase.module.js';
+import {
+  aplicacaoFirebase,
+  emEmulador,
+  idDoProjeto,
+} from './firebase/firebase.module.js';
 
 /**
  * Utilidades de teste de integracao contra os emuladores.

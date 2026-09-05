@@ -70,11 +70,16 @@ class RotaAdministrativa {
 function contexto(
   classe: new () => object,
   token?: string,
-): { contexto: ExecutionContext; requisicao: { usuario?: UsuarioAutenticado } } {
+): {
+  contexto: ExecutionContext;
+  requisicao: { usuario?: UsuarioAutenticado };
+} {
   const requisicao: {
     headers: Record<string, string>;
     usuario?: UsuarioAutenticado;
-  } = { headers: token === undefined ? {} : { authorization: `Bearer ${token}` } };
+  } = {
+    headers: token === undefined ? {} : { authorization: `Bearer ${token}` },
+  };
 
   return {
     contexto: {
@@ -216,7 +221,9 @@ describe('fronteira de autorizacao', () => {
    * `setCustomUserClaims`. 403, e nao 401: a identidade esta provada.
    */
   it('token valido sem perfil recebe 403', async () => {
-    const semPerfil = await auth.createUser({ email: 'ninguem@escritorio.test' });
+    const semPerfil = await auth.createUser({
+      email: 'ninguem@escritorio.test',
+    });
     const { contexto: alvo } = contexto(
       RotaAberta,
       await idTokenDe(semPerfil.uid),

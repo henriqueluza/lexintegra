@@ -13,6 +13,8 @@ import { AutenticacaoController } from './autenticacao/senha/redefinicao.control
 import type { RedefinicaoSenhaService } from './autenticacao/senha/redefinicao.service.js';
 import type { UsuarioAutenticado } from './autenticacao/usuario.js';
 import { HealthController } from './health/health.controller.js';
+import { ProdutosController } from './produtos/produtos.controller.js';
+import type { ProdutosService } from './produtos/produtos.service.js';
 
 const reflector = new Reflector();
 
@@ -35,21 +37,44 @@ const ADMIN: UsuarioAutenticado = {
  * quebra estes.
  */
 describe('anotacoes de seguranca dos controladores', () => {
-  it('a superficie administrativa exige admin, na classe', () => {
-    const exigidos = reflector.get<readonly Perfil[]>(
-      CHAVE_PERFIS,
-      AdvogadosController,
-    );
-    expect(exigidos).toEqual(['admin']);
-  });
+  it.each([
+    ['advogados', AdvogadosController],
+    ['produtos', ProdutosController],
+  ])(
+    'a superficie administrativa de %s exige admin, na classe',
+    (_nome, classe) => {
+      const exigidos = reflector.get<readonly Perfil[]>(CHAVE_PERFIS, classe);
+      expect(exigidos).toEqual(['admin']);
+    },
+  );
 
   it.each([
     ['listar', AdvogadosController.prototype.listar],
     ['criar', AdvogadosController.prototype.criar],
     ['suspender', AdvogadosController.prototype.suspender],
     ['reativar', AdvogadosController.prototype.reativar],
+    ['produtos.listar', ProdutosController.prototype.listar],
+    ['produtos.obter', ProdutosController.prototype.obter],
+    ['produtos.criar', ProdutosController.prototype.criar],
+    ['produtos.editar', ProdutosController.prototype.editar],
+    ['produtos.ativar', ProdutosController.prototype.ativar],
+    ['produtos.desativar', ProdutosController.prototype.desativar],
   ])('o metodo administrativo %s nao se declara publico', (_nome, metodo) => {
     expect(reflector.get(CHAVE_PUBLICO, metodo)).toBeUndefined();
+  });
+
+  /**
+   * A ausencia de exclusao e uma decisao, e decisao que so existe como ausencia
+   * ninguem defende numa revisao futura. Produto sai da vitrine por desativacao;
+   * apagar a linha deixaria `pedidos.produtoOrigemId` apontando para o vazio.
+   */
+  it('nao expoe exclusao de produto', () => {
+    expect(
+      (ProdutosController.prototype as Record<string, unknown>)['excluir'],
+    ).toBeUndefined();
+    expect(
+      (ProdutosController.prototype as Record<string, unknown>)['remover'],
+    ).toBeUndefined();
   });
 
   /**
@@ -131,6 +156,85 @@ describe('AdvogadosController', () => {
     expect(chamadas).toEqual([
       'suspender uid-advogado por uid-admin',
       'reativar uid-advogado por uid-admin',
+    ]);
+  });
+});
+
+describe('ProdutosController', () => {
+  function montar(): { controlador: ProdutosController; chamadas: string[] } {
+    const chamadas: string[] = [];
+    const servico = {
+      listar: (situacao: string) => {
+        chamadas.push(`listar ${situacao}`);
+        return Promise.resolve([]);
+      },
+      obter: (id: string) => {
+        chamadas.push(`obter ${id}`);
+        return Promise.resolve({});
+      },
+      criar: (dados: { nome: string }, admin: string) => {
+        chamadas.push(`criar ${dados.nome} por ${admin}`);
+        return Promise.resolve({});
+      },
+      editar: (id: string, dados: { nome: string }, admin: string) => {
+        chamadas.push(`editar ${id} para ${dados.nome} por ${admin}`);
+        return Promise.resolve({});
+      },
+      ativar: (id: string, admin: string) => {
+        chamadas.push(`ativar ${id} por ${admin}`);
+        return Promise.resolve({});
+      },
+      desativar: (id: string, admin: string) => {
+        chamadas.push(`desativar ${id} por ${admin}`);
+        return Promise.resolve({});
+      },
+    } as unknown as ProdutosService;
+
+    return { controlador: new ProdutosController(servico), chamadas };
+  }
+
+  /**
+   * `situacao` chega da query string, e query string e texto livre. O `catch` do
+   * schema faz um valor desconhecido cair no filtro mais amplo em vez de derrubar
+   * a tela do administrador com 400 — e a consulta continua sendo uma das tres
+   * que o indice composto cobre.
+   */
+  it.each([
+    ['ativos', 'ativos'],
+    ['inativos', 'inativos'],
+    ['todos', 'todos'],
+    [undefined, 'todos'],
+    ['arquivados', 'todos'],
+  ])('lista com situacao %s', async (recebido, esperado) => {
+    const { controlador, chamadas } = montar();
+    await controlador.listar(recebido);
+    expect(chamadas).toEqual([`listar ${esperado}`]);
+  });
+
+  it('cria e edita atribuindo a autoria ao administrador autenticado', async () => {
+    const { controlador, chamadas } = montar();
+    const corpo = { nome: 'Parecer' } as never;
+
+    await controlador.criar(corpo, ADMIN);
+    await controlador.editar('produto-1', corpo, ADMIN);
+
+    expect(chamadas).toEqual([
+      'criar Parecer por uid-admin',
+      'editar produto-1 para Parecer por uid-admin',
+    ]);
+  });
+
+  it('ativa e desativa pelo id do caminho', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.ativar('produto-1', ADMIN);
+    await controlador.desativar('produto-1', ADMIN);
+    await controlador.obter('produto-1');
+
+    expect(chamadas).toEqual([
+      'ativar produto-1 por uid-admin',
+      'desativar produto-1 por uid-admin',
+      'obter produto-1',
     ]);
   });
 });
