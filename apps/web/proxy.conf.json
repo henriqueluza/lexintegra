@@ -1,4 +1,5 @@
 {
+  "//": "8080 e fixo, e o `dev` de apps/api tambem fixa. Em desenvolvimento os dois apps herdam a env de quem chamou `pnpm dev`, e um PORT no ambiente (o harness de preview injeta um) faria a API subir na mesma porta do ng serve — a API vence a corrida, o Angular cai para outra porta, e o sintoma e 'Cannot GET /entrar'. Producao continua honrando PORT, que e o que o Cloud Run injeta, pelo script `start`.",
   "/api": {
     "target": "http://localhost:8080",
     "secure": false,
