@@ -207,7 +207,7 @@ interface EmailTransport {
 }
 ```
 
-Duas implementações cabem atrás dessa interface: **produção** (Resend) e **testes automatizados** (um transporte falso, que não toca rede nenhuma e permite ao teste inspecionar a mensagem construída ou simplesmente ler o registro já gravado no outbox). Conferência visual de renderização, quando necessária, usa a própria conta de desenvolvimento do Resend, enviando para a caixa do desenvolvedor — sem provedor adicional.
+Duas implementações cabem atrás dessa interface: **produção** (Resend) e **testes automatizados** (um transporte falso, que não toca rede nenhuma e permite ao teste inspecionar a mensagem construída ou simplesmente ler o registro já gravado no outbox). **As duas foram escritas na Etapa 4**, e não na 7 como previsto: o fluxo de redefinição de senha do ADR-07 precisa entregar e-mail de verdade, e adiar o adaptador significaria a Etapa 4 chamar o SDK direto de um handler — exatamente o acoplamento que este ADR evita. O que permaneceu na Etapa 7 é a entrega assíncrona: Cloud Tasks, reentrega e política de tentativa. Conferência visual de renderização, quando necessária, usa a própria conta de desenvolvimento do Resend, enviando para a caixa do desenvolvedor — sem provedor adicional.
 
 **Por que o transporte falso e não uma chamada real na suíte automatizada.** Um teste que depende de rede externa é mais lento e mais instável do que um teste que verifica apenas o estado do próprio outbox. A suíte deve provar que a mensagem certa foi produzida e registrada, não que um provedor de terceiro está no ar.
 
@@ -446,13 +446,21 @@ Quatro fronteiras, cada uma com forma distinta de autenticação:
 
 **2. Webhook do AbacatePay** — sem usuário, autenticado por assinatura. É a única rota que aceita chamada externa sem sessão. A validação da assinatura é o que separa "pagamento confirmado" de "qualquer um cria conta paga". Falha aqui é a mais grave do sistema.
 
-**3. Autenticada** — cliente e advogado, separados por custom claim no token do Firebase Auth. Regras do Firestore validam não só o perfil, mas a atribuição: pelos itens 2.6.1 e 2.6.2, o advogado só enxerga o que lhe foi distribuído.
+**3. Autenticada** — cliente e advogado, separados por custom claim no token do Firebase Auth. Pelos itens 2.6.1 e 2.6.2, o advogado só enxerga o que lhe foi distribuído — e a **Etapa 4 fixou onde isso é verificado**: nos guards e serviços da API, não nas regras do Firestore. A razão está em 6.1.
 
 **4. Administrativa** — administrador global, provisionado fora da aplicação conforme o 2.4.2, sem autocadastro possível.
 
 ### 6.1 Regras do Firestore
 
 Como o acesso ao banco passa sempre pela API, as regras do Firestore devem ser restritivas por padrão e negar acesso direto do cliente. O SDK do Firebase no Angular é usado apenas para autenticação, não para leitura de dados. Isso simplifica as regras e concentra a autorização em um lugar auditável.
+
+**Decidido na Etapa 4: as regras negam tudo, e essa é a forma final delas.** Não é um estado provisório a afrouxar quando as coleções existirem.
+
+O motivo é que a API usa o Admin SDK, que **ignora** as regras. Uma regra que permitisse ao advogado ler o que lhe foi distribuído nunca seria atravessada por código de produção, nunca falharia num teste de aplicação se estivesse errada, e ficaria como porta aberta que ninguém visita — protegendo menos do que aparenta. A autorização por perfil e por atribuição vive em `apps/api/src/autenticacao`, onde é exercitada a cada requisição.
+
+O que as regras fazem, então, é provar que **o navegador não tem caminho nenhum** até o banco. A suíte em `packages/regras-firestore` verifica isso de forma tabular — quatro perfis × cada caminho de 5.1 × cinco operações, 244 asserções — e inclui um controle positivo, sem o qual um arnês quebrado faria a suíte passar verde negando tudo por acidente.
+
+Do lado do frontend, a mesma garantia é fechada por uma regra de `dependency-cruiser`: `apps/web` não pode importar `firebase/firestore`. As regras provam que o acesso seria negado; o lint impede que o import chegue a existir.
 
 ### 6.2 Superfície de upload
 

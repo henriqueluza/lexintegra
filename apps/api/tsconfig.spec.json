@@ -1,0 +1,27 @@
+{
+  /*
+   * tsconfig SO PARA TESTE. Existe por um motivo especifico: resolver `shared`
+   * para a FONTE, e nao para o `dist`.
+   *
+   * O `tsconfig.json` da API resolve `shared` pelo node_modules, que aponta para
+   * `packages/shared/dist` — e assim tem de ser, porque `nest build` emite com
+   * `rootDir: ./src` e incluir a fonte de outro pacote no grafo faria o compilador
+   * recusar ("is not under rootDir").
+   *
+   * Mas `dist` e gerado e ignorado pelo git. Num clone novo — ou na CI, onde o
+   * build roda DEPOIS dos testes — ele nao existe, e a suite inteira falhava com
+   * "Cannot find module 'shared'". Foi exatamente assim que a Etapa 4 quebrou a
+   * primeira execucao da CI.
+   *
+   * `apps/web/tsconfig.json` ja fazia isso desde a Etapa 2, pelo mesmo motivo; a
+   * API so passou a importar `shared` agora.
+   */
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "shared": ["../../packages/shared/src/index.ts"],
+      "shared/*": ["../../packages/shared/src/*.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}

@@ -88,6 +88,19 @@ locals {
     "roles/logging.logWriter", # log estruturado (arquitetura, secao 9)
     "roles/cloudtrace.agent",  # traces via OpenTelemetry
     "roles/monitoring.metricWriter",
+
+    # Etapa 4. Sem este papel o Admin SDK nao cria usuario, nao escreve custom
+    # claim, nao gera link de definicao de senha e nao revoga token — ou seja, o
+    # provisionamento de advogados (item 2.4.3) e a suspensao (2.4.6) falham em
+    # producao mesmo com todo o codigo correto e todos os testes verdes contra o
+    # emulador, que nao verifica IAM.
+    #
+    # E o papel mais poderoso desta lista: quem o tem pode escrever qualquer
+    # claim, inclusive `admin`. A protecao nao esta no IAM e sim no codigo — a
+    # unica escrita de claim da aplicacao esta em `advogados.service.ts`, e ela
+    # so escreve `advogado`. Elevacao a administrador continua sendo operacao
+    # manual, fora da aplicacao (item 2.4.2).
+    "roles/firebaseauth.admin",
   ]
 }
 

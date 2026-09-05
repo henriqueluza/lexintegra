@@ -1,0 +1,43 @@
+/* Direcao A (Catedra), como as demais telas de acesso: quem chega aqui nao esta
+ * autenticado. */
+.definir {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--s5);
+  padding: var(--s7) var(--s4);
+}
+
+.definir__marca {
+  font-family: var(--fonte-interface);
+  font-size: var(--t-mini);
+  letter-spacing: var(--letra-caixa-alta);
+  text-transform: uppercase;
+  color: var(--acento);
+}
+
+.definir__caixa {
+  width: 100%;
+  max-width: var(--medida-auxiliar);
+}
+
+.definir__formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.definir__acoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  align-items: stretch;
+}
+
+.definir__auxiliar {
+  text-align: center;
+  font-size: var(--t-menor);
+  color: var(--texto-2);
+}

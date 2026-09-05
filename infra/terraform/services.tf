@@ -13,6 +13,9 @@ locals {
     "cloudtasks.googleapis.com",
     "cloudtrace.googleapis.com",
     "firebasehosting.googleapis.com",
+    # Etapa 4: o pipeline passou a publicar `firestore.rules`, e a publicacao vai
+    # pela API de Rules, nao pela do Firestore.
+    "firebaserules.googleapis.com",
     "firestore.googleapis.com",
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",

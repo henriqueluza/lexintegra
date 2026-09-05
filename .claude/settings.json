@@ -11,5 +11,10 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "deny": [
+      "Bash(*scripts/manual-only/*)"
+    ]
   }
 }

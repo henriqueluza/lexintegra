@@ -1,0 +1,60 @@
+<main class="recuperar">
+  <p class="recuperar__marca">LexIntegra</p>
+
+  <div class="recuperar__caixa">
+    @if (enviado()) {
+    <app-cartao
+      titulo="Verifique seu e-mail"
+      descricao="Se houver uma conta com esse endereco, o link de redefinicao chega em instantes."
+    >
+      <p class="recuperar__auxiliar">
+        O link vale por tempo limitado e so pode ser usado uma vez.
+      </p>
+      <div appCartaoRodape>
+        <app-botao variante="secundario" (click)="voltarAoInicio()">
+          Voltar para a entrada
+        </app-botao>
+      </div>
+    </app-cartao>
+    } @else {
+    <app-cartao
+      titulo="Redefinir senha"
+      descricao="Informe o e-mail cadastrado e enviaremos um link."
+    >
+      <form
+        class="recuperar__formulario"
+        [formGroup]="formulario"
+        (ngSubmit)="enviar()"
+      >
+        <app-campo
+          rotulo="E-mail"
+          tipo="email"
+          formControlName="email"
+          [obrigatorio]="true"
+          [erro]="erroDoEmail()"
+        />
+
+        @if (falhou()) {
+        <app-mensagem-erro variante="bloco">
+          Nao foi possivel registrar o pedido agora. Tente novamente em
+          instantes.
+        </app-mensagem-erro>
+        }
+
+        <div class="recuperar__acoes">
+          <app-botao
+            variante="primario"
+            tipo="submit"
+            [carregando]="enviando()"
+          >
+            Enviar link
+          </app-botao>
+          <p class="recuperar__auxiliar">
+            <a routerLink="/entrar">Voltar para a entrada</a>
+          </p>
+        </div>
+      </form>
+    </app-cartao>
+    }
+  </div>
+</main>

@@ -277,6 +277,66 @@ O desvio de escopo da superfície elevada estava escrito como `[data-direcao='ca
 
 **Critério de aceite.** Os testes de regras cobrem cada perfil contra cada caminho de documento, incluindo os casos negativos.
 
+### Registro de execução — Etapa 4
+
+Branch `feat/auth`. O que foi decidido durante a execução, e não estava no plano:
+
+**As regras do Firestore continuam negando tudo, e isso é a forma final delas.**
+Justificativa completa em `docs/arquitetura.md`, 6.1: o Admin SDK ignora as
+regras, então qualquer `allow` seria código que nenhum caminho real atravessa. O
+critério de aceite ("cada perfil contra cada caminho, incluindo os negativos")
+é cumprido por 244 asserções em `packages/regras-firestore`, mais um controle
+positivo que impede a suíte de passar verde por arnês quebrado.
+
+**O outbox nasceu aqui, não na Etapa 7.** A regra inviolável 3 não admite
+notificação fora dele, e a Etapa 4 já produz duas. O que ficou para a Etapa 7 é
+o despacho assíncrono: hoje o despachante é chamado logo após o commit; lá, por
+Cloud Tasks. O `despachar(id)` já é idempotente e recebe só o id, que é
+exatamente a mensagem que a fila vai carregar.
+
+**O adaptador do Resend e o transporte falso foram antecipados da Etapa 7**, pelo
+mesmo motivo: sem eles, o ADR-07 exigiria chamar o SDK direto de um handler.
+
+**Cliente só existe no emulador.** Em produção, cliente nasce no checkout (Etapa
+8); a Etapa 4 não cria nenhum. `scripts/semear-emulador.mjs` semeia os três
+perfis localmente, falando apenas com a API de administração que só o emulador
+expõe — sem `firebase-admin`, sem credencial, com três guardas que recusam
+qualquer coisa que não seja um projeto `demo-`.
+
+**Duas lacunas ficam registradas em vez de mal resolvidas:**
+
+- O tempo de resposta de `POST /api/auth/redefinicao-senha` ainda difere entre
+  endereço conhecido e desconhecido. O status é 202 nos dois casos, mas o caminho
+  conhecido escreve no Firestore e chama o provedor antes de responder. Adiar
+  esse trabalho não resolve hoje: o Cloud Run roda com `cpu_idle = true` e
+  trabalho iniciado depois da resposta pode não rodar. Fecha na Etapa 7, quando o
+  caminho síncrono virar só o enfileiramento.
+- `verifyIdToken` roda com `checkRevoked: true` em toda requisição autenticada,
+  o que custa uma ida ao Firebase por chamada. É o que faz a suspensão valer
+  contra sessão já aberta. Revisitar na Etapa 12, com número medido.
+
+**Descobertas de infraestrutura que teriam quebrado o deploy:**
+
+- O pipeline **nunca publicou** `firestore.rules`. O arquivo estava versionado
+  desde a Etapa 2 e o que valia em produção era o que alguém tinha aplicado à
+  mão. Agora sai no `firebase deploy`.
+- A service account de runtime precisava de `roles/firebaseauth.admin`. Sem ele,
+  todo o provisionamento falharia só em produção — o emulador não verifica IAM.
+- `terraform-ci` precisa de `roles/firebaserules.admin`, concessão **manual**
+  (os papéis do CI são bootstrap, ver `infra/terraform/README.md`).
+- O barril de `packages/shared` levava o zod inteiro, com todos os locales, para
+  o pacote inicial do Angular: 256 kB → 722 kB. Resolvido com subcaminhos
+  (`shared/perfil`), de volta a 311 kB.
+- O `ci.yml` define `GCP_PROJECT_ID` no nível do workflow, para todos os jobs.
+  Como o `idDoProjeto` preferia essa variável ao projeto do emulador, o Admin SDK
+  validava tokens esperando **produção** enquanto o emulador os emitia como
+  `demo-lexintegra`. A suíte passava na máquina e falhava só no CI, em exatamente
+  os cinco testes que emitem token — e a mensagem era "credencial inválida",
+  porque o guard esconde a causa de propósito.
+- A `apiKey` do Firebase, escrita no código, disparou o secret scanning do GitHub
+  (o repositório é **público**). Não é credencial, mas saiu do código-fonte assim
+  mesmo: agora vem de `/__/firebase/init.json`, servido pelo Hosting.
+
 ### Só você — Etapa 4
 
 **Impossível delegar**

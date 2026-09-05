@@ -22,10 +22,49 @@ export default tseslint.config(
       'docs/prototipos/**',
       'infra/**',
       'public/**',
+      /*
+       * Fora do alcance da sessao de agente por politica (ver CLAUDE.md, "Scripts
+       * de execucao manual apenas"): sao os scripts de elevacao de privilegio, e
+       * quem os edita e o desenvolvedor, a mao. Reportar violacao em arquivo que
+       * o agente nao pode abrir para corrigir so produz um `pnpm lint` vermelho
+       * que ninguem tem como fechar.
+       */
+      'scripts/manual-only/**',
     ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    /*
+     * Scripts de apoio da raiz: Node, executados a mao, nunca empacotados. O
+     * `languageOptions` padrao do projeto e o do codigo de aplicacao (sem
+     * globais de Node), e sem este bloco cada `process`, `console` e `fetch`
+     * vira erro de `no-undef`.
+     */
+    files: ['scripts/**/*.{js,mjs}'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        URL: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+      },
+    },
+  },
+  {
+    // Os `.js` da raiz sao CommonJS; os `.mjs` ja sao modulos e nao precisam
+    // desta excecao.
+    files: ['scripts/**/*.js'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: { module: 'writable', require: 'readonly' },
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
   {
     // Arquivos de configuracao CommonJS na raiz.
     files: ['**/*.cjs'],
@@ -51,6 +90,17 @@ export default tseslint.config(
       ],
       'max-depth': ['error', 4],
       '@typescript-eslint/no-explicit-any': 'error',
+      /*
+       * O prefixo `_` ja e a convencao do projeto para parametro deliberadamente
+       * nao usado — `it.each((_caso, valor) => ...)` aparece em varios testes. O
+       * padrao do preset e `after-used`, que so reclama do ultimo parametro, e
+       * por isso a convencao vinha passando por acidente ate um caso de um
+       * parametro so aparecer. Torna-la explicita e o que a faz valer sempre.
+       */
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/explicit-function-return-type': [
         'warn',
         { allowExpressions: true },

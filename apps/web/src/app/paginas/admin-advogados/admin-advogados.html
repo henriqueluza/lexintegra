@@ -1,0 +1,83 @@
+<section class="advogados">
+  <h1 class="advogados__titulo">Advogados</h1>
+
+  <app-cartao
+    titulo="Cadastrar advogado"
+    descricao="O acesso e criado aqui e so aqui. Nao ha autocadastro."
+  >
+    <form
+      class="advogados__formulario"
+      [formGroup]="formulario"
+      (ngSubmit)="cadastrar()"
+    >
+      <div class="advogados__campos">
+        <app-campo
+          rotulo="Nome completo"
+          formControlName="nome"
+          [obrigatorio]="true"
+          [erro]="erroDoCampo('nome')"
+        />
+        <app-campo
+          rotulo="E-mail"
+          tipo="email"
+          formControlName="email"
+          [obrigatorio]="true"
+          [erro]="erroDoCampo('email')"
+        />
+      </div>
+
+      <p class="advogados__aviso">
+        Nenhuma senha e definida aqui. O advogado recebe por e-mail um link de
+        uso unico para escolher a propria senha.
+      </p>
+
+      @if (falhaDoCadastro(); as mensagem) {
+      <app-mensagem-erro variante="bloco">{{ mensagem }}</app-mensagem-erro>
+      }
+
+      <div>
+        <app-botao
+          variante="primario"
+          tipo="submit"
+          [carregando]="cadastrando()"
+        >
+          Cadastrar e enviar link
+        </app-botao>
+      </div>
+    </form>
+  </app-cartao>
+
+  @if (falhaDaLista()) {
+  <app-mensagem-erro variante="bloco">
+    Nao foi possivel carregar a lista de advogados.
+  </app-mensagem-erro>
+  }
+
+  <app-tabela
+    legenda="Advogados cadastrados"
+    mensagemVazia="Nenhum advogado cadastrado ainda."
+    [colunas]="colunas"
+    [linhas]="linhas()"
+    [carregando]="carregando()"
+  >
+    <ng-template appCelulaTabela let-linha let-coluna="coluna">
+      @switch (coluna.chave) { @case ('status') {
+      <span
+        class="advogados__situacao"
+        [class.advogados__situacao--suspenso]="linha.status === 'suspenso'"
+      >
+        {{ linha.status === 'suspenso' ? 'Suspenso' : 'Ativo' }}
+      </span>
+      } @case ('acoes') {
+      <app-botao
+        tamanho="p"
+        [variante]="linha.status === 'suspenso' ? 'secundario' : 'fantasma'"
+        [carregando]="emCurso() === linha.uid"
+        (click)="alternarAcesso(linha)"
+      >
+        {{ linha.status === 'suspenso' ? 'Reativar' : 'Suspender' }}
+      </app-botao>
+      } @default { {{ linha[coluna.chave] }} } }
+    </ng-template>
+  </app-tabela>
+</section>

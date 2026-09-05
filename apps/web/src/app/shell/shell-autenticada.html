@@ -1,0 +1,16 @@
+<div class="shell" data-direcao="pauta">
+  <header class="shell__topo">
+    <div class="shell__identidade">
+      <span class="shell__marca">LexIntegra</span>
+      <span class="shell__usuario">{{ descricaoDoUsuario() }}</span>
+    </div>
+
+    <app-botao variante="secundario" tamanho="p" (click)="sair()">
+      Sair
+    </app-botao>
+  </header>
+
+  <main class="shell__conteudo">
+    <router-outlet />
+  </main>
+</div>

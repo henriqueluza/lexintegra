@@ -1,0 +1,12 @@
+<section class="painel">
+  <h1 class="painel__titulo">{{ titulo() }}</h1>
+  <p class="painel__texto">{{ explicacao() }}</p>
+
+  <app-cartao titulo="Sessao" [descricao]="resumoDaSessao()">
+    <p class="painel__texto">
+      A area de trabalho deste perfil e construida nas etapas seguintes. O que
+      esta pronto e a fronteira de acesso: esta tela so aparece para quem tem
+      sessao valida, e a API recusa qualquer chamada sem token.
+    </p>
+  </app-cartao>
+</section>
