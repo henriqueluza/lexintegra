@@ -5,6 +5,19 @@
       <span class="shell__usuario">{{ descricaoDoUsuario() }}</span>
     </div>
 
+    @if (navegacao().length > 0) {
+    <nav class="shell__nav" aria-label="Secoes da administracao">
+      @for (item of navegacao(); track item.rota) {
+      <a
+        class="shell__link"
+        [routerLink]="item.rota"
+        routerLinkActive="shell__link--ativo"
+        >{{ item.rotulo }}</a
+      >
+      }
+    </nav>
+    }
+
     <app-botao variante="secundario" tamanho="p" (click)="sair()">
       Sair
     </app-botao>

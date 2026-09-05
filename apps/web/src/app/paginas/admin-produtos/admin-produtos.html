@@ -1,0 +1,203 @@
+<section class="produtos">
+  <h1 class="produtos__titulo">Produtos</h1>
+
+  <app-cartao
+    [titulo]="tituloDoCartao()"
+    descricao="O que for salvo aqui vale para compras novas. Pedidos ja feitos carregam a versao congelada no momento da compra."
+  >
+    <form
+      class="produtos__formulario"
+      [formGroup]="formulario"
+      (ngSubmit)="salvar()"
+    >
+      <div class="produtos__campos">
+        <app-campo
+          rotulo="Nome do produto"
+          formControlName="nome"
+          [obrigatorio]="true"
+        />
+        <app-campo
+          rotulo="Preco"
+          formControlName="preco"
+          marcador="3.200,00"
+          dica="Em reais. A API guarda em centavos."
+          [obrigatorio]="true"
+        />
+      </div>
+
+      <app-campo
+        rotulo="Descricao"
+        formControlName="descricao"
+        [multilinha]="true"
+        [obrigatorio]="true"
+      />
+
+      <div class="produtos__campos produtos__campos--quatro">
+        <app-campo
+          rotulo="Reunioes incluidas"
+          formControlName="quantidadeReunioes"
+        />
+        <app-campo
+          rotulo="Prazo das reunioes"
+          formControlName="prazoValidadeReunioesDias"
+          dica="Dias a partir da compra."
+        />
+        <app-campo
+          rotulo="Intervalo minimo"
+          formControlName="intervaloMinimoReunioesDias"
+          dica="Dias entre uma reuniao e outra."
+        />
+        <app-campo
+          rotulo="Revisoes permitidas"
+          formControlName="numeroRevisoesPermitidas"
+          dica="Unico parametro da maquina de estados."
+        />
+      </div>
+
+      <fieldset class="produtos__lista" formArrayName="entregaveis">
+        <legend class="produtos__legenda">Entregaveis</legend>
+        <p class="produtos__ajuda">
+          Cada item vira um entregavel proprio no pedido, com estado e saldo de
+          revisao independentes. Pelo menos um.
+        </p>
+
+        @for (controle of lista('entregaveis').controls; track $index) {
+        <div class="produtos__item">
+          <app-campo
+            [rotulo]="'Entregavel ' + ($index + 1)"
+            [formControlName]="$index"
+          />
+          <app-botao
+            variante="texto"
+            tamanho="p"
+            icone="fecha"
+            [rotuloAcessivel]="'Remover entregavel ' + ($index + 1)"
+            (click)="remover('entregaveis', $index)"
+          >
+            Remover
+          </app-botao>
+        </div>
+        }
+
+        <div>
+          <app-botao
+            variante="secundario"
+            tamanho="p"
+            (click)="acrescentar('entregaveis')"
+          >
+            Adicionar entregavel
+          </app-botao>
+        </div>
+      </fieldset>
+
+      <fieldset class="produtos__lista" formArrayName="textosOrientativos">
+        <legend class="produtos__legenda">Textos orientativos</legend>
+        <p class="produtos__ajuda">
+          Texto de apoio exibido ao cliente. Opcional.
+        </p>
+
+        @for (controle of lista('textosOrientativos').controls; track $index) {
+        <div class="produtos__item">
+          <app-campo
+            [rotulo]="'Texto ' + ($index + 1)"
+            [multilinha]="true"
+            [formControlName]="$index"
+          />
+          <app-botao
+            variante="texto"
+            tamanho="p"
+            icone="fecha"
+            [rotuloAcessivel]="'Remover texto ' + ($index + 1)"
+            (click)="remover('textosOrientativos', $index)"
+          >
+            Remover
+          </app-botao>
+        </div>
+        }
+
+        <div>
+          <app-botao
+            variante="secundario"
+            tamanho="p"
+            (click)="acrescentar('textosOrientativos')"
+          >
+            Adicionar texto
+          </app-botao>
+        </div>
+      </fieldset>
+
+      @if (falhaDoFormulario(); as mensagem) {
+      <app-mensagem-erro variante="bloco">{{ mensagem }}</app-mensagem-erro>
+      }
+
+      <div class="produtos__acoes">
+        <app-botao variante="primario" tipo="submit" [carregando]="salvando()">
+          {{ editando() === null ? 'Cadastrar produto' : 'Salvar alteracoes' }}
+        </app-botao>
+
+        @if (editando() !== null) {
+        <app-botao variante="fantasma" (click)="cancelarEdicao()"
+          >Cancelar</app-botao
+        >
+        }
+      </div>
+    </form>
+  </app-cartao>
+
+  <div class="produtos__filtro">
+    <app-selecao
+      rotulo="Situacao"
+      [opcoes]="opcoesDeSituacao"
+      [formControl]="situacao"
+    />
+  </div>
+
+  @if (falhaDaLista()) {
+  <app-mensagem-erro variante="bloco">
+    Nao foi possivel carregar o catalogo.
+  </app-mensagem-erro>
+  }
+
+  <app-tabela
+    legenda="Catalogo de produtos"
+    mensagemVazia="Nenhum produto neste filtro."
+    [colunas]="colunas"
+    [linhas]="linhas()"
+    [carregando]="carregando()"
+  >
+    <ng-template appCelulaTabela let-linha let-coluna="coluna">
+      @switch (coluna.chave) { @case ('preco') { {{
+      precoFormatado(comoProduto(linha).precoCentavos) }} } @case ('composicao')
+      {
+      <span class="produtos__composicao"
+        >{{ composicao(comoProduto(linha)) }}</span
+      >
+      } @case ('situacao') {
+      <span
+        class="produtos__situacao"
+        [class.produtos__situacao--inativo]="!comoProduto(linha).ativo"
+      >
+        {{ comoProduto(linha).ativo ? 'Na vitrine' : 'Fora da vitrine' }}
+      </span>
+      } @case ('acoes') {
+      <div class="produtos__acoes-linha">
+        <app-botao
+          variante="texto"
+          tamanho="p"
+          (click)="editar(comoProduto(linha))"
+        >
+          Editar
+        </app-botao>
+        <app-botao
+          tamanho="p"
+          [variante]="comoProduto(linha).ativo ? 'fantasma' : 'secundario'"
+          [carregando]="emCurso() === comoProduto(linha).id"
+          (click)="alternarVitrine(comoProduto(linha))"
+        >
+          {{ comoProduto(linha).ativo ? 'Desativar' : 'Reativar' }}
+        </app-botao>
+      </div>
+      } @default { {{ linha[coluna.chave] }} } }
+    </ng-template>
+  </app-tabela>
+</section>

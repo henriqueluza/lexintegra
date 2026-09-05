@@ -8,6 +8,7 @@ function montar(
     nome: string | null;
     email: string | null;
   } | null,
+  perfil: 'cliente' | 'advogado' | 'admin' | null = 'cliente',
 ): {
   fixture: ComponentFixture<ShellAutenticada>;
   saidas: number;
@@ -24,6 +25,7 @@ function montar(
         provide: SessaoService,
         useValue: {
           usuario: () => usuario,
+          perfil: () => perfil,
           sair: () => {
             estado.saidas += 1;
             return Promise.resolve();
@@ -92,5 +94,63 @@ describe('ShellAutenticada', () => {
 
     expect(cenario.saidas).toBe(1);
     expect(cenario.destinos).toEqual(['/entrar']);
+  });
+});
+
+describe('navegacao da shell', () => {
+  /**
+   * Ate a Etapa 4 nao havia navegacao: uma pagina por area. Com duas telas
+   * administrativas, sem menu o administrador so chegaria a segunda digitando a
+   * URL.
+   */
+  it('oferece as duas secoes administrativas ao admin', () => {
+    const { fixture } = montar(
+      { nome: 'Marcos', email: 'admin@x.test' },
+      'admin',
+    );
+    const links = [
+      ...fixture.nativeElement.querySelectorAll('.shell__link'),
+    ] as HTMLAnchorElement[];
+
+    expect(links.map((link) => link.textContent?.trim())).toEqual([
+      'Advogados',
+      'Produtos',
+    ]);
+  });
+
+  /**
+   * Cliente e advogado tem uma tela so — um menu de um item e ruido. E a barra
+   * some por completo em vez de renderizar vazia.
+   */
+  it.each([['cliente'], ['advogado'], [null]])(
+    'nao mostra navegacao para o perfil %s',
+    (perfil) => {
+      const { fixture } = montar(
+        { nome: 'Ana', email: 'ana@x.test' },
+        perfil as 'cliente' | 'advogado' | null,
+      );
+
+      expect(fixture.nativeElement.querySelector('.shell__nav')).toBeNull();
+    },
+  );
+
+  /**
+   * Esconder link nao e controle de acesso — quem protege sao os guards de
+   * `canMatch` e o `@Perfis('admin')` da API. Este teste existe para que ninguem
+   * leia a ausencia do menu como se fosse protecao.
+   */
+  it('aponta para as rotas reais, sem depender do menu para proteger', () => {
+    const { fixture } = montar(
+      { nome: 'Marcos', email: 'admin@x.test' },
+      'admin',
+    );
+    const links = [
+      ...fixture.nativeElement.querySelectorAll('.shell__link'),
+    ] as HTMLAnchorElement[];
+
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/admin/advogados',
+      '/admin/produtos',
+    ]);
   });
 });

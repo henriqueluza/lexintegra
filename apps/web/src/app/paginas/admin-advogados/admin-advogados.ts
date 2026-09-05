@@ -5,10 +5,10 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import type { AdvogadoResumo } from 'shared/esquemas/advogado';
 import { ApiService } from '../../autenticacao/api.service';
+import { mensagemDoErro } from '../erros';
 import { Botao } from '../../ui/botao/botao';
 import { Campo } from '../../ui/campo/campo';
 import { Cartao } from '../../ui/cartao/cartao';
@@ -18,6 +18,12 @@ import {
   Tabela,
   type ColunaTabela,
 } from '../../ui/tabela/tabela';
+
+/**
+ * 409 aqui e sempre a mesma coisa, e o texto generico ("Ja existe um registro
+ * equivalente") seria pior do que o que a tela pode dizer.
+ */
+const CONFLITO_DE_EMAIL = { 409: 'Ja existe um advogado com este e-mail.' };
 
 /**
  * Provisionamento de advogados pelo administrador global (item 2.4.3).
@@ -105,7 +111,7 @@ export class AdminAdvogados implements OnInit {
       this.formulario.reset();
       await this.recarregar();
     } catch (erro) {
-      this.falhaDoCadastro.set(mensagemDoErro(erro));
+      this.falhaDoCadastro.set(mensagemDoErro(erro, CONFLITO_DE_EMAIL));
     } finally {
       this.cadastrando.set(false);
     }
@@ -123,31 +129,9 @@ export class AdminAdvogados implements OnInit {
       }
       await this.recarregar();
     } catch (erro) {
-      this.falhaDoCadastro.set(mensagemDoErro(erro));
+      this.falhaDoCadastro.set(mensagemDoErro(erro, CONFLITO_DE_EMAIL));
     } finally {
       this.emCurso.set(null);
     }
   }
-}
-
-/**
- * A API responde 400 com `{ erros: { campo: mensagem } }` (ver `zod.pipe.ts`) e
- * 409 quando o e-mail ja tem advogado. Traduzir aqui, e nao mostrar o corpo cru,
- * evita que um detalhe interno vire texto de tela — mas as mensagens de validacao
- * do proprio schema sao escritas para serem lidas, e sao reaproveitadas.
- */
-function mensagemDoErro(erro: unknown): string {
-  if (!(erro instanceof HttpErrorResponse)) {
-    return 'Nao foi possivel concluir a operacao.';
-  }
-  if (erro.status === 409) {
-    return 'Ja existe um advogado com este e-mail.';
-  }
-  if (erro.status === 403) {
-    return 'Seu perfil nao permite esta operacao.';
-  }
-
-  const corpo = erro.error as { erros?: Record<string, string> } | null;
-  const primeiro = Object.values(corpo?.erros ?? {})[0];
-  return primeiro ?? 'Nao foi possivel concluir a operacao.';
 }

@@ -99,6 +99,14 @@ export const routes: Routes = [
           ),
         title: 'Advogados — LexIntegra',
       },
+      {
+        path: 'produtos',
+        loadComponent: () =>
+          import('./paginas/admin-produtos/admin-produtos').then(
+            (m) => m.AdminProdutos,
+          ),
+        title: 'Produtos — LexIntegra',
+      },
     ],
   },
 
