@@ -12,6 +12,7 @@ export default {
   moduleNameMapper: {
     // Espelha o `paths` do tsconfig: o Jest nao le `paths` sozinho.
     '^shared$': '<rootDir>/../../packages/shared/src/index.ts',
+    '^shared/(.*)$': '<rootDir>/../../packages/shared/src/$1.ts',
     // `packages/shared` e nodenext e importa './estado-entregavel.js'; o arquivo
     // em disco e `.ts`. Mesmo par usado em apps/api/jest.config.mjs.
     '^(\\.{1,2}/.*)\\.js$': '$1',

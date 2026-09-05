@@ -1,0 +1,48 @@
+/* Direcao B (Pauta) por heranca da shell autenticada. */
+.advogados {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+.advogados__titulo {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t1);
+  font-weight: var(--peso-titulo);
+  line-height: var(--altura-titulo);
+  letter-spacing: var(--letra-titulo);
+}
+
+.advogados__formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.advogados__campos {
+  display: grid;
+  gap: var(--s4);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 48rem) {
+  .advogados__campos {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.advogados__aviso {
+  color: var(--texto-2);
+  font-size: var(--t-menor);
+  max-width: var(--medida-texto);
+}
+
+.advogados__situacao {
+  font-size: var(--t-menor);
+  color: var(--texto-2);
+}
+
+.advogados__situacao--suspenso {
+  color: var(--estado-alerta);
+  font-weight: var(--peso-medio);
+}

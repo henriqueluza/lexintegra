@@ -1,0 +1,54 @@
+/*
+ * A shell e o ponto onde a Direcao B (Pauta) comeca. O `data-direcao="pauta"` no
+ * elemento raiz deste componente reescopa os tokens semanticos para tudo abaixo
+ * dele — nenhum componente daqui para baixo sabe em qual direcao esta.
+ *
+ * O ANINHAMENTO E DE PROPOSITO e tem teste proprio: o <html> continua sendo
+ * `catedra` (rotas publicas), entao todo componente da area autenticada e, ao
+ * mesmo tempo, descendente de um `[data-direcao='catedra']`. E por esse caminho
+ * que o primeiro desvio de escopo da Etapa 3 vazou o dourado da Catedra para
+ * dentro da area do cliente; ver `apps/web/e2e/direcao.spec.ts`.
+ */
+.shell {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background: var(--superficie);
+  color: var(--texto);
+}
+
+.shell__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  padding: var(--s3) var(--s4);
+  border-bottom: var(--borda-fina) solid var(--divisor);
+  background: var(--superficie-elevada);
+}
+
+.shell__identidade {
+  display: flex;
+  flex-direction: column;
+}
+
+.shell__marca {
+  font-family: var(--fonte-interface);
+  font-size: var(--t-mini);
+  letter-spacing: var(--letra-caixa-alta);
+  text-transform: uppercase;
+  color: var(--acento);
+}
+
+.shell__usuario {
+  font-size: var(--t-menor);
+  color: var(--texto-2);
+}
+
+.shell__conteudo {
+  flex: 1;
+  width: 100%;
+  max-width: var(--largura-conteudo);
+  margin: 0 auto;
+  padding: var(--s5) var(--s4);
+}

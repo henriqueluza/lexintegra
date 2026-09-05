@@ -1,0 +1,81 @@
+<main class="definir">
+  <p class="definir__marca">LexIntegra</p>
+
+  <div class="definir__caixa">
+    @switch (situacao()) { @case ('conferindo') {
+    <app-cartao titulo="Definir senha">
+      <app-carregando variante="bloco" rotulo="Conferindo o link" />
+    </app-cartao>
+    } @case ('invalido') {
+    <app-cartao
+      titulo="Link expirado"
+      descricao="Este link ja foi usado ou passou da validade."
+    >
+      <p class="definir__auxiliar">
+        Peca um novo link e use o mais recente que receber.
+      </p>
+      <div appCartaoRodape>
+        <app-botao variante="primario" (click)="pedirOutro()">
+          Pedir um novo link
+        </app-botao>
+      </div>
+    </app-cartao>
+    } @case ('pronto') {
+    <app-cartao
+      titulo="Senha definida"
+      descricao="Voce ja pode entrar com a nova senha."
+    >
+      <div appCartaoRodape>
+        <app-botao variante="primario" (click)="irParaEntrada()">
+          Entrar
+        </app-botao>
+      </div>
+    </app-cartao>
+    } @default {
+    <app-cartao
+      titulo="Definir senha"
+      [descricao]="'Conta: ' + (email() ?? '')"
+    >
+      <form
+        class="definir__formulario"
+        [formGroup]="formulario"
+        (ngSubmit)="enviar()"
+      >
+        <app-campo
+          rotulo="Nova senha"
+          tipo="password"
+          formControlName="senha"
+          dica="Ao menos 12 caracteres."
+          [obrigatorio]="true"
+          [erro]="erroDaSenha()"
+        />
+
+        <app-campo
+          rotulo="Repita a nova senha"
+          tipo="password"
+          formControlName="confirmacao"
+          [obrigatorio]="true"
+          [erro]="erroDaConfirmacao()"
+        />
+
+        @if (falhou()) {
+        <app-mensagem-erro variante="bloco">
+          Nao foi possivel definir a senha. O link pode ter expirado enquanto a
+          pagina estava aberta.
+        </app-mensagem-erro>
+        }
+
+        <div class="definir__acoes">
+          <app-botao
+            variante="primario"
+            tipo="submit"
+            [carregando]="enviando()"
+          >
+            Definir senha
+          </app-botao>
+        </div>
+      </form>
+    </app-cartao>
+    } }
+  </div>
+</main>

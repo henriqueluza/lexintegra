@@ -1,0 +1,48 @@
+<main class="entrada">
+  <p class="entrada__marca">LexIntegra</p>
+
+  <div class="entrada__caixa">
+    <app-cartao titulo="Entrar" descricao="Acesse com o e-mail cadastrado.">
+      <form
+        class="entrada__formulario"
+        [formGroup]="formulario"
+        (ngSubmit)="enviar()"
+      >
+        <app-campo
+          rotulo="E-mail"
+          tipo="email"
+          formControlName="email"
+          [obrigatorio]="true"
+          [erro]="erroDoCampo('email')"
+        />
+
+        <app-campo
+          rotulo="Senha"
+          tipo="password"
+          formControlName="senha"
+          [obrigatorio]="true"
+          [erro]="erroDoCampo('senha')"
+        />
+
+        @if (falha(); as motivo) {
+        <app-mensagem-erro variante="bloco"
+          >{{ mensagemDaFalha(motivo) }}</app-mensagem-erro
+        >
+        }
+
+        <div class="entrada__acoes">
+          <app-botao
+            variante="primario"
+            tipo="submit"
+            [carregando]="enviando()"
+          >
+            Entrar
+          </app-botao>
+          <p class="entrada__auxiliar">
+            <a routerLink="/recuperar-senha">Esqueci minha senha</a>
+          </p>
+        </div>
+      </form>
+    </app-cartao>
+  </div>
+</main>

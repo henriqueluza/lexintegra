@@ -46,12 +46,18 @@ export type NovoAdvogado = z.infer<typeof esquemaNovoAdvogado>;
 /**
  * O que a API devolve sobre um advogado. Sem nada que nao seja necessario a
  * tela: nem token, nem claim, nem carimbo interno.
+ *
+ * `type` e nao `interface`, de proposito: o TypeScript da assinatura de indice
+ * implicita a um alias de tipo e NAO a uma interface. Sem ela, este tipo nao e
+ * atribuivel a `Record<string, unknown>`, que e o que o componente de tabela do
+ * sistema de design espera em `linhas`. Trocar por `interface` quebra a tela de
+ * advogados com um erro que nao menciona nenhuma das duas.
  */
-export interface AdvogadoResumo {
+export type AdvogadoResumo = {
   readonly uid: string;
   readonly nome: string;
   readonly email: string;
   readonly status: StatusAdvogado;
   /** ISO 8601, ou `null` enquanto o carimbo do servidor nao materializou. */
   readonly criadoEm: string | null;
-}
+};

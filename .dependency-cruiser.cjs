@@ -36,6 +36,20 @@ module.exports = {
       to: { path: '^apps' },
     },
     {
+      name: 'web-so-usa-firebase-para-auth',
+      severity: 'error',
+      comment:
+        'Regra inviolavel 7: o SDK do Firebase no frontend serve SO para autenticacao. ' +
+        'Nenhuma leitura ou escrita direta no Firestore pelo browser — todo acesso ao ' +
+        'banco passa pela API, o que concentra a autorizacao em um lugar auditavel. As ' +
+        'regras do Firestore negam a leitura de qualquer forma, entao um import destes ' +
+        'produziria uma tela que falha em producao sem falhar em nenhum teste de unidade.',
+      from: { path: '^apps/web' },
+      to: {
+        path: '^(firebase/(firestore|storage|database|functions|analytics|messaging)|firebase-admin)',
+      },
+    },
+    {
       name: 'sem-dev-dep-em-producao',
       severity: 'error',
       comment: 'Modulo de producao dependendo de devDependency.',
