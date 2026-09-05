@@ -327,6 +327,15 @@ qualquer coisa que não seja um projeto `demo-`.
 - O barril de `packages/shared` levava o zod inteiro, com todos os locales, para
   o pacote inicial do Angular: 256 kB → 722 kB. Resolvido com subcaminhos
   (`shared/perfil`), de volta a 311 kB.
+- O `ci.yml` define `GCP_PROJECT_ID` no nível do workflow, para todos os jobs.
+  Como o `idDoProjeto` preferia essa variável ao projeto do emulador, o Admin SDK
+  validava tokens esperando **produção** enquanto o emulador os emitia como
+  `demo-lexintegra`. A suíte passava na máquina e falhava só no CI, em exatamente
+  os cinco testes que emitem token — e a mensagem era "credencial inválida",
+  porque o guard esconde a causa de propósito.
+- A `apiKey` do Firebase, escrita no código, disparou o secret scanning do GitHub
+  (o repositório é **público**). Não é credencial, mas saiu do código-fonte assim
+  mesmo: agora vem de `/__/firebase/init.json`, servido pelo Hosting.
 
 ### Só você — Etapa 4
 
