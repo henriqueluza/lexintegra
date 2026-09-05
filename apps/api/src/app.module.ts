@@ -4,6 +4,7 @@ import { AutenticacaoModule } from './autenticacao/autenticacao.module.js';
 import { SenhaModule } from './autenticacao/senha/senha.module.js';
 import { FirebaseModule } from './firebase/firebase.module.js';
 import { HealthModule } from './health/health.module.js';
+import { PedidosModule } from './pedidos/pedidos.module.js';
 import { ProdutosModule } from './produtos/produtos.module.js';
 
 @Module({
@@ -14,6 +15,7 @@ import { ProdutosModule } from './produtos/produtos.module.js';
     SenhaModule,
     AdvogadosModule,
     ProdutosModule,
+    PedidosModule,
   ],
 })
 export class AppModule {}

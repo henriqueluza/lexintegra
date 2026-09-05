@@ -111,14 +111,17 @@ export class ConsultaFalsa {
 
     const ordem = this.ordem;
     if (ordem !== null) {
-      docs.sort((a, b) =>
-        String(a.data()?.[ordem] ?? '').localeCompare(
-          String(b.data()?.[ordem] ?? ''),
-        ),
-      );
+      docs.sort((a, b) => comparar(a.data()?.[ordem], b.data()?.[ordem]));
     }
     return Promise.resolve({ docs });
   }
+}
+
+/** Numero compara como numero; o resto, como texto. `orderBy('ordem')` num
+ * entregavel ordenaria 10 antes de 2 se tudo virasse string. */
+function comparar(a: unknown, b: unknown): number {
+  if (typeof a === 'number' && typeof b === 'number') return a - b;
+  return String(a ?? '').localeCompare(String(b ?? ''));
 }
 
 export class ColecaoFalsa extends ConsultaFalsa {
