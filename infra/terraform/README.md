@@ -32,6 +32,19 @@ roles/run.admin                        roles/resourcemanager.projectIamAdmin
 roles/secretmanager.admin              roles/serviceusage.serviceUsageAdmin
 roles/cloudkms.admin                   roles/firebasehosting.admin
 roles/artifactregistry.admin           roles/iam.workloadIdentityPoolAdmin
+roles/firebaserules.admin
+```
+
+`roles/firebaserules.admin` foi acrescentado na **Etapa 4**, e sem ele o deploy
+falha num ponto tardio: o pipeline passou a publicar `firestore.rules`, e a
+publicação vai pela API de Rules — `roles/datastore.owner` cobre os dados, não
+as regras. Como os papéis de projeto do CI são bootstrap manual (ver acima), a
+concessão é manual:
+
+```bash
+gcloud projects add-iam-policy-binding plataforma-juridica-36bda \
+  --member=serviceAccount:terraform-ci@plataforma-juridica-36bda.iam.gserviceaccount.com \
+  --role=roles/firebaserules.admin
 ```
 
 Os cinco da coluna da direita, das últimas linhas, foram acrescentados na Etapa 2:

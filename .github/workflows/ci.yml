@@ -53,6 +53,17 @@ jobs:
       - name: Testes unitarios com limiar de cobertura
         run: pnpm test:coverage
 
+      # Emulador de Auth e Firestore. E aqui que as regras de seguranca sao
+      # exercitadas — elas sao codigo sem cobertura por padrao (arquitetura,
+      # secao 10), e o unico jeito de saber que negam o que devem negar e roda-las.
+      #
+      # Sem `setup-java`: a imagem `ubuntu-latest` do GitHub ja traz um JDK, e os
+      # emuladores rodam sobre a JVM. Se um dia a imagem parar de trazer, este
+      # passo falha com a mensagem do proprio `scripts/emuladores.sh`, que diz o
+      # que instalar.
+      - name: Regras do Firestore e integracao no emulador
+        run: pnpm test:integration
+
       - name: Build
         run: pnpm build
 

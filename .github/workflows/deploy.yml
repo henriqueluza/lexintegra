@@ -54,6 +54,13 @@ jobs:
       - name: Lint e testes
         run: pnpm lint && pnpm test:coverage
 
+      # As regras de seguranca do Firestore sao publicadas mais abaixo. Rodar a
+      # suite delas ANTES de publicar e o que impede uma regra quebrada de chegar
+      # a producao — depois de publicada, a unica forma de descobrir seria alguem
+      # conseguir ler dado que nao devia.
+      - name: Regras do Firestore e integracao no emulador
+        run: pnpm test:integration
+
       - name: Autenticar no Google Cloud (sem chave JSON)
         uses: google-github-actions/auth@v3
         with:
@@ -116,10 +123,21 @@ jobs:
 
       # A ordem importa: o Cloud Run precisa estar no ar antes do Hosting, porque o
       # rewrite do Hosting aponta para o servico (ADR-15).
-      - name: Publicar o frontend no Firebase Hosting
+      #
+      # `firestore:rules` entra junto, e ate a Etapa 4 NAO ENTRAVA: as regras
+      # viviam versionadas no repositorio e nunca eram publicadas, entao o que
+      # estava em producao era o que alguem tinha aplicado a mao pela ultima vez.
+      # Um arquivo de seguranca que ninguem publica e pior que nenhum arquivo,
+      # porque parece que existe.
+      #
+      # `firebase-tools` sai do lockfile (`pnpm exec`), nao de `dlx @latest`: o
+      # mesmo binario que roda os emuladores no CI publica as regras aqui, e uma
+      # versao flutuante no caminho de deploy e uma mudanca de comportamento sem
+      # commit.
+      - name: Publicar o frontend e as regras do Firestore
         run: |
-          pnpm dlx firebase-tools@latest \
-            deploy --only hosting \
+          pnpm exec firebase \
+            deploy --only hosting,firestore:rules \
             --project "${GCP_PROJECT_ID}" \
             --non-interactive
 
