@@ -24,7 +24,35 @@ resource "google_firestore_database" "default" {
 }
 
 # Indices compostos entram aqui, como google_firestore_index, conforme as consultas
-# forem escritas. Nao ha nenhum ainda porque nao ha colecao. A arquitetura (secao 10)
-# exige que sejam declarados no Terraform: o emulador diverge do servico real em
-# comportamento de indice composto, e uma consulta que passa local pode falhar em
-# producao por indice ausente.
+# forem escritas. A arquitetura (secao 10) exige que sejam declarados no Terraform: o
+# emulador diverge do servico real em comportamento de indice composto, e uma consulta
+# que passa local pode falhar em producao por indice ausente.
+#
+# UM INDICE POR CONSULTA QUE EXISTE, e nao um por consulta imaginavel. Indice
+# composto custa armazenamento e escrita em toda gravacao da colecao; declarar os
+# que "talvez" sejam usados paga esse custo por consulta que ninguem faz.
+
+# `GET /api/admin/produtos?situacao=ativos|inativos` — ProdutosService.listar monta
+# `where('ativo', '==', ...).orderBy('nome')`. Igualdade mais ordenacao por outro
+# campo e exatamente o caso que o Firestore nao resolve com indice de campo unico.
+#
+# `situacao=todos` NAO precisa deste indice: sem `where`, o `orderBy('nome')` sozinho
+# usa o indice de campo unico que o Firestore mantem automaticamente.
+resource "google_firestore_index" "produtos_por_situacao" {
+  project    = var.project_id
+  database   = google_firestore_database.default.name
+  collection = "produtos"
+
+  fields {
+    field_path = "ativo"
+    order      = "ASCENDING"
+  }
+
+  # A ordem dos blocos e significativa e precisa espelhar a consulta: campo de
+  # igualdade primeiro, campo de ordenacao depois. Invertida, o indice existe e a
+  # consulta continua falhando em producao pedindo outro indice.
+  fields {
+    field_path = "nome"
+    order      = "ASCENDING"
+  }
+}

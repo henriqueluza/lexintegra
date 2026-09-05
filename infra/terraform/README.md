@@ -76,7 +76,7 @@ duração existe em lugar nenhum — não há segredo de GCP cadastrado no GitHu
 | `variables.tf`         | Projeto, região, repositório autorizado, imagem e commit    |
 | `imports.tf`           | **Temporário** — ver abaixo                                 |
 | `services.tf`          | APIs habilitadas                                            |
-| `firestore.tf`         | Base `(default)` e, no futuro, os índices compostos         |
+| `firestore.tf`         | Base `(default)` e os índices compostos                     |
 | `kms.tf`               | Keyring e chave CMEK dos buckets                            |
 | `storage.tf`           | Bucket de state (importado) e os quatro de aplicação        |
 | `artifact_registry.tf` | Repositório de imagens e a política de limpeza              |
@@ -158,4 +158,6 @@ Entra junto com o código que o usa, não antes:
 - Filas do Cloud Tasks e jobs do Cloud Scheduler — Etapas 7 e 9.
 - Serviço do scanner ClamAV — Etapa 11.
 - Políticas de alerta e uptime check — Etapa 12.
-- Índices compostos do Firestore — conforme as consultas existirem.
+- Mais índices compostos do Firestore — conforme as consultas existirem. O
+  primeiro (`produtos` por `ativo` + `nome`) entrou na Etapa 5, junto da consulta
+  que o exige; os próximos devem entrar do mesmo jeito, nunca antes.
