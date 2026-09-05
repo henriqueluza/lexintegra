@@ -33,6 +33,9 @@ export default {
      * como exercitar, e o numero deixaria de dizer alguma coisa.
      */
     '!emulador.ts',
+    // Mesma razao: `firestore-falso.ts` e o dublê em memoria que as suites de
+    // unidade importam. E arnes, nao codigo de producao.
+    '!firestore-falso.ts',
   ],
   coverageDirectory: '../coverage',
   coverageReporters: ['text-summary', 'lcov', 'json-summary'],
