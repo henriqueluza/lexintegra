@@ -18,10 +18,17 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 const PRE_CADASTRO = '**/api/pre-cadastros';
 const VITRINE = '**/api/vitrine';
 
+/**
+ * O nome NAO PODE coincidir com nenhum dos cartoes de exemplo borrados do estado
+ * travado (`textos.servicos.travado.exemplos`). A primeira versao usava "Revisão
+ * de contrato comercial", que e exatamente um deles — e o teste de "o catalogo
+ * nao aparece antes do cadastro" passava a acusar a propria textura como
+ * vazamento de catalogo.
+ */
 const SERVICOS = [
   {
     id: 'produto-1',
-    nome: 'Revisão de contrato comercial',
+    nome: 'Due diligence societária',
     descricao: 'Leitura completa e minuta revisada pronta para negociação.',
     precoCentavos: 250_000,
     entregaveis: ['Minuta revisada'],
@@ -76,18 +83,44 @@ async function percorrerAPaginaInteira(page: Page): Promise<void> {
   await page.waitForTimeout(300);
 }
 
+/**
+ * Espera a aplicacao estar VIVA, provando isso por interacao.
+ *
+ * A pagina e pre-renderizada: os campos existem no HTML servido antes de o
+ * Angular hidratar, e o que a pessoa digitar nessa janela e perdido — o
+ * formulario reativo escreve o modelo vazio por cima quando inicializa.
+ *
+ * Duas tentativas anteriores nao resolveram, e vale registrar por que. Preencher
+ * e conferir o valor falha porque a conferencia acontece contra o DOM
+ * pre-hidratacao e o apagamento vem depois. Esperar por um marcador de hidratacao
+ * tambem nao serve: o build de desenvolvimento nao emite `ngh`, entao nao ha
+ * marcador estavel para depender.
+ *
+ * O que funciona e pedir a aplicacao para FAZER alguma coisa que so o codigo
+ * hidratado faz — enviar o formulario vazio e ver a validacao responder. Depois
+ * disso o Angular esta no controle e o preenchimento fica.
+ */
+async function esperarHidratacao(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Criar acesso' }).click();
+  await expect(page.getByText('Campo obrigatório.').first()).toBeVisible();
+}
+
 async function preencherEEnviar(page: Page): Promise<void> {
+  await esperarHidratacao(page);
+
   await page.getByLabel('Nome completo').fill('Ana Ribeiro Salgado');
   await page.getByLabel('E-mail').fill('ana@empresa.com.br');
   await page.getByLabel('Telefone').fill('(61) 99000-0000');
   await page.getByRole('button', { name: 'Criar acesso' }).click();
 }
 
+/*
+ * Sem limpeza de armazenamento no `beforeEach`. O Playwright ja da um contexto
+ * novo por teste, entao `localStorage` nasce vazio — e a primeira versao daqui
+ * usava `page.addInitScript`, que roda a CADA navegacao: o `reload` do teste de
+ * persistencia apagava justamente o token que ele existia para verificar.
+ */
 test.describe('area publica', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => localStorage.clear());
-  });
-
   /**
    * A afirmacao central. Rolar a pagina inteira e acionar os caminhos internos
    * NAO pode produzir uma requisicao — nem para a vitrine, nem para o health, nem
@@ -113,9 +146,7 @@ test.describe('area publica', () => {
     await expect(
       page.getByText('Os preços aparecem depois do cadastro'),
     ).toBeVisible();
-    await expect(page.getByText('Revisão de contrato comercial')).toHaveCount(
-      0,
-    );
+    await expect(page.getByText('Due diligence societária')).toHaveCount(0);
   });
 
   /**
@@ -130,8 +161,13 @@ test.describe('area publica', () => {
     await page.goto('/');
     await preencherEEnviar(page);
 
-    await expect(page.getByText('Revisão de contrato comercial')).toBeVisible();
-    await expect(page.getByText('R$ 2.500,00')).toBeVisible();
+    await expect(page.getByText('Due diligence societária')).toBeVisible();
+    /*
+     * `Intl` em pt-BR separa o simbolo com espaco NAO SEPARAVEL (U+00A0). Um
+     * literal com espaco comum nao casa, e a mensagem de falha ("elemento nao
+     * encontrado") nao da nenhuma pista disso.
+     */
+    await expect(page.getByText(/R\$\s*2\.500,00/)).toBeVisible();
     expect(chamadas).toEqual(['POST /api/pre-cadastros', 'GET /api/vitrine']);
   });
 
@@ -144,11 +180,11 @@ test.describe('area publica', () => {
     await interceptar(page);
     await page.goto('/');
     await preencherEEnviar(page);
-    await expect(page.getByText('Revisão de contrato comercial')).toBeVisible();
+    await expect(page.getByText('Due diligence societária')).toBeVisible();
 
     await page.reload();
 
-    await expect(page.getByText('Revisão de contrato comercial')).toBeVisible();
+    await expect(page.getByText('Due diligence societária')).toBeVisible();
     await expect(
       page.getByText('Os preços aparecem depois do cadastro'),
     ).toHaveCount(0);
@@ -161,6 +197,8 @@ test.describe('area publica', () => {
     await interceptar(page);
 
     await page.goto('/');
+    await esperarHidratacao(page);
+
     await page.getByLabel('Nome completo').fill('An');
     await page.getByLabel('E-mail').fill('nao-e-email');
     await page.getByLabel('Telefone').fill('123');
@@ -183,8 +221,14 @@ test.describe('area publica', () => {
     await expect(
       formulario.getByText('Você pode pedir a exclusão a qualquer momento.'),
     ).toBeVisible();
+
+    /*
+     * Localizado pelo `summary`, e nao por `getByRole('group', { name })`: o
+     * `<details>` tem papel `group`, mas o nome acessivel dele NAO vem do
+     * `<summary>` — o grupo fica sem nome, e a consulta por nome nunca casa.
+     */
     await expect(
-      formulario.getByRole('group', { name: 'Aviso de privacidade' }),
-    ).toBeAttached();
+      formulario.getByText('Aviso de privacidade', { exact: true }),
+    ).toBeVisible();
   });
 });

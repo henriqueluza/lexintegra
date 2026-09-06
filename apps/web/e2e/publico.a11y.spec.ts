@@ -68,6 +68,11 @@ test.describe('acessibilidade da area publica', () => {
 
   test('com a vitrine liberada', async ({ page }) => {
     await page.goto('/');
+
+    /* Prova que a aplicacao hidratou: ver `esperarHidratacao` em publico.spec.ts. */
+    await page.getByRole('button', { name: 'Criar acesso' }).click();
+    await expect(page.getByText('Campo obrigatório.').first()).toBeVisible();
+
     await page.getByLabel('Nome completo').fill('Ana Ribeiro Salgado');
     await page.getByLabel('E-mail').fill('ana@empresa.com.br');
     await page.getByLabel('Telefone').fill('(61) 99000-0000');

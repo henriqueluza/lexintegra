@@ -14,6 +14,17 @@ import { expect, test } from '@playwright/test';
  */
 test.use({ javaScriptEnabled: false });
 
+/*
+ * Contra o servidor de desenvolvimento estas afirmacoes nao valem: o `ng serve`
+ * nao serve o que o Hosting vai servir. `URL_BASE` so esta definida quando
+ * `scripts/publico.sh` aponta a suite para o build estatico — sem ela, a suite se
+ * declara ignorada em vez de reprovar por um motivo que nao e defeito.
+ */
+test.skip(
+  process.env['URL_BASE'] === undefined,
+  'Precisa do build estatico: rode `scripts/publico.sh`.',
+);
+
 test.describe('pre-renderizacao da area publica', () => {
   test('serve o conteudo sem JavaScript', async ({ page }) => {
     await page.goto('/');
