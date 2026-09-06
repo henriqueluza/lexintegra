@@ -98,6 +98,25 @@ export const TEXTOS = {
       texto:
         'A lista completa aparece acima, com preços e o que cada um inclui.',
     },
+    falhaGenerica:
+      'Não foi possível concluir o cadastro agora. Tente novamente em instantes.',
+    falhaExcesso:
+      'Muitas tentativas em pouco tempo. Espere alguns minutos e tente de novo.',
+  },
+
+  /*
+   * TODO-TEXTO-PRIVACIDADE-JURIDICO — o `juridico` abaixo e o placeholder, e sai
+   * literal na tela de proposito.
+   *
+   * E peca juridica, nao copy: quem aprova e o escritorio, fora do codigo (Etapa
+   * 6, "So voce"). O `resumo` NAO e o aviso legal — e a frase em linguagem
+   * simples que a pessoa le antes de digitar, e essa o CONTRATADO escreve.
+   */
+  privacidade: {
+    resumo:
+      'Usamos nome, e-mail e telefone só para liberar seu acesso e falar sobre o seu pedido. Você pode pedir a exclusão a qualquer momento.',
+    rotulo: 'Aviso de privacidade',
+    juridico: '{{TODO-TEXTO-PRIVACIDADE-JURIDICO}}',
   },
 
   rodape: {

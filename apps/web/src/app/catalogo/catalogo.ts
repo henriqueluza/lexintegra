@@ -19,6 +19,7 @@ export const PECAS: readonly {
   { rota: 'estado-vazio', nome: 'Estado vazio' },
   { rota: 'carregando', nome: 'Carregamento' },
   { rota: 'mensagem-erro', nome: 'Mensagem de erro' },
+  { rota: 'aviso-privacidade', nome: 'Aviso de privacidade' },
 ];
 
 /**

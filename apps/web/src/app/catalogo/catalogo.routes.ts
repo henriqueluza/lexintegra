@@ -87,6 +87,13 @@ export const catalogoRoutes: Routes = [
             (m) => m.SecaoMensagemErro,
           ),
       },
+      {
+        path: 'aviso-privacidade',
+        loadComponent: () =>
+          import('./secoes/aviso-privacidade.secao').then(
+            (m) => m.SecaoAvisoPrivacidade,
+          ),
+      },
     ],
   },
 ];

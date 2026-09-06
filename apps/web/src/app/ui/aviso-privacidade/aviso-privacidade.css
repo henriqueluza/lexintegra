@@ -1,0 +1,34 @@
+.aviso {
+  font-family: var(--fonte-interface);
+  font-size: var(--t-mini);
+  line-height: var(--altura-solta);
+  color: var(--texto-3);
+}
+
+.aviso__resumo {
+  margin: 0;
+}
+
+.aviso__completo {
+  margin-top: var(--s2);
+}
+
+/*
+ * `summary` e um controle: precisa parecer clicavel e ter foco visivel. O
+ * `:focus-visible` global de `base.css` cuida do anel.
+ */
+.aviso__completo summary {
+  color: var(--acento);
+  cursor: pointer;
+}
+
+.aviso__completo summary:hover {
+  text-decoration: underline;
+}
+
+.aviso__texto {
+  margin-top: var(--s2);
+  padding-top: var(--s2);
+  border-top: var(--borda-fina) solid var(--divisor);
+  color: var(--texto-2);
+}

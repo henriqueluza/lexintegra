@@ -9,6 +9,7 @@ import {
   viewChildren,
 } from '@angular/core';
 import { LinkAcao } from '../../ui/link-acao/link-acao';
+import { Cadastro } from './cadastro/cadastro';
 import { TEXTOS } from './textos';
 
 /** As tres posicoes do martelo. Estados fixos, nao trajetoria. */
@@ -37,7 +38,7 @@ export type PosicaoMartelo = (typeof POSICOES_MARTELO)[number];
  */
 @Component({
   selector: 'app-landing',
-  imports: [LinkAcao],
+  imports: [LinkAcao, Cadastro],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './landing.html',
   styleUrl: './landing.css',

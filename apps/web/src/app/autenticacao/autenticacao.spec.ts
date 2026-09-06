@@ -18,7 +18,11 @@ import {
 } from './firebase';
 import { rotaInicialDe } from './guardas';
 import { traduzirFalha } from './sessao.service';
-import { anexarToken, ehChamadaDaApi } from './token.interceptor';
+import {
+  anexarToken,
+  ehCaminhoPublico,
+  ehChamadaDaApi,
+} from './token.interceptor';
 import { SessaoService } from './sessao.service';
 
 describe('ehDesenvolvimentoLocal', () => {
@@ -263,8 +267,75 @@ describe('anexarToken', () => {
    * tela de recuperacao de senha, que e publica, chama a API.
    */
   it('segue sem cabecalho quando nao ha sessao', async () => {
-    const enviada = await executar('/api/auth/redefinicao-senha', null);
+    const enviada = await executar('/api/admin/advogados', null);
     expect(enviada.headers.get('Authorization')).toBeNull();
+  });
+
+  /**
+   * ESTE E O TESTE QUE PROTEGE A PAGINA DE CAPTACAO.
+   *
+   * `inject(SessaoService)` dispara o `import()` dinamico do SDK do Firebase.
+   * Sem o recorte de caminhos publicos, enviar o formulario de pre-cadastro
+   * baixaria meio megabyte de SDK de autenticacao no exato momento da conversao —
+   * na pagina que a regra inviolavel 10 existe para manter leve. O duble estoura
+   * se for consultado, porque "nao anexou o cabecalho" passaria tambem no caso
+   * em que o SDK foi carregado e devolveu `null`.
+   */
+  it.each([
+    '/api/pre-cadastros',
+    '/api/vitrine',
+    '/api/auth/redefinicao-senha',
+    '/api/health',
+  ])('nao toca na sessao ao chamar %s', async (url) => {
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: SessaoService,
+          useValue: {
+            token: () => {
+              throw new Error('A sessao nao devia ser consultada aqui.');
+            },
+          },
+        },
+      ],
+    });
+
+    const enviada = (await firstValueFrom(
+      TestBed.runInInjectionContext(() =>
+        anexarToken(new HttpRequest('GET', url), (r) => of(r as never)),
+      ),
+    )) as unknown as HttpRequest<unknown>;
+
+    expect(enviada.headers.get('Authorization')).toBeNull();
+  });
+});
+
+describe('ehCaminhoPublico', () => {
+  it.each([
+    '/api/health',
+    '/api/vitrine',
+    '/api/pre-cadastros',
+    '/api/auth/redefinicao-senha',
+  ])('reconhece %s', (url) => {
+    expect(ehCaminhoPublico(url)).toBe(true);
+  });
+
+  it.each(['/api/admin/produtos', '/api/admin/pre-cadastros', '/api/auth/eu'])(
+    'nao reconhece %s',
+    (url) => {
+      expect(ehCaminhoPublico(url)).toBe(false);
+    },
+  );
+
+  /**
+   * Prefixo nao basta. `/api/admin/pre-cadastros` e a consulta administrativa de
+   * leads: se ela casasse com a rota publica de mesmo nome, a listagem inteira
+   * passaria a viajar sem `Authorization` e o servidor devolveria 401 — ou, num
+   * dia ruim, alguem "consertaria" abrindo a rota.
+   */
+  it('nao casa por prefixo', () => {
+    expect(ehCaminhoPublico('/api/vitrine-secreta')).toBe(false);
+    expect(ehCaminhoPublico('/api/pre-cadastros/todos')).toBe(false);
   });
 });
 

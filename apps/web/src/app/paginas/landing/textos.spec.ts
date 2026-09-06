@@ -20,6 +20,7 @@ describe('textos da home', () => {
       'marca',
       'navegacao',
       'numeros',
+      'privacidade',
       'rodape',
       'servicos',
     ]);
@@ -64,6 +65,17 @@ describe('textos da home', () => {
    * com `#` seria uma rota — e rota nova exige entrada em `ROTAS_PUBLICAS` e
    * pre-renderizacao, coisas que este arquivo nao controla.
    */
+  /**
+   * O texto juridico e o UNICO placeholder que sai literal na tela. Quando ele
+   * deixar de ser um marcador, este teste cai — que e o lembrete de que a peca
+   * juridica chegou e o item saiu da lista de pendencias.
+   */
+  it('ainda esta com o aviso de privacidade pendente', () => {
+    expect(TEXTOS.privacidade.juridico).toBe(
+      '{{TODO-TEXTO-PRIVACIDADE-JURIDICO}}',
+    );
+  });
+
   it('navega so por ancoras internas', () => {
     for (const item of TEXTOS.navegacao) {
       expect(item.destino.startsWith('#')).toBe(true);
