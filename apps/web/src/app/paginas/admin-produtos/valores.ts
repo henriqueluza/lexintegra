@@ -11,6 +11,10 @@
  * Um centavo perdido num preco e um centavo perdido em todo pedido daquele
  * produto, para sempre. Aqui os inteiros e os decimais sao separados como TEXTO e
  * so depois viram numero.
+ *
+ * A formatacao de centavos para reais saiu daqui para `comum/moeda.ts` quando a
+ * vitrine publica passou a precisar dela: a home nao tem por que carregar o
+ * codigo que LE preco digitado por administrador.
  */
 
 /** `null` quando o texto nao e um preco valido — o chamador decide a mensagem. */
@@ -28,13 +32,6 @@ export function paraCentavos(texto: string): number | null {
 
   const [inteiros, decimais = ''] = normalizado.split('.');
   return Number(inteiros) * 100 + Number(decimais.padEnd(2, '0'));
-}
-
-export function paraReais(centavos: number): string {
-  return (centavos / 100).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  });
 }
 
 /** Para preencher o formulario ao editar: centavos viram "3200,00", sem simbolo. */

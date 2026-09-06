@@ -1,0 +1,56 @@
+@if (!liberado()) {
+<div class="trava">
+  <div class="trava__fundo" aria-hidden="true">
+    @for (exemplo of textos.servicos.travado.exemplos; track exemplo) {
+    <article class="produto produto--exemplo">
+      <h3>{{ exemplo }}</h3>
+      <p>Escopo fechado, prazo e preço definidos antes de começar.</p>
+      <p class="produto__preco">R$ 0.000</p>
+    </article>
+    }
+  </div>
+
+  <div class="trava__aviso">
+    <app-icone nome="cadeado" />
+    <h3>{{ textos.servicos.travado.titulo }}</h3>
+    <p>{{ textos.servicos.travado.texto }}</p>
+    <app-link-acao destino="#cadastro" variante="primario">
+      {{ textos.servicos.travado.acao }}
+    </app-link-acao>
+  </div>
+</div>
+} @else if (carregando()) {
+<app-carregando variante="bloco" [rotulo]="textos.servicos.carregando" />
+} @else if (falhou()) {
+<div class="falha">
+  <app-mensagem-erro variante="bloco">
+    {{ textos.servicos.falha }}
+  </app-mensagem-erro>
+  <app-botao variante="secundario" (click)="buscar()">
+    {{ textos.servicos.tentarDeNovo }}
+  </app-botao>
+</div>
+} @else if ((produtos() ?? []).length === 0) {
+<app-estado-vazio [mensagem]="textos.servicos.vazio" icone="documento" />
+} @else {
+<div class="vitrine">
+  @for (produto of produtos(); track produto.id) {
+  <article class="produto">
+    <h3>{{ produto.nome }}</h3>
+    <p>{{ produto.descricao }}</p>
+
+    <ul class="produto__entregaveis">
+      @for (entregavel of produto.entregaveis; track entregavel) {
+      <li>{{ entregavel }}</li>
+      }
+    </ul>
+
+    <p class="produto__preco">{{ preco(produto.precoCentavos) }}</p>
+    <p class="produto__inclui">
+      {{ produto.quantidadeReunioes }} {{ textos.servicos.reunioes }} · {{
+      produto.numeroRevisoesPermitidas }} {{ textos.servicos.revisoes }}
+    </p>
+  </article>
+  }
+</div>
+}

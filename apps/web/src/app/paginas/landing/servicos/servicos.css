@@ -1,0 +1,103 @@
+.vitrine,
+.trava__fundo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--s4);
+}
+
+.produto {
+  border: var(--borda-fina) solid var(--divisor);
+  padding: var(--s5);
+}
+
+.produto h3 {
+  margin: 0;
+  font-family: var(--fonte-display);
+  font-weight: var(--peso-titulo);
+  font-size: var(--t-t3);
+  line-height: var(--altura-titulo);
+  color: var(--texto);
+}
+
+.produto p {
+  margin: var(--s3) 0 0;
+  color: var(--texto-2);
+  font-size: var(--t-menor);
+  line-height: var(--altura-solta);
+}
+
+.produto__entregaveis {
+  margin: var(--s3) 0 0;
+  padding-left: var(--s4);
+  color: var(--texto-2);
+  font-size: var(--t-menor);
+  line-height: var(--altura-solta);
+}
+
+.produto__preco {
+  margin-top: var(--s4);
+  font-family: var(--fonte-display);
+  font-size: var(--t-t2);
+  font-weight: var(--peso-titulo);
+  color: var(--acento-forte);
+}
+
+.produto__inclui {
+  color: var(--texto-3);
+  font-size: var(--t-mini);
+}
+
+/*
+ * A trava: os cartoes ficam la, ilegiveis, atras do aviso.
+ *
+ * Mostrar que existe um catalogo do outro lado e o que faz o cadastro valer a
+ * pena; mostrar o catalogo tornaria o cadastro dispensavel. O desfoque e
+ * decorativo — quem usa leitor de tela recebe o aviso e o botao, que e a
+ * informacao inteira.
+ */
+.trava {
+  position: relative;
+}
+
+.trava__fundo .produto {
+  filter: blur(3px);
+  opacity: 0.35;
+  user-select: none;
+}
+
+.trava__aviso {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s3);
+  text-align: center;
+  padding: var(--s5);
+  color: var(--acento);
+}
+
+.trava__aviso h3 {
+  margin: 0;
+  font-family: var(--fonte-display);
+  font-weight: var(--peso-titulo);
+  font-size: var(--t-t3);
+  color: var(--texto);
+}
+
+.trava__aviso p {
+  margin: 0;
+  max-width: 34ch;
+  color: var(--texto-2);
+  font-size: var(--t-menor);
+  line-height: var(--altura-solta);
+}
+
+/* Repetir a busca e acao da pessoa, nao do efeito. Ver `servicos.ts`. */
+.falha {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s3);
+}

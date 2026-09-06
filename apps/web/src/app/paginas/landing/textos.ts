@@ -82,8 +82,23 @@ export const TEXTOS = {
       texto:
         'Leva menos de um minuto: nome, e-mail e telefone. Não pedimos documento nem cartão nesta etapa.',
       acao: 'Criar acesso',
+      /*
+       * Textura, nao conteudo: sao os cartoes borrados atras do aviso de cadeado,
+       * marcados `aria-hidden` porque nao ha nada ali para ler. Os nomes sao
+       * genericos de proposito — anunciar um servico que o escritorio talvez nao
+       * ofereca seria promessa falsa mesmo desfocada.
+       */
+      exemplos: [
+        'Revisão de contrato comercial',
+        'Parecer de risco trabalhista',
+        'Alteração de contrato social',
+      ],
     },
     vazio: 'Nenhum serviço publicado no momento.',
+    carregando: 'Carregando os serviços',
+    tentarDeNovo: 'Tentar de novo',
+    reunioes: 'reuniões incluídas',
+    revisoes: 'revisões por entregável',
     falha:
       'Não foi possível carregar os serviços agora. Tente novamente em instantes.',
   },

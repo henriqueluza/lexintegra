@@ -1,3 +1,4 @@
+import { paraReais } from '../../comum/moeda';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -31,12 +32,7 @@ import {
   type ColunaTabela,
 } from '../../ui/tabela/tabela';
 import { mensagemDoErro } from '../erros';
-import {
-  paraCampoDePreco,
-  paraCentavos,
-  paraInteiro,
-  paraReais,
-} from './valores';
+import { paraCampoDePreco, paraCentavos, paraInteiro } from './valores';
 
 /**
  * Catalogo de produtos, pelo administrador global (itens 2.5.1 a 2.5.4).
