@@ -6,6 +6,7 @@ import { EntregaveisModule } from './entregaveis/entregaveis.module.js';
 import { FirebaseModule } from './firebase/firebase.module.js';
 import { HealthModule } from './health/health.module.js';
 import { PedidosModule } from './pedidos/pedidos.module.js';
+import { PreCadastrosModule } from './pre-cadastros/pre-cadastros.module.js';
 import { ProdutosModule } from './produtos/produtos.module.js';
 
 @Module({
@@ -16,6 +17,7 @@ import { ProdutosModule } from './produtos/produtos.module.js';
     SenhaModule,
     AdvogadosModule,
     ProdutosModule,
+    PreCadastrosModule,
     PedidosModule,
     EntregaveisModule,
   ],

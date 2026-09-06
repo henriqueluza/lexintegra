@@ -13,6 +13,9 @@ import { AutenticacaoController } from './autenticacao/senha/redefinicao.control
 import type { RedefinicaoSenhaService } from './autenticacao/senha/redefinicao.service.js';
 import type { UsuarioAutenticado } from './autenticacao/usuario.js';
 import { HealthController } from './health/health.controller.js';
+import { PreCadastrosAdminController } from './pre-cadastros/pre-cadastros.admin.controller.js';
+import { PreCadastrosController } from './pre-cadastros/pre-cadastros.controller.js';
+import type { PreCadastrosService } from './pre-cadastros/pre-cadastros.service.js';
 import { ProdutosController } from './produtos/produtos.controller.js';
 import type { ProdutosService } from './produtos/produtos.service.js';
 
@@ -40,6 +43,7 @@ describe('anotacoes de seguranca dos controladores', () => {
   it.each([
     ['advogados', AdvogadosController],
     ['produtos', ProdutosController],
+    ['pre-cadastros', PreCadastrosAdminController],
   ])(
     'a superficie administrativa de %s exige admin, na classe',
     (_nome, classe) => {
@@ -59,6 +63,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['produtos.editar', ProdutosController.prototype.editar],
     ['produtos.ativar', ProdutosController.prototype.ativar],
     ['produtos.desativar', ProdutosController.prototype.desativar],
+    ['pre-cadastros.listar', PreCadastrosAdminController.prototype.listar],
   ])('o metodo administrativo %s nao se declara publico', (_nome, metodo) => {
     expect(reflector.get(CHAVE_PUBLICO, metodo)).toBeUndefined();
   });
@@ -78,16 +83,39 @@ describe('anotacoes de seguranca dos controladores', () => {
   });
 
   /**
-   * As unicas duas rotas publicas do sistema hoje. Cada linha aqui e uma decisao
-   * que precisou de justificativa: o health e alvo do startup probe do Cloud Run,
-   * que nao tem token; o pedido de redefinicao e para quem esqueceu a senha e
-   * portanto nao consegue autenticar.
+   * As unicas rotas publicas do sistema hoje. Cada linha aqui e uma decisao que
+   * precisou de justificativa: o health e alvo do startup probe do Cloud Run, que
+   * nao tem token; o pedido de redefinicao e para quem esqueceu a senha e
+   * portanto nao consegue autenticar; o pre-cadastro e a porta de entrada de quem
+   * ainda nao existe como usuario (arquitetura, secao 6, fronteira 1).
+   *
+   * A lista e nominal para que ABRIR uma rota nova exija editar este arquivo.
+   * Uma contagem (`expect(publicas).toHaveLength(3)`) passaria a mesma sensacao
+   * de rigor e aceitaria a troca de uma rota por outra sem ninguem notar.
    */
   it.each([
     ['health', HealthController.prototype.obter],
     ['redefinicao de senha', AutenticacaoController.prototype.redefinirSenha],
+    ['pre-cadastro', PreCadastrosController.prototype.registrar],
   ])('%s e publico', (_nome, metodo) => {
     expect(reflector.get(CHAVE_PUBLICO, metodo)).toBe(true);
+  });
+
+  /**
+   * O reverso: a consulta administrativa de leads NAO e publica. Ela e vizinha de
+   * arquivo da rota que e, e o erro de anotar a classe errada nao produziria
+   * sintoma nenhum — produziria a base de leads inteira aberta na internet.
+   */
+  it('a consulta de pre-cadastros NAO e publica', () => {
+    expect(
+      reflector.get(
+        CHAVE_PUBLICO,
+        PreCadastrosAdminController.prototype.listar,
+      ),
+    ).toBeUndefined();
+    expect(
+      reflector.get(CHAVE_PUBLICO, PreCadastrosAdminController),
+    ).toBeUndefined();
   });
 
   it('a rota `eu` NAO e publica', () => {
@@ -236,6 +264,63 @@ describe('ProdutosController', () => {
       'desativar produto-1 por uid-admin',
       'obter produto-1',
     ]);
+  });
+});
+
+describe('PreCadastrosController', () => {
+  function montar(): {
+    publico: PreCadastrosController;
+    admin: PreCadastrosAdminController;
+    chamadas: string[];
+  } {
+    const chamadas: string[] = [];
+    const servico = {
+      registrar: (dados: { email: string }) => {
+        chamadas.push(`registrar ${dados.email}`);
+        return Promise.resolve({ token: 'id.segredo', expiraEm: '2026-01-01' });
+      },
+      listar: (limite: number) => {
+        chamadas.push(`listar ${limite}`);
+        return Promise.resolve([]);
+      },
+    } as unknown as PreCadastrosService;
+
+    return {
+      publico: new PreCadastrosController(servico),
+      admin: new PreCadastrosAdminController(servico),
+      chamadas,
+    };
+  }
+
+  it('devolve o token de liberacao no corpo', async () => {
+    const { publico } = montar();
+
+    const resposta = await publico.registrar({
+      nome: 'Ana Ribeiro Salgado',
+      email: 'ana@empresa.com.br',
+      telefone: '61990000000',
+    });
+
+    expect(resposta).toEqual({ token: 'id.segredo', expiraEm: '2026-01-01' });
+  });
+
+  /**
+   * `limite` chega da query string, que e texto livre. O `catch` do schema faz
+   * um valor absurdo cair no padrao em vez de derrubar a tela do administrador
+   * com 400 — e impede que `?limite=999999` vire uma varredura da colecao.
+   */
+  it.each([
+    ['10', 'listar 10'],
+    [undefined, 'listar 50'],
+    ['nao-e-numero', 'listar 50'],
+    ['0', 'listar 50'],
+    ['99999', 'listar 50'],
+  ])('lista com limite %s', async (recebido, esperado) => {
+    const { admin, chamadas } = montar();
+
+    await admin.listar(recebido);
+
+    expect(chamadas).toEqual([esperado]);
   });
 });
 

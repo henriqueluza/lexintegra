@@ -91,3 +91,21 @@ export type PreCadastroLiberado = {
   /** ISO 8601. */
   readonly expiraEm: string;
 };
+
+/**
+ * Quantos leads a consulta administrativa devolve por vez.
+ *
+ * `catch` como em `esquemaSituacao`: a query string e texto livre do navegador, e
+ * um valor absurdo deve cair no padrao em vez de derrubar a tela com 400. O teto
+ * existe porque a alternativa e um `GET` que varre a colecao inteira — e a
+ * colecao cresce com a divulgacao, nao com o uso.
+ */
+export const LIMITE_PADRAO_PRE_CADASTROS = 50;
+
+export const esquemaLimitePreCadastros = z.coerce
+  .number()
+  .int()
+  .min(1)
+  .max(200)
+  .catch(LIMITE_PADRAO_PRE_CADASTROS)
+  .default(LIMITE_PADRAO_PRE_CADASTROS);
