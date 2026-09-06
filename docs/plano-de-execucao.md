@@ -388,6 +388,12 @@ qualquer coisa que não seja um projeto `demo-`.
 
 **Critério de aceite.** A página pública não faz nenhuma chamada à API antes do pré-cadastro, preservando a mitigação de cold start prevista na arquitetura.
 
+**Como o critério foi verificado.** `apps/web/e2e/publico.spec.ts` espia toda requisição para `/api`, rola a página inteira, aciona os caminhos internos e afirma lista vazia — e cobre o outro lado da mesma regra, que a vitrine é buscada **depois** do envio. Sem essa segunda metade, "não chama a API" seria satisfeito por uma página que nunca chama a API. Mais duas redes menores rodam em `pnpm test`: `app.routes.spec.ts` recusa resolver ou guard em rota pública, e o teste do `Landing` recusa dependência de rede no componente.
+
+**Decisões da etapa que viraram ADR-16.** App Check só nas rotas públicas, inicializado sob demanda no primeiro toque no formulário; rate limiting como primeiro guard da cadeia, em memória e sem dependência nova; liberação da vitrine por token opaco conferido no servidor.
+
+**O que a etapa mudou no `design.md`.** A hero deixou de ser malha diagonal com brilho radial: o Marcos pediu fotografia de martelo em posições discretas conforme a rolagem, e descartou a variante 3D. A foto ainda não existe e a ordem dos lados depende de confirmação por escrito.
+
 ### Só você — Etapa 6
 
 **Impossível delegar**

@@ -48,7 +48,7 @@ Sóbria e institucional. Cores medidas diretamente das páginas do portfólio fo
 
 **Outros tokens** — raio `2px` em toda a UI (praticamente reto); nenhuma sombra; escala de espaçamento em passos de `4/8/12/16/24/32/48/72/112px` (`--s1` a `--s9`); ícones de traço 1,5px, sem preenchimento, terminações retas (`stroke-linecap: butt`).
 
-**Elementos que só existem em A** — hero de página inteira com malha diagonal e brilho radial dourado; cartões de serviço em grade `1px` de borda que "trava" atrás de um aviso de cadeado até o cadastro; manifesto tipográfico de seção inteira; numerais grandes como recurso de hierarquia (`font-weight: 300`, até 66px).
+**Elementos que só existem em A** — hero de página inteira (a malha diagonal e o brilho radial dourado foram **substituídos na Etapa 6**: o Marcos pediu uma fotografia de martelo em posições discretas conforme a rolagem, e descartou explicitamente a variante 3D por parecer artificial — ver ADR-16 e `docs/etapa6-relatorio-acessibilidade-performance.md`; a ordem dos lados ainda depende de confirmação por escrito); cartões de serviço em grade `1px` de borda que "trava" atrás de um aviso de cadeado até o cadastro; manifesto tipográfico de seção inteira; numerais grandes como recurso de hierarquia (`font-weight: 300`, até 66px).
 
 ## Direção B — Pauta (módulos internos)
 
@@ -113,10 +113,10 @@ Os experimentos de hero animado (`lexintegra-landing-martelo.html`, `lexintegra-
 
 Os dois pares que este documento listava como suspeitos **não eram os problemas**:
 
-- `--creme-400` sobre `--vinho-800` já dava **5,59:1**, acima de AA.
+- `--creme-400` sobre `--vinho-800` já dava **5,59:1**, acima de AA — mas o token **foi alterado assim mesmo**, por outro motivo: ele caía para 4,30:1 sobre `--vinho-600`, a superfície mais clara da direção. `#9C8B85` → **`#A18F89`**, clareado até o pior fundo da direção passar. Sobre `--vinho-800` o par mede hoje **5,90:1**. (Corrigido na Etapa 6: a tabela abaixo não registrava esta alteração, e este parágrafo dizia que o valor não havia mudado. O código e o teste sempre estiveram certos; a divergência era só documental.)
 - "Chip claro sobre `--papel`" (~1,1:1) não é violação: a WCAG 1.4.11 fala do limite de **controle interativo**, e chip não é controle. O critério que se aplica é o 1.4.1 (uso de cor), atendido enquanto o chip carregar rótulo textual. Isso virou regra dura no componente `app-selo-estado`, com teste: não existe modo "só cor".
 
-Seis outros pares reprovavam, e foram corrigidos:
+Sete pares reprovavam, e foram corrigidos:
 
 | Par | Antes | Correção |
 |---|---|---|
@@ -125,6 +125,7 @@ Seis outros pares reprovavam, e foram corrigidos:
 | A, `--erro` sobre `--vinho-700` (erro dentro do formulário) | 4,43 | `--erro`: `#C96A63` → **`#DC746C`** |
 | A, `--ouro-500` sobre `--vinho-700` (rótulo em cartão) | 4,19 | valor **não muda** (ADR-10): superfície elevada reescopa o acento para `--ouro-400` |
 | A e B, borda de campo (`--linha-forte` / `--borda-forte`) | 1,77 / 1,71 | token dedicado `--limite-controle`; os divisores decorativos ficam como estavam |
+| A, `--creme-400` sobre `--vinho-600` (texto terciário na superfície mais clara) | 4,30 | `--creme-400`: `#9C8B85` → **`#A18F89`** |
 
 `--ouro-500` e os vinhos não foram alterados de propósito: são cores medidas do portfólio da CONTRATANTE (ADR-10), e mexer nelas é decisão de marca, não de implementação. O `--ouro` da direção B **não** é o dourado da marca, então escurecê-lo foi seguro.
 

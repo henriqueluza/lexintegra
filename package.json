@@ -24,6 +24,7 @@
     "test:visual": "pnpm --filter web test:visual",
     "test:a11y": "pnpm --filter web test:a11y",
     "test:publico": "scripts/publico.sh",
+    "relatorio:publico": "scripts/relatorio-publico.sh",
     "semear": "scripts/emuladores.sh 'node scripts/semear-emulador.mjs'"
   },
   "devDependencies": {
