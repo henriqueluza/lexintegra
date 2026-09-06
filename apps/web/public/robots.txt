@@ -1,0 +1,12 @@
+# lexintegra.com.br
+#
+# Tudo que existe hoje e publico e deve ser indexado: a home e a unica rota que
+# vale para busca. A area autenticada nao aparece aqui porque ela nao e servida
+# como pagina indexavel — as rotas de `/painel` e `/admin` exigem sessao, e o
+# rastreador recebe a mesma casca pre-renderizada que qualquer visitante nao
+# autenticado, sem dado nenhum. Bloquear caminho por robots.txt anunciaria a
+# existencia dele sem impedir acesso a nada.
+User-agent: *
+Allow: /
+
+Sitemap: https://lexintegra.com.br/sitemap.xml

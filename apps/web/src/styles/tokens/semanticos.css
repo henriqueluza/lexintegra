@@ -62,9 +62,10 @@
   --raio-pilula: 2px;
 
   /* Tipografia */
+  /* `Source Serif 4 fallback` e Georgia com metrica casada — ver `fontes.css`. */
   --fonte-display:
-    'Source Serif 4 Variable', 'Source Serif 4', Georgia, 'Times New Roman',
-    serif;
+    'Source Serif 4 Variable', 'Source Serif 4', 'Source Serif 4 fallback',
+    Georgia, 'Times New Roman', serif;
   --fonte-interface:
     'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
