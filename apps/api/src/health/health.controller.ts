@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { Publico } from '../autenticacao/decoradores.js';
+import { SemAppCheck } from '../app-check/decoradores.js';
 import { SemLimite } from '../limite/decoradores.js';
 import type { EstadoDeSaude } from './health.service.js';
 import { HealthService } from './health.service.js';
@@ -22,6 +23,7 @@ export class HealthController {
    * proprio probe simplesmente nao sobe.
    */
   @SemLimite()
+  @SemAppCheck()
   @Publico()
   @Get()
   obter(): EstadoDeSaude {

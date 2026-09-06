@@ -17,6 +17,7 @@ import type { RedefinicaoSenhaService } from './autenticacao/senha/redefinicao.s
 import type { UsuarioAutenticado } from './autenticacao/usuario.js';
 import { HealthController } from './health/health.controller.js';
 import type { Limite as ConfiguracaoDeLimite } from './limite/contador.js';
+import { CHAVE_SEM_APP_CHECK } from './app-check/decoradores.js';
 import { CHAVE_LIMITE, CHAVE_SEM_LIMITE } from './limite/decoradores.js';
 import { PreCadastrosAdminController } from './pre-cadastros/pre-cadastros.admin.controller.js';
 import { PreCadastrosController } from './pre-cadastros/pre-cadastros.controller.js';
@@ -190,6 +191,26 @@ describe('limite de requisicoes das rotas publicas', () => {
     expect(
       reflector.get(CHAVE_SEM_LIMITE, HealthController.prototype.obter),
     ).toBe(true);
+  });
+
+  /**
+   * Pelo mesmo motivo, o health e a unica rota publica isenta de App Check: o
+   * probe nao e um navegador e nao tem como produzir o token. As outras tres
+   * rotas publicas sao verificadas — e este teste as lista para que tirar uma da
+   * verificacao exija editar este arquivo.
+   */
+  it('o health e a UNICA rota publica isenta de App Check', () => {
+    expect(
+      reflector.get(CHAVE_SEM_APP_CHECK, HealthController.prototype.obter),
+    ).toBe(true);
+
+    for (const metodo of [
+      PreCadastrosController.prototype.registrar,
+      AutenticacaoController.prototype.redefinirSenha,
+      VitrineController.prototype.listar,
+    ]) {
+      expect(reflector.get(CHAVE_SEM_APP_CHECK, metodo)).toBeUndefined();
+    }
   });
 });
 

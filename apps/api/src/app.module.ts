@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AdvogadosModule } from './advogados/advogados.module.js';
+import { AppCheckModule } from './app-check/app-check.module.js';
 import { AutenticacaoModule } from './autenticacao/autenticacao.module.js';
 import { SenhaModule } from './autenticacao/senha/senha.module.js';
 import { EntregaveisModule } from './entregaveis/entregaveis.module.js';
@@ -21,6 +22,7 @@ import { VitrineModule } from './vitrine/vitrine.module.js';
      * custa uma ida ao Firebase por requisicao.
      */
     LimiteModule,
+    AppCheckModule,
     AutenticacaoModule,
     HealthModule,
     SenhaModule,

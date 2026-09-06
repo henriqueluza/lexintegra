@@ -1,5 +1,6 @@
 import { Global, Logger, Module } from '@nestjs/common';
 import { getApps, initializeApp, type App } from 'firebase-admin/app';
+import { getAppCheck, type AppCheck } from 'firebase-admin/app-check';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 
@@ -21,6 +22,16 @@ export const AUTH_FIREBASE = Symbol('AuthFirebase');
 
 /** Instancia de `Firestore` do Admin SDK. */
 export const FIRESTORE = Symbol('Firestore');
+
+/**
+ * Instancia de `AppCheck` do Admin SDK, usada para verificar o token que o
+ * navegador envia nas rotas publicas (arquitetura, secao 6, fronteira 1).
+ *
+ * A verificacao le as chaves publicas do projeto; nao ha credencial nova a
+ * gerir aqui, so a API `firebaseappcheck.googleapis.com` habilitada e o papel de
+ * verificacao na conta de servico de runtime — os dois no Terraform.
+ */
+export const APP_CHECK_FIREBASE = Symbol('AppCheckFirebase');
 
 /**
  * Emulador detectado pelas variaveis que o proprio `firebase emulators:exec`
@@ -111,7 +122,11 @@ export function aplicacaoFirebase(): App {
       provide: FIRESTORE,
       useFactory: (): Firestore => getFirestore(aplicacaoFirebase()),
     },
+    {
+      provide: APP_CHECK_FIREBASE,
+      useFactory: (): AppCheck => getAppCheck(aplicacaoFirebase()),
+    },
   ],
-  exports: [AUTH_FIREBASE, FIRESTORE],
+  exports: [AUTH_FIREBASE, FIRESTORE, APP_CHECK_FIREBASE],
 })
 export class FirebaseModule {}
