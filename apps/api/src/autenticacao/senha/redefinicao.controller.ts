@@ -5,6 +5,7 @@ import {
   type Perfil,
 } from 'shared';
 import { ZodPipe } from '../../validacao/zod.pipe.js';
+import { Limite } from '../../limite/decoradores.js';
 import { Publico, UsuarioAtual } from '../decoradores.js';
 import type { UsuarioAutenticado } from '../usuario.js';
 import { RedefinicaoSenhaService } from './redefinicao.service.js';
@@ -24,6 +25,12 @@ export class AutenticacaoController {
    * `@Publico()` e obrigatorio aqui — o guard e global e rota nasce fechada. Quem
    * esqueceu a senha nao tem token para apresentar.
    */
+  /*
+   * Mesma classe de abuso do pre-cadastro: formulario publico que dispara
+   * trabalho no servidor. Aqui o trabalho e um e-mail, entao o limite tambem
+   * protege a cota do Resend e a reputacao de envio do dominio.
+   */
+  @Limite({ janelaMs: 10 * 60_000, maximo: 5 })
   @Publico()
   @Post('redefinicao-senha')
   @HttpCode(202)

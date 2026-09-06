@@ -5,6 +5,7 @@ import {
   type PreCadastroLiberado,
 } from 'shared';
 import { Publico } from '../autenticacao/decoradores.js';
+import { Limite } from '../limite/decoradores.js';
 import { ZodPipe } from '../validacao/zod.pipe.js';
 import { PreCadastrosService } from './pre-cadastros.service.js';
 
@@ -33,6 +34,13 @@ export class PreCadastrosController {
    * string: e credencial viva (regra inviolavel 9), e query string entra em log
    * de servidor, em historico de navegador e em referenciador.
    */
+  /*
+   * Cinco envios por dez minutos, por endereco. Uma pessoa preenche este
+   * formulario uma vez, talvez duas se errar o e-mail; quem precisa de cinco em
+   * dez minutos nao esta preenchendo, esta testando. O numero e generoso o
+   * bastante para nao punir um escritorio inteiro atras do mesmo IP de saida.
+   */
+  @Limite({ janelaMs: 10 * 60_000, maximo: 5 })
   @Publico()
   @Post()
   @HttpCode(201)

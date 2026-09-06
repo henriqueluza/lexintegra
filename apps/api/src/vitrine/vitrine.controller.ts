@@ -1,6 +1,7 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import type { ProdutoVitrine } from 'shared';
 import { Publico } from '../autenticacao/decoradores.js';
+import { Limite } from '../limite/decoradores.js';
 import { PreCadastroGuard } from './pre-cadastro.guard.js';
 import { VitrineService } from './vitrine.service.js';
 
@@ -20,6 +21,12 @@ import { VitrineService } from './vitrine.service.js';
 export class VitrineController {
   constructor(private readonly vitrine: VitrineService) {}
 
+  /*
+   * Bem mais folgado que o do formulario: isto e leitura, e a home pode
+   * recarregar a vitrine varias vezes numa sessao de navegacao normal. O limite
+   * aqui existe contra raspagem do catalogo, nao contra envio automatizado.
+   */
+  @Limite({ janelaMs: 60_000, maximo: 60 })
   @Publico()
   @Get()
   listar(): Promise<ProdutoVitrine[]> {

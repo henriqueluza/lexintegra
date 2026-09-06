@@ -16,6 +16,8 @@ import { AutenticacaoController } from './autenticacao/senha/redefinicao.control
 import type { RedefinicaoSenhaService } from './autenticacao/senha/redefinicao.service.js';
 import type { UsuarioAutenticado } from './autenticacao/usuario.js';
 import { HealthController } from './health/health.controller.js';
+import type { Limite as ConfiguracaoDeLimite } from './limite/contador.js';
+import { CHAVE_LIMITE, CHAVE_SEM_LIMITE } from './limite/decoradores.js';
 import { PreCadastrosAdminController } from './pre-cadastros/pre-cadastros.admin.controller.js';
 import { PreCadastrosController } from './pre-cadastros/pre-cadastros.controller.js';
 import type { PreCadastrosService } from './pre-cadastros/pre-cadastros.service.js';
@@ -129,6 +131,65 @@ describe('anotacoes de seguranca dos controladores', () => {
     expect(
       reflector.get(CHAVE_PUBLICO, AutenticacaoController.prototype.eu),
     ).toBeUndefined();
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Limite de requisicoes                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Os testes do guard provam que ele barra quando anotado. O que falta cobrir e o
+ * outro lado — que a anotacao esta no lugar certo. Tirar o `@Limite` do
+ * formulario publico nao quebraria teste de guard nenhum, e o sintoma so
+ * apareceria na conta do Firestore.
+ */
+describe('limite de requisicoes das rotas publicas', () => {
+  it.each([
+    ['pre-cadastro', PreCadastrosController.prototype.registrar],
+    ['redefinicao de senha', AutenticacaoController.prototype.redefinirSenha],
+    ['vitrine', VitrineController.prototype.listar],
+  ])('%s declara limite proprio', (_nome, metodo) => {
+    const limite = reflector.get<ConfiguracaoDeLimite | undefined>(
+      CHAVE_LIMITE,
+      metodo,
+    );
+
+    expect(limite?.maximo).toBeGreaterThan(0);
+    expect(limite?.janelaMs).toBeGreaterThan(0);
+  });
+
+  /**
+   * O formulario tem que ser mais apertado que a leitura da vitrine. Se um dia os
+   * dois numeros se aproximarem por edicao distraida, este teste avisa: escrever
+   * lead e caro e raro, ler catalogo e barato e repetido.
+   */
+  it('o formulario e mais apertado que a vitrine', () => {
+    const formulario = reflector.get<ConfiguracaoDeLimite>(
+      CHAVE_LIMITE,
+      PreCadastrosController.prototype.registrar,
+    );
+    const vitrine = reflector.get<ConfiguracaoDeLimite>(
+      CHAVE_LIMITE,
+      VitrineController.prototype.listar,
+    );
+
+    const porMinuto = (limite: ConfiguracaoDeLimite): number =>
+      limite.maximo / (limite.janelaMs / 60_000);
+
+    expect(porMinuto(formulario)).toBeLessThan(porMinuto(vitrine));
+  });
+
+  /**
+   * E o health tem que ficar de fora. O startup probe do Cloud Run bate em
+   * cadencia fixa e nao sabe reagir a 429: uma instancia que responde 429 ao
+   * proprio probe nao entra em servico, e o deploy falha no smoke test sem dizer
+   * por que.
+   */
+  it('o health e isento', () => {
+    expect(
+      reflector.get(CHAVE_SEM_LIMITE, HealthController.prototype.obter),
+    ).toBe(true);
   });
 });
 
