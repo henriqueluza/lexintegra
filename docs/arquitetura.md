@@ -397,12 +397,15 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 | Coleção | Papel |
 |---|---|
 | `produtos` | Catálogo vivo e editável pelo administrador global |
+| `pre-cadastros` | Leads da área pública, antes de existir conta (item 2.1.4) |
 | `clientes` | Conta do cliente final, com subcoleção de anamnese |
 | `pagamentos` | Um por transação confirmada pelo gateway |
 | `pedidos` | Um por produto comprado; snapshot imutável |
 | `advogados` | Perfil, atribuições e licença Microsoft confirmada |
 | `disponibilidades` | Slots com ID determinístico |
 | `outbox` | Eventos pendentes de entrega |
+
+**Sobre `pre-cadastros`.** ID determinístico do e-mail normalizado (ADR-04), o que faz a mesma pessoa ocupar um documento e não três. Guarda nome, e-mail, telefone, a contagem de envios e o hash do token que destrava a vitrine — **e nada além disso**: sem IP, sem user-agent, sem referenciador. São dados que um formulário de captação coleta por reflexo e que ninguém neste projeto vai usar, e a minimização da seção 13 é medida, não boa intenção. É também a coleção com o caminho de eliminação mais simples do sistema: um documento por titular.
 
 Subcoleções: `clientes/{id}/anamnese`, `pedidos/{id}/entregaveis`, `pedidos/{id}/reunioes`, `pedidos/{id}/entregaveis/{id}/transicoes`.
 
@@ -511,7 +514,7 @@ Como o acesso ao banco passa sempre pela API, as regras do Firestore devem ser r
 
 O motivo é que a API usa o Admin SDK, que **ignora** as regras. Uma regra que permitisse ao advogado ler o que lhe foi distribuído nunca seria atravessada por código de produção, nunca falharia num teste de aplicação se estivesse errada, e ficaria como porta aberta que ninguém visita — protegendo menos do que aparenta. A autorização por perfil e por atribuição vive em `apps/api/src/autenticacao`, onde é exercitada a cada requisição.
 
-O que as regras fazem, então, é provar que **o navegador não tem caminho nenhum** até o banco. A suíte em `packages/regras-firestore` verifica isso de forma tabular — quatro perfis × cada caminho de 5.1 × cinco operações, 244 asserções — e inclui um controle positivo, sem o qual um arnês quebrado faria a suíte passar verde negando tudo por acidente.
+O que as regras fazem, então, é provar que **o navegador não tem caminho nenhum** até o banco. A suíte em `packages/regras-firestore` verifica isso de forma tabular — quatro perfis × cada caminho de 5.1 × cinco operações, 264 asserções — e inclui um controle positivo, sem o qual um arnês quebrado faria a suíte passar verde negando tudo por acidente.
 
 Do lado do frontend, a mesma garantia é fechada por uma regra de `dependency-cruiser`: `apps/web` não pode importar `firebase/firestore`. As regras provam que o acesso seria negado; o lint impede que o import chegue a existir.
 
