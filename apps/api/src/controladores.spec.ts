@@ -1,5 +1,8 @@
-import type { ExecutionContext } from '@nestjs/common';
-import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants.js';
+import type { CanActivate, ExecutionContext, Type } from '@nestjs/common';
+import {
+  GUARDS_METADATA,
+  ROUTE_ARGS_METADATA,
+} from '@nestjs/common/constants.js';
 import { Reflector } from '@nestjs/core';
 import type { Perfil } from 'shared';
 import { AdvogadosController } from './advogados/advogados.controller.js';
@@ -18,6 +21,9 @@ import { PreCadastrosController } from './pre-cadastros/pre-cadastros.controller
 import type { PreCadastrosService } from './pre-cadastros/pre-cadastros.service.js';
 import { ProdutosController } from './produtos/produtos.controller.js';
 import type { ProdutosService } from './produtos/produtos.service.js';
+import { PreCadastroGuard } from './vitrine/pre-cadastro.guard.js';
+import { VitrineController } from './vitrine/vitrine.controller.js';
+import type { VitrineService } from './vitrine/vitrine.service.js';
 
 const reflector = new Reflector();
 
@@ -97,6 +103,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['health', HealthController.prototype.obter],
     ['redefinicao de senha', AutenticacaoController.prototype.redefinirSenha],
     ['pre-cadastro', PreCadastrosController.prototype.registrar],
+    ['vitrine', VitrineController.prototype.listar],
   ])('%s e publico', (_nome, metodo) => {
     expect(reflector.get(CHAVE_PUBLICO, metodo)).toBe(true);
   });
@@ -264,6 +271,37 @@ describe('ProdutosController', () => {
       'desativar produto-1 por uid-admin',
       'obter produto-1',
     ]);
+  });
+});
+
+/**
+ * A vitrine e a unica rota `@Publico()` que mesmo assim exige autorizacao — o
+ * token de pre-cadastro. Como o guard e de CONTROLADOR e nao global, apagar o
+ * `@UseGuards` nao quebraria teste de guard nenhum: quebraria o sigilo do
+ * catalogo, em silencio. Este teste olha para a anotacao pela mesma razao que os
+ * de `@Perfis` olham.
+ */
+describe('a vitrine exige o token de pre-cadastro, na classe', () => {
+  it('declara o guard no controlador', () => {
+    const guards = Reflect.getMetadata(GUARDS_METADATA, VitrineController) as
+      ReadonlyArray<Type<CanActivate>> | undefined;
+
+    expect(guards).toContain(PreCadastroGuard);
+  });
+});
+
+describe('VitrineController', () => {
+  it('delega a listagem ao servico', async () => {
+    const chamadas: string[] = [];
+    const controlador = new VitrineController({
+      listar: () => {
+        chamadas.push('listar');
+        return Promise.resolve([]);
+      },
+    } as unknown as VitrineService);
+
+    await expect(controlador.listar()).resolves.toEqual([]);
+    expect(chamadas).toEqual(['listar']);
   });
 });
 

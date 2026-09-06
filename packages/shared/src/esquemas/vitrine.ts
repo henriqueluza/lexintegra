@@ -1,3 +1,5 @@
+import type { ProdutoResumo } from './produto.js';
+
 /**
  * O que a vitrine publica mostra de um produto.
  *
@@ -21,3 +23,25 @@ export type ProdutoVitrine = {
   readonly quantidadeReunioes: number;
   readonly numeroRevisoesPermitidas: number;
 };
+
+/**
+ * O UNICO lugar que sabe o que a vitrine publica mostra de um produto.
+ *
+ * Campo a campo e explicito, nao um spread, pela mesma razao de
+ * `congelarProduto`: um spread copiaria `ativo`, os carimbos, `criadoPor` e
+ * qualquer campo interno que o documento venha a ganhar — e aqui o destino nao e
+ * um pedido, e uma rota que responde a quem so preencheu um formulario. Um campo
+ * novo no produto fica de fora ate alguem decidir o contrario, que e o padrao
+ * certo para uma superficie publica.
+ */
+export function paraVitrine(produto: ProdutoResumo): ProdutoVitrine {
+  return {
+    id: produto.id,
+    nome: produto.nome,
+    descricao: produto.descricao,
+    precoCentavos: produto.precoCentavos,
+    entregaveis: [...produto.entregaveis],
+    quantidadeReunioes: produto.quantidadeReunioes,
+    numeroRevisoesPermitidas: produto.numeroRevisoesPermitidas,
+  };
+}

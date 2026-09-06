@@ -8,6 +8,7 @@ import { HealthModule } from './health/health.module.js';
 import { PedidosModule } from './pedidos/pedidos.module.js';
 import { PreCadastrosModule } from './pre-cadastros/pre-cadastros.module.js';
 import { ProdutosModule } from './produtos/produtos.module.js';
+import { VitrineModule } from './vitrine/vitrine.module.js';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ProdutosModule } from './produtos/produtos.module.js';
     AdvogadosModule,
     ProdutosModule,
     PreCadastrosModule,
+    VitrineModule,
     PedidosModule,
     EntregaveisModule,
   ],
