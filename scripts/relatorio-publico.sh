@@ -33,12 +33,14 @@ SOMBRAS=(
   -v lexintegra-nm-web:/trabalho/apps/web/node_modules
   -v lexintegra-nm-api:/trabalho/apps/api/node_modules
   -v lexintegra-nm-shared:/trabalho/packages/shared/node_modules
+  -v lexintegra-nm-regras:/trabalho/packages/regras-firestore/node_modules
   -v lexintegra-pnpm-store:/pnpm-store
 )
 
 echo "Imagem: $IMAGEM"
 
 docker run --rm --init \
+  -e CI=true \
   -v "$RAIZ":/trabalho \
   "${SOMBRAS[@]}" \
   -w /trabalho \
@@ -72,14 +74,22 @@ docker run --rm --init \
     fi
     cat /tmp/axe-resumo.txt
 
+    mkdir -p /trabalho/apps/web/test-results
     echo '==> Lighthouse'
+    # O Lighthouse nao acha navegador sozinho nesta imagem: ela traz os do
+    # Playwright, num caminho que so o Playwright conhece. Perguntar a ele e mais
+    # estavel que fixar `/ms-playwright/chromium-*/chrome-linux/chrome`, que muda
+    # de numero a cada atualizacao.
+    export CHROME_PATH=\"\$(node -e \"import('@playwright/test').then(m => console.log(m.chromium.executablePath()))\")\"
+    echo \"Chrome: \$CHROME_PATH\"
+
     pnpm exec lighthouse \"http://localhost:$PORTA/\" \
       --quiet \
-      --output=json --output-path=/tmp/lighthouse.json \
+      --output=json --output-path=/trabalho/apps/web/test-results/lighthouse.json \
       --chrome-flags='--headless=new --no-sandbox --disable-dev-shm-usage'
 
     cd /trabalho
-    node scripts/relatorio-lighthouse.mjs /tmp/lighthouse.json /tmp/axe-resumo.txt
+    node scripts/relatorio-lighthouse.mjs apps/web/test-results/lighthouse.json /tmp/axe-resumo.txt
   "
 
 echo
