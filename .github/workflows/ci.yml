@@ -22,6 +22,7 @@ permissions:
 env:
   GCP_PROJECT_ID: plataforma-juridica-36bda
   GCP_REGION: southamerica-east1
+  REGISTRY: southamerica-east1-docker.pkg.dev
   # Nao ha segredo de GCP para cadastrar no GitHub: com Workload Identity
   # Federation nenhuma credencial de longa duracao existe. Estes valores nao sao
   # sensiveis e ficam inline de proposito, para o workflow ser auditavel sozinho.
@@ -181,6 +182,9 @@ jobs:
 
       - name: Plan
         id: plan
+        env:
+          TF_VAR_api_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/api:${{ github.event.pull_request.head.sha }}
+          TF_VAR_commit_sha: ${{ github.event.pull_request.head.sha }}
         run: terraform plan -input=false -no-color -lock-timeout=5m
         working-directory: infra/terraform
         continue-on-error: true
