@@ -36,6 +36,11 @@ export const catalogoRoutes: Routes = [
           import('./secoes/botao.secao').then((m) => m.SecaoBotao),
       },
       {
+        path: 'link-acao',
+        loadComponent: () =>
+          import('./secoes/link-acao.secao').then((m) => m.SecaoLinkAcao),
+      },
+      {
         path: 'campo',
         loadComponent: () =>
           import('./secoes/campo.secao').then((m) => m.SecaoCampo),

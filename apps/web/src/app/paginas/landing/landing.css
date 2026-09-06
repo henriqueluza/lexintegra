@@ -1,43 +1,297 @@
 /*
- * Rota publica, Direcao A (Catedra). Nenhum valor visual literal: cor,
- * espacamento e tamanho de fonte vem de token, e e isso que o stylelint passa a
- * exigir de todo CSS de tela.
- *
- * O conteudo definitivo desta pagina e a Etapa 6. O que muda aqui na Etapa 3 e
- * so a origem dos valores.
+ * Home publica, Direcao A — Cátedra. Nenhum valor visual literal: cor,
+ * espacamento e tipografia vem de token SEMANTICO, nunca de primitivo (regra
+ * inviolavel 8).
  */
-.hero {
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: var(--s4);
-  padding: var(--s7) var(--s5);
+
+/* --- estrutura comum --- */
+
+.faixa {
   max-width: var(--largura-conteudo);
   margin: 0 auto;
+  padding: 0 var(--s5);
 }
 
-.marca {
-  font-family: var(--fonte-interface);
-  font-size: var(--t-mini);
-  letter-spacing: var(--letra-caixa-alta);
-  text-transform: uppercase;
-  color: var(--acento);
+.secao {
+  padding: var(--s8) 0;
+  border-top: var(--borda-fina) solid var(--divisor);
 }
 
+.secao h2,
 .hero h1 {
   font-family: var(--fonte-display);
   font-weight: var(--peso-titulo);
-  font-size: var(--t-display);
-  line-height: var(--altura-apertada);
   letter-spacing: var(--letra-titulo);
+  line-height: var(--altura-apertada);
+}
+
+.secao h2 {
+  font-size: var(--t-t2);
+  margin-bottom: var(--s6);
   max-width: var(--medida-titulo);
 }
 
-.subtitulo {
+/* --- topo --- */
+
+.topo {
+  padding: var(--s4) 0;
+}
+
+.topo .faixa {
+  display: flex;
+  align-items: center;
+  gap: var(--s5);
+}
+
+.marca {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t3);
+  font-weight: var(--peso-titulo);
+  color: var(--texto);
+  text-decoration: none;
+  letter-spacing: var(--letra-titulo);
+}
+
+.topo__nav {
+  display: flex;
+  gap: var(--s5);
+  margin-left: auto;
+  font-family: var(--fonte-interface);
+  font-size: var(--t-menor);
+}
+
+.topo__nav a {
   color: var(--texto-2);
+  text-decoration: none;
+}
+
+.topo__nav a:hover {
+  color: var(--texto);
+  text-decoration: underline;
+}
+
+/*
+ * Em tela estreita o menu sai, e a acao principal fica.
+ *
+ * Sao ancoras para secoes DESTA pagina — rolar chega no mesmo lugar, entao
+ * esconde-las nao tira caminho de ninguem. Mante-las espremia o cabecalho em duas
+ * linhas e empurrava o titulo para fora da primeira dobra, que e onde a decisao
+ * de ficar ou sair acontece.
+ */
+@media (max-width: 620px) {
+  .topo__nav {
+    display: none;
+  }
+}
+
+/*
+ * --- palco do martelo ---
+ *
+ * As tres primeiras secoes dividem uma coluna `sticky` a direita. O martelo fica
+ * nela e troca de posicao quando cada secao cruza o meio da tela — tres estados
+ * fixos, sem trajetoria continua.
+ *
+ * A coluna e absoluta para nao entrar no fluxo: as secoes continuam medindo a
+ * largura inteira e so ganham um respiro a direita, o que mantem o layout
+ * identico quando ela nao existe (telas estreitas, e a pre-renderizacao).
+ */
+.palco {
+  position: relative;
+  /*
+   * `clip` e nao `hidden`: `hidden` cria um contexto de rolagem e mata o
+   * `position: sticky` do martelo. `clip` so recorta.
+   *
+   * Existe porque o martelo gira, e caixa girada e mais larga que o elemento: sem
+   * isto, a inclinacao do repouso cria alguns pixels de rolagem HORIZONTAL na
+   * pagina inteira — o defeito mais irritante de uma home, e o mais facil de nao
+   * notar em telas largas.
+   */
+  overflow-x: clip;
+}
+
+.palco__coluna {
+  display: none;
+}
+
+.martelo {
+  display: block;
+  /*
+   * Menor que a coluna de proposito: a folga e o que a caixa girada ocupa. Em
+   * 100% a inclinacao encostaria na coluna de leitura.
+   */
+  width: 88%;
+  height: auto;
+  margin-inline-start: auto;
+}
+
+@media (min-width: 1000px) {
+  .palco__coluna {
+    display: block;
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: max(
+      var(--s5),
+      calc((100% - var(--largura-conteudo)) / 2)
+    );
+    width: 300px;
+    pointer-events: none;
+  }
+
+  .palco .faixa {
+    padding-inline-end: calc(300px + var(--s7));
+  }
+
+  .martelo {
+    position: sticky;
+    top: 18vh;
+    transform-origin: 50% 12%;
+    transition:
+      transform var(--duracao-lenta) cubic-bezier(0.2, 0.7, 0.3, 1),
+      opacity var(--duracao-lenta) ease;
+  }
+
+  /* Erguido, sobre o hero. */
+  .martelo[data-posicao='erguido'] {
+    transform: rotate(-16deg) translateY(-2%);
+  }
+
+  /* Batido na base, sobre "Como funciona". */
+  .martelo[data-posicao='batendo'] {
+    transform: rotate(6deg) translateY(9%);
+  }
+
+  /*
+   * Em repouso, deitado do lado oposto da base que bateu, sobre "Serviços".
+   *
+   * DENTRO DO PROPRIO PALCO, e nao atravessando a pagina. A primeira versao
+   * cruzava a area de conteudo inteira, e o martelo deitado caia por cima do
+   * texto dos passos — nao ha espaco livre do outro lado para ele ocupar. O
+   * `scale` existe pelo mesmo motivo: deitado, a caixa do elemento passa a medir
+   * a altura dele, e sem encolher um pouco ela invadiria a coluna de leitura.
+   *
+   * A ORDEM DOS LADOS AINDA PRECISA DE CONFIRMACAO. A explicacao do Marcos ficou
+   * ambigua nesse ponto; inverter e trocar o sinal do `translate` e do angulo.
+   */
+  .martelo[data-posicao='repouso'] {
+    transform: translate(-18%, 12%) rotate(-88deg) scale(0.82);
+    opacity: 0.8;
+  }
+}
+
+/*
+ * Movimento reduzido: o observador nem chega a ser criado (ver `landing.ts`), e
+ * aqui a transicao sai junto. O martelo fica erguido, parado.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .martelo {
+    transition: none;
+  }
+}
+
+/* --- hero --- */
+
+.hero {
+  padding: var(--s9) 0 var(--s8);
+}
+
+.hero h1 {
+  font-size: var(--t-display);
+  max-width: var(--medida-titulo);
+}
+
+.hero__apoio {
+  margin-top: var(--s5);
   max-width: var(--medida-texto);
-  padding-top: var(--s3);
-  border-top: var(--borda-fina) solid var(--divisor);
+  color: var(--texto-2);
+  font-size: var(--t-maior);
   line-height: var(--altura-solta);
+}
+
+.hero__acoes {
+  margin-top: var(--s7);
+  display: flex;
+  gap: var(--s3);
+  flex-wrap: wrap;
+}
+
+/* --- numeros: fatos do produto, nao metrica de vaidade --- */
+
+.numeros {
+  margin: var(--s9) 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  border-top: var(--borda-fina) solid var(--divisor);
+}
+
+.numeros__item {
+  padding: var(--s5) var(--s5) 0 0;
+}
+
+.numeros__valor {
+  font-family: var(--fonte-display);
+  font-weight: var(--peso-titulo);
+  font-size: var(--t-numeral);
+  line-height: var(--altura-apertada);
+  color: var(--acento-forte);
+}
+
+.numeros__rotulo {
+  margin: var(--s2) 0 0;
+  color: var(--texto-3);
+  font-size: var(--t-menor);
+  line-height: var(--altura-solta);
+  max-width: 26ch;
+}
+
+/* --- como funciona --- */
+
+.passos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--s6);
+}
+
+.passo {
+  border-top: var(--borda-fina) solid var(--divisor);
+  padding-top: var(--s4);
+}
+
+.passo__numero {
+  display: block;
+  font-family: var(--fonte-display);
+  font-weight: var(--peso-titulo);
+  font-size: var(--t-t2);
+  color: var(--acento);
+  line-height: var(--altura-apertada);
+}
+
+.passo h3 {
+  margin: var(--s3) 0 var(--s2);
+  font-family: var(--fonte-interface);
+  font-size: var(--t-corpo);
+  font-weight: var(--peso-medio);
+  color: var(--texto);
+}
+
+.passo p {
+  margin: 0;
+  color: var(--texto-2);
+  font-size: var(--t-menor);
+  line-height: var(--altura-solta);
+}
+
+/* --- rodape --- */
+
+.rodape {
+  padding: var(--s6) 0 var(--s7);
+  border-top: var(--borda-fina) solid var(--divisor);
+  color: var(--texto-3);
+  font-size: var(--t-menor);
+}
+
+.rodape p {
+  margin: 0;
 }

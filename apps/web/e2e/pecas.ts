@@ -9,6 +9,7 @@ export const PECAS = [
   'tokens',
   'icone',
   'botao',
+  'link-acao',
   'campo',
   'selecao',
   'cartao',

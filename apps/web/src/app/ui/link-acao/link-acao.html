@@ -1,0 +1,14 @@
+<a
+  class="link-acao"
+  [class.link-acao--primario]="variante() === 'primario'"
+  [class.link-acao--secundario]="variante() === 'secundario'"
+  [class.link-acao--fantasma]="variante() === 'fantasma'"
+  [class.link-acao--texto]="variante() === 'texto'"
+  [class.link-acao--p]="tamanho() === 'p'"
+  [href]="destino()"
+>
+  @if (icone() !== null) {
+  <app-icone [nome]="icone()!" tamanho="p" />
+  }
+  <span class="link-acao__rotulo"><ng-content /></span>
+</a>

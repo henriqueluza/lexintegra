@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 420" role="img" aria-label="Espaco reservado para a foto do martelo">
+  <!--
+    TODO-FOTO-MARTELO — espaco reservado, nao arte final.
+
+    O lugar de uma FOTOGRAFIA de martelo de juiz, tratada com perspectiva. Nao
+    ilustracao vetorial, nao render 3D — os dois foram descartados pelo Marcos.
+    A foto precisa de resolucao boa e direitos de uso claros (comprada de banco
+    ou feita pelo escritorio); ver a lista de pendencias da Etapa 6.
+
+    Este arquivo e deliberadamente feio: um placeholder plausivel viraria arte
+    final por esquecimento.
+  -->
+  <rect x="6" y="6" width="308" height="408" fill="none" stroke="#A8783C" stroke-width="1.5" stroke-dasharray="8 6"/>
+  <path d="M92 150h136v52H92z" fill="none" stroke="#9C8B85" stroke-width="1.5"/>
+  <path d="M160 202v112" fill="none" stroke="#9C8B85" stroke-width="1.5"/>
+  <path d="M104 336h112" fill="none" stroke="#9C8B85" stroke-width="1.5"/>
+  <text x="160" y="382" fill="#9C8B85" font-family="monospace" font-size="15" text-anchor="middle">{{TODO-FOTO-MARTELO}}</text>
+</svg>
