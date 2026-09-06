@@ -57,3 +57,44 @@ variable "url_aplicacao" {
   type        = string
   default     = "https://lexintegra.com.br"
 }
+
+# Etapa 6 --------------------------------------------------------------------
+
+variable "app_check_enforce" {
+  description = <<-EOT
+    Se a API exige token de App Check nas rotas publicas.
+
+    A aplicacao RECUSA SUBIR em producao sem esta variavel definida como "true"
+    ou "false" (ver `apps/api/src/app-check/exigencia.ts`). Um padrao silencioso
+    escolheria sozinho entre recusar todo trafego legitimo e nao verificar nada, e
+    as duas sao decisoes grandes demais para um valor omitido tomar.
+
+    Fica "false" ate o provedor do App Check existir no console do Firebase e a
+    site key estar publicada no `configuracao-publica.json`. Ligar antes disso faz
+    a home parar de aceitar cadastro.
+  EOT
+  type        = string
+  default     = "false"
+
+  validation {
+    condition     = contains(["true", "false"], var.app_check_enforce)
+    error_message = "app_check_enforce precisa ser \"true\" ou \"false\"."
+  }
+}
+
+variable "proxies_confiaveis" {
+  description = <<-EOT
+    Quantos proxies existem entre o visitante e o Cloud Run.
+
+    Vira `trust proxy` do Express. Com o numero errado, `requisicao.ip` devolve o
+    endereco de um proxy e o limitador de requisicoes passa a contar o mundo
+    inteiro como um visitante so — nao falha, so para de proteger.
+
+    Atras do rewrite do Hosting para o Cloud Run (ADR-15) sao dois: o CDN do
+    Hosting e a borda do Cloud Run. O NUMERO PRECISA SER CONFERIDO numa requisicao
+    real, inspecionando `X-Forwarded-For` — esta na lista de pendencias manuais da
+    Etapa 6.
+  EOT
+  type        = number
+  default     = 2
+}

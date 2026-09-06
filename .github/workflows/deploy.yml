@@ -111,6 +111,31 @@ jobs:
       - name: Build do Angular
         run: pnpm --filter web build
 
+      # A site key do reCAPTCHA e PUBLICA por definicao — viaja no HTML que todo
+      # visitante baixa, como a `apiKey` do Firebase. Por isso ela e uma VARIABLE
+      # do repositorio e nao um secret: guardar valor publico como secret ensina a
+      # equipe que "secret" nao quer dizer nada.
+      #
+      # Enquanto a variavel nao existir, o arquivo commitado permanece com o
+      # marcador e o App Check fica desligado no navegador — que e o estado certo
+      # ate alguem criar o provedor no console do Firebase.
+      - name: Publicar a chave do App Check na configuracao publica
+        env:
+          APP_CHECK_SITE_KEY: ${{ vars.APP_CHECK_SITE_KEY }}
+          APP_CHECK_PROVEDOR: ${{ vars.APP_CHECK_PROVEDOR }}
+        run: |
+          destino=apps/web/dist/web/browser/configuracao-publica.json
+          if [ -z "${APP_CHECK_SITE_KEY}" ]; then
+            echo "APP_CHECK_SITE_KEY nao definida: o App Check segue desligado no navegador."
+            exit 0
+          fi
+          provedor="${APP_CHECK_PROVEDOR:-recaptcha-enterprise}"
+          jq --arg chave "${APP_CHECK_SITE_KEY}" --arg provedor "${provedor}" \
+            '.appCheck.siteKey = $chave | .appCheck.provedor = $provedor' \
+            "${destino}" > "${destino}.novo"
+          mv "${destino}.novo" "${destino}"
+          echo "Chave do App Check publicada (provedor ${provedor})."
+
       # ADR-08: source maps ficam em bucket privado e nunca sao publicados junto do
       # bundle. O build ja os gera sem o comentario sourceMappingURL (hidden), mas
       # os arquivos existem no diretorio de saida e precisam sair antes do upload.

@@ -79,6 +79,18 @@ jobs:
             || { echo "index.html nao foi pre-renderizado"; exit 1; }
           echo "Pre-renderizacao confirmada."
 
+      - name: Conferir que a configuracao publica foi para o pacote
+        # O `deploy.yml` reescreve este arquivo com a site key do App Check antes
+        # de publicar. Se ele deixasse de ser copiado — um `public/` renomeado, um
+        # `assets` reconfigurado — a reescrita gravaria num caminho inexistente e o
+        # App Check ficaria desligado em producao PARA SEMPRE, sem erro nenhum.
+        run: |
+          arquivo=apps/web/dist/web/browser/configuracao-publica.json
+          test -f "$arquivo" || { echo "configuracao-publica.json nao foi publicado"; exit 1; }
+          jq -e '.appCheck | has("siteKey") and has("provedor")' "$arquivo" > /dev/null \
+            || { echo "configuracao-publica.json esta sem o bloco appCheck"; exit 1; }
+          echo "Configuracao publica presente e com o formato esperado."
+
       - name: Conferir que o catalogo de componentes nao foi publicado
         # O catalogo e ferramenta de desenvolvimento: a configuracao de producao
         # troca suas rotas por uma lista vazia (`fileReplacements` no
