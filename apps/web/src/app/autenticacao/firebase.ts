@@ -14,7 +14,8 @@ import type { Auth } from 'firebase/auth';
  * visitante baixa, e o próprio Firebase Hosting a publica em
  * `/__/firebase/init.json`. Não há como ter autenticação no navegador sem ela, e
  * quem protege o projeto são as regras do Firestore, os guards da API e o App
- * Check (Etapa 12).
+ * Check (implementado na Etapa 6, ver `app-check.ts`; as chaves são passo manual
+ * no console do Firebase).
  *
  * Mesmo assim, tirá-la do código-fonte vale por três razões concretas:
  *
