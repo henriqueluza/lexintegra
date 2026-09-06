@@ -32,9 +32,12 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
+# `a11y` cobre TODAS as suites de acessibilidade, nao so a do catalogo: a Etapa 6
+# acrescentou a da area publica, e um alvo fixo teria deixado a pagina que o
+# cliente ve de fora justamente do atalho que se usa para conferi-la.
 ALVO="e2e"
 if [ "${1:-}" = "a11y" ]; then
-  ALVO="e2e/catalogo.a11y.spec.ts"
+  ALVO="e2e/catalogo.a11y.spec.ts e2e/publico.a11y.spec.ts"
   shift
 fi
 

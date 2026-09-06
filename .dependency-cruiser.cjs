@@ -68,6 +68,9 @@ module.exports = {
           // Substituto de producao do catalogo: entra no grafo por
           // `fileReplacements` do angular.json, nao por import.
           '^apps/web/src/app/catalogo/catalogo\\.routes\\.prod\\.ts$',
+          // Suite do Playwright: e ponto de entrada, descoberto pelo runner e
+          // nao importado por ninguem. Ser orfao e a forma certa dela.
+          '^apps/web/e2e/.*\\.spec\\.ts$',
         ],
       },
       to: {},
