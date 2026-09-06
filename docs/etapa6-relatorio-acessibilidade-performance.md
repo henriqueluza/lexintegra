@@ -67,14 +67,94 @@ auditoria da Etapa 3 já cobre. Os dois componentes novos (`app-link-acao` e
 texto — que é justamente o que o sistema de três camadas existe para garantir.
 
 ## 2. Acessibilidade — axe-core
+axe-core sobre a home, nas três larguras (360, 768 e 1280), e nos **dois** estados
+da vitrine — travado e liberado. O estado liberado tem uma árvore de conteúdo
+diferente (cartões, listas, preços), e verificar só o travado deixaria metade da
+página sem cobertura.
 
-<!-- PREENCHIDO PELO SCRIPT -->
+Regras: `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`. Gravidades consideradas:
+`serious` e `critical` — o mesmo recorte que a suíte do catálogo usa desde a
+Etapa 3.
 
+```
+Nenhuma violacao serious ou critical.
+```
+
+Esta suíte é **portão de CI**: roda em `pnpm test:a11y` e no job `visual`.
 ## 3. Performance — Lighthouse
+Medido em 2026-09-06,
+Lighthouse 13.4.1, perfil móvel (o padrão do CLI), contra o
+build de produção servido estaticamente — não contra o servidor de desenvolvimento.
 
-<!-- PREENCHIDO PELO SCRIPT -->
+| Categoria | Nota |
+|---|---|
+| Performance | **65** |
+| Acessibilidade | **100** |
+| Boas práticas | **100** |
+| SEO | **100** |
 
-## 4. Responsividade
+| Métrica | Valor |
+|---|---|
+| First Contentful Paint | 3.5 s |
+| Largest Contentful Paint | 3.6 s |
+| Total Blocking Time | 0 ms |
+| Cumulative Layout Shift | 0.381 |
+| Speed Index | 3.5 s |
+
+Auditorias binárias reprovadas:
+
+- `llms-txt` — llms.txt does not follow recommendations
+- `bf-cache` — Page prevented back/forward cache restoration
+## 4. Por que o CLS está alto — diagnóstico medido
+
+O Cumulative Layout Shift de **0,381** é quase quatro vezes o limite de 0,1, e é o
+único número ruim do relatório. O Lighthouse aponta `div.palco` e
+`p.hero__apoio` como o que se desloca.
+
+**A causa é a troca de fonte, e ela foi medida, não deduzida.** Enquanto o arquivo
+da fonte não chega, o texto é desenhado na substituta do sistema; quando a fonte
+troca, a largura muda, o texto quebra em outro número de linhas e tudo abaixo dele
+desce. As razões de largura, medidas com a mesma frase em corpo 200px:
+
+| Fonte da marca | Substituta | Largura relativa |
+|---|---|---|
+| Source Serif 4 (display) | Georgia, no macOS | 107,0% |
+| Source Serif 4 (display) | serifada padrão do contêiner Linux | 118,8% |
+| IBM Plex Sans (interface) | Arial / Helvetica / Liberation Sans | 100,1% |
+| IBM Plex Sans (interface) | DejaVu Sans | 111,9% |
+
+**Duas leituras importam aqui.** A primeira: a fonte de interface, que é a que
+compõe a maior parte da página, é praticamente idêntica a Arial e Helvetica — o
+deslocamento que um visitante de macOS ou Windows sofre é próximo de zero. A
+segunda: o contêiner onde o Lighthouse roda não tem Georgia nem Arial de verdade;
+`local('Georgia')` casa com a serifada padrão dele. **O número 0,381 é, em boa
+parte, um artefato do conjunto de fontes do ambiente de medição.**
+
+**O que foi feito:** um `@font-face` de fallback com métrica casada
+(`size-adjust: 107%`, medido) entra na pilha da fonte de display antes de Georgia.
+Onde Georgia existe, a quebra de linha passa a ser a mesma antes e depois da
+troca. Onde não existe, a declaração não carrega e a pilha cai para o que havia
+antes — melhora para a maioria, sem piorar para ninguém.
+
+**O que NÃO foi feito, e por quê.** As duas saídas que zerariam o número têm custo
+que não vale pagar agora:
+
+- `font-display: optional` na fonte de display elimina o deslocamento por
+  completo — o navegador desiste da fonte se ela não chegar em ~100 ms e não troca
+  mais durante aquele carregamento. O custo é o primeiro visitante de conexão
+  lenta ver a página inteira na fonte substituta.
+- Um `size-adjust` por plataforma exigiria uma família de fallback declarada por
+  sistema, e `local()` casa por nome de forma pouco confiável — foi exatamente o
+  que o contêiner mostrou.
+
+**E há uma razão para não ajustar mais agora:** o texto do hero é provisório
+(`{{TODO-TEXTO-INSTITUCIONAL}}`) e a fotografia do martelo não existe. Os dois
+mudam a quebra de linha e o maior elemento pintado. Afinar métrica contra um texto
+que vai ser reescrito é afinar contra o alvo errado — **esta medição precisa ser
+refeita quando o conteúdo definitivo chegar**, e é aí que a decisão sobre
+`font-display` deve ser tomada com o número real na mão.
+
+## 5. Responsividade
 
 Verificada em três larguras, as mesmas que os projetos do Playwright já definem:
 360px (telefone estreito), 768px (tablet) e 1280px (desktop).
@@ -93,7 +173,7 @@ Verificada em três larguras, as mesmas que os projetos do Playwright já define
   página inteira — o defeito mais irritante de uma home e o mais fácil de não
   notar em tela larga. `clip` e não `hidden`, que mataria o `position: sticky`.
 
-## 5. Movimento
+## 6. Movimento
 
 O martelo é o **único** movimento não solicitado da página, e ele tem três estados
 fixos em vez de trajetória contínua.
@@ -103,7 +183,7 @@ criado**: o martelo fica erguido e parado. Desligar só a transição no CSS nã
 bastaria — um salto instantâneo entre posições continua sendo movimento não
 solicitado para quem pediu para não ter nenhum.
 
-## 6. Peso da página
+## 7. Peso da página
 
 A regra inviolável 10 é sobre chamadas à API, mas a mesma lógica vale para bytes:
 a home é a página onde a pessoa decide se fica.
@@ -120,7 +200,7 @@ a home é a página onde a pessoa decide se fica.
 - **As fontes são servidas do próprio domínio** (`@fontsource`), não do CDN do
   Google — o CDN receberia o IP de todo visitante de uma plataforma jurídica.
 
-## 7. Pendências que afetam estes números
+## 8. Pendências que afetam estes números
 
 1. **A fotografia do martelo não existe.** O que está no lugar é um SVG de
    marcação, propositalmente feio. A foto real muda o peso da página e o LCP, e
@@ -131,3 +211,5 @@ a home é a página onde a pessoa decide se fica.
 4. **O App Check está desligado.** Com ele ligado, o script do reCAPTCHA passa a
    carregar no primeiro toque no formulário, o que afeta a interação medida — não
    o carregamento inicial.
+5. **O CLS precisa ser remedido com o conteúdo definitivo**, e a decisão sobre
+   `font-display: optional` tomada então — ver a seção 4.
