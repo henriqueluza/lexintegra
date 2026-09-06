@@ -107,10 +107,36 @@ export const CARREGADOR_APP_CHECK = new InjectionToken<
   factory: () => carregarAppCheck,
 });
 
-async function carregarAppCheck(): Promise<ContextoAppCheck | null> {
-  if (ehDesenvolvimentoLocal(window.location.origin)) return null;
+/**
+ * Os modulos do Firebase que o App Check precisa, carregados sob demanda.
+ *
+ * Tipo proprio para o teste poder substituir os dois sem tocar no `import()`
+ * dinamico — que e o que mantem o SDK fora do pacote inicial e nao pode ser
+ * trocado por import estatico so para virar testavel.
+ */
+export interface ModulosAppCheck {
+  readonly nucleo: typeof import('firebase/app');
+  readonly sdk: typeof import('firebase/app-check');
+}
 
-  const configuracao = await carregarConfiguracaoAppCheck(fetch);
+/**
+ * A montagem do App Check, com as costuras como parametro.
+ *
+ * Mesmo formato de `carregarConfiguracao` em `firebase.ts`, e pelo mesmo motivo:
+ * origem, busca e carregamento de modulo entram de fora, entao a decisao — quando
+ * desistir, qual provedor instanciar — e verificavel sem navegador e sem
+ * reCAPTCHA. Sem isto, o unico lugar onde este codigo rodaria pela primeira vez
+ * seria producao.
+ */
+export async function montarAppCheck(
+  origem: string,
+  buscar: typeof fetch,
+  carregarModulos: () => Promise<ModulosAppCheck>,
+): Promise<ContextoAppCheck | null> {
+  /* Em localhost nao ha chave, e o guard da API tambem esta desligado. */
+  if (ehDesenvolvimentoLocal(origem)) return null;
+
+  const configuracao = await carregarConfiguracaoAppCheck(buscar);
   if (configuracao === null) {
     console.warn(
       'App Check nao configurado: as rotas publicas seguem sem verificacao de ' +
@@ -119,10 +145,9 @@ async function carregarAppCheck(): Promise<ContextoAppCheck | null> {
     return null;
   }
 
-  const [nucleo, sdk, firebase] = await Promise.all([
-    import('firebase/app'),
-    import('firebase/app-check'),
-    carregarConfiguracao(window.location.origin, fetch),
+  const [{ nucleo, sdk }, firebase] = await Promise.all([
+    carregarModulos(),
+    carregarConfiguracao(origem, buscar),
   ]);
 
   const app =
@@ -142,6 +167,14 @@ async function carregarAppCheck(): Promise<ContextoAppCheck | null> {
     }),
     sdk,
   };
+}
+
+/** Os valores de verdade. Sem ramo nenhum, e por isso fica fora do teste. */
+function carregarAppCheck(): Promise<ContextoAppCheck | null> {
+  return montarAppCheck(window.location.origin, fetch, async () => ({
+    nucleo: await import('firebase/app'),
+    sdk: await import('firebase/app-check'),
+  }));
 }
 
 @Injectable({ providedIn: 'root' })

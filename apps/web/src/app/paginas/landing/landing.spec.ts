@@ -166,6 +166,50 @@ describe('Landing', () => {
       expect(observados).toEqual([]);
     });
 
+    /**
+     * O observador reporta as secoes que SAIRAM da faixa junto com as que
+     * entraram. Reagir a uma saida colocaria o martelo na posicao da secao que a
+     * pessoa acabou de deixar.
+     */
+    it('ignora secao que esta saindo da faixa', async () => {
+      const fixture = await montar();
+      cruzar(fixture, 'como');
+
+      const alvo = (fixture.nativeElement as HTMLElement).querySelector(
+        '#servicos',
+      );
+      disparar?.([
+        {
+          target: alvo,
+          isIntersecting: false,
+        } as unknown as IntersectionObserverEntry,
+      ]);
+      fixture.detectChanges();
+
+      expect(martelo(fixture)?.dataset['posicao']).toBe('batendo');
+    });
+
+    /**
+     * `data-posicao` e escrito a mao no template. Um valor com erro de digitacao
+     * nao pode virar um estado que o CSS nao conhece — o martelo ficaria sem
+     * `transform` nenhum, no meio da tela.
+     */
+    it('ignora marco com posicao desconhecida', async () => {
+      const fixture = await montar();
+      const alvo = document.createElement('div');
+      alvo.setAttribute('data-posicao', 'flutuando');
+
+      disparar?.([
+        {
+          target: alvo,
+          isIntersecting: true,
+        } as unknown as IntersectionObserverEntry,
+      ]);
+      fixture.detectChanges();
+
+      expect(martelo(fixture)?.dataset['posicao']).toBe('erguido');
+    });
+
     it('desconecta ao destruir o componente', async () => {
       const fixture = await montar();
 

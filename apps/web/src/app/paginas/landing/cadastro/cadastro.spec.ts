@@ -176,6 +176,20 @@ describe('Cadastro', () => {
   });
 
   /**
+   * Campo vazio e "obrigatorio", nao "formato invalido". A distincao importa: a
+   * primeira mensagem diz o que fazer, a segunda sugere que o que foi digitado
+   * esta errado — e nao foi digitado nada.
+   */
+  it('acusa campo vazio como obrigatorio, e nao como formato', async () => {
+    const fixture = montar();
+
+    await enviar(fixture);
+
+    expect(texto(fixture)).toContain('Campo obrigatório.');
+    expect(texto(fixture)).not.toContain('Informe um telefone com DDD.');
+  });
+
+  /**
    * O App Check so comeca a carregar quando alguem toca no formulario — nao ao
    * abrir a pagina. Quem so le a home nao tem o IP enviado ao Google, pelo mesmo
    * raciocinio que o ADR-14 usou contra o Analytics.

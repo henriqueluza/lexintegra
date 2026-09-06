@@ -4,7 +4,9 @@ import {
   CARREGADOR_APP_CHECK,
   carregarConfiguracaoAppCheck,
   CHAVE_PENDENTE,
+  montarAppCheck,
   type ContextoAppCheck,
+  type ModulosAppCheck,
 } from './app-check';
 
 function respostaCom(corpo: unknown, ok = true): typeof fetch {
@@ -146,5 +148,144 @@ describe('AppCheckService', () => {
     const servico = montar(contextoQue('token'));
 
     expect(servico.preparar()).toBeUndefined();
+  });
+});
+
+describe('montarAppCheck', () => {
+  interface Registro {
+    readonly inicializou: string[];
+    readonly provedores: string[];
+  }
+
+  function modulos(
+    registro: Registro,
+    appsExistentes = 0,
+  ): () => Promise<ModulosAppCheck> {
+    const nucleo = {
+      getApps: () => new Array(appsExistentes).fill({}),
+      initializeApp: () => ({ nome: 'novo' }),
+      getApp: () => ({ nome: 'existente' }),
+    } as unknown as ModulosAppCheck['nucleo'];
+
+    const sdk = {
+      ReCaptchaV3Provider: class {
+        constructor(chave: string) {
+          registro.provedores.push(`v3:${chave}`);
+        }
+      },
+      ReCaptchaEnterpriseProvider: class {
+        constructor(chave: string) {
+          registro.provedores.push(`enterprise:${chave}`);
+        }
+      },
+      initializeAppCheck: (app: { nome: string }) => {
+        registro.inicializou.push(app.nome);
+        return { marcador: 'app-check' };
+      },
+    } as unknown as ModulosAppCheck['sdk'];
+
+    return () => Promise.resolve({ nucleo, sdk });
+  }
+
+  function buscarCom(configuracao: unknown, firebase: unknown): typeof fetch {
+    return ((url: string) =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve(
+            url.includes('configuracao-publica') ? configuracao : firebase,
+          ),
+      })) as unknown as typeof fetch;
+  }
+
+  const FIREBASE = {
+    apiKey: 'chave',
+    authDomain: 'lexintegra.com.br',
+    projectId: 'plataforma',
+  };
+
+  function registro(): Registro {
+    return { inicializou: [], provedores: [] };
+  }
+
+  /**
+   * Em localhost nao ha chave, e o guard da API tambem esta desligado fora de
+   * producao. Nem chega a buscar configuracao.
+   */
+  it('nao monta nada em localhost', async () => {
+    const reg = registro();
+
+    await expect(
+      montarAppCheck('http://localhost:4200', buscarCom({}, {}), modulos(reg)),
+    ).resolves.toBeNull();
+    expect(reg.provedores).toEqual([]);
+  });
+
+  it('desiste, sem lancar, enquanto a chave for o marcador', async () => {
+    const reg = registro();
+
+    await expect(
+      montarAppCheck(
+        'https://lexintegra.com.br',
+        buscarCom({ appCheck: { siteKey: CHAVE_PENDENTE } }, FIREBASE),
+        modulos(reg),
+      ),
+    ).resolves.toBeNull();
+    expect(reg.provedores).toEqual([]);
+  });
+
+  it.each([
+    ['recaptcha-enterprise', 'enterprise:6Lchave'],
+    ['recaptcha-v3', 'v3:6Lchave'],
+  ])('instancia o provedor %s', async (provedor, esperado) => {
+    const reg = registro();
+
+    await montarAppCheck(
+      'https://lexintegra.com.br',
+      buscarCom({ appCheck: { provedor, siteKey: '6Lchave' } }, FIREBASE),
+      modulos(reg),
+    );
+
+    expect(reg.provedores).toEqual([esperado]);
+  });
+
+  /**
+   * O App Check compartilha a aplicacao do Firebase com a autenticacao. Uma
+   * segunda `initializeApp` lanca, e o recarregamento a quente do servidor de
+   * desenvolvimento produz exatamente esse caso.
+   */
+  it('reusa a aplicacao ja inicializada', async () => {
+    const reg = registro();
+
+    await montarAppCheck(
+      'https://lexintegra.com.br',
+      buscarCom({ appCheck: { siteKey: '6Lchave' } }, FIREBASE),
+      modulos(reg, 1),
+    );
+
+    expect(reg.inicializou).toEqual(['existente']);
+  });
+
+  it('inicializa a aplicacao quando ainda nao existe nenhuma', async () => {
+    const reg = registro();
+
+    await montarAppCheck(
+      'https://lexintegra.com.br',
+      buscarCom({ appCheck: { siteKey: '6Lchave' } }, FIREBASE),
+      modulos(reg, 0),
+    );
+
+    expect(reg.inicializou).toEqual(['novo']);
+  });
+
+  it('devolve o contexto com o SDK junto', async () => {
+    const contexto = await montarAppCheck(
+      'https://lexintegra.com.br',
+      buscarCom({ appCheck: { siteKey: '6Lchave' } }, FIREBASE),
+      modulos(registro()),
+    );
+
+    expect(contexto?.appCheck).toEqual({ marcador: 'app-check' });
+    expect(contexto?.sdk).toBeDefined();
   });
 });

@@ -134,6 +134,29 @@ describe('PreCadastroService', () => {
       expect(localStorage.getItem(CHAVE_LIBERACAO)).toBeNull();
     });
 
+    /**
+     * Navegacao privada com armazenamento bloqueado faz `localStorage` LANCAR, e
+     * nao devolver null. Sem o `try`, a home inteira quebraria no `afterNextRender`
+     * para quem navega assim — e o sintoma seria uma pagina em branco.
+     */
+    it('sobrevive ao armazenamento bloqueado', async () => {
+      const original = Object.getOwnPropertyDescriptor(window, 'localStorage');
+      Object.defineProperty(window, 'localStorage', {
+        configurable: true,
+        get: () => {
+          throw new Error('Acesso negado.');
+        },
+      });
+
+      const { servico } = montar();
+      await hidratar();
+
+      expect(servico.liberado()).toBe(false);
+      if (original !== undefined) {
+        Object.defineProperty(window, 'localStorage', original);
+      }
+    });
+
     it.each([
       ['texto que nao e JSON', 'nao-e-json'],
       ['JSON sem token', '{"expiraEm":"2030-01-01T00:00:00.000Z"}'],
