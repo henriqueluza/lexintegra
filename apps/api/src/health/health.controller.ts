@@ -1,9 +1,11 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Req } from '@nestjs/common';
 import { Publico } from '../autenticacao/decoradores.js';
 import { SemAppCheck } from '../app-check/decoradores.js';
 import { SemLimite } from '../limite/decoradores.js';
 import type { EstadoDeSaude } from './health.service.js';
 import { HealthService } from './health.service.js';
+/* TEMPORARIO: medicao de PROXIES_CONFIAVEIS. Remover com o arquivo. */
+import { medir } from './xff-temporario.js';
 
 @Controller('health')
 export class HealthController {
@@ -26,7 +28,15 @@ export class HealthController {
   @SemAppCheck()
   @Publico()
   @Get()
-  obter(): EstadoDeSaude {
+  obter(
+    /*
+     * TEMPORARIO — sai junto com `xff-temporario.ts`. Opcional para que o teste
+     * de unidade continue chamando `obter()` sem arnes de requisicao.
+     */
+    @Req() requisicao?: { readonly headers?: Record<string, unknown> },
+  ): EstadoDeSaude {
+    medir(requisicao?.headers?.['x-forwarded-for']);
+
     return this.health.estado();
   }
 }
