@@ -390,6 +390,24 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 
 ---
 
+### ADR-16 — Defesas da fronteira pública, e por que elas não são simétricas
+
+**Contexto.** A seção 6 lista três defesas para a fronteira 1 (pública, sem identidade): App Check, rate limiting e validação de entrada. A Etapa 6 as implementou, e as três acabaram com escopos diferentes — o que merece registro, porque cada assimetria foi uma escolha e não um esquecimento.
+
+**Decisões.**
+
+1. **App Check só nas rotas `@Publico()`.** As rotas autenticadas já passam por `verifyIdToken(token, true)` a cada requisição, que é barreira mais forte; exigir App Check também nelas não acrescentaria quase nada e quebraria o painel administrativo enquanto as chaves não existirem. O health é a única rota pública isenta: o startup probe do Cloud Run não é um navegador e não tem como produzir token.
+
+2. **A verificação é ligada por variável, e a ausência derruba o boot em produção.** `APP_CHECK_ENFORCE` aceita `"true"` ou `"false"`, e nada mais. Um padrão silencioso escolheria sozinho entre recusar todo tráfego legítimo e não verificar nada, e as duas são decisões grandes demais para um valor omitido tomar. Enquanto o provedor não existir no console do Firebase, o valor correto em produção é `"false"` declarado de propósito.
+
+3. **O App Check é inicializado sob demanda no navegador, no primeiro toque no formulário — não no carregamento da página.** O provedor baixa o script do reCAPTCHA, e esse script recebe IP e sinais de navegação de quem só está lendo a home. É o mesmo raciocínio do ADR-14 contra o Analytics: dado de visitante indo para terceiro sem necessidade é mais uma linha na política de privacidade e no mapeamento de subprocessadores. O custo é um score de reCAPTCHA um pouco pior, por observar a pessoa por menos tempo.
+
+4. **O rate limiting é um guard próprio, em memória, sem dependência nova.** `@nestjs/throttler` declara par `@nestjs/common ^11` e o projeto está no 12; um par insatisfeito num guard de segurança é risco desnecessário, e o extrator de IP teria de ser substituído de qualquer forma por causa dos saltos de proxy. É por instância, como o ADR-02 já registrou. O guard é o primeiro da cadeia: recusar cedo custa uma consulta a um `Map`, recusar depois custa um `verifyIdToken` — uma ida ao Firebase por requisição.
+
+5. **A liberação da vitrine é um token opaco, verificado no servidor.** O pré-cadastro emite `<id>.<segredo>`; o servidor guarda só o hash. O navegador lembra a liberação em `localStorage`, com o mesmo prazo que o servidor promete — mas isso é a lembrança da autorização, não a autorização: armazenamento de navegador é editável, e sem a verificação no `PreCadastroGuard` a regra "o catálogo só aparece depois do cadastro" seria uma sugestão.
+
+**Consequência assumida.** O rate limiting por instância tolera até três vezes o limite configurado (`max_instance_count = 3`), e um atacante com muitos endereços consegue zerar o contador de uma vítima ao encher o mapa. As duas aproximações são conhecidas; a defesa contra automação em massa é o App Check, não o contador.
+
 ## 5. Modelo de dados
 
 ### 5.1 Coleções raiz
@@ -397,12 +415,15 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 | Coleção | Papel |
 |---|---|
 | `produtos` | Catálogo vivo e editável pelo administrador global |
+| `pre-cadastros` | Leads da área pública, antes de existir conta (item 2.1.4) |
 | `clientes` | Conta do cliente final, com subcoleção de anamnese |
 | `pagamentos` | Um por transação confirmada pelo gateway |
 | `pedidos` | Um por produto comprado; snapshot imutável |
 | `advogados` | Perfil, atribuições e licença Microsoft confirmada |
 | `disponibilidades` | Slots com ID determinístico |
 | `outbox` | Eventos pendentes de entrega |
+
+**Sobre `pre-cadastros`.** ID determinístico do e-mail normalizado (ADR-04), o que faz a mesma pessoa ocupar um documento e não três. Guarda nome, e-mail, telefone, a contagem de envios e o hash do token que destrava a vitrine — **e nada além disso**: sem IP, sem user-agent, sem referenciador. São dados que um formulário de captação coleta por reflexo e que ninguém neste projeto vai usar, e a minimização da seção 13 é medida, não boa intenção. É também a coleção com o caminho de eliminação mais simples do sistema: um documento por titular.
 
 Subcoleções: `clientes/{id}/anamnese`, `pedidos/{id}/entregaveis`, `pedidos/{id}/reunioes`, `pedidos/{id}/entregaveis/{id}/transicoes`.
 
@@ -511,7 +532,7 @@ Como o acesso ao banco passa sempre pela API, as regras do Firestore devem ser r
 
 O motivo é que a API usa o Admin SDK, que **ignora** as regras. Uma regra que permitisse ao advogado ler o que lhe foi distribuído nunca seria atravessada por código de produção, nunca falharia num teste de aplicação se estivesse errada, e ficaria como porta aberta que ninguém visita — protegendo menos do que aparenta. A autorização por perfil e por atribuição vive em `apps/api/src/autenticacao`, onde é exercitada a cada requisição.
 
-O que as regras fazem, então, é provar que **o navegador não tem caminho nenhum** até o banco. A suíte em `packages/regras-firestore` verifica isso de forma tabular — quatro perfis × cada caminho de 5.1 × cinco operações, 244 asserções — e inclui um controle positivo, sem o qual um arnês quebrado faria a suíte passar verde negando tudo por acidente.
+O que as regras fazem, então, é provar que **o navegador não tem caminho nenhum** até o banco. A suíte em `packages/regras-firestore` verifica isso de forma tabular — quatro perfis × cada caminho de 5.1 × cinco operações, 264 asserções — e inclui um controle positivo, sem o qual um arnês quebrado faria a suíte passar verde negando tudo por acidente.
 
 Do lado do frontend, a mesma garantia é fechada por uma regra de `dependency-cruiser`: `apps/web` não pode importar `firebase/firestore`. As regras provam que o acesso seria negado; o lint impede que o import chegue a existir.
 

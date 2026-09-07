@@ -14,7 +14,7 @@ JVM. É por isso que o script aqui se chama `test:integration` e não `test`:
 
 Que **ninguém** lê ou escreve no Firestore pelo SDK do navegador. Quatro perfis
 (anônimo, cliente, advogado, admin) × doze caminhos do modelo de dados ×
-cinco operações, tudo negado. São 244 asserções.
+cinco operações, tudo negado. São 264 asserções.
 
 Isso é a forma final das regras, não um estado provisório. A justificativa está
 no cabeçalho de `firestore.rules` e em `docs/arquitetura.md`, seção 6.1: a API
@@ -29,7 +29,7 @@ derrubaria se estivesse errada. A autorização por perfil vive em
 arnês quebrado — porta errada, emulador fora, contexto mal construído — faria
 tudo falhar e a suíte passaria verde provando nada. Os dois testes de `arnês`
 escrevem com as regras desligadas: se eles não passarem, a negação dos outros
-244 não significa nada.
+264 não significa nada.
 
 **O caminho `colecao-que-nao-existe`.** Testa o catch-all `/{document=**}`. Sem
 ele, a suíte só provaria que as coleções que alguém lembrou de listar estão

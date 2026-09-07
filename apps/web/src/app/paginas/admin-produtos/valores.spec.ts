@@ -1,9 +1,5 @@
-import {
-  paraCampoDePreco,
-  paraCentavos,
-  paraInteiro,
-  paraReais,
-} from './valores';
+import { paraReais } from '../../comum/moeda';
+import { paraCampoDePreco, paraCentavos, paraInteiro } from './valores';
 
 describe('paraCentavos', () => {
   it.each([

@@ -9,6 +9,7 @@ export const PECAS = [
   'tokens',
   'icone',
   'botao',
+  'link-acao',
   'campo',
   'selecao',
   'cartao',
@@ -18,6 +19,7 @@ export const PECAS = [
   'estado-vazio',
   'carregando',
   'mensagem-erro',
+  'aviso-privacidade',
 ] as const;
 
 /**

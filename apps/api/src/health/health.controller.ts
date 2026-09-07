@@ -1,5 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { Publico } from '../autenticacao/decoradores.js';
+import { SemAppCheck } from '../app-check/decoradores.js';
+import { SemLimite } from '../limite/decoradores.js';
 import type { EstadoDeSaude } from './health.service.js';
 import { HealthService } from './health.service.js';
 
@@ -15,6 +17,13 @@ export class HealthController {
    * Run, que nao tem token nenhum para apresentar, e do uptime check. Nao devolve
    * nada que identifique titular de dado (LGPD).
    */
+  /*
+   * Isento do limitador. O startup probe do Cloud Run e o uptime check batem em
+   * cadencia fixa e nao sabem reagir a um 429 — uma instancia que responde 429 ao
+   * proprio probe simplesmente nao sobe.
+   */
+  @SemLimite()
+  @SemAppCheck()
   @Publico()
   @Get()
   obter(): EstadoDeSaude {

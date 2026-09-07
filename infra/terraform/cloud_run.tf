@@ -72,6 +72,18 @@ resource "google_cloud_run_v2_service" "api" {
         value = var.email_remetente
       }
 
+      # Etapa 6. As duas defesas da fronteira publica que dependem do ambiente, e
+      # nao do codigo. Ver as descricoes em `variables.tf`.
+      env {
+        name  = "APP_CHECK_ENFORCE"
+        value = var.app_check_enforce
+      }
+
+      env {
+        name  = "PROXIES_CONFIAVEIS"
+        value = tostring(var.proxies_confiaveis)
+      }
+
       # A chave chega por referencia ao Secret Manager, nunca como valor no
       # Terraform: um `env { value = ... }` com a chave a colocaria no state, que
       # fica no bucket, e no plan comentado no PR (regra inviolavel 9).

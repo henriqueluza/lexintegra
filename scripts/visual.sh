@@ -32,13 +32,29 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
+# `a11y` cobre TODAS as suites de acessibilidade, nao so a do catalogo: a Etapa 6
+# acrescentou a da area publica, e um alvo fixo teria deixado a pagina que o
+# cliente ve de fora justamente do atalho que se usa para conferi-la.
+#
+# Um caminho `e2e/...` SUBSTITUI o alvo em vez de somar. Passar o caminho como
+# argumento extra fazia o Playwright receber `e2e` mais o arquivo, e como os dois
+# sao filtros o resultado era a suite inteira — quem pedia um arquivo esperando
+# uma execucao curta recebia todas, e demorava a perceber.
 ALVO="e2e"
-if [ "${1:-}" = "a11y" ]; then
-  ALVO="e2e/catalogo.a11y.spec.ts"
-  shift
-fi
+case "${1:-}" in
+  a11y)
+    ALVO="e2e/catalogo.a11y.spec.ts e2e/publico.a11y.spec.ts"
+    shift
+    ;;
+  e2e/*)
+    ALVO="$1"
+    shift
+    ;;
+esac
 
-# Volumes nomeados sombreando cada `node_modules` do workspace.
+# Volumes nomeados sombreando o node_modules de CADA projeto do workspace — os
+# cinco. Faltar um faz o pnpm do conteiner encontrar uma instalacao de macOS ali e
+# querer purgar o diretorio, o que sem TTY aborta a execucao inteira.
 #
 # Sem eles, o `pnpm install` de dentro do conteiner escreveria binarios de Linux
 # por cima do `node_modules` do macOS montado — esbuild, @parcel/watcher e
@@ -50,12 +66,14 @@ SOMBRAS=(
   -v lexintegra-nm-web:/trabalho/apps/web/node_modules
   -v lexintegra-nm-api:/trabalho/apps/api/node_modules
   -v lexintegra-nm-shared:/trabalho/packages/shared/node_modules
+  -v lexintegra-nm-regras:/trabalho/packages/regras-firestore/node_modules
   -v lexintegra-pnpm-store:/pnpm-store
 )
 
 echo "Imagem: $IMAGEM"
 
 docker run --rm --init \
+  -e CI=true \
   -v "$RAIZ":/trabalho \
   "${SOMBRAS[@]}" \
   -w /trabalho/apps/web \
@@ -66,7 +84,11 @@ docker run --rm --init \
     corepack enable
     cd /trabalho
     # Store fora da arvore montada: sem isto o pnpm do conteiner cria um
-    # `.pnpm-store/` dentro do repositorio do host.
+    # diretorio .pnpm-store dentro do repositorio do host.
+    #
+    # SEM CRASE NESTE COMENTARIO. O bloco inteiro esta entre aspas duplas, entao
+    # crase aqui vira substituicao de comando executada pelo shell do HOST — e o
+    # erro que ela produz aparece antes de o conteiner sequer subir.
     pnpm install --frozen-lockfile --store-dir /pnpm-store
     cd /trabalho/apps/web
     pnpm exec playwright test $ALVO $*

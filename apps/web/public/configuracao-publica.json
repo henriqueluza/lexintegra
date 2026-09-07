@@ -1,0 +1,7 @@
+{
+  "_leia": "Servido estaticamente pelo Hosting. NAO e segredo: a site key do reCAPTCHA e publica por definicao, como a apiKey do Firebase. Em producao o pipeline reescreve este arquivo a partir das variaveis APP_CHECK_SITE_KEY e APP_CHECK_PROVEDOR do repositorio. Enquanto o valor for o marcador abaixo, o App Check fica desligado no navegador.",
+  "appCheck": {
+    "provedor": "recaptcha-enterprise",
+    "siteKey": "<preencher-no-console-do-firebase>"
+  }
+}

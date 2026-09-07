@@ -1,0 +1,58 @@
+@if (concluido()) {
+<div class="cadastro__pronto">
+  <h3>{{ textos.cadastro.concluido.titulo }}</h3>
+  <p>{{ textos.cadastro.concluido.texto }}</p>
+</div>
+} @else {
+<div class="cadastro">
+  <div class="cadastro__texto">
+    <p>{{ textos.cadastro.apoio }}</p>
+  </div>
+
+  <form
+    class="cadastro__formulario"
+    [formGroup]="formulario"
+    (ngSubmit)="enviar()"
+    (focusin)="prepararVerificacao()"
+  >
+    <app-campo
+      rotulo="Nome completo"
+      formControlName="nome"
+      marcador="Ana Ribeiro Salgado"
+      [obrigatorio]="true"
+      [erro]="erro('nome')"
+    />
+    <app-campo
+      rotulo="E-mail"
+      tipo="email"
+      formControlName="email"
+      marcador="ana@empresa.com.br"
+      [obrigatorio]="true"
+      [erro]="erro('email')"
+    />
+    <app-campo
+      rotulo="Telefone"
+      tipo="tel"
+      formControlName="telefone"
+      marcador="(61) 90000-0000"
+      [obrigatorio]="true"
+      [erro]="erro('telefone')"
+    />
+
+    @if (falha() !== null) {
+    <app-mensagem-erro variante="bloco">{{ falha() }}</app-mensagem-erro>
+    }
+
+    <app-botao variante="primario" tipo="submit" [carregando]="enviando()">
+      {{ textos.cadastro.acao }}
+    </app-botao>
+
+    <app-aviso-privacidade
+      [resumo]="textos.privacidade.resumo"
+      [rotulo]="textos.privacidade.rotulo"
+    >
+      {{ textos.privacidade.juridico }}
+    </app-aviso-privacidade>
+  </form>
+</div>
+}

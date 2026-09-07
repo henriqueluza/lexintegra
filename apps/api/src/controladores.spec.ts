@@ -1,5 +1,8 @@
-import type { ExecutionContext } from '@nestjs/common';
-import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants.js';
+import type { CanActivate, ExecutionContext, Type } from '@nestjs/common';
+import {
+  GUARDS_METADATA,
+  ROUTE_ARGS_METADATA,
+} from '@nestjs/common/constants.js';
 import { Reflector } from '@nestjs/core';
 import type { Perfil } from 'shared';
 import { AdvogadosController } from './advogados/advogados.controller.js';
@@ -13,8 +16,17 @@ import { AutenticacaoController } from './autenticacao/senha/redefinicao.control
 import type { RedefinicaoSenhaService } from './autenticacao/senha/redefinicao.service.js';
 import type { UsuarioAutenticado } from './autenticacao/usuario.js';
 import { HealthController } from './health/health.controller.js';
+import type { Limite as ConfiguracaoDeLimite } from './limite/contador.js';
+import { CHAVE_SEM_APP_CHECK } from './app-check/decoradores.js';
+import { CHAVE_LIMITE, CHAVE_SEM_LIMITE } from './limite/decoradores.js';
+import { PreCadastrosAdminController } from './pre-cadastros/pre-cadastros.admin.controller.js';
+import { PreCadastrosController } from './pre-cadastros/pre-cadastros.controller.js';
+import type { PreCadastrosService } from './pre-cadastros/pre-cadastros.service.js';
 import { ProdutosController } from './produtos/produtos.controller.js';
 import type { ProdutosService } from './produtos/produtos.service.js';
+import { PreCadastroGuard } from './vitrine/pre-cadastro.guard.js';
+import { VitrineController } from './vitrine/vitrine.controller.js';
+import type { VitrineService } from './vitrine/vitrine.service.js';
 
 const reflector = new Reflector();
 
@@ -40,6 +52,7 @@ describe('anotacoes de seguranca dos controladores', () => {
   it.each([
     ['advogados', AdvogadosController],
     ['produtos', ProdutosController],
+    ['pre-cadastros', PreCadastrosAdminController],
   ])(
     'a superficie administrativa de %s exige admin, na classe',
     (_nome, classe) => {
@@ -59,6 +72,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['produtos.editar', ProdutosController.prototype.editar],
     ['produtos.ativar', ProdutosController.prototype.ativar],
     ['produtos.desativar', ProdutosController.prototype.desativar],
+    ['pre-cadastros.listar', PreCadastrosAdminController.prototype.listar],
   ])('o metodo administrativo %s nao se declara publico', (_nome, metodo) => {
     expect(reflector.get(CHAVE_PUBLICO, metodo)).toBeUndefined();
   });
@@ -78,22 +92,125 @@ describe('anotacoes de seguranca dos controladores', () => {
   });
 
   /**
-   * As unicas duas rotas publicas do sistema hoje. Cada linha aqui e uma decisao
-   * que precisou de justificativa: o health e alvo do startup probe do Cloud Run,
-   * que nao tem token; o pedido de redefinicao e para quem esqueceu a senha e
-   * portanto nao consegue autenticar.
+   * As unicas rotas publicas do sistema hoje. Cada linha aqui e uma decisao que
+   * precisou de justificativa: o health e alvo do startup probe do Cloud Run, que
+   * nao tem token; o pedido de redefinicao e para quem esqueceu a senha e
+   * portanto nao consegue autenticar; o pre-cadastro e a porta de entrada de quem
+   * ainda nao existe como usuario (arquitetura, secao 6, fronteira 1).
+   *
+   * A lista e nominal para que ABRIR uma rota nova exija editar este arquivo.
+   * Uma contagem (`expect(publicas).toHaveLength(3)`) passaria a mesma sensacao
+   * de rigor e aceitaria a troca de uma rota por outra sem ninguem notar.
    */
   it.each([
     ['health', HealthController.prototype.obter],
     ['redefinicao de senha', AutenticacaoController.prototype.redefinirSenha],
+    ['pre-cadastro', PreCadastrosController.prototype.registrar],
+    ['vitrine', VitrineController.prototype.listar],
   ])('%s e publico', (_nome, metodo) => {
     expect(reflector.get(CHAVE_PUBLICO, metodo)).toBe(true);
+  });
+
+  /**
+   * O reverso: a consulta administrativa de leads NAO e publica. Ela e vizinha de
+   * arquivo da rota que e, e o erro de anotar a classe errada nao produziria
+   * sintoma nenhum — produziria a base de leads inteira aberta na internet.
+   */
+  it('a consulta de pre-cadastros NAO e publica', () => {
+    expect(
+      reflector.get(
+        CHAVE_PUBLICO,
+        PreCadastrosAdminController.prototype.listar,
+      ),
+    ).toBeUndefined();
+    expect(
+      reflector.get(CHAVE_PUBLICO, PreCadastrosAdminController),
+    ).toBeUndefined();
   });
 
   it('a rota `eu` NAO e publica', () => {
     expect(
       reflector.get(CHAVE_PUBLICO, AutenticacaoController.prototype.eu),
     ).toBeUndefined();
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Limite de requisicoes                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Os testes do guard provam que ele barra quando anotado. O que falta cobrir e o
+ * outro lado — que a anotacao esta no lugar certo. Tirar o `@Limite` do
+ * formulario publico nao quebraria teste de guard nenhum, e o sintoma so
+ * apareceria na conta do Firestore.
+ */
+describe('limite de requisicoes das rotas publicas', () => {
+  it.each([
+    ['pre-cadastro', PreCadastrosController.prototype.registrar],
+    ['redefinicao de senha', AutenticacaoController.prototype.redefinirSenha],
+    ['vitrine', VitrineController.prototype.listar],
+  ])('%s declara limite proprio', (_nome, metodo) => {
+    const limite = reflector.get<ConfiguracaoDeLimite | undefined>(
+      CHAVE_LIMITE,
+      metodo,
+    );
+
+    expect(limite?.maximo).toBeGreaterThan(0);
+    expect(limite?.janelaMs).toBeGreaterThan(0);
+  });
+
+  /**
+   * O formulario tem que ser mais apertado que a leitura da vitrine. Se um dia os
+   * dois numeros se aproximarem por edicao distraida, este teste avisa: escrever
+   * lead e caro e raro, ler catalogo e barato e repetido.
+   */
+  it('o formulario e mais apertado que a vitrine', () => {
+    const formulario = reflector.get<ConfiguracaoDeLimite>(
+      CHAVE_LIMITE,
+      PreCadastrosController.prototype.registrar,
+    );
+    const vitrine = reflector.get<ConfiguracaoDeLimite>(
+      CHAVE_LIMITE,
+      VitrineController.prototype.listar,
+    );
+
+    const porMinuto = (limite: ConfiguracaoDeLimite): number =>
+      limite.maximo / (limite.janelaMs / 60_000);
+
+    expect(porMinuto(formulario)).toBeLessThan(porMinuto(vitrine));
+  });
+
+  /**
+   * E o health tem que ficar de fora. O startup probe do Cloud Run bate em
+   * cadencia fixa e nao sabe reagir a 429: uma instancia que responde 429 ao
+   * proprio probe nao entra em servico, e o deploy falha no smoke test sem dizer
+   * por que.
+   */
+  it('o health e isento', () => {
+    expect(
+      reflector.get(CHAVE_SEM_LIMITE, HealthController.prototype.obter),
+    ).toBe(true);
+  });
+
+  /**
+   * Pelo mesmo motivo, o health e a unica rota publica isenta de App Check: o
+   * probe nao e um navegador e nao tem como produzir o token. As outras tres
+   * rotas publicas sao verificadas — e este teste as lista para que tirar uma da
+   * verificacao exija editar este arquivo.
+   */
+  it('o health e a UNICA rota publica isenta de App Check', () => {
+    expect(
+      reflector.get(CHAVE_SEM_APP_CHECK, HealthController.prototype.obter),
+    ).toBe(true);
+
+    for (const metodo of [
+      PreCadastrosController.prototype.registrar,
+      AutenticacaoController.prototype.redefinirSenha,
+      VitrineController.prototype.listar,
+    ]) {
+      expect(reflector.get(CHAVE_SEM_APP_CHECK, metodo)).toBeUndefined();
+    }
   });
 });
 
@@ -236,6 +353,94 @@ describe('ProdutosController', () => {
       'desativar produto-1 por uid-admin',
       'obter produto-1',
     ]);
+  });
+});
+
+/**
+ * A vitrine e a unica rota `@Publico()` que mesmo assim exige autorizacao — o
+ * token de pre-cadastro. Como o guard e de CONTROLADOR e nao global, apagar o
+ * `@UseGuards` nao quebraria teste de guard nenhum: quebraria o sigilo do
+ * catalogo, em silencio. Este teste olha para a anotacao pela mesma razao que os
+ * de `@Perfis` olham.
+ */
+describe('a vitrine exige o token de pre-cadastro, na classe', () => {
+  it('declara o guard no controlador', () => {
+    const guards = Reflect.getMetadata(GUARDS_METADATA, VitrineController) as
+      ReadonlyArray<Type<CanActivate>> | undefined;
+
+    expect(guards).toContain(PreCadastroGuard);
+  });
+});
+
+describe('VitrineController', () => {
+  it('delega a listagem ao servico', async () => {
+    const chamadas: string[] = [];
+    const controlador = new VitrineController({
+      listar: () => {
+        chamadas.push('listar');
+        return Promise.resolve([]);
+      },
+    } as unknown as VitrineService);
+
+    await expect(controlador.listar()).resolves.toEqual([]);
+    expect(chamadas).toEqual(['listar']);
+  });
+});
+
+describe('PreCadastrosController', () => {
+  function montar(): {
+    publico: PreCadastrosController;
+    admin: PreCadastrosAdminController;
+    chamadas: string[];
+  } {
+    const chamadas: string[] = [];
+    const servico = {
+      registrar: (dados: { email: string }) => {
+        chamadas.push(`registrar ${dados.email}`);
+        return Promise.resolve({ token: 'id.segredo', expiraEm: '2026-01-01' });
+      },
+      listar: (limite: number) => {
+        chamadas.push(`listar ${limite}`);
+        return Promise.resolve([]);
+      },
+    } as unknown as PreCadastrosService;
+
+    return {
+      publico: new PreCadastrosController(servico),
+      admin: new PreCadastrosAdminController(servico),
+      chamadas,
+    };
+  }
+
+  it('devolve o token de liberacao no corpo', async () => {
+    const { publico } = montar();
+
+    const resposta = await publico.registrar({
+      nome: 'Ana Ribeiro Salgado',
+      email: 'ana@empresa.com.br',
+      telefone: '61990000000',
+    });
+
+    expect(resposta).toEqual({ token: 'id.segredo', expiraEm: '2026-01-01' });
+  });
+
+  /**
+   * `limite` chega da query string, que e texto livre. O `catch` do schema faz
+   * um valor absurdo cair no padrao em vez de derrubar a tela do administrador
+   * com 400 — e impede que `?limite=999999` vire uma varredura da colecao.
+   */
+  it.each([
+    ['10', 'listar 10'],
+    [undefined, 'listar 50'],
+    ['nao-e-numero', 'listar 50'],
+    ['0', 'listar 50'],
+    ['99999', 'listar 50'],
+  ])('lista com limite %s', async (recebido, esperado) => {
+    const { admin, chamadas } = montar();
+
+    await admin.listar(recebido);
+
+    expect(chamadas).toEqual([esperado]);
   });
 });
 

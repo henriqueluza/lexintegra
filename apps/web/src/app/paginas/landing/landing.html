@@ -1,10 +1,97 @@
-<main class="hero">
-  <p class="marca">LexIntegra</p>
-  <h1>
-    Produtos jurídicos contratados, acompanhados e entregues em um só lugar.
-  </h1>
-  <p class="subtitulo">
-    Plataforma em construção. Esta é a fundação da Etapa 2 — infraestrutura e
-    pipeline — servida como HTML pré-renderizado.
-  </p>
+<header class="topo">
+  <div class="faixa">
+    <a class="marca" href="#inicio">{{ textos.marca }}</a>
+    <nav class="topo__nav" aria-label="Seções desta página">
+      @for (item of textos.navegacao; track item.destino) {
+      <a [href]="item.destino">{{ item.rotulo }}</a>
+      }
+    </nav>
+    <app-link-acao destino="#cadastro" variante="primario" tamanho="p">
+      {{ textos.cadastro.acao }}
+    </app-link-acao>
+  </div>
+</header>
+
+<main>
+  <!--
+    O martelo acompanha as tres primeiras secoes de dentro de uma coluna
+    `sticky`. Fica FORA do fluxo de leitura (`aria-hidden`): e ilustracao, e um
+    leitor de tela anunciando "imagem" tres vezes durante a rolagem seria ruido.
+  -->
+  <div class="palco">
+    <div class="palco__coluna" aria-hidden="true">
+      <img
+        class="martelo"
+        [attr.data-posicao]="posicao()"
+        src="martelo-placeholder.svg"
+        alt=""
+        width="320"
+        height="420"
+      />
+    </div>
+
+    <section class="hero" id="inicio" #marco data-posicao="erguido">
+      <div class="faixa hero__conteudo">
+        <h1>{{ textos.hero.titulo }}</h1>
+        <p class="hero__apoio">{{ textos.hero.apoio }}</p>
+
+        <div class="hero__acoes">
+          <app-link-acao destino="#servicos" variante="primario">
+            {{ textos.hero.acaoPrincipal }}
+          </app-link-acao>
+          <app-link-acao destino="#como" variante="secundario">
+            {{ textos.hero.acaoSecundaria }}
+          </app-link-acao>
+        </div>
+
+        <dl class="numeros">
+          @for (numero of textos.numeros; track numero.rotulo) {
+          <div class="numeros__item">
+            <dt class="numeros__valor">{{ numero.valor }}</dt>
+            <dd class="numeros__rotulo">{{ numero.rotulo }}</dd>
+          </div>
+          }
+        </dl>
+      </div>
+    </section>
+
+    <section class="secao" id="como" #marco data-posicao="batendo">
+      <div class="faixa">
+        <h2>{{ textos.como.titulo }}</h2>
+
+        <ol class="passos">
+          @for (passo of textos.como.passos; track passo.titulo; let i = $index)
+          {
+          <li class="passo">
+            <span class="passo__numero" aria-hidden="true">
+              {{ numeral(i) }}
+            </span>
+            <h3>{{ passo.titulo }}</h3>
+            <p>{{ passo.texto }}</p>
+          </li>
+          }
+        </ol>
+      </div>
+    </section>
+
+    <section class="secao" id="servicos" #marco data-posicao="repouso">
+      <div class="faixa">
+        <h2>{{ textos.servicos.titulo }}</h2>
+        <app-servicos />
+      </div>
+    </section>
+  </div>
+
+  <section class="secao" id="cadastro">
+    <div class="faixa">
+      <h2>{{ textos.cadastro.titulo }}</h2>
+      <app-cadastro />
+    </div>
+  </section>
 </main>
+
+<footer class="rodape">
+  <div class="faixa">
+    <p>{{ textos.rodape.linha }}</p>
+  </div>
+</footer>

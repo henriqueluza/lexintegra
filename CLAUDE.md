@@ -59,7 +59,7 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 - **Três perfis numa única claim, `role`** (`cliente` | `advogado` | `admin`), definida em `packages/shared/src/perfil.ts`. O nome é em inglês porque a claim do admin global já foi gravada assim, à mão, fora da aplicação — renomear exigiria reescrever a claim de um usuário existente.
 - **Dois guards globais na API**, não por controlador. Rota nova nasce **fechada**: esquecer `@Publico()` dá 401 na primeira chamada; esquecer de proteger daria vazamento silencioso. Só o health e o pedido de redefinição de senha são públicos.
 - **`verifyIdToken(token, true)` — `checkRevoked` ligado em toda requisição.** É a metade que faz a suspensão valer contra sessão já aberta; a outra metade é `revokeRefreshTokens` no serviço. Cada uma sozinha passa nos próprios testes de unidade e não suspende ninguém — só o teste de integração pega isso.
-- **As regras do Firestore negam tudo, e é a forma final delas** (ver `docs/arquitetura.md` 6.1). 244 asserções em `packages/regras-firestore`, mais um controle positivo sem o qual a suíte passaria verde por arnês quebrado. `apps/web` não pode importar `firebase/firestore` — regra de dependency-cruiser.
+- **As regras do Firestore negam tudo, e é a forma final delas** (ver `docs/arquitetura.md` 6.1). 264 asserções em `packages/regras-firestore`, mais um controle positivo sem o qual a suíte passaria verde por arnês quebrado. `apps/web` não pode importar `firebase/firestore` — regra de dependency-cruiser.
 - **Outbox mínimo** (`outbox/`), com o despachante separado da escrita: `OutboxService` recebe a transação de fora e não abre a sua; `DespachanteOutbox` só roda depois do commit. O documento **não guarda o link nem o e-mail** — link é credencial viva, endereço é dado pessoal em repouso.
 - **Adaptador do Resend e transporte falso** antecipados da Etapa 7 (ADR-07.1). `RESEND_API_KEY` e `EMAIL_FROM` vêm de variável de ambiente; em produção, ausência é erro de inicialização, não degradação silenciosa.
 - **`pnpm dev` sobe os emuladores junto**, porque a API recusa iniciar sem projeto configurado e sem emulador. `pnpm semear` cria um usuário de cada perfil (só emulador).
@@ -77,6 +77,20 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 - **Dados fictícios isolados** em `scripts/dados-ficticios/catalogo-produtos.ts`, fora de `apps/` e portanto sem caminho até o bundle ou a imagem. Consumidos só pelo seed do emulador e pela suíte de integração, que os valida contra `esquemaNovoProduto`. **Substituir pelo catálogo real da B&C antes de produção** — ver o LEIA-ME de lá.
 - **Integração roda com `maxWorkers: 1`**: há um emulador só, e todo arquivo o limpa no `beforeEach`. Em paralelo, um apaga o dado do outro, e o sintoma são falhas que mudam de nome a cada execução.
 - **Cobertura:** `apps/api` 92/85/93/94, `apps/web` 97/91/92/97, `packages/shared` 95/100/100/95.
+
+**Etapa 6 — área pública e pré-cadastro (branch `feat/area-publica`):**
+
+- **A home não chama a API. Ponto.** É o critério de aceite formal da etapa e a mitigação de cold start do Cloud Run (regra 10). Há três guardas: `app.routes.spec.ts` (rota pública sem resolver nem guard), um teste no `Landing` que recusa dependência de rede, e `apps/web/e2e/publico.spec.ts`, que espia toda requisição a `/api` enquanto rola a página inteira. A vitrine só busca dados depois de `liberado()` virar verdadeiro.
+- **Três defesas na fronteira pública, com escopos diferentes de propósito** (ADR-16): App Check só em rotas `@Publico()`, limite de requisições como **primeiro** guard global da cadeia, e validação de entrada pelo `ZodPipe`. `APP_CHECK_ENFORCE` é obrigatória em produção — ausente, a API recusa subir.
+- **Rate limiting é guard próprio, em memória** (`apps/api/src/limite/`). `@nestjs/throttler` declara par `@nestjs/common ^11` e o projeto está no 12. Por instância, como o ADR-02 já aceitava. O contador tem teto de chaves: sem ele, endereços forjados transformariam o mecanismo de defesa em vazamento de memória.
+- **`trust proxy` vem de `PROXIES_CONFIAVEIS`.** Com o número errado, `requisicao.ip` é o endereço do proxy e o limitador conta o mundo inteiro como um visitante só — não falha, só para de proteger. **O valor real ainda precisa ser conferido em produção.**
+- **A liberação da vitrine é token opaco com hash no servidor.** O navegador lembra em `localStorage` com o mesmo prazo de sete dias; a autorização mesmo é o `PreCadastroGuard`, a cada requisição.
+- **`pre-cadastros` guarda três campos e mais nada** — sem IP, sem user-agent, sem referenciador. Há teste que lista os campos gravados, para acrescentar um ser decisão e não acidente. ID determinístico do e-mail (regra 4).
+- **O interceptor de token pula as quatro rotas públicas.** Injetar `SessaoService` dispara o `import()` do SDK do Firebase: sem o recorte, enviar o pré-cadastro baixaria meio megabyte no momento da conversão.
+- **Todo o texto da home em `paginas/landing/textos.ts`**, um arquivo só, `{{TODO-TEXTO-INSTITUCIONAL}}`. O aviso de privacidade jurídico sai literal como `{{TODO-TEXTO-PRIVACIDADE-JURIDICO}}`, e há teste que cai quando ele for substituído.
+- **Hero com fotografia de martelo em três posições discretas**, por decisão do Marcos (3D descartado). Sem biblioteca de animação; `IntersectionObserver` e `transform`. **A foto não existe ainda** e a ordem dos lados depende de confirmação por escrito.
+- **`app.integration-spec.ts` sobe a aplicação inteira sobre HTTP.** É o único lugar que prova que os três guards globais estão na cadeia, na ordem certa, e que o prefixo `/api` está no lugar.
+- **Cobertura:** `apps/api` 93/86/95/95, `apps/web` 97/92/93/98.
 
 **Próximo trabalho recomendado:** revisar e abrir o PR da Etapa 5, depois seguir para a Etapa 6. O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde. O catálogo real da B&C continua pendente do lado da CONTRATANTE — sem ele a Etapa 5 tem o código pronto mas não o entregável formal ("cadastrado de verdade, não com dados fictícios").
 
@@ -96,10 +110,16 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 apps/web/          Angular 22, pré-renderização estática das rotas públicas
   src/styles/      tokens em três camadas + base global; ÚNICO lugar com valor literal
   src/app/ui/      componentes base do sistema de design
+  src/app/publico/ estado do pre-cadastro no navegador (localStorage)
+  src/app/paginas/landing/ home publica; TODO o texto em textos.ts
   src/app/catalogo/ catálogo navegável, removido do build de produção
   e2e/             Playwright: regressão visual, axe e aninhamento de direção
   e2e/referencia/  imagens de referência da regressão visual
 apps/api/          NestJS 12 (ESM-only), prefixo global /api
+  src/app-check/    guard da fronteira publica; APP_CHECK_ENFORCE obrigatoria em producao
+  src/limite/       janela fixa em memoria, primeiro guard da cadeia
+  src/pre-cadastros/ leads: tres campos, ID deterministico, token de liberacao
+  src/vitrine/      catalogo publico atras do PreCadastroGuard
   src/autenticacao/ guards globais, decoradores e redefinição de senha
   src/advogados/    provisionamento e suspensão (só admin)
   src/produtos/     catálogo: CRUD administrativo, sem exclusão
@@ -226,7 +246,7 @@ Estas vêm de decisões registradas nos ADRs. Violá-las é bug, não preferênc
 
 17. **Custom claim só é escrita em um lugar.** `AdvogadosService.criar` escreve `role: advogado`, e nada mais na aplicação escreve claim nenhuma. `admin` nunca é escrito por código: o administrador global é provisionado fora da aplicação (item 2.4.2), por script manual em `scripts/manual-only/`. Suspensão **não** mexe na claim — quem foi suspenso continua sendo advogado, o que muda é o acesso.
 
-18. **Rota nova na API nasce fechada.** Os dois guards são globais; abrir exige `@Publico()` explícito, e a superfície administrativa declara `@Perfis('admin')` na classe do controlador, não em cada método. Hoje há exatamente duas rotas públicas, e há teste que as lista nominalmente.
+18. **Rota nova na API nasce fechada.** Os guards são globais; abrir exige `@Publico()` explícito, e a superfície administrativa declara `@Perfis('admin')` na classe do controlador, não em cada método. Hoje há exatamente **três** rotas públicas — health, redefinição de senha e pré-cadastro — e há teste que as lista nominalmente. A vitrine é `@Publico()` no sentido de "sem identidade" e mesmo assim exige o token de pré-cadastro, por um guard de controlador.
 
 19. **A API é acessada via `/api/**` no mesmo domínio do frontend, não por subdomínio.** Rewrite do Firebase Hosting para o Cloud Run (ver ADR-15). Não criar mapeamento de domínio próprio (`api.lexintegra.com.br`) sem antes verificar se a região do serviço já suporta essa funcionalidade do Cloud Run — na região `southamerica-east1`, não suporta.
 

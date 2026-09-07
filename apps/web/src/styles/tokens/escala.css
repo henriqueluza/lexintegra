@@ -69,6 +69,12 @@
    */
   --duracao-rapida: 120ms;
   --duracao-normal: 200ms;
+  /*
+   * Deslocamento longo, nao mudanca de estado de controle. Existe para o martelo
+   * da home, que atravessa a area de conteudo: na duracao normal a travessia vira
+   * um salto, e o movimento deixa de ser legivel como movimento.
+   */
+  --duracao-lenta: 520ms;
 
   /* Camadas. Faixa estreita e nomeada: `z-index: 9999` avulso e bug futuro. */
   --camada-base: 0;

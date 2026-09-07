@@ -18,7 +18,12 @@ import {
 } from './firebase';
 import { rotaInicialDe } from './guardas';
 import { traduzirFalha } from './sessao.service';
-import { anexarToken, ehChamadaDaApi } from './token.interceptor';
+import {
+  anexarToken,
+  ehCaminhoPublico,
+  ehChamadaDaApi,
+} from './token.interceptor';
+import { AppCheckService } from './app-check';
 import { SessaoService } from './sessao.service';
 
 describe('ehDesenvolvimentoLocal', () => {
@@ -263,18 +268,94 @@ describe('anexarToken', () => {
    * tela de recuperacao de senha, que e publica, chama a API.
    */
   it('segue sem cabecalho quando nao ha sessao', async () => {
-    const enviada = await executar('/api/auth/redefinicao-senha', null);
+    const enviada = await executar('/api/admin/advogados', null);
     expect(enviada.headers.get('Authorization')).toBeNull();
+  });
+
+  /**
+   * ESTE E O TESTE QUE PROTEGE A PAGINA DE CAPTACAO.
+   *
+   * `inject(SessaoService)` dispara o `import()` dinamico do SDK do Firebase.
+   * Sem o recorte de caminhos publicos, enviar o formulario de pre-cadastro
+   * baixaria meio megabyte de SDK de autenticacao no exato momento da conversao —
+   * na pagina que a regra inviolavel 10 existe para manter leve. O duble estoura
+   * se for consultado, porque "nao anexou o cabecalho" passaria tambem no caso
+   * em que o SDK foi carregado e devolveu `null`.
+   */
+  it.each([
+    '/api/pre-cadastros',
+    '/api/vitrine',
+    '/api/auth/redefinicao-senha',
+    '/api/health',
+  ])('nao toca na sessao ao chamar %s', async (url) => {
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: SessaoService,
+          useValue: {
+            token: () => {
+              throw new Error('A sessao nao devia ser consultada aqui.');
+            },
+          },
+        },
+      ],
+    });
+
+    const enviada = (await firstValueFrom(
+      TestBed.runInInjectionContext(() =>
+        anexarToken(new HttpRequest('GET', url), (r) => of(r as never)),
+      ),
+    )) as unknown as HttpRequest<unknown>;
+
+    expect(enviada.headers.get('Authorization')).toBeNull();
+  });
+});
+
+describe('ehCaminhoPublico', () => {
+  it.each([
+    '/api/health',
+    '/api/vitrine',
+    '/api/pre-cadastros',
+    '/api/auth/redefinicao-senha',
+  ])('reconhece %s', (url) => {
+    expect(ehCaminhoPublico(url)).toBe(true);
+  });
+
+  it.each(['/api/admin/produtos', '/api/admin/pre-cadastros', '/api/auth/eu'])(
+    'nao reconhece %s',
+    (url) => {
+      expect(ehCaminhoPublico(url)).toBe(false);
+    },
+  );
+
+  /**
+   * Prefixo nao basta. `/api/admin/pre-cadastros` e a consulta administrativa de
+   * leads: se ela casasse com a rota publica de mesmo nome, a listagem inteira
+   * passaria a viajar sem `Authorization` e o servidor devolveria 401 — ou, num
+   * dia ruim, alguem "consertaria" abrindo a rota.
+   */
+  it('nao casa por prefixo', () => {
+    expect(ehCaminhoPublico('/api/vitrine-secreta')).toBe(false);
+    expect(ehCaminhoPublico('/api/pre-cadastros/todos')).toBe(false);
   });
 });
 
 describe('ApiService', () => {
   let api: ApiService;
   let http: HttpTestingController;
+  let tokenAppCheck: string | null = null;
 
   beforeEach(() => {
+    tokenAppCheck = null;
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: AppCheckService,
+          useValue: { token: () => Promise.resolve(tokenAppCheck) },
+        },
+      ],
     });
     api = TestBed.inject(ApiService);
     http = TestBed.inject(HttpTestingController);
@@ -346,5 +427,79 @@ describe('ApiService', () => {
     // Os `expectOne` acima ja falhariam com URL absoluta; esta afirmacao fixa a
     // intencao para quem for acrescentar um metodo novo.
     expect(ehChamadaDaApi('/api/admin/advogados')).toBe(true);
+  });
+
+  describe('superficie publica', () => {
+    /*
+     * As duas chamadas publicas esperam o token de App Check antes de disparar,
+     * entao a requisicao so existe depois da fila de microtarefas virar.
+     */
+    const proximoTique = (): Promise<void> =>
+      new Promise((resolver) => setTimeout(resolver, 0));
+
+    it('envia o pre-cadastro com os tres campos', async () => {
+      const dados = {
+        nome: 'Ana Ribeiro Salgado',
+        email: 'ana@empresa.com.br',
+        telefone: '61990000000',
+      };
+      const promessa = api.criarPreCadastro(dados);
+      await proximoTique();
+
+      const chamada = http.expectOne('/api/pre-cadastros');
+      expect(chamada.request.method).toBe('POST');
+      expect(chamada.request.body).toEqual(dados);
+      chamada.flush({ token: 'id.segredo', expiraEm: '2030-01-01' });
+      await promessa;
+    });
+
+    /**
+     * O token do pre-cadastro vai em CABECALHO, nunca em query string: e
+     * credencial viva (regra inviolavel 9), e query string entra em log de
+     * servidor, historico de navegador e referenciador.
+     */
+    it('manda o token da vitrine em cabecalho, nao na URL', async () => {
+      const promessa = api.listarVitrine('id.segredo');
+      await proximoTique();
+
+      const chamada = http.expectOne('/api/vitrine');
+      expect(chamada.request.headers.get('X-Pre-Cadastro')).toBe('id.segredo');
+      expect(chamada.request.urlWithParams).toBe('/api/vitrine');
+      chamada.flush([]);
+      await promessa;
+    });
+
+    it('anexa o App Check quando ha token', async () => {
+      tokenAppCheck = 'token-de-app-check';
+      const promessa = api.listarVitrine('id.segredo');
+      await proximoTique();
+
+      const chamada = http.expectOne('/api/vitrine');
+      expect(chamada.request.headers.get('X-Firebase-AppCheck')).toBe(
+        'token-de-app-check',
+      );
+      chamada.flush([]);
+      await promessa;
+    });
+
+    /**
+     * Sem App Check configurado a requisicao SEGUE, sem o cabecalho. Quem decide
+     * se ela passa e o servidor, por `APP_CHECK_ENFORCE` — bloquear aqui daria a
+     * um cliente adulterado a chance de se declarar dispensado, e travaria o site
+     * inteiro enquanto as chaves nao existirem.
+     */
+    it('segue sem o cabecalho quando o App Check nao esta configurado', async () => {
+      const promessa = api.criarPreCadastro({
+        nome: 'Ana Ribeiro Salgado',
+        email: 'ana@empresa.com.br',
+        telefone: '61990000000',
+      });
+      await proximoTique();
+
+      const chamada = http.expectOne('/api/pre-cadastros');
+      expect(chamada.request.headers.has('X-Firebase-AppCheck')).toBe(false);
+      chamada.flush({ token: 'id.segredo', expiraEm: '2030-01-01' });
+      await promessa;
+    });
   });
 });

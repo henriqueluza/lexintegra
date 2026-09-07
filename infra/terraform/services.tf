@@ -16,6 +16,15 @@ locals {
     # Etapa 4: o pipeline passou a publicar `firestore.rules`, e a publicacao vai
     # pela API de Rules, nao pela do Firestore.
     "firebaserules.googleapis.com",
+    # Etapa 6: o App Check defende a fronteira publica (arquitetura, secao 6).
+    #
+    # A API precisa estar habilitada para o provedor ser CRIADO no console — que e
+    # passo manual, porque envolve chave do reCAPTCHA. A verificacao do token pelo
+    # Admin SDK le a JWKS publica do projeto e nao exige papel de IAM nenhum na
+    # conta de servico de runtime; por isso nao ha grant correspondente em
+    # `iam.tf`. Se a primeira execucao em producao acusar falta de permissao, e
+    # aqui e la que a correcao entra.
+    "firebaseappcheck.googleapis.com",
     "firestore.googleapis.com",
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",

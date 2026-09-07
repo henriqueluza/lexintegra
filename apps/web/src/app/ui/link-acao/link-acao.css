@@ -1,0 +1,86 @@
+/*
+ * Espelha `botao.css` variante a variante. As duas aparecem lado a lado no hero,
+ * e qualquer diferenca de preenchimento ou peso entre elas seria lida como
+ * defeito de alinhamento.
+ */
+:host {
+  display: inline-flex;
+}
+
+:host > .link-acao {
+  flex: 1;
+}
+
+.link-acao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  font-family: var(--fonte-interface);
+  font-size: var(--t-menor);
+  font-weight: var(--botao-peso);
+  line-height: var(--altura-densa);
+  padding: var(--botao-preenchimento);
+  border: var(--borda-fina) solid transparent;
+  border-radius: var(--raio);
+  background: transparent;
+  color: var(--texto);
+  text-decoration: none;
+  transition:
+    background-color var(--duracao-rapida) ease,
+    border-color var(--duracao-rapida) ease,
+    color var(--duracao-rapida) ease;
+}
+
+.link-acao--p {
+  padding: var(--botao-preenchimento-p);
+  font-size: var(--t-mini);
+}
+
+.link-acao--primario {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: var(--texto-sobre-acento);
+  font-weight: var(--botao-peso-primario);
+}
+
+.link-acao--primario:hover {
+  background: var(--acento-forte);
+  border-color: var(--acento-forte);
+}
+
+.link-acao--secundario {
+  background: var(--botao-secundario-fundo);
+  /* `--limite-controle`, nao o divisor decorativo: a WCAG 1.4.11 pede 3:1. */
+  border-color: var(--limite-controle);
+  color: var(--botao-secundario-cor);
+}
+
+.link-acao--secundario:hover {
+  background: var(--acento-fundo);
+  color: var(--texto);
+}
+
+/* Sem borda, pelo mesmo motivo documentado em `botao.css`. */
+.link-acao--fantasma {
+  background: transparent;
+  border-color: transparent;
+  color: var(--texto-2);
+}
+
+.link-acao--fantasma:hover {
+  background: var(--acento-fundo);
+  color: var(--texto);
+}
+
+.link-acao--texto {
+  background: transparent;
+  border-color: transparent;
+  color: var(--acento);
+  padding-left: 0;
+  padding-right: var(--s2);
+}
+
+.link-acao--texto:hover {
+  text-decoration: underline;
+}

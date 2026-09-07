@@ -8,10 +8,12 @@
  * numero deixar de dizer alguma coisa.
  *
  * O QUE ELE IMITA E O QUE NAO IMITA. Imita: caminho de documento, subcolecao,
- * consulta com `where` e `orderBy`, transacao que le antes de escrever, `create`
- * que estoura em documento existente, e a ORDEM das escritas. Nao imita: carimbo
- * de servidor, reexecucao sob contencao, indices, regras. Essas so aparecem
- * contra o emulador, e e la que os `*.integration-spec.ts` as verificam.
+ * consulta com `where`, `orderBy` (nas duas direcoes) e `limit`, transacao que le
+ * antes de escrever, `create` que estoura em documento existente, e a ORDEM das
+ * escritas. Nao imita: carimbo de servidor, reexecucao sob contencao, indices,
+ * regras, nem os tipos do Firestore — um `Timestamp` semeado aqui e o que o teste
+ * puser. Essas so aparecem contra o emulador, e e la que os
+ * `*.integration-spec.ts` as verificam.
  *
  * `ordemDeEscrita` e o ponto: quase toda decisao destes servicos e sobre ORDEM —
  * ler antes de escrever, criar a trilha na mesma transacao do fato, nao emitir
@@ -80,6 +82,8 @@ export class ConsultaFalsa {
     protected readonly colecao: string,
     private readonly filtros: readonly Filtro[] = [],
     private readonly ordem: string | null = null,
+    private readonly descendente = false,
+    private readonly teto: number | null = null,
   ) {}
 
   where(campo: string, _operador: string, valor: unknown): ConsultaFalsa {
@@ -88,11 +92,31 @@ export class ConsultaFalsa {
       this.colecao,
       [...this.filtros, { campo, valor }],
       this.ordem,
+      this.descendente,
+      this.teto,
     );
   }
 
-  orderBy(campo: string): ConsultaFalsa {
-    return new ConsultaFalsa(this.banco, this.colecao, this.filtros, campo);
+  orderBy(campo: string, direcao: 'asc' | 'desc' = 'asc'): ConsultaFalsa {
+    return new ConsultaFalsa(
+      this.banco,
+      this.colecao,
+      this.filtros,
+      campo,
+      direcao === 'desc',
+      this.teto,
+    );
+  }
+
+  limit(quantidade: number): ConsultaFalsa {
+    return new ConsultaFalsa(
+      this.banco,
+      this.colecao,
+      this.filtros,
+      this.ordem,
+      this.descendente,
+      quantidade,
+    );
   }
 
   get(): Promise<{ docs: DocumentoFalso[] }> {
@@ -111,9 +135,15 @@ export class ConsultaFalsa {
 
     const ordem = this.ordem;
     if (ordem !== null) {
-      docs.sort((a, b) => comparar(a.data()?.[ordem], b.data()?.[ordem]));
+      const sinal = this.descendente ? -1 : 1;
+      docs.sort(
+        (a, b) => sinal * comparar(a.data()?.[ordem], b.data()?.[ordem]),
+      );
     }
-    return Promise.resolve({ docs });
+
+    return Promise.resolve({
+      docs: this.teto === null ? docs : docs.slice(0, this.teto),
+    });
   }
 }
 

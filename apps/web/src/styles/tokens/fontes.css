@@ -25,3 +25,33 @@
 @import '@fontsource/ibm-plex-sans/latin-400.css';
 @import '@fontsource/ibm-plex-sans/latin-500.css';
 @import '@fontsource/ibm-plex-sans/latin-600.css';
+
+/*
+ * Fallback com METRICA CASADA para a fonte de display.
+ *
+ * O PROBLEMA QUE ELE RESOLVE, medido: Source Serif 4 e cerca de 7% mais larga que
+ * Georgia no mesmo corpo. Enquanto o arquivo nao chega, o titulo do hero e
+ * desenhado em Georgia e cabe em menos linhas; quando a fonte troca, o titulo
+ * ganha uma linha e empurra a pagina inteira para baixo. O Lighthouse mediu isso
+ * como CLS de 0,381 — quase quatro vezes o limite de 0,1 — e apontou justamente
+ * `div.palco` e o paragrafo do hero como o que se desloca.
+ *
+ * `size-adjust: 107%` faz o Georgia ocupar a mesma largura, entao a quebra de
+ * linha e a mesma antes e depois da troca. O valor saiu de medicao no navegador,
+ * nao de estimativa: largura de uma frase real em corpo 200px nas duas familias.
+ *
+ * SEM `ascent-override`/`descent-override` de proposito: a altura de linha vem de
+ * `--altura-apertada`, que e um numero sem unidade, entao ela ja nao depende da
+ * metrica vertical da fonte. Sobrescrever o que ja e estavel so acrescentaria
+ * numero para alguem manter errado depois.
+ *
+ * `local('Georgia')` sem arquivo: em sistema que nao tem Georgia esta declaracao
+ * simplesmente nao carrega e a pilha cai para a proxima familia, como caia antes.
+ * O ganho e para quem tem, que e a maioria dos visitantes.
+ */
+@font-face {
+  font-family: 'Source Serif 4 fallback';
+  src: local('Georgia');
+  size-adjust: 107%;
+  font-display: swap;
+}

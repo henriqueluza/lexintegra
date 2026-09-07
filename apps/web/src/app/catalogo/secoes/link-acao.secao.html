@@ -1,0 +1,48 @@
+<app-pagina
+  titulo="Link de ação"
+  descricao="Mesma aparência do botão, mas é uma âncora de verdade — abre em nova aba, tem menu de contexto e é anunciado como link. Não tem estado desabilitado: âncora desabilitada não existe em HTML, e ação que pode ficar indisponível é botão."
+>
+  <ng-template #estados>
+    <app-amostra rotulo="Primário">
+      <app-link-acao destino="#cadastro" variante="primario">
+        Criar acesso
+      </app-link-acao>
+    </app-amostra>
+    <app-amostra rotulo="Secundário">
+      <app-link-acao destino="#servicos" variante="secundario">
+        Ver serviços e preços
+      </app-link-acao>
+    </app-amostra>
+    <app-amostra rotulo="Fantasma">
+      <app-link-acao destino="#como" variante="fantasma">
+        Entender o processo
+      </app-link-acao>
+    </app-amostra>
+    <app-amostra rotulo="Texto">
+      <app-link-acao destino="#privacidade" variante="texto">
+        Aviso de privacidade
+      </app-link-acao>
+    </app-amostra>
+    <app-amostra rotulo="Com ícone">
+      <app-link-acao
+        destino="#servicos"
+        variante="secundario"
+        icone="documento"
+      >
+        Ver o que entra
+      </app-link-acao>
+    </app-amostra>
+    <app-amostra rotulo="Pequeno">
+      <app-link-acao destino="#cadastro" variante="primario" tamanho="p">
+        Criar acesso
+      </app-link-acao>
+    </app-amostra>
+  </ng-template>
+
+  <app-vitrine direcao="catedra">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+  <app-vitrine direcao="pauta">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+</app-pagina>

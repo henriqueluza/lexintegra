@@ -20,8 +20,34 @@ export function ehChamadaDaApi(url: string): boolean {
   return url === '/api' || url.startsWith('/api/');
 }
 
+/**
+ * As rotas da API que NUNCA levam credencial de usuario.
+ *
+ * A lista existe por causa do custo, nao da correcao: `sessao.token()` injeta o
+ * `SessaoService`, e injeta-lo dispara o `import()` dinamico do SDK do Firebase.
+ * Sem este recorte, enviar o formulario de pre-cadastro baixaria meio megabyte de
+ * SDK de autenticacao no exato momento da conversao — na pagina que a regra
+ * inviolavel 10 existe para manter leve.
+ *
+ * Sao as mesmas rotas que a API declara `@Publico()`, e nenhuma delas olha para
+ * `Authorization`.
+ */
+const CAMINHOS_PUBLICOS = [
+  '/api/health',
+  '/api/vitrine',
+  '/api/pre-cadastros',
+  '/api/auth/redefinicao-senha',
+] as const;
+
+export function ehCaminhoPublico(url: string): boolean {
+  return CAMINHOS_PUBLICOS.some(
+    (caminho) => url === caminho || url.startsWith(`${caminho}?`),
+  );
+}
+
 export const anexarToken: HttpInterceptorFn = (requisicao, proxima) => {
   if (!ehChamadaDaApi(requisicao.url)) return proxima(requisicao);
+  if (ehCaminhoPublico(requisicao.url)) return proxima(requisicao);
 
   const sessao = inject(SessaoService);
 

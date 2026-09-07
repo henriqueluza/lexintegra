@@ -1,21 +1,18 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module.js';
+import { configurar } from './configurar.js';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     // Log estruturado em JSON vai para o Cloud Logging (arquitetura, secao 9).
     // O formatador entra na Etapa 12; aqui fica o logger padrao.
     logger: ['error', 'warn', 'log'],
   });
 
-  /**
-   * ADR-15: o rewrite do Firebase Hosting encaminha o caminho COMPLETO. Uma
-   * requisicao a lexintegra.com.br/api/health chega neste processo como
-   * /api/health, nao como /health. Sem este prefixo global, todo o roteamento
-   * quebra em producao enquanto continua funcionando em localhost.
-   */
-  app.setGlobalPrefix('api');
+  // Prefixo global e `trust proxy`. Ver `configurar.ts`.
+  configurar(app);
 
   /**
    * CORS NAO e configurado, de proposito. Frontend e backend compartilham a mesma
@@ -32,4 +29,3 @@ async function bootstrap(): Promise<void> {
 }
 
 void bootstrap();
-// teste do critério de aceite da Etapa 2

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Uma rota so, porque uma rota so e publica. Quando a Etapa 8 acrescentar paginas
+  de produto, elas entram aqui — e as rotas com parametro vao precisar de
+  `getPrerenderParams` em `app.routes.server.ts` antes, senao entrariam no sitemap
+  sem existir como HTML servido.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://lexintegra.com.br/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

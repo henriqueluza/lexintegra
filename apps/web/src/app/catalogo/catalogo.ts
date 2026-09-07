@@ -9,6 +9,7 @@ export const PECAS: readonly {
   { rota: 'tokens', nome: 'Tokens' },
   { rota: 'icone', nome: 'Ícone' },
   { rota: 'botao', nome: 'Botão' },
+  { rota: 'link-acao', nome: 'Link de ação' },
   { rota: 'campo', nome: 'Campo' },
   { rota: 'selecao', nome: 'Seleção' },
   { rota: 'cartao', nome: 'Cartão' },
@@ -18,6 +19,7 @@ export const PECAS: readonly {
   { rota: 'estado-vazio', nome: 'Estado vazio' },
   { rota: 'carregando', nome: 'Carregamento' },
   { rota: 'mensagem-erro', nome: 'Mensagem de erro' },
+  { rota: 'aviso-privacidade', nome: 'Aviso de privacidade' },
 ];
 
 /**

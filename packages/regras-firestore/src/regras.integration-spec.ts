@@ -51,6 +51,14 @@ const PROJETO = 'demo-lexintegra';
  */
 const CAMINHOS = [
   ['produtos', 'produto-1'],
+  /*
+   * A colecao da Etapa 6. Ela guarda nome, e-mail e telefone de quem ainda nao e
+   * cliente — dado pessoal coletado antes de existir relacao contratual
+   * (arquitetura, secao 13). E a colecao mais sensivel a leitura direta do
+   * navegador que o sistema tem: uma base de leads de escritorio de advocacia e a
+   * lista de quem procurou um advogado.
+   */
+  ['pre-cadastros', 'hash-do-email'],
   ['clientes', 'cliente-1'],
   ['clientes/cliente-1/anamnese', 'anamnese-1'],
   ['pagamentos', 'pagamento-1'],

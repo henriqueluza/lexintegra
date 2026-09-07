@@ -1,0 +1,29 @@
+<app-pagina
+  titulo="Aviso de privacidade"
+  descricao="Duas camadas: o resumo em linguagem simples fica sempre visível, porque é o que a pessoa lê antes de digitar; o texto jurídico completo fica num detalhe recolhido, disponível sem empurrar o formulário para fora da tela. O texto jurídico é projetado — ele é aprovado fora do código."
+>
+  <ng-template #estados>
+    <app-amostra rotulo="Na coleta" [larga]="true">
+      <app-aviso-privacidade
+        resumo="Usamos nome, e-mail e telefone só para liberar seu acesso e falar sobre o seu pedido. Você pode pedir a exclusão a qualquer momento."
+      >
+        {{ '{{TODO-TEXTO-PRIVACIDADE-JURIDICO}}' }}
+      </app-aviso-privacidade>
+    </app-amostra>
+    <app-amostra rotulo="Com outro rótulo" [larga]="true">
+      <app-aviso-privacidade
+        resumo="Os arquivos enviados ficam disponíveis por 30 dias."
+        rotulo="Como tratamos seus arquivos"
+      >
+        {{ '{{TODO-TEXTO-PRIVACIDADE-JURIDICO}}' }}
+      </app-aviso-privacidade>
+    </app-amostra>
+  </ng-template>
+
+  <app-vitrine direcao="catedra">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+  <app-vitrine direcao="pauta">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+</app-pagina>
