@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { esperarHidratacao } from './hidratacao';
 
 /**
  * Acessibilidade da pagina publica, nas tres larguras que os projetos do
@@ -69,9 +70,7 @@ test.describe('acessibilidade da area publica', () => {
   test('com a vitrine liberada', async ({ page }) => {
     await page.goto('/');
 
-    /* Prova que a aplicacao hidratou: ver `esperarHidratacao` em publico.spec.ts. */
-    await page.getByRole('button', { name: 'Criar acesso' }).click();
-    await expect(page.getByText('Campo obrigatório.').first()).toBeVisible();
+    await esperarHidratacao(page);
 
     await page.getByLabel('Nome completo').fill('Ana Ribeiro Salgado');
     await page.getByLabel('E-mail').fill('ana@empresa.com.br');

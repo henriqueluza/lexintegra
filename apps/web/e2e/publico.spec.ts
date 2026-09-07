@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { esperarHidratacao } from './hidratacao';
 
 /**
  * O CRITERIO DE ACEITE DA ETAPA 6, em forma de teste.
@@ -81,28 +82,6 @@ async function percorrerAPaginaInteira(page: Page): Promise<void> {
     }
   });
   await page.waitForTimeout(300);
-}
-
-/**
- * Espera a aplicacao estar VIVA, provando isso por interacao.
- *
- * A pagina e pre-renderizada: os campos existem no HTML servido antes de o
- * Angular hidratar, e o que a pessoa digitar nessa janela e perdido — o
- * formulario reativo escreve o modelo vazio por cima quando inicializa.
- *
- * Duas tentativas anteriores nao resolveram, e vale registrar por que. Preencher
- * e conferir o valor falha porque a conferencia acontece contra o DOM
- * pre-hidratacao e o apagamento vem depois. Esperar por um marcador de hidratacao
- * tambem nao serve: o build de desenvolvimento nao emite `ngh`, entao nao ha
- * marcador estavel para depender.
- *
- * O que funciona e pedir a aplicacao para FAZER alguma coisa que so o codigo
- * hidratado faz — enviar o formulario vazio e ver a validacao responder. Depois
- * disso o Angular esta no controle e o preenchimento fica.
- */
-async function esperarHidratacao(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Criar acesso' }).click();
-  await expect(page.getByText('Campo obrigatório.').first()).toBeVisible();
 }
 
 async function preencherEEnviar(page: Page): Promise<void> {
