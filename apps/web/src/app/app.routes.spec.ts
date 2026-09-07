@@ -24,12 +24,16 @@ describe('rotas', () => {
     expect(routes[routes.length - 1].path).toBe('**');
   });
 
-  it.each(['entrar', 'recuperar-senha', 'definir-senha', 'painel', 'admin'])(
-    'registra a rota %s',
-    (caminho) => {
-      expect(routes.some((r) => r.path === caminho)).toBe(true);
-    },
-  );
+  it.each([
+    'entrar',
+    'recuperar-senha',
+    'definir-senha',
+    'painel',
+    'advogado',
+    'admin',
+  ])('registra a rota %s', (caminho) => {
+    expect(routes.some((r) => r.path === caminho)).toBe(true);
+  });
 
   /**
    * Regra inviolavel 10: rota publica nao chama a API antes do pre-cadastro. E a
@@ -108,6 +112,50 @@ describe('rotas', () => {
         Promise.resolve(rota.loadComponent()),
       ).resolves.toBeDefined();
     }
+  });
+
+  /**
+   * A SEGUNDA METADE DO CRITERIO DE ACEITE DA ETAPA 9.
+   *
+   * "Um cliente com dois pedidos nao encontra em nenhum lugar da interface uma
+   * tela de agendamento desconectada de um cartao especifico."
+   *
+   * A razao e o ADR-12 e a arquitetura 5.4: cada pedido tem saldo de reunioes,
+   * janela de validade e intervalo minimo PROPRIOS. Uma tela de agendamento solta
+   * nao teria como saber qual saldo debitar — e o defeito nao apareceria como
+   * erro, apareceria como reuniao descontada do pedido errado.
+   *
+   * O teste e sobre ROTA porque e ai que a tela solta nasceria: alguem
+   * acrescenta `/painel/reunioes` achando que esta organizando, e a ambiguidade
+   * entra junto. A acao de marcar reuniao vive DENTRO de `app-cartao-pedido`, e
+   * a Etapa 10 a implementa la.
+   */
+  it('nao existe rota de agendamento fora do cartao do pedido', () => {
+    const caminhos = [
+      ...routes.map((r) => r.path ?? ''),
+      ...routes.flatMap((r) => (r.children ?? []).map((f) => f.path ?? '')),
+    ];
+
+    const suspeitas = caminhos.filter((caminho) =>
+      /reuni|agend|calendario|marcar/i.test(caminho),
+    );
+
+    expect(suspeitas).toEqual([]);
+  });
+
+  /**
+   * As duas areas autenticadas sao arvores SEPARADAS, com guard de perfil
+   * proprio. Uma rota `/painel` que aceitasse advogado o levaria aos cartoes de
+   * pedido — uma tela que a API responde vazia para ele, porque
+   * `ConsultaPedidosService.listarDoCliente` consulta por `clienteId`.
+   */
+  it('a area do cliente e a do advogado tem guards distintos', () => {
+    const cliente = routes.find((r) => r.path === 'painel');
+    const advogado = routes.find((r) => r.path === 'advogado');
+
+    expect(cliente?.canMatch).toHaveLength(2);
+    expect(advogado?.canMatch).toHaveLength(2);
+    expect(cliente?.canMatch?.[1]).not.toBe(advogado?.canMatch?.[1]);
   });
 
   it('define titulo em todas as rotas, para aba e leitor de tela', () => {

@@ -64,18 +64,59 @@ export const routes: Routes = [
    * esta no navegador de qualquer jeito — e sim nao baixar o codigo do painel
    * administrativo para quem nunca vai abri-lo.
    */
+  /*
+   * AREA DO CLIENTE e AREA DO ADVOGADO sao arvores SEPARADAS desde a Etapa 9.
+   *
+   * Ate a Etapa 6 `/painel` servia aos dois perfis com uma tela de espera. As
+   * areas de verdade nao se parecem: uma tem cartoes de pedido, a outra tem
+   * demandas distribuidas e grade de disponibilidade. Um `/painel` compartilhado
+   * teria que ramificar por perfil dentro do componente — e ramificacao por
+   * perfil dentro de tela e como uma delas acaba mostrando o que a outra deveria.
+   */
   {
     path: 'painel',
-    canMatch: [exigirAutenticacao, exigirPerfil('cliente', 'advogado')],
+    canMatch: [exigirAutenticacao, exigirPerfil('cliente')],
     loadComponent: () =>
       import('./shell/shell-autenticada').then((m) => m.ShellAutenticada),
-    title: 'Painel — LexIntegra',
+    title: 'Meus pedidos — LexIntegra',
     children: [
       {
         path: '',
         loadComponent: () =>
-          import('./paginas/painel/painel').then((m) => m.Painel),
-        title: 'Painel — LexIntegra',
+          import('./paginas/cliente-pedidos/cliente-pedidos').then(
+            (m) => m.ClientePedidos,
+          ),
+        title: 'Meus pedidos — LexIntegra',
+      },
+    ],
+  },
+  {
+    path: 'advogado',
+    canMatch: [exigirAutenticacao, exigirPerfil('advogado')],
+    loadComponent: () =>
+      import('./shell/shell-autenticada').then((m) => m.ShellAutenticada),
+    title: 'Minhas demandas — LexIntegra',
+    children: [
+      {
+        path: '',
+        redirectTo: 'demandas',
+        pathMatch: 'full',
+      },
+      {
+        path: 'demandas',
+        loadComponent: () =>
+          import('./paginas/advogado-demandas/advogado-demandas').then(
+            (m) => m.AdvogadoDemandas,
+          ),
+        title: 'Minhas demandas — LexIntegra',
+      },
+      {
+        path: 'disponibilidade',
+        loadComponent: () =>
+          import('./paginas/advogado-disponibilidade/advogado-disponibilidade').then(
+            (m) => m.AdvogadoDisponibilidade,
+          ),
+        title: 'Disponibilidade — LexIntegra',
       },
     ],
   },
@@ -106,6 +147,22 @@ export const routes: Routes = [
             (m) => m.AdminProdutos,
           ),
         title: 'Produtos — LexIntegra',
+      },
+      {
+        path: 'distribuicao',
+        loadComponent: () =>
+          import('./paginas/admin-distribuicao/admin-distribuicao').then(
+            (m) => m.AdminDistribuicao,
+          ),
+        title: 'Distribuicao — LexIntegra',
+      },
+      {
+        path: 'clientes',
+        loadComponent: () =>
+          import('./paginas/admin-clientes/admin-clientes').then(
+            (m) => m.AdminClientes,
+          ),
+        title: 'Clientes — LexIntegra',
       },
     ],
   },

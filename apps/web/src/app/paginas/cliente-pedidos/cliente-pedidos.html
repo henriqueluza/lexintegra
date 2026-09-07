@@ -1,0 +1,27 @@
+<section class="meus-pedidos">
+  <h1 class="meus-pedidos__titulo">Meus pedidos</h1>
+
+  @if (carregando()) {
+  <app-carregando variante="bloco" rotulo="Carregando seus pedidos" />
+  } @else if (falha()) {
+  <app-mensagem-erro variante="bloco">
+    Nao foi possivel carregar seus pedidos. Recarregue a pagina.
+  </app-mensagem-erro>
+  } @else if (pedidos().length === 0) {
+  <app-estado-vazio
+    titulo="Nenhum pedido ainda"
+    mensagem="Quando voce contratar um produto, ele aparece aqui com o andamento de cada entregavel."
+  />
+  } @else {
+  <!--
+    Um `app-cartao-pedido` por pedido, cada um com seus proprios entregaveis,
+    seu proprio saldo e sua propria acao de reuniao. E o criterio de aceite da
+    Etapa 9 na estrutura do template.
+  -->
+  <div class="meus-pedidos__lista">
+    @for (pedido of pedidos(); track pedido.id) {
+    <app-cartao-pedido [pedido]="pedido" (recarregado)="recarregar()" />
+    }
+  </div>
+  }
+</section>

@@ -1,0 +1,84 @@
+/* Direcao B (Pauta) por heranca da shell autenticada. */
+.grade {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+.grade__titulo {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t1);
+  font-weight: var(--peso-titulo);
+  line-height: var(--altura-titulo);
+  letter-spacing: var(--letra-titulo);
+}
+
+.grade__semanas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-bottom: var(--s4);
+}
+
+/* Conteudo largo rola dentro do proprio contentor: o corpo da pagina nunca
+   rola na horizontal. */
+.grade__rolagem {
+  overflow-x: auto;
+}
+
+.grade__tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-mini);
+}
+
+.grade__legenda {
+  margin-bottom: var(--s2);
+  color: var(--texto-3);
+  font-size: var(--t-micro);
+  text-align: left;
+}
+
+.grade__tabela th {
+  padding: var(--s2);
+  color: var(--texto-3);
+  font-size: var(--t-micro);
+  font-weight: var(--peso-medio);
+  text-align: center;
+}
+
+.grade__hora {
+  color: var(--texto-3);
+  font-variant-numeric: var(--t-numeral);
+  text-align: right;
+}
+
+.grade__celula {
+  padding: var(--s1);
+}
+
+.grade__alternar {
+  display: block;
+  width: 100%;
+  min-width: var(--limite-controle);
+  min-height: var(--limite-controle);
+  background: var(--superficie-sutil);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio);
+  cursor: pointer;
+}
+
+.grade__alternar:focus-visible {
+  outline: var(--borda-media) solid var(--foco);
+  outline-offset: var(--foco-deslocamento);
+}
+
+.grade__alternar--marcada {
+  background: var(--acento);
+  border-color: var(--acento-forte);
+}
+
+.grade__salvo {
+  color: var(--estado-ok);
+  font-size: var(--t-mini);
+}

@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { AdvogadosModule } from './advogados/advogados.module.js';
 import { AppCheckModule } from './app-check/app-check.module.js';
 import { AutenticacaoModule } from './autenticacao/autenticacao.module.js';
+import { ClientesModule } from './clientes/clientes.module.js';
+import { DisponibilidadesModule } from './disponibilidades/disponibilidades.module.js';
 import { SenhaModule } from './autenticacao/senha/senha.module.js';
 import { EntregaveisModule } from './entregaveis/entregaveis.module.js';
 import { FirebaseModule } from './firebase/firebase.module.js';
@@ -30,8 +32,10 @@ import { VitrineModule } from './vitrine/vitrine.module.js';
     ProdutosModule,
     PreCadastrosModule,
     VitrineModule,
+    ClientesModule,
     PedidosModule,
     EntregaveisModule,
+    DisponibilidadesModule,
   ],
 })
 export class AppModule {}

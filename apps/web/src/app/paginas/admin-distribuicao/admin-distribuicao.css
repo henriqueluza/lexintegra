@@ -1,0 +1,54 @@
+/* Direcao B (Pauta) por heranca da shell autenticada. */
+.distribuicao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+.distribuicao__titulo {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t1);
+  font-weight: var(--peso-titulo);
+  line-height: var(--altura-titulo);
+  letter-spacing: var(--letra-titulo);
+}
+
+.distribuicao__acao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: var(--s2);
+}
+
+.distribuicao__rotulo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+
+/* O rotulo existe para leitor de tela: a coluna ja diz "Distribuir", e repetir
+   o texto em cada linha seria ruido visual. */
+.distribuicao__rotulo-texto {
+  position: absolute;
+  width: var(--borda-fina);
+  height: var(--borda-fina);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.distribuicao__select {
+  min-height: var(--limite-controle);
+  padding: var(--campo-preenchimento);
+  background: var(--campo-fundo);
+  border: var(--campo-borda-largura) solid var(--campo-borda-cor);
+  border-radius: var(--raio);
+  color: var(--texto);
+  font: inherit;
+}
+
+.distribuicao__select:focus-visible {
+  outline: var(--borda-media) solid var(--foco);
+  outline-offset: var(--foco-deslocamento);
+}

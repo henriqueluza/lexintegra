@@ -1,0 +1,86 @@
+<section class="grade">
+  <h1 class="grade__titulo">Minha disponibilidade</h1>
+
+  <app-cartao
+    titulo="Semana"
+    descricao="Marque os horarios em que voce atende. Publicar substitui a semana inteira: o que nao estiver marcado deixa de valer."
+  >
+    <!--
+      As semanas vem do SERVIDOR (ver o cabecalho do componente). Sao sempre duas
+      — a corrente e a seguinte —, e o limite existe dos dois lados: publicar no
+      passado reescreveria grade que ja produziu reuniao, e meses a frente seria
+      compromisso que ninguem lembra de ter assumido.
+    -->
+    <div class="grade__semanas" role="group" aria-label="Semana a editar">
+      @for (opcao of semanas(); track opcao) {
+      <app-botao
+        tamanho="p"
+        [variante]="opcao === semana() ? 'primario' : 'secundario'"
+        (click)="trocarSemana(opcao)"
+      >
+        {{ opcao }}
+      </app-botao>
+      }
+    </div>
+
+    @if (carregando()) {
+    <app-carregando variante="bloco" rotulo="Carregando a grade" />
+    } @else {
+    <div class="grade__rolagem">
+      <table class="grade__tabela">
+        <caption class="grade__legenda">
+          Horarios de atendimento da semana de {{ semana() }}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Hora</th>
+            @for (dia of dias; track dia; let i = $index) {
+            <th scope="col">{{ rotulo(i) }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (hora of horas; track hora) {
+          <tr>
+            <th scope="row" class="grade__hora">{{ hora }}h</th>
+            @for (dia of dias; track dia; let i = $index) {
+            <td class="grade__celula">
+              <!--
+                Botao e nao checkbox: a celula e uma acao de alternar, e o
+                `aria-pressed` comunica o estado a leitores de tela sem precisar
+                de um rotulo visivel por celula.
+              -->
+              <button
+                type="button"
+                class="grade__alternar"
+                [class.grade__alternar--marcada]="marcada(i, hora)"
+                [attr.aria-pressed]="marcada(i, hora)"
+                [attr.aria-label]="rotulo(i) + ' as ' + hora + ' horas'"
+                (click)="alternar(i, hora)"
+              ></button>
+            </td>
+            }
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    } @if (falha(); as mensagem) {
+    <app-mensagem-erro>{{ mensagem }}</app-mensagem-erro>
+    }
+
+    <div appCartaoRodape>
+      <app-botao
+        variante="primario"
+        [carregando]="salvando()"
+        (click)="publicar()"
+      >
+        Publicar semana
+      </app-botao>
+
+      @if (salvo()) {
+      <span class="grade__salvo" role="status">Grade publicada.</span>
+      }
+    </div>
+  </app-cartao>
+</section>

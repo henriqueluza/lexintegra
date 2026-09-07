@@ -66,6 +66,16 @@ const CAMINHOS = [
   ['pedidos/pedido-1/entregaveis', 'entregavel-1'],
   ['pedidos/pedido-1/entregaveis/entregavel-1/transicoes', 'transicao-1'],
   ['pedidos/pedido-1/reunioes', 'reuniao-1'],
+  /*
+   * As duas subcolecoes da Etapa 9. `observacoes` guarda texto escrito pelo
+   * cliente sobre o proprio caso juridico, e `anexos` guarda o metadado dos
+   * arquivos de apoio — nome de documento pessoal incluido. As duas ficam abaixo
+   * de `pedidos/{id}`, entao ja seriam alcancadas pelo catch-all; estao listadas
+   * porque a suite e tabular de proposito, e um caminho que existe no modelo e
+   * nao aparece aqui e um caminho que ninguem conferiu.
+   */
+  ['pedidos/pedido-1/observacoes', 'observacao-1'],
+  ['pedidos/pedido-1/anexos', 'anexo-1'],
   ['advogados', 'advogado-1'],
   ['disponibilidades', 'advogado-1_2026-09-04T14:00:00Z'],
   ['outbox', 'definir-senha_uid-1'],

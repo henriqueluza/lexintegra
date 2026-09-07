@@ -1,39 +1,29 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
   FieldValue,
-  Timestamp,
   type DocumentReference,
   type Firestore,
   type Transaction,
 } from 'firebase-admin/firestore';
-import { congelarProduto, type SnapshotProduto } from 'shared';
+import {
+  congelarProduto,
+  type EntregavelResumo,
+  type SnapshotProduto,
+} from 'shared';
 import {
   idDaTransicao,
   idDoEntregavel,
+  resumoDoEntregavel,
   SUBCOLECAO_ENTREGAVEIS,
   SUBCOLECAO_TRANSICOES,
   type DocumentoEntregavel,
   type DocumentoTransicao,
-  type EntregavelResumo,
 } from '../entregaveis/entregavel.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import { COLECAO_PRODUTOS } from '../produtos/produtos.service.js';
+import { COLECAO_PEDIDOS, type DocumentoPedido } from './pedido.js';
 
-export const COLECAO_PEDIDOS = 'pedidos';
-
-interface DocumentoPedido {
-  clienteId: string;
-  pagamentoId: string;
-  /**
-   * SO PARA AUDITORIA. Nenhum caminho de leitura resolve este id para mostrar
-   * dado ao cliente — o que a tela mostra vem de `snapshot`. O nome carrega o
-   * aviso justamente porque `produtoId` convidaria ao contrario, e a regra
-   * inviolavel 5 e sobre isso.
-   */
-  produtoOrigemId: string;
-  snapshot: SnapshotProduto;
-  criadoEm: Timestamp | FieldValue;
-}
+export { COLECAO_PEDIDOS };
 
 /** Resultado da fase de leitura. `gravar` so aceita isto, entao nao ha como
  * escrever um pedido sem ter lido o produto antes. */
@@ -128,6 +118,13 @@ export class PedidosService {
         produtoOrigemId: dados.produtoOrigemId,
         snapshot,
         criadoEm: FieldValue.serverTimestamp(),
+        /*
+         * Nasce sem advogado (Etapa 9). Os dois campos sao escritos SEMPRE, e nao
+         * omitidos ate a primeira atribuicao: a caixa de entrada do administrador
+         * filtra por `distribuido`, e campo ausente nao casa com `== false`.
+         */
+        advogadoId: null,
+        distribuido: false,
       } satisfies DocumentoPedido);
 
       snapshot.entregaveis.forEach((nome, indice) => {
@@ -203,17 +200,12 @@ export class PedidosService {
       clienteId: dados.clienteId,
       pagamentoId: dados.pagamentoId,
       snapshot: dados.snapshot,
-      entregaveis: pagina.docs.map((entregavel) => {
-        const item = entregavel.data() as DocumentoEntregavel;
-        return {
-          id: entregavel.id,
-          nome: item.nome,
-          ordem: item.ordem,
-          estado: item.estado,
-          revisoesUsadas: item.revisoesUsadas,
-          temArquivo: item.arquivoAtual !== null,
-        };
-      }),
+      entregaveis: pagina.docs.map((entregavel) =>
+        resumoDoEntregavel(
+          entregavel.id,
+          entregavel.data() as DocumentoEntregavel,
+        ),
+      ),
     };
   }
 }

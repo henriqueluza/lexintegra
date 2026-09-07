@@ -56,3 +56,117 @@ resource "google_firestore_index" "produtos_por_situacao" {
     order      = "ASCENDING"
   }
 }
+
+# ------------------------------------------------------------------------------
+# Etapa 9 — areas do cliente, do advogado e distribuicao
+# ------------------------------------------------------------------------------
+# Cinco indices, um por consulta que EXISTE. Todas seguem o mesmo formato que o
+# Firestore nao resolve com indice de campo unico: igualdade num campo, ordenacao
+# por outro.
+
+# `GET /api/pedidos` — ConsultaPedidosService.listarDoCliente monta
+# `where('clienteId','==',uid).orderBy('criadoEm','desc')`.
+resource "google_firestore_index" "pedidos_por_cliente" {
+  project    = var.project_id
+  database   = google_firestore_database.default.name
+  collection = "pedidos"
+
+  fields {
+    field_path = "clienteId"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "criadoEm"
+    order      = "DESCENDING"
+  }
+}
+
+# `GET /api/advogado/pedidos` — a mesma consulta pelo outro lado da atribuicao.
+# E o indice que faz "o advogado enxerga apenas o que lhe foi distribuido" (item
+# 2.6.1) ser uma consulta e nao uma filtragem em memoria.
+resource "google_firestore_index" "pedidos_por_advogado" {
+  project    = var.project_id
+  database   = google_firestore_database.default.name
+  collection = "pedidos"
+
+  fields {
+    field_path = "advogadoId"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "criadoEm"
+    order      = "DESCENDING"
+  }
+}
+
+# `GET /api/admin/pedidos?situacao=...` — a caixa de entrada da distribuicao.
+#
+# O campo e `distribuido` (booleano) e nao `advogadoId == null` de proposito: no
+# Firestore, igualdade contra `null` mistura o campo ausente com o campo nulo, e
+# um pedido gravado antes de o campo existir cairia do lado errado do filtro sem
+# erro nenhum. `situacao=todos` nao usa este indice — sem `where`, o
+# `orderBy('criadoEm')` sozinho e resolvido pelo indice de campo unico.
+resource "google_firestore_index" "pedidos_por_distribuicao" {
+  project    = var.project_id
+  database   = google_firestore_database.default.name
+  collection = "pedidos"
+
+  fields {
+    field_path = "distribuido"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "criadoEm"
+    order      = "DESCENDING"
+  }
+}
+
+# `GET /api/admin/clientes?produto=...` — o filtro por produto contratado do item
+# 2.5.8, sobre o array denormalizado da arquitetura 5.5.
+#
+# `ARRAY_CONTAINS` mais ordenacao por outro campo exige indice composto, como a
+# igualdade. A busca TEXTUAL nao entra aqui: o Firestore nao faz substring, e ela
+# e resolvida filtrando no servidor sobre o resultado desta consulta.
+resource "google_firestore_index" "clientes_por_produto" {
+  project    = var.project_id
+  database   = google_firestore_database.default.name
+  collection = "clientes"
+
+  fields {
+    field_path   = "produtosContratados"
+    array_config = "CONTAINS"
+  }
+
+  fields {
+    field_path = "nomeNormalizado"
+    order      = "ASCENDING"
+  }
+}
+
+# `GET /api/advogado/disponibilidade` — a grade de uma semana (item 2.6.3).
+# DUAS igualdades mais uma ordenacao: advogado e semana filtram, o inicio ordena.
+# A ordem dos blocos espelha a consulta; invertida, o indice existe e a consulta
+# continua falhando em producao pedindo outro.
+resource "google_firestore_index" "disponibilidades_por_semana" {
+  project    = var.project_id
+  database   = google_firestore_database.default.name
+  collection = "disponibilidades"
+
+  fields {
+    field_path = "advogadoId"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "semana"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "inicio"
+    order      = "ASCENDING"
+  }
+}
