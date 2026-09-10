@@ -32,8 +32,56 @@ env:
   BUCKET_SOURCEMAPS: lexintegra-sourcemaps-36bda
 
 jobs:
+  versao-playwright:
+    name: Versao do Playwright
+    runs-on: ubuntu-latest
+    outputs:
+      imagem: ${{ steps.ler.outputs.imagem }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: ler
+        run: |
+          versao=$(node -p "require('./apps/web/package.json').devDependencies['@playwright/test'].replace(/^[\^~]/,'')")
+          echo "imagem=mcr.microsoft.com/playwright:v${versao}-noble" >> "$GITHUB_OUTPUT"
+          echo "Imagem: mcr.microsoft.com/playwright:v${versao}-noble"
+
+  visual:
+    name: Acessibilidade e regressao visual
+    needs: versao-playwright
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ needs.versao-playwright.outputs.imagem }}
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Servidor de desenvolvimento, axe e regressao visual
+        run: pnpm exec playwright test
+        working-directory: apps/web
+
+      - name: Guardar as diferencas quando falhar
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-diferencas
+          path: |
+            apps/web/test-results/
+            apps/web/playwright-report/
+          retention-days: 7
+
   publicar:
     name: Build, infraestrutura e publicacao
+    needs: visual
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
