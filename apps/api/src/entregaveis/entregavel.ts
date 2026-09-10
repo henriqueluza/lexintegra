@@ -1,5 +1,9 @@
 import type { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import type { EstadoEntregavel, EventoEntregavel } from 'shared';
+import type {
+  EntregavelResumo,
+  EstadoEntregavel,
+  EventoEntregavel,
+} from 'shared';
 
 /**
  * Formas dos documentos de entregavel e de transicao, e os IDs deterministicos
@@ -78,14 +82,29 @@ export function idDaTransicao(sequencia: number): string {
   return String(sequencia).padStart(4, '0');
 }
 
-/** O que a API devolve sobre um entregavel. `temArquivo` em vez do arquivo
- * inteiro: o nome do arquivo e dado do cliente, e a tela so precisa saber se ha
- * versao esperando decisao. */
-export interface EntregavelResumo {
-  readonly id: string;
-  readonly nome: string;
-  readonly ordem: number;
-  readonly estado: EstadoEntregavel;
-  readonly revisoesUsadas: number;
-  readonly temArquivo: boolean;
+/**
+ * O documento vira o que a API devolve.
+ *
+ * `EntregavelResumo` mudou de lugar na Etapa 9: era declarado aqui e agora vem de
+ * `packages/shared`, porque a mesma forma passou a ser renderizada pela tela do
+ * cliente e pela do advogado. Uma copia no frontend divergiria no primeiro campo
+ * novo, e o sintoma seria um selo mostrando o estado errado.
+ *
+ * A CONVERSAO tambem estava em dois lugares — `PedidosService.obter` montava o
+ * objeto a mao e `EntregaveisService` tinha uma funcao `resumo` privada com o
+ * mesmo corpo. Duas copias da mesma projecao e como um campo novo aparece numa
+ * tela e some na outra.
+ */
+export function resumoDoEntregavel(
+  id: string,
+  dados: DocumentoEntregavel,
+): EntregavelResumo {
+  return {
+    id,
+    nome: dados.nome,
+    ordem: dados.ordem,
+    estado: dados.estado,
+    revisoesUsadas: dados.revisoesUsadas,
+    temArquivo: dados.arquivoAtual !== null,
+  };
 }

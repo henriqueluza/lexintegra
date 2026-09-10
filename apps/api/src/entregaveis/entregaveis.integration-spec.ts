@@ -26,6 +26,12 @@ beforeEach(async () => {
   entregaveis = new EntregaveisService(banco);
 });
 
+/**
+ * O pedido nasce SEM advogado desde a Etapa 9 — quem distribui e o administrador
+ * (item 2.5.6). Como este arquivo exercita o trabalho do advogado, `comprar`
+ * atribui logo em seguida; a recusa por falta de atribuicao tem teste proprio em
+ * `entregaveis.service.spec.ts` e em `pedidos/areas.integration-spec.ts`.
+ */
 async function comprar(revisoes: number): Promise<void> {
   const produtos = new ProdutosService(banco);
   const pedidos = new PedidosService(banco);
@@ -47,6 +53,11 @@ async function comprar(revisoes: number): Promise<void> {
       ]),
     );
   });
+
+  await banco
+    .collection('pedidos')
+    .doc('pedido-1')
+    .update({ advogadoId: ADVOGADO, distribuido: true });
 }
 
 async function ateAguardandoCliente(revisoes = 1): Promise<void> {

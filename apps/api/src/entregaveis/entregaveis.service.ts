@@ -15,18 +15,19 @@ import {
 import {
   TRANSICAO_DO_EVENTO,
   transicaoPermitida,
+  type EntregavelResumo,
   type EventoDeTransicao,
 } from 'shared';
-import { COLECAO_PEDIDOS } from '../pedidos/pedidos.service.js';
+import { COLECAO_PEDIDOS } from '../pedidos/pedido.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import {
   idDaTransicao,
+  resumoDoEntregavel,
   SUBCOLECAO_ENTREGAVEIS,
   SUBCOLECAO_TRANSICOES,
   type ArquivoEntregavel,
   type DocumentoEntregavel,
   type DocumentoTransicao,
-  type EntregavelResumo,
 } from './entregavel.js';
 
 interface Alvo {
@@ -37,6 +38,8 @@ interface Alvo {
 interface Contexto {
   readonly entregavel: DocumentoEntregavel;
   readonly clienteId: string;
+  /** `null` enquanto o administrador nao distribuiu o pedido (Etapa 9). */
+  readonly advogadoId: string | null;
   readonly revisoesPermitidas: number;
 }
 
@@ -47,6 +50,16 @@ interface Contexto {
  * aresta de cada um vem de `TRANSICAO_DO_EVENTO`, em `packages/shared`. E a
  * diferenca entre "mude para entregue" — que e a transicao manual que o ADR-11
  * proibe — e "o cliente confirmou".
+ *
+ * QUEM PODE DISPARAR O QUE (Etapa 9). Ate a Etapa 5 os eventos do advogado nao
+ * conferiam nada: `iniciar-trabalho`, `retomar-trabalho` e `registrarArquivo`
+ * eram alcancaveis por QUALQUER advogado autenticado, em QUALQUER pedido. A
+ * anotacao `@Perfis('advogado')` separa perfis, nao pessoas — e o item 2.6.1 diz
+ * que o advogado enxerga e trabalha apenas no que lhe foi distribuido. A
+ * conferencia vive aqui, dentro da transacao, e nao no controlador, porque o
+ * `advogadoId` precisa ser lido no mesmo instante em que o estado e avaliado: uma
+ * checagem antes da transacao pode ler uma atribuicao que o administrador
+ * removeu no meio.
  *
  * `entregue` tem DUAS travas, e as duas sao necessarias:
  *
@@ -105,7 +118,11 @@ export class EntregaveisService {
   ): Promise<EntregavelResumo> {
     return this.db.runTransaction(async (transacao) => {
       const referencia = this.referencia(alvo);
-      const { entregavel } = await this.ler(transacao, alvo);
+      const contexto = await this.ler(transacao, alvo);
+      const { entregavel } = contexto;
+
+      // Upload nao muda estado, mas e trabalho no pedido: vale a mesma regra.
+      this.exigirAdvogadoAtribuido(contexto, advogadoUid);
 
       if (entregavel.estado !== 'em_elaboracao') {
         throw new ConflictException(
@@ -128,7 +145,10 @@ export class EntregaveisService {
       this.log.log(
         `entregavel ${alvo.pedidoId}/${alvo.entregavelId} recebeu a versao ${arquivoAtual.versao}`,
       );
-      return resumo(alvo.entregavelId, { ...entregavel, arquivoAtual });
+      return resumoDoEntregavel(alvo.entregavelId, {
+        ...entregavel,
+        arquivoAtual,
+      });
     });
   }
 
@@ -187,7 +207,7 @@ export class EntregaveisService {
         `entregavel ${alvo.pedidoId}/${alvo.entregavelId}: ${de} -> ${para} por ${evento}`,
       );
 
-      return resumo(alvo.entregavelId, {
+      return resumoDoEntregavel(alvo.entregavelId, {
         ...entregavel,
         estado: para,
         revisoesUsadas:
@@ -210,7 +230,10 @@ export class EntregaveisService {
     contexto: Contexto,
     atorUid: string,
   ): void {
-    if (evento === 'iniciar-trabalho' || evento === 'retomar-trabalho') return;
+    if (evento === 'iniciar-trabalho' || evento === 'retomar-trabalho') {
+      this.exigirAdvogadoAtribuido(contexto, atorUid);
+      return;
+    }
 
     if (atorUid !== contexto.clienteId) {
       throw new ForbiddenException(
@@ -235,6 +258,28 @@ export class EntregaveisService {
   }
 
   /**
+   * O advogado so age no que lhe foi distribuido (itens 2.6.1 e 2.6.2).
+   *
+   * Pedido AINDA NAO DISTRIBUIDO recusa todo mundo, e nao "o primeiro que
+   * chegar": um advogado que comeca a trabalhar num pedido sem atribuicao
+   * contorna a distribuicao do item 2.5.6, que e decisao do administrador.
+   *
+   * A mensagem nao diz de quem e o pedido. Quem depura tem o log; quem esta
+   * sondando a API nao ganha o mapa de quem atende quem.
+   */
+  private exigirAdvogadoAtribuido(contexto: Contexto, atorUid: string): void {
+    if (contexto.advogadoId === null) {
+      throw new ForbiddenException(
+        'Este pedido ainda nao foi distribuido a um advogado.',
+      );
+    }
+
+    if (contexto.advogadoId !== atorUid) {
+      throw new ForbiddenException('Este pedido nao foi distribuido a voce.');
+    }
+  }
+
+  /**
    * Le entregavel e pedido, nesta ordem e sempre os dois, ANTES de qualquer
    * escrita — o Firestore recusa leitura depois de escrita na transacao. Ler o
    * pedido so quando o evento e do cliente economizaria uma leitura e criaria um
@@ -252,12 +297,21 @@ export class EntregaveisService {
 
     const dadosPedido = documentoPedido.data() as {
       clienteId: string;
+      advogadoId?: string | null;
       snapshot: { numeroRevisoesPermitidas: number };
     };
 
     return {
       entregavel: documento.data() as DocumentoEntregavel,
       clienteId: dadosPedido.clienteId,
+      /*
+       * `?? null` e a defesa contra o pedido escrito antes de o campo existir.
+       * Sem ela, `undefined !== atorUid` deixaria a conferencia passar como se o
+       * pedido estivesse atribuido a outra pessoa — a mensagem certa pelo motivo
+       * errado — e o pedido sem distribuicao nenhuma recusaria com o texto de
+       * "nao foi distribuido a voce".
+       */
+      advogadoId: dadosPedido.advogadoId ?? null,
       /*
        * O saldo vem do SNAPSHOT do pedido, nunca do produto vivo (regra
        * inviolavel 5). Um cliente que comprou com duas revisoes contratadas
@@ -274,15 +328,4 @@ export class EntregaveisService {
       .collection(SUBCOLECAO_ENTREGAVEIS)
       .doc(alvo.entregavelId);
   }
-}
-
-function resumo(id: string, dados: DocumentoEntregavel): EntregavelResumo {
-  return {
-    id,
-    nome: dados.nome,
-    ordem: dados.ordem,
-    estado: dados.estado,
-    revisoesUsadas: dados.revisoesUsadas,
-    temArquivo: dados.arquivoAtual !== null,
-  };
 }

@@ -36,22 +36,36 @@ export class ShellAutenticada {
   /**
    * Navegacao derivada do PERFIL, nao da rota atual.
    *
-   * Ate a Etapa 4 a shell nao tinha navegacao porque havia uma pagina por area.
-   * Com duas telas administrativas, o administrador so chegaria a segunda
-   * digitando a URL. Cliente e advogado continuam sem menu — a area deles ainda
-   * tem uma tela so, e um menu de um item e ruido.
+   * O cliente continua sem menu, e continua sendo decisao e nao esquecimento: a
+   * area dele tem UMA tela — os cartoes de pedido —, e tudo que se faz com um
+   * pedido acontece dentro do cartao dele, inclusive marcar reuniao. Um menu de
+   * um item so e ruido; pior, um item "Reunioes" no menu seria exatamente a tela
+   * de agendamento solta que o criterio de aceite da Etapa 9 proibe.
    *
    * ISTO NAO E CONTROLE DE ACESSO. Esconder link nao protege rota; quem protege
-   * sao os guards de `canMatch` e, de verdade, o `@Perfis('admin')` da API.
+   * sao os guards de `canMatch` e, de verdade, o `@Perfis` da API.
    */
-  protected readonly navegacao = computed(() =>
-    this.sessao.perfil() === 'admin'
-      ? [
-          { rota: '/admin/advogados', rotulo: 'Advogados' },
-          { rota: '/admin/produtos', rotulo: 'Produtos' },
-        ]
-      : [],
-  );
+  protected readonly navegacao = computed(() => {
+    const perfil = this.sessao.perfil();
+
+    if (perfil === 'admin') {
+      return [
+        { rota: '/admin/distribuicao', rotulo: 'Distribuicao' },
+        { rota: '/admin/clientes', rotulo: 'Clientes' },
+        { rota: '/admin/advogados', rotulo: 'Advogados' },
+        { rota: '/admin/produtos', rotulo: 'Produtos' },
+      ];
+    }
+
+    if (perfil === 'advogado') {
+      return [
+        { rota: '/advogado/demandas', rotulo: 'Demandas' },
+        { rota: '/advogado/disponibilidade', rotulo: 'Disponibilidade' },
+      ];
+    }
+
+    return [];
+  });
 
   protected readonly descricaoDoUsuario = computed(() => {
     const usuario = this.sessao.usuario();

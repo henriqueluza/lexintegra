@@ -25,6 +25,13 @@ import type {
  *
  * Os tipos vem de `packages/shared`, os mesmos que o controlador da API declara.
  * Redeclarar `AdvogadoResumo` aqui criaria duas verdades sobre a mesma resposta.
+ *
+ * UM SERVICO POR AREA, desde a Etapa 9. Este cobre a superficie publica e o
+ * catalogo administrativo; as areas autenticadas tem os seus:
+ * `ApiClienteService`, `ApiAdvogadoService` e `ApiDistribuicaoService`. A divisao
+ * espelha a dos CONTROLADORES da API, que sao um por perfil (regra inviolavel
+ * 18), e mantem cada arquivo abaixo do limite de linhas — um cliente unico com
+ * quarenta metodos vira o lugar onde ninguem acha nada.
  */
 @Injectable({ providedIn: 'root' })
 export class ApiService {

@@ -1,0 +1,107 @@
+/* Direcao B (Pauta) por heranca da shell autenticada. */
+.demandas,
+.demandas__lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+.demandas__titulo {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t1);
+  font-weight: var(--peso-titulo);
+  line-height: var(--altura-titulo);
+  letter-spacing: var(--letra-titulo);
+}
+
+.demandas__cliente {
+  margin-bottom: var(--s3);
+  color: var(--texto-2);
+}
+
+.demandas__entregaveis,
+.demandas__observacoes {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+}
+
+.demandas__observacoes {
+  gap: var(--s3);
+}
+
+.demandas__entregavel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) 0;
+  border-top: var(--borda-fina) solid var(--divisor);
+}
+
+.demandas__nome {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: var(--peso-medio);
+}
+
+.demandas__detalhe {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  margin-top: var(--s4);
+  padding-top: var(--s4);
+  border-top: var(--borda-fina) solid var(--divisor);
+}
+
+.demandas__subtitulo {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t3);
+  font-weight: var(--peso-titulo);
+  letter-spacing: var(--letra-titulo);
+}
+
+.demandas__ficha {
+  display: grid;
+  gap: var(--s2);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 40rem) {
+  .demandas__ficha {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
+}
+
+.demandas__rotulo {
+  color: var(--texto-3);
+  font-size: var(--t-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--letra-caixa-alta);
+}
+
+.demandas__valor {
+  line-height: var(--altura-corpo);
+}
+
+.demandas__vazio,
+.demandas__autor {
+  color: var(--texto-3);
+  font-size: var(--t-micro);
+}
+
+.demandas__observacao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  line-height: var(--altura-corpo);
+}
+
+.demandas__formulario,
+.demandas__arquivo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s2);
+  font-size: var(--t-mini);
+}

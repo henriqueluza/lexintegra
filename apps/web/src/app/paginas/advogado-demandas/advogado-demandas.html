@@ -1,0 +1,137 @@
+<section class="demandas">
+  <h1 class="demandas__titulo">Minhas demandas</h1>
+
+  @if (carregando()) {
+  <app-carregando variante="bloco" rotulo="Carregando suas demandas" />
+  } @else if (falhaDaLista()) {
+  <app-mensagem-erro variante="bloco">
+    Nao foi possivel carregar as demandas. Recarregue a pagina.
+  </app-mensagem-erro>
+  } @else if (demandas().length === 0) {
+  <!--
+    Estado vazio legitimo: o advogado ve apenas o que lhe foi distribuido (item
+    2.6.1). Nenhuma demanda aqui significa que o administrador ainda nao
+    distribuiu nada — nao que algo falhou.
+  -->
+  <app-estado-vazio
+    titulo="Nenhuma demanda distribuida"
+    mensagem="Quando o administrador distribuir um pedido para voce, ele aparece aqui."
+  />
+  } @else {
+  <div class="demandas__lista">
+    @for (demanda of demandas(); track demanda.id) {
+    <app-cartao [titulo]="demanda.snapshot.nome">
+      <p class="demandas__cliente">{{ demanda.cliente.nome }}</p>
+
+      <ul class="demandas__entregaveis">
+        @for (entregavel of demanda.entregaveis; track entregavel.id) {
+        <li class="demandas__entregavel">
+          <span class="demandas__nome">{{ entregavel.nome }}</span>
+          <app-selo-estado [estado]="entregavel.estado" />
+
+          @if (acao(entregavel); as proxima) {
+          <app-botao
+            variante="primario"
+            tamanho="p"
+            [carregando]="emCurso() === entregavel.id"
+            (click)="mover(demanda.id, entregavel)"
+          >
+            {{ proxima === 'iniciar' ? 'Iniciar trabalho' : 'Retomar' }}
+          </app-botao>
+          } @if (podeEnviarArquivo(entregavel)) {
+          <label class="demandas__arquivo">
+            <span>Enviar entregavel</span>
+            <input
+              type="file"
+              (change)="enviarArquivo(demanda.id, entregavel, $event)"
+            />
+          </label>
+          }
+        </li>
+        }
+      </ul>
+
+      <div appCartaoRodape>
+        <app-botao
+          tamanho="p"
+          variante="texto"
+          [attr.aria-expanded]="abertaId() === demanda.id"
+          (click)="abrir(demanda)"
+        >
+          {{ abertaId() === demanda.id ? 'Ocultar' : 'Anamnese e observacoes' }}
+        </app-botao>
+      </div>
+
+      @if (abertaId() === demanda.id) {
+      <section class="demandas__detalhe">
+        @if (falha(); as mensagem) {
+        <app-mensagem-erro>{{ mensagem }}</app-mensagem-erro>
+        } @if (carregandoDetalhe()) {
+        <app-carregando rotulo="Carregando a ficha" />
+        } @else {
+        <h3 class="demandas__subtitulo">Anamnese</h3>
+
+        @if (anamnese().length === 0) {
+        <p class="demandas__vazio">O cliente ainda nao preencheu a ficha.</p>
+        } @else {
+        <!--
+          RENDERIZADOR GENERICO: pares campo/valor, sem conhecer nome de campo
+          nenhum. A ficha definitiva ainda nao chegou da CONTRATANTE (plano de
+          execucao, 0.2, item 3) e quem a preenche e a Etapa 8 — fixar campos
+          aqui seria decidir a ficha no lugar de quem tem que decidi-la, e
+          trocar depois significaria reescrever esta tela.
+        -->
+        @for (ficha of anamnese(); track ficha.id) {
+        <dl class="demandas__ficha">
+          @for (campo of ficha.campos; track campo.rotulo) {
+          <dt class="demandas__rotulo">{{ campo.rotulo }}</dt>
+          <dd class="demandas__valor">{{ campo.valor }}</dd>
+          }
+        </dl>
+        } }
+
+        <h3 class="demandas__subtitulo">Observacoes</h3>
+
+        @if (observacoes().length === 0) {
+        <p class="demandas__vazio">Nenhuma observacao ainda.</p>
+        } @else {
+        <ul class="demandas__observacoes">
+          @for (item of observacoes(); track item.id) {
+          <li class="demandas__observacao">
+            <span class="demandas__autor">
+              {{ item.autorPerfil === 'cliente' ? 'Cliente' : 'Voce' }}
+            </span>
+            <span>{{ item.texto }}</span>
+          </li>
+          }
+        </ul>
+        }
+
+        <!-- `(submit)`, e nao `(ngSubmit)`: ver a nota em `cartao-pedido.html`. -->
+        <form
+          class="demandas__formulario"
+          (submit)="$event.preventDefault(); responder(demanda.id)"
+        >
+          <app-campo
+            rotulo="Responder ao cliente"
+            [formControl]="observacao"
+            [multilinha]="true"
+            [linhas]="3"
+          />
+          <app-botao
+            tipo="submit"
+            tamanho="p"
+            [carregando]="emCurso() === 'observacao'"
+            [desabilitado]="observacao.invalid"
+          >
+            Enviar resposta
+          </app-botao>
+        </form>
+        }
+      </section>
+      }
+    </app-cartao>
+    }
+  </div>
+  }
+</section>

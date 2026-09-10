@@ -92,7 +92,21 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 - **`app.integration-spec.ts` sobe a aplicação inteira sobre HTTP.** É o único lugar que prova que os três guards globais estão na cadeia, na ordem certa, e que o prefixo `/api` está no lugar.
 - **Cobertura:** `apps/api` 93/86/95/95, `apps/web` 97/92/93/98.
 
-**Próximo trabalho recomendado:** revisar e abrir o PR da Etapa 5, depois seguir para a Etapa 6. O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde. O catálogo real da B&C continua pendente do lado da CONTRATANTE — sem ele a Etapa 5 tem o código pronto mas não o entregável formal ("cadastrado de verdade, não com dados fictícios").
+**Etapa 9 — áreas do cliente, do advogado e distribuição (branch `feat/areas-cliente-advogado`):**
+
+- **A atribuição mora no PEDIDO** (`pedidos.advogadoId` + `distribuido`), não no advogado — `docs/arquitetura.md` 5.1 foi corrigido. O booleano é redundante de propósito: igualdade contra `null` no Firestore mistura campo ausente com campo nulo.
+- **Três controladores de pedido, um por perfil** (`cliente`, `advogado`, `admin`), com `@Perfis` na classe. Um controlador único faria o endpoint novo nascer aberto aos três — e o que nasceria aberto ali é leitura de pedido alheio.
+- **Lacuna de servidor fechada:** até a Etapa 5, `iniciar-trabalho`, `retomar-trabalho` e `registrarArquivo` eram alcançáveis por **qualquer** advogado autenticado em **qualquer** pedido. `@Perfis('advogado')` separa perfis, não pessoas. A conferência entrou em `EntregaveisService`, dentro da transação.
+- **Negação por atribuição responde 404, não 403** — um 403 confirmaria a existência do id. Vive na API, não nas regras do Firestore: ver a errata do critério de aceite em `docs/plano-de-execucao.md`, Etapa 9.
+- **A semana de disponibilidade é calculada na leitura**, nunca aberta por rotina (arquitetura, seção 8). `packages/shared/src/semana.ts` usa fuso explícito — o Cloud Run roda em UTC, e às 22h de um domingo brasileiro um cálculo sem fuso devolve a semana errada.
+- **`observacoes` é append-only**, sem edição nem exclusão na API, com teste que defende a ausência.
+- **Anexos são PLACEHOLDER**: gravam nome, tipo e tamanho, nenhum byte em bucket. `status: 'metadado_sem_arquivo'`, que **não pode virar `limpo`** — regra inviolável 6 valendo antes de existir arquivo. A integração real é a Etapa 11, no mesmo ponto.
+- **O cartão é a unidade da área do cliente.** A ação de marcar reunião vive dentro dele; `app.routes.spec.ts` falha se alguém criar rota de agendamento de topo.
+- **`ApiService` foi dividido por área** (`ApiClienteService`, `ApiAdvogadoService`, `ApiDistribuicaoService`), espelhando os controladores. O arquivo único passava do limite de 300 linhas do lint.
+- **Cinco índices compostos** novos em `infra/terraform/firestore.tf`.
+- **Cobertura:** `apps/api` 94/84/95/96, `apps/web` 96/90/94/98, `packages/shared` 99/100/100/99.
+
+**Próximo trabalho recomendado:** revisar e abrir o PR da Etapa 9, e seguir para a Etapa 11 (upload e varredura), que parte da branch da Etapa 9 porque encaixa o upload real no mesmo ponto de UI. As Etapas 7, 8 e 10 seguem travadas por confirmação externa. O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde. O catálogo real da B&C continua pendente do lado da CONTRATANTE; os clientes e pedidos fictícios da Etapa 9 têm pendência própria, de revalidação contra o checkout da Etapa 8 (ver `scripts/dados-ficticios/LEIA-ME.md`).
 
 ## Stack
 
@@ -112,6 +126,11 @@ apps/web/          Angular 22, pré-renderização estática das rotas públicas
   src/app/ui/      componentes base do sistema de design
   src/app/publico/ estado do pre-cadastro no navegador (localStorage)
   src/app/paginas/landing/ home publica; TODO o texto em textos.ts
+  src/app/paginas/cliente-pedidos/ um cartao por pedido; a reuniao vive dentro dele
+  src/app/paginas/advogado-demandas/ so o que foi distribuido
+  src/app/paginas/advogado-disponibilidade/ grade semanal (ADR-06)
+  src/app/paginas/admin-distribuicao/ caixa de entrada e atribuicao
+  src/app/paginas/admin-clientes/ busca e filtro (item 2.5.8)
   src/app/catalogo/ catálogo navegável, removido do build de produção
   e2e/             Playwright: regressão visual, axe e aninhamento de direção
   e2e/referencia/  imagens de referência da regressão visual

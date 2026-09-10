@@ -467,7 +467,49 @@ qualquer coisa que não seja um projeto `demo-`.
 
 **Cláusulas atendidas.** 2.3.2 a 2.3.4, 2.5.5 a 2.5.8, 2.6.1 a 2.6.3.
 
-**Critério de aceite.** Um advogado tentando acessar demanda não atribuída a ele recebe negação pela regra do Firestore, não apenas pela interface. Um cliente com dois pedidos ativos não encontra em nenhum lugar da interface uma tela de agendamento desconectada de um cartão específico.
+**Critério de aceite.** Um advogado tentando acessar demanda não atribuída a ele recebe negação **do servidor**, não apenas pela interface (ver a errata abaixo). Um cliente com dois pedidos ativos não encontra em nenhum lugar da interface uma tela de agendamento desconectada de um cartão específico.
+
+> **Errata — onde a negação por atribuição é verificada.**
+>
+> O texto original deste critério dizia "negação pela regra do Firestore". Ele foi escrito antes da Etapa 4 e é **superado por ela**.
+>
+> A Etapa 4 decidiu que as regras do Firestore **negam tudo, e essa é a forma final delas** (ADR na seção 6.1 da arquitetura, regra inviolável 7). O motivo é que a API usa o Admin SDK, que **ignora** as regras: um `allow` por atribuição nunca seria atravessado por código de produção, nunca falharia num teste de aplicação se estivesse errado, e ficaria como porta aberta que ninguém visita — protegendo menos do que aparenta.
+>
+> A negação por atribuição vive, portanto, **nos guards e serviços da API**, onde é exercitada a cada requisição:
+>
+> - `ConsultaPedidosService` consulta por `advogadoId` e responde **404** — não 403 — quando o pedido existe e é de outra pessoa, para não confirmar a existência do id.
+> - `EntregaveisService.exigirAdvogadoAtribuido` confere a atribuição **dentro da transação**, antes de mover qualquer estado. Uma checagem feita antes da transação poderia ler uma atribuição que o administrador removeu no meio.
+> - `packages/regras-firestore` continua provando a outra metade: o navegador não tem caminho nenhum até o banco.
+>
+> Provado por teste de integração contra o emulador, em `apps/api/src/pedidos/areas.integration-spec.ts`.
+
+### Registro de execução — Etapa 9
+
+Branch `feat/areas-cliente-advogado`. O que foi construído, e as decisões que não são óbvias no código:
+
+**Modelo.** `pedidos` ganhou `advogadoId` e `distribuido`. O booleano é redundante com `advogadoId !== null` e existe assim mesmo: no Firestore, igualdade contra `null` mistura o campo ausente com o campo nulo, e um pedido gravado antes do campo existir cairia do lado errado do filtro da caixa de entrada sem erro nenhum. Subcoleções novas: `observacoes` (append-only) e `anexos` (placeholder, ver abaixo). Coleção `clientes` com os campos denormalizados da arquitetura 5.5.
+
+**Onde a atribuição mora.** No **pedido**, não no advogado. A tabela 5.1 da arquitetura lista "atribuições" na coleção `advogados`, mas foi escrita antes de existir a consulta: a que existe de verdade é "quais pedidos são meus", feita pelo advogado a cada abertura de tela. Do lado do advogado, ela seria um array que cresce sem limite dentro de um documento e que precisa ser lido inteiro para filtrar; no pedido, é uma igualdade indexada.
+
+**Três controladores, um por perfil**, em vez de um controlador de pedidos com `@Perfis` por método. É o que faz um endpoint novo nascer restrito ao perfil daquele arquivo (regra inviolável 18) — e o que nasceria aberto num controlador único é a leitura de pedido alheio.
+
+**Uma lacuna de servidor fechada.** Até a Etapa 5, `iniciar-trabalho`, `retomar-trabalho` e `registrarArquivo` eram alcançáveis por **qualquer** advogado autenticado, em **qualquer** pedido: `@Perfis('advogado')` separa perfis, não pessoas. A conferência entrou em `EntregaveisService`, dentro da transação.
+
+**Cinco índices compostos** em `infra/terraform/firestore.tf`, um por consulta que existe: `pedidos` por cliente, por advogado e por distribuição; `clientes` por produto contratado (`array-contains`); `disponibilidades` por advogado + semana.
+
+**A semana é calculada na leitura**, nunca aberta por rotina agendada (arquitetura, seção 8). `packages/shared/src/semana.ts` faz a aritmética com fuso explícito — o Cloud Run roda em UTC, e às 22h de um domingo brasileiro um cálculo sem fuso devolveria a semana seguinte.
+
+**O cartão é a unidade da área do cliente.** Tudo que se faz com um pedido acontece dentro dele, inclusive a ação de marcar reunião (desabilitada até a Etapa 10). Não existe rota de agendamento de topo, e `app.routes.spec.ts` falha se alguém criar uma — com dois pedidos ativos, uma tela solta não teria como saber qual saldo debitar (ADR-12, arquitetura 5.4).
+
+**O cliente do `ApiService` foi dividido por área** (`ApiClienteService`, `ApiAdvogadoService`, `ApiDistribuicaoService`), espelhando a divisão de controladores. Um cliente único com quarenta métodos passava do limite de 300 linhas do lint e viraria o lugar onde ninguém acha nada.
+
+**Anexos são placeholder, de propósito.** Grava-se nome, tipo e tamanho declarados; nenhum byte vai para bucket nenhum. A validação de tipo/tamanho/quantidade já vale porque é regra de negócio confirmada na reunião, não detalhe de transporte. O `status` gravado é `metadado_sem_arquivo`, que **não é e não pode virar** `limpo` — é a regra inviolável 6 valendo sobre um documento que ainda não tem arquivo.
+
+**Três defeitos que só os testes pegaram:** refinement de objeto do zod 4 roda mesmo após falha interna (um corpo malformado virava 500 em vez de 400); `appCartaoRodape` só vira diretiva se a classe for importada, e sem isso o rodapé inteiro não renderiza; e `(ngSubmit)` sem `[formGroup]` não escuta nada — dois formulários ficavam mudos.
+
+**Dados fictícios** em `scripts/dados-ficticios/clientes-pedidos.ts`, com pendência de revalidação contra a Etapa 8 registrada no LEIA-ME de lá.
+
+**Cobertura:** `apps/api` 94/84/95/96, `apps/web` 96/90/94/98, `packages/shared` 99/100/100/99.
 
 ### Só você — Etapa 9
 

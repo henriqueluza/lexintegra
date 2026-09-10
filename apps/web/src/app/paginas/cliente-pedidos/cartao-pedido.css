@@ -1,0 +1,130 @@
+/*
+ * Regra inviolavel 8: so token SEMANTICO, nunca primitivo. Nenhuma cor,
+ * espacamento ou tamanho literal — o stylelint e o criterio de aceite da Etapa 3.
+ * A Direcao B (Pauta) chega por heranca da shell autenticada.
+ */
+.cartao-pedido__linha {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s3);
+}
+
+.cartao-pedido__preco {
+  color: var(--acento);
+  font-size: var(--t-maior);
+  font-weight: var(--peso-forte);
+  font-variant-numeric: var(--t-numeral);
+}
+
+.cartao-pedido__situacao {
+  color: var(--texto-3);
+  font-size: var(--t-mini);
+}
+
+.cartao-pedido__descricao {
+  margin-bottom: var(--s4);
+  color: var(--texto-2);
+  line-height: var(--altura-corpo);
+  max-width: var(--medida-texto);
+}
+
+.cartao-pedido__orientacoes {
+  margin-bottom: var(--s4);
+  padding-left: var(--s5);
+  color: var(--texto-3);
+  font-size: var(--t-mini);
+  line-height: var(--altura-densa);
+}
+
+.cartao-pedido__entregaveis {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+}
+
+.cartao-pedido__entregavel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) 0;
+  border-top: var(--borda-fina) solid var(--divisor);
+}
+
+.cartao-pedido__identificacao {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--s1);
+  min-width: 0;
+}
+
+.cartao-pedido__nome {
+  font-weight: var(--peso-medio);
+}
+
+.cartao-pedido__saldo,
+.cartao-pedido__vazio,
+.cartao-pedido__autor {
+  color: var(--texto-3);
+  font-size: var(--t-micro);
+}
+
+.cartao-pedido__acoes,
+.cartao-pedido__rodape {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+}
+
+.cartao-pedido__rodape {
+  justify-content: space-between;
+  width: 100%;
+}
+
+.cartao-pedido__detalhes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  margin-top: var(--s4);
+  padding-top: var(--s4);
+  border-top: var(--borda-fina) solid var(--divisor);
+}
+
+.cartao-pedido__subtitulo {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t3);
+  font-weight: var(--peso-titulo);
+  letter-spacing: var(--letra-titulo);
+}
+
+.cartao-pedido__observacoes,
+.cartao-pedido__anexos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  list-style: none;
+}
+
+.cartao-pedido__observacao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  line-height: var(--altura-corpo);
+}
+
+.cartao-pedido__formulario {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s3);
+}
+
+.cartao-pedido__arquivo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  font-size: var(--t-mini);
+}

@@ -419,13 +419,17 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 | `clientes` | Conta do cliente final, com subcoleção de anamnese |
 | `pagamentos` | Um por transação confirmada pelo gateway |
 | `pedidos` | Um por produto comprado; snapshot imutável |
-| `advogados` | Perfil, atribuições e licença Microsoft confirmada |
+| `advogados` | Perfil e licença Microsoft confirmada |
 | `disponibilidades` | Slots com ID determinístico |
 | `outbox` | Eventos pendentes de entrega |
 
+**Sobre a atribuição de pedidos a advogados (Etapa 9).** Ela mora no **pedido** (`pedidos.advogadoId`), não no advogado — esta tabela dizia "atribuições" em `advogados`, e foi corrigida acima. A razão é a consulta que existe de verdade: "quais pedidos são meus", feita pelo advogado a cada abertura de tela. Do lado do advogado, seria um array que cresce sem limite dentro de um documento e que precisa ser lido inteiro para filtrar; no pedido, é uma igualdade indexada (`advogadoId` + `criadoEm`). O documento carrega ainda `distribuido`, um booleano redundante com `advogadoId !== null` que existe porque igualdade contra `null` no Firestore mistura o campo ausente com o campo nulo — e um pedido gravado antes do campo existir cairia do lado errado do filtro da caixa de entrada sem erro nenhum.
+
 **Sobre `pre-cadastros`.** ID determinístico do e-mail normalizado (ADR-04), o que faz a mesma pessoa ocupar um documento e não três. Guarda nome, e-mail, telefone, a contagem de envios e o hash do token que destrava a vitrine — **e nada além disso**: sem IP, sem user-agent, sem referenciador. São dados que um formulário de captação coleta por reflexo e que ninguém neste projeto vai usar, e a minimização da seção 13 é medida, não boa intenção. É também a coleção com o caminho de eliminação mais simples do sistema: um documento por titular.
 
-Subcoleções: `clientes/{id}/anamnese`, `pedidos/{id}/entregaveis`, `pedidos/{id}/reunioes`, `pedidos/{id}/entregaveis/{id}/transicoes`.
+Subcoleções: `clientes/{id}/anamnese`, `pedidos/{id}/entregaveis`, `pedidos/{id}/reunioes`, `pedidos/{id}/entregaveis/{id}/transicoes`, `pedidos/{id}/observacoes` e `pedidos/{id}/anexos` (as duas últimas, da Etapa 9).
+
+**`observacoes` é append-only**, e isso é decisão e não limitação: o advogado trabalha a partir do que o cliente escreveu, e texto reescrito faz "o cliente pediu X" virar "o cliente sempre pediu Y", sem trilha. A API não expõe edição nem exclusão, e há teste que defende a ausência.
 
 **Índices compostos.** Um só até aqui: `produtos` por `ativo` + `nome`, para o filtro de situação da listagem administrativa. Declarado em `infra/terraform/firestore.tf`, nunca criado à mão no console — o emulador não exige índice, então uma consulta sem índice declarado passa local e falha em produção. A regra é um índice por consulta que existe, não por consulta imaginável: índice composto custa escrita em toda gravação da coleção.
 

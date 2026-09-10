@@ -33,7 +33,16 @@ interface Arranjo {
   entregaveis: EntregaveisService;
 }
 
-async function montar(revisoes = 2): Promise<Arranjo> {
+/**
+ * O pedido nasce SEM advogado (Etapa 9): quem distribui e o administrador. Como
+ * a maioria dos casos deste arquivo exercita o trabalho do advogado, `montar`
+ * atribui por padrao — e `montar({ atribuirA: null })` cobre o pedido que ainda
+ * esta na caixa de entrada.
+ */
+async function montar(
+  revisoes = 2,
+  opcoes: { atribuirA?: string | null } = {},
+): Promise<Arranjo> {
   const banco = new FirestoreFalso();
   const produtos = new ProdutosService(banco as unknown as Firestore);
   const pedidos = new PedidosService(banco as unknown as Firestore);
@@ -56,6 +65,14 @@ async function montar(revisoes = 2): Promise<Arranjo> {
       ]),
     );
   });
+
+  const advogado = opcoes.atribuirA === undefined ? ADVOGADO : opcoes.atribuirA;
+  if (advogado !== null) {
+    await banco
+      .collection('pedidos')
+      .doc('pedido-1')
+      .update({ advogadoId: advogado, distribuido: true });
+  }
 
   return {
     banco,
@@ -292,6 +309,11 @@ describe('EntregaveisService', () => {
           ]),
         );
       });
+      await banco
+        .collection('pedidos')
+        .doc('pedido-1')
+        .update({ advogadoId: ADVOGADO, distribuido: true });
+
       await entregaveis.iniciarTrabalho(ALVO, ADVOGADO);
       await entregaveis.registrarArquivo(
         ALVO,
@@ -405,5 +427,85 @@ describe('EntregaveisService', () => {
         ),
       ).rejects.toThrow(NotFoundException);
     });
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Atribuicao (itens 2.6.1 e 2.6.2)                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A metade-servidor do criterio de aceite da Etapa 9.
+ *
+ * `@Perfis('advogado')` separa PERFIS, nao PESSOAS: sem estas conferencias,
+ * qualquer advogado autenticado avancaria o estado de qualquer pedido do
+ * sistema, e a distribuicao feita pelo administrador (item 2.5.6) nao valeria
+ * nada. Esconder a demanda na tela nao resolve — a rota e alcancavel com curl.
+ */
+describe('o advogado so trabalha no que lhe foi distribuido', () => {
+  const OUTRO = 'uid-outro-advogado';
+
+  it.each([
+    [
+      'iniciar-trabalho',
+      (s: EntregaveisService) => s.iniciarTrabalho(ALVO, OUTRO),
+    ],
+    [
+      'registrar arquivo',
+      (s: EntregaveisService) =>
+        s.registrarArquivo(ALVO, { nome: 'minuta.pdf' }, OUTRO),
+    ],
+  ])('recusa %s de advogado nao atribuido', async (_nome, acao) => {
+    const { entregaveis } = await montar();
+    await expect(acao(entregaveis)).rejects.toThrow(ForbiddenException);
+  });
+
+  it('recusa retomar-trabalho de advogado nao atribuido', async () => {
+    const { entregaveis } = await ateAguardandoCliente();
+    await entregaveis.pedirRevisao(ALVO, CLIENTE);
+
+    await expect(entregaveis.retomarTrabalho(ALVO, OUTRO)).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  /**
+   * Pedido ainda na caixa de entrada recusa TODO MUNDO, e nao "o primeiro que
+   * chegar". Um advogado que comeca a trabalhar antes da distribuicao contorna a
+   * decisao do administrador.
+   */
+  it('recusa qualquer advogado enquanto o pedido nao foi distribuido', async () => {
+    const { entregaveis } = await montar(2, { atribuirA: null });
+
+    await expect(entregaveis.iniciarTrabalho(ALVO, ADVOGADO)).rejects.toThrow(
+      /ainda nao foi distribuido/,
+    );
+  });
+
+  /**
+   * A recusa acontece ANTES de qualquer escrita. Se ela viesse depois, um
+   * advogado sem atribuicao deixaria trilha de transicao num pedido alheio antes
+   * de tomar o 403.
+   */
+  it('nao escreve nada ao recusar', async () => {
+    const { banco, entregaveis } = await montar(2, { atribuirA: null });
+    const antes = banco.escritas.length;
+
+    await expect(entregaveis.iniciarTrabalho(ALVO, ADVOGADO)).rejects.toThrow();
+
+    expect(banco.escritas).toHaveLength(antes);
+  });
+
+  /**
+   * A conferencia e sobre o ADVOGADO, e nao sobre "quem nao e o cliente". O
+   * cliente do pedido continua sem caminho para os eventos do advogado — o estado
+   * de origem ja o barra, e este teste registra que a trava do advogado nao abriu
+   * uma porta lateral para ele.
+   */
+  it('o cliente nao vira advogado por estar no proprio pedido', async () => {
+    const { entregaveis } = await montar();
+    await expect(entregaveis.iniciarTrabalho(ALVO, CLIENTE)).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 });

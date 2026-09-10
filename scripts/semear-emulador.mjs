@@ -23,13 +23,19 @@
  * Uso:
  *   scripts/emuladores.sh 'node scripts/semear-emulador.mjs'
  *
- * Semeia tambem o catalogo de produtos, com os DADOS FICTICIOS de
- * `scripts/dados-ficticios/` — ver o LEIA-ME de la. As mesmas guardas valem: a
- * escrita no Firestore vai pela REST do emulador, com `Bearer owner`, que o
- * servico real recusa.
+ * Semeia tambem o catalogo de produtos e, desde a Etapa 9, clientes e pedidos —
+ * todos com os DADOS FICTICIOS de `scripts/dados-ficticios/`, ver o LEIA-ME de
+ * la. As mesmas guardas valem: a escrita no Firestore vai pela REST do emulador,
+ * com `Bearer owner`, que o servico real recusa.
  */
 
+import { congelarProduto } from '../packages/shared/src/esquemas/produto.ts';
+import { normalizarParaBusca } from '../packages/shared/src/texto.ts';
 import { CATALOGO_FICTICIO } from './dados-ficticios/catalogo-produtos.ts';
+import {
+  CLIENTES_FICTICIOS,
+  PEDIDOS_FICTICIOS,
+} from './dados-ficticios/clientes-pedidos.ts';
 import {
   confirmarEmuladorFirestore,
   gravarDocumento,
@@ -41,8 +47,26 @@ const PROJETO = process.env.GCLOUD_PROJECT ?? 'demo-lexintegra';
 
 const SENHA = 'senha-de-desenvolvimento';
 const CONTAS = [
-  { email: 'cliente@exemplo.test', nome: 'Clara Nunes', perfil: 'cliente' },
+  {
+    email: 'cliente@exemplo.test',
+    nome: 'Clara Nunes de Sa',
+    perfil: 'cliente',
+  },
+  // O SEGUNDO CLIENTE nao e enfeite: a Etapa 9 precisa provar que um cliente nao
+  // ve o pedido do outro, e isso nao e verificavel com um cliente so.
+  {
+    email: 'bruno.cliente@exemplo.test',
+    nome: 'Bruno Alves Machado',
+    perfil: 'cliente',
+  },
   { email: 'advogado@exemplo.test', nome: 'Ana Souza', perfil: 'advogado' },
+  // O SEGUNDO ADVOGADO, pelo mesmo motivo: sem ele nao ha como demonstrar que a
+  // demanda de um nao aparece para o outro (item 2.6.1).
+  {
+    email: 'carlos.advogado@exemplo.test',
+    nome: 'Carlos Prado',
+    perfil: 'advogado',
+  },
   { email: 'admin@exemplo.test', nome: 'Marcos Braga', perfil: 'admin' },
 ];
 
@@ -139,6 +163,7 @@ async function semear({ email, nome, perfil }) {
  */
 async function semearCatalogo() {
   const agora = new Date();
+  const ids = [];
 
   for (const [indice, produto] of CATALOGO_FICTICIO.entries()) {
     const id = `ficticio-${String(indice + 1).padStart(2, '0')}`;
@@ -152,7 +177,137 @@ async function semearCatalogo() {
       atualizadoPor: 'seed-do-emulador',
     });
 
+    ids.push(id);
     console.log(`  ${id}  ${produto.nome}`);
+  }
+
+  return ids;
+}
+
+/**
+ * Clientes, pedidos, entregaveis, trilha, observacoes e anamnese (Etapa 9).
+ *
+ * O SNAPSHOT SAI DE `congelarProduto`, a mesma funcao que o checkout usa — nunca
+ * de um espalhamento do produto aqui. E a regra inviolavel 5 valendo tambem para
+ * o seed: um campo novo no produto entra no snapshot nos dois lugares de uma vez,
+ * ou em nenhum. Um `{ ...produto }` aqui levaria `ativo` e os carimbos para
+ * dentro do pedido e o dado de desenvolvimento deixaria de parecer com o real.
+ *
+ * A FORMA DO ENTREGAVEL E DA TRANSICAO esta escrita a mao, e essa duplicacao e
+ * conhecida: o script fala com a REST do emulador de proposito (ver o cabecalho)
+ * e nao pode importar `PedidosService`, que depende do Nest e do Admin SDK. Quem
+ * pega divergencia e a suite de integracao, que exercita os servicos de verdade
+ * contra o mesmo emulador.
+ */
+async function semearClientesEPedidos(idsDeProduto, uidPorEmail) {
+  const agora = new Date();
+  const uidDoCliente = new Map();
+
+  for (const cliente of CLIENTES_FICTICIOS) {
+    const uid = uidPorEmail.get(cliente.email);
+    if (uid === undefined) {
+      abortar(`Cliente ficticio ${cliente.email} nao tem conta em CONTAS.`);
+    }
+    uidDoCliente.set(cliente.chave, uid);
+
+    const produtos = PEDIDOS_FICTICIOS.filter(
+      (pedido) => pedido.clienteChave === cliente.chave,
+    ).map((pedido) => CATALOGO_FICTICIO[pedido.produtoIndice].nome);
+
+    await gravarDocumento(HOST_FIRESTORE, PROJETO, `clientes/${uid}`, {
+      nome: cliente.nome,
+      email: cliente.email,
+      // Os campos de busca do item 2.5.8 saem da MESMA funcao que o formulario
+      // do administrador usa no termo digitado (arquitetura 5.5).
+      nomeNormalizado: normalizarParaBusca(cliente.nome),
+      emailNormalizado: normalizarParaBusca(cliente.email),
+      produtosContratados: [...new Set(produtos)],
+      criadoEm: agora,
+    });
+
+    await gravarDocumento(
+      HOST_FIRESTORE,
+      PROJETO,
+      `clientes/${uid}/anamnese/ficha-01`,
+      { campos: [...cliente.anamnese], criadoEm: agora },
+    );
+
+    console.log(`  cliente   ${cliente.nome}`);
+  }
+
+  const advogados = {
+    ana: uidPorEmail.get('advogado@exemplo.test'),
+    carlos: uidPorEmail.get('carlos.advogado@exemplo.test'),
+  };
+
+  for (const pedido of PEDIDOS_FICTICIOS) {
+    const produto = CATALOGO_FICTICIO[pedido.produtoIndice];
+    const snapshot = congelarProduto(produto);
+    const clienteId = uidDoCliente.get(pedido.clienteChave);
+    const advogadoId =
+      pedido.advogado === null ? null : advogados[pedido.advogado];
+    const caminho = `pedidos/${pedido.chave}`;
+
+    await gravarDocumento(HOST_FIRESTORE, PROJETO, caminho, {
+      clienteId,
+      pagamentoId: pedido.pagamentoChave,
+      produtoOrigemId: idsDeProduto[pedido.produtoIndice],
+      snapshot,
+      criadoEm: agora,
+      advogadoId,
+      distribuido: advogadoId !== null,
+    });
+
+    for (const [indice, nome] of snapshot.entregaveis.entries()) {
+      const ordem = indice + 1;
+      const id = String(ordem).padStart(3, '0');
+
+      await gravarDocumento(
+        HOST_FIRESTORE,
+        PROJETO,
+        `${caminho}/entregaveis/${id}`,
+        {
+          nome,
+          ordem,
+          estado: 'solicitado',
+          revisoesUsadas: 0,
+          arquivoAtual: null,
+          transicoes: 1,
+          atualizadoEm: agora,
+        },
+      );
+
+      await gravarDocumento(
+        HOST_FIRESTORE,
+        PROJETO,
+        `${caminho}/entregaveis/${id}/transicoes/0001`,
+        {
+          de: null,
+          para: 'solicitado',
+          evento: 'criar-pedido',
+          por: 'sistema',
+          atorUid: clienteId,
+          em: agora,
+        },
+      );
+    }
+
+    for (const [indice, observacao] of pedido.observacoes.entries()) {
+      await gravarDocumento(
+        HOST_FIRESTORE,
+        PROJETO,
+        `${caminho}/observacoes/obs-${String(indice + 1).padStart(2, '0')}`,
+        {
+          texto: observacao.texto,
+          autorUid: observacao.de === 'cliente' ? clienteId : advogadoId,
+          autorPerfil: observacao.de,
+          criadoEm: agora,
+        },
+      );
+    }
+
+    const destino = advogadoId === null ? 'na fila' : `com ${pedido.advogado}`;
+    console.log(`  pedido    ${pedido.chave.padEnd(18)} ${destino}`);
   }
 }
 
@@ -160,17 +315,26 @@ await confirmarEmulador();
 await confirmarEmuladorFirestore(HOST_FIRESTORE, PROJETO);
 
 console.log(`Semeando ${PROJETO} em ${HOST}\n`);
+const uidPorEmail = new Map();
 for (const conta of CONTAS) {
   const uid = await semear(conta);
-  console.log(`  ${conta.perfil.padEnd(9)} ${conta.email.padEnd(24)} ${uid}`);
+  uidPorEmail.set(conta.email, uid);
+  console.log(`  ${conta.perfil.padEnd(9)} ${conta.email.padEnd(30)} ${uid}`);
 }
 
 console.log(`\n  Senha de todas: ${SENHA}`);
 console.log('  Sao contas de EMULADOR. Nao existem em lugar nenhum alem dele.');
 
 console.log(`\nCatalogo ficticio em ${HOST_FIRESTORE}\n`);
-await semearCatalogo();
+const idsDeProduto = await semearCatalogo();
+
+console.log('\nClientes e pedidos ficticios\n');
+await semearClientesEPedidos(idsDeProduto, uidPorEmail);
+
 console.log(
-  '\n  DADOS FICTICIOS. Substituir pelo catalogo real da B&C antes de producao',
+  '\n  DADOS FICTICIOS. Substituir pelo catalogo real da B&C antes de producao,',
+);
+console.log(
+  '  e revalidar clientes/pedidos contra o checkout quando a Etapa 8 existir',
 );
 console.log('  (scripts/dados-ficticios/LEIA-ME.md).');

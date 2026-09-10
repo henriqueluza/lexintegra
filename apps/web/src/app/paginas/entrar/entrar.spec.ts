@@ -111,13 +111,18 @@ describe('Entrar', () => {
     expect(destinos).toEqual(['/admin']);
   });
 
-  it('leva cliente e advogado ao painel', async () => {
-    const { fixture, destinos } = montar({ perfil: 'advogado' });
-    preencher(fixture, 'ana@escritorio.test', 'segredo');
+  /** Cada perfil cai na PROPRIA area: elas sao arvores separadas desde a Etapa
+   * 9, e mandar o advogado ao painel do cliente o levaria a uma tela vazia. */
+  it.each([
+    ['advogado', 'ana@escritorio.test', '/advogado'],
+    ['cliente', 'clara@exemplo.test', '/painel'],
+  ] as const)('leva %s a propria area', async (perfil, email, destino) => {
+    const { fixture, destinos } = montar({ perfil });
+    preencher(fixture, email, 'segredo');
 
     await enviar(fixture);
 
-    expect(destinos).toEqual(['/painel']);
+    expect(destinos).toEqual([destino]);
   });
 
   /**

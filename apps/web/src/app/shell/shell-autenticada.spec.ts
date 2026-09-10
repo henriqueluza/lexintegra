@@ -99,11 +99,11 @@ describe('ShellAutenticada', () => {
 
 describe('navegacao da shell', () => {
   /**
-   * Ate a Etapa 4 nao havia navegacao: uma pagina por area. Com duas telas
-   * administrativas, sem menu o administrador so chegaria a segunda digitando a
+   * Ate a Etapa 4 nao havia navegacao: uma pagina por area. Com quatro telas
+   * administrativas, sem menu o administrador so chegaria as demais digitando a
    * URL.
    */
-  it('oferece as duas secoes administrativas ao admin', () => {
+  it('oferece as quatro secoes administrativas ao admin', () => {
     const { fixture } = montar(
       { nome: 'Marcos', email: 'admin@x.test' },
       'admin',
@@ -113,21 +113,43 @@ describe('navegacao da shell', () => {
     ] as HTMLAnchorElement[];
 
     expect(links.map((link) => link.textContent?.trim())).toEqual([
+      'Distribuicao',
+      'Clientes',
       'Advogados',
       'Produtos',
     ]);
   });
 
+  /** O advogado ganhou duas telas na Etapa 9: as demandas e a grade semanal. */
+  it('oferece as duas secoes do advogado', () => {
+    const { fixture } = montar(
+      { nome: 'Ana', email: 'ana@x.test' },
+      'advogado',
+    );
+    const links = [
+      ...fixture.nativeElement.querySelectorAll('.shell__link'),
+    ] as HTMLAnchorElement[];
+
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/advogado/demandas',
+      '/advogado/disponibilidade',
+    ]);
+  });
+
   /**
-   * Cliente e advogado tem uma tela so — um menu de um item e ruido. E a barra
-   * some por completo em vez de renderizar vazia.
+   * O CLIENTE CONTINUA SEM MENU, e continua sendo decisao.
+   *
+   * A area dele tem uma tela so — os cartoes —, e tudo que se faz com um pedido
+   * acontece dentro do cartao dele. Um item "Reunioes" neste menu seria
+   * exatamente a tela de agendamento solta que o criterio de aceite da Etapa 9
+   * proibe. A barra some por completo em vez de renderizar vazia.
    */
-  it.each([['cliente'], ['advogado'], [null]])(
+  it.each([['cliente'], [null]])(
     'nao mostra navegacao para o perfil %s',
     (perfil) => {
       const { fixture } = montar(
-        { nome: 'Ana', email: 'ana@x.test' },
-        perfil as 'cliente' | 'advogado' | null,
+        { nome: 'Clara', email: 'clara@x.test' },
+        perfil as 'cliente' | null,
       );
 
       expect(fixture.nativeElement.querySelector('.shell__nav')).toBeNull();
@@ -149,6 +171,8 @@ describe('navegacao da shell', () => {
     ] as HTMLAnchorElement[];
 
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/admin/distribuicao',
+      '/admin/clientes',
       '/admin/advogados',
       '/admin/produtos',
     ]);

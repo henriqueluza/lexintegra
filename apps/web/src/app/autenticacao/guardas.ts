@@ -69,6 +69,9 @@ export function exigirPerfil(...perfis: readonly Perfil[]): CanMatchFn {
  */
 export function rotaInicialDe(perfil: Perfil | null): string {
   if (perfil === 'admin') return '/admin';
-  if (perfil === 'advogado' || perfil === 'cliente') return '/painel';
+  // Desde a Etapa 9 as duas areas sao arvores separadas: o advogado tem demandas
+  // e grade de disponibilidade, o cliente tem os cartoes de pedido.
+  if (perfil === 'advogado') return '/advogado';
+  if (perfil === 'cliente') return '/painel';
   return '/';
 }

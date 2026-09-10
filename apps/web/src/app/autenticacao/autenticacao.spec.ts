@@ -149,7 +149,9 @@ describe('carregarConfiguracao', () => {
 describe('rotaInicialDe', () => {
   it.each([
     ['admin', '/admin'],
-    ['advogado', '/painel'],
+    // Areas separadas desde a Etapa 9: o advogado tem demandas e grade de
+    // disponibilidade, o cliente tem os cartoes de pedido.
+    ['advogado', '/advogado'],
     ['cliente', '/painel'],
   ] as const)('manda %s para %s', (perfil, destino) => {
     expect(rotaInicialDe(perfil)).toBe(destino);

@@ -1,0 +1,37 @@
+<section class="clientes">
+  <h1 class="clientes__titulo">Clientes</h1>
+
+  <div class="clientes__filtros">
+    <app-campo
+      rotulo="Buscar"
+      [formControl]="busca"
+      marcador="Nome ou e-mail"
+      dica="Acento e maiuscula nao importam."
+    />
+    <app-campo
+      rotulo="Produto contratado"
+      [formControl]="produto"
+      marcador="Nome exato do produto"
+    />
+  </div>
+
+  @if (falha()) {
+  <app-mensagem-erro variante="bloco">
+    Nao foi possivel carregar os clientes. Recarregue a pagina.
+  </app-mensagem-erro>
+  }
+
+  <app-tabela
+    legenda="Clientes cadastrados"
+    [colunas]="colunas"
+    [linhas]="linhas()"
+    [carregando]="carregando()"
+    mensagemVazia="Nenhum cliente encontrado com esses filtros."
+  >
+    <ng-template appCelulaTabela let-linha let-coluna="coluna">
+      @switch (coluna.chave) { @case ('nome') { {{ comoCliente(linha).nome }} }
+      @case ('email') { {{ comoCliente(linha).email }} } @case ('produtos') { {{
+      produtos(comoCliente(linha)) }} } }
+    </ng-template>
+  </app-tabela>
+</section>

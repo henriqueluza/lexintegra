@@ -68,12 +68,26 @@ describe('exigirAutenticacao', () => {
 
 describe('exigirPerfil', () => {
   it.each(['cliente', 'advogado'] as const)(
-    'deixa %s entrar no painel',
+    'deixa %s entrar na propria area',
     async (perfil) => {
       preparar({ autenticado: true, perfil });
-      await expect(executar(exigirPerfil('cliente', 'advogado'))).resolves.toBe(
-        true,
-      );
+      await expect(executar(exigirPerfil(perfil))).resolves.toBe(true);
+    },
+  );
+
+  /**
+   * As duas areas autenticadas sao SEPARADAS desde a Etapa 9, e o guard de uma
+   * recusa o perfil da outra. Nao e seguranca — quem protege e o `@Perfis` da
+   * API — e sim nao levar ninguem a uma tela que vai vir vazia.
+   */
+  it.each([
+    ['cliente', 'advogado', '/painel'],
+    ['advogado', 'cliente', '/advogado'],
+  ] as const)(
+    'o %s que tenta a area do %s volta para a propria',
+    async (perfil, area, destino) => {
+      preparar({ autenticado: true, perfil });
+      expect(destinoDe(await executar(exigirPerfil(area)))).toBe(destino);
     },
   );
 
@@ -87,16 +101,14 @@ describe('exigirPerfil', () => {
    * advogado logado para a tela de login por tentar `/admin` sugere que a sessao
    * dele acabou, o que nao aconteceu.
    */
-  it('manda o advogado de volta ao painel quando tenta a area administrativa', async () => {
+  it('manda o advogado a propria area quando tenta a administrativa', async () => {
     preparar({ autenticado: true, perfil: 'advogado' });
-    expect(destinoDe(await executar(exigirPerfil('admin')))).toBe('/painel');
+    expect(destinoDe(await executar(exigirPerfil('admin')))).toBe('/advogado');
   });
 
-  it('manda o admin ao painel administrativo quando tenta o painel comum', async () => {
+  it('manda o admin ao painel administrativo quando tenta a area do cliente', async () => {
     preparar({ autenticado: true, perfil: 'admin' });
-    expect(destinoDe(await executar(exigirPerfil('cliente', 'advogado')))).toBe(
-      '/admin',
-    );
+    expect(destinoDe(await executar(exigirPerfil('cliente')))).toBe('/admin');
   });
 
   it('manda quem nao tem perfil para a raiz', async () => {

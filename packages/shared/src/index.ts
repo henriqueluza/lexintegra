@@ -7,9 +7,16 @@
  */
 export * from './estado-entregavel.js';
 export * from './esquemas/advogado.js';
+export * from './esquemas/anexo.js';
+export * from './esquemas/cliente.js';
+export * from './esquemas/disponibilidade.js';
+export * from './esquemas/observacao.js';
+export * from './esquemas/pedido.js';
 export * from './esquemas/pre-cadastro.js';
 export * from './esquemas/produto.js';
 export * from './esquemas/senha.js';
 export * from './esquemas/vitrine.js';
 export * from './perfil.js';
+export * from './semana.js';
 export * from './telefone.js';
+export * from './texto.js';

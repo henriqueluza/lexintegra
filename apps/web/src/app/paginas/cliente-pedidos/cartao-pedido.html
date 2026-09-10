@@ -1,0 +1,166 @@
+<app-cartao [titulo]="pedido().snapshot.nome">
+  <p class="cartao-pedido__linha">
+    <span class="cartao-pedido__preco">{{ preco() }}</span>
+    <span class="cartao-pedido__situacao">
+      {{ pedido().distribuido ? 'Em andamento' : 'Em analise' }}
+    </span>
+  </p>
+
+  <p class="cartao-pedido__descricao">{{ pedido().snapshot.descricao }}</p>
+
+  @if (pedido().snapshot.textosOrientativos.length > 0) {
+  <ul class="cartao-pedido__orientacoes">
+    @for (texto of pedido().snapshot.textosOrientativos; track texto) {
+    <li>{{ texto }}</li>
+    }
+  </ul>
+  }
+
+  <!-- Entregaveis DESTE pedido, com o saldo DESTE pedido (arquitetura 5.4). -->
+  <ul class="cartao-pedido__entregaveis">
+    @for (entregavel of pedido().entregaveis; track entregavel.id) {
+    <li class="cartao-pedido__entregavel">
+      <div class="cartao-pedido__identificacao">
+        <span class="cartao-pedido__nome">{{ entregavel.nome }}</span>
+        <span class="cartao-pedido__saldo"
+          >{{ saldoDeRevisoes(entregavel) }}</span
+        >
+      </div>
+
+      <app-selo-estado [estado]="entregavel.estado" />
+
+      @if (podeDecidir(entregavel)) {
+      <div class="cartao-pedido__acoes">
+        <app-botao
+          variante="primario"
+          tamanho="p"
+          [carregando]="emCurso() === entregavel.id"
+          (click)="confirmar(entregavel)"
+        >
+          Confirmar entrega
+        </app-botao>
+
+        <!--
+          O botao some quando o saldo acaba, e o servidor recusa de qualquer
+          forma: `EntregaveisService` compara com o numero congelado no SNAPSHOT
+          do pedido, nunca com o produto vivo (regra inviolavel 5).
+        -->
+        @if (temSaldo(entregavel)) {
+        <app-botao
+          tamanho="p"
+          [carregando]="emCurso() === entregavel.id"
+          (click)="pedirRevisao(entregavel)"
+        >
+          Pedir revisao
+        </app-botao>
+        }
+      </div>
+      }
+    </li>
+    }
+  </ul>
+
+  <div appCartaoRodape class="cartao-pedido__rodape">
+    <app-botao
+      tamanho="p"
+      variante="texto"
+      [attr.aria-expanded]="detalhesAbertos()"
+      (click)="alternarDetalhes()"
+    >
+      {{ detalhesAbertos() ? 'Ocultar detalhes' : 'Observacoes e arquivos' }}
+    </app-botao>
+
+    <!--
+      A ACAO DE REUNIAO VIVE AQUI DENTRO, escopada a este pedido — nunca numa
+      tela solta. Com dois pedidos ativos, uma tela de agendamento separada nao
+      teria como saber qual saldo debitar (ADR-12, arquitetura 5.4).
+      O agendamento em si e a Etapa 10.
+    -->
+    <app-botao tamanho="p" [desabilitado]="true">
+      Marcar reuniao ({{ pedido().snapshot.quantidadeReunioes }} incluida(s))
+    </app-botao>
+  </div>
+
+  @if (detalhesAbertos()) {
+  <section class="cartao-pedido__detalhes">
+    @if (falha(); as mensagem) {
+    <app-mensagem-erro>{{ mensagem }}</app-mensagem-erro>
+    }
+
+    <h3 class="cartao-pedido__subtitulo">Observacoes</h3>
+
+    @if (observacoes().length === 0) {
+    <p class="cartao-pedido__vazio">Nenhuma observacao ainda.</p>
+    } @else {
+    <ul class="cartao-pedido__observacoes">
+      @for (item of observacoes(); track item.id) {
+      <li class="cartao-pedido__observacao">
+        <span class="cartao-pedido__autor">
+          {{ item.autorPerfil === 'cliente' ? 'Voce' : 'Escritorio' }}
+        </span>
+        <span>{{ item.texto }}</span>
+      </li>
+      }
+    </ul>
+    }
+
+    <!--
+      `(submit)` e nao `(ngSubmit)`: `ngSubmit` e uma saida de `NgForm` ou de
+      `FormGroupDirective`, e este formulario nao tem nenhum dos dois — usa um
+      `[formControl]` avulso. Com `(ngSubmit)`, o Angular registra um ouvinte para
+      um evento de DOM chamado "ngSubmit", que nunca acontece: o formulario fica
+      mudo e o Enter nao envia nada.
+    -->
+    <form
+      class="cartao-pedido__formulario"
+      (submit)="$event.preventDefault(); enviarObservacao()"
+    >
+      <app-campo
+        rotulo="Nova observacao"
+        [formControl]="observacao"
+        [multilinha]="true"
+        [linhas]="3"
+      />
+      <app-botao
+        tipo="submit"
+        tamanho="p"
+        [carregando]="emCurso() === 'observacao'"
+        [desabilitado]="observacao.invalid"
+      >
+        Enviar observacao
+      </app-botao>
+    </form>
+
+    <h3 class="cartao-pedido__subtitulo">Arquivos de apoio</h3>
+
+    @if (anexos().length > 0) {
+    <ul class="cartao-pedido__anexos">
+      @for (anexo of anexos(); track anexo.id) {
+      <li>{{ anexo.nome }}</li>
+      }
+    </ul>
+    }
+
+    <div class="cartao-pedido__formulario">
+      <label class="cartao-pedido__arquivo">
+        <span>Escolher arquivos (JPG ou PDF, ate {{ maximoAnexos }})</span>
+        <input
+          type="file"
+          multiple
+          accept="image/jpeg,application/pdf"
+          (change)="escolher($event)"
+        />
+      </label>
+
+      <app-botao
+        tamanho="p"
+        [carregando]="emCurso() === 'anexo'"
+        [desabilitado]="selecionados().length === 0"
+        (click)="anexar()"
+      >
+        Anexar ao pedido
+      </app-botao>
+    </div>
+  </section>
+  }
+</app-cartao>

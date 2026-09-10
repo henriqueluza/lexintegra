@@ -19,6 +19,18 @@ import { HealthController } from './health/health.controller.js';
 import type { Limite as ConfiguracaoDeLimite } from './limite/contador.js';
 import { CHAVE_SEM_APP_CHECK } from './app-check/decoradores.js';
 import { CHAVE_LIMITE, CHAVE_SEM_LIMITE } from './limite/decoradores.js';
+import { AnexosService } from './anexos/anexos.service.js';
+import { ClientesAdminController } from './clientes/clientes.admin.controller.js';
+import type { ClientesService } from './clientes/clientes.service.js';
+import { DisponibilidadesController } from './disponibilidades/disponibilidades.controller.js';
+import type { DisponibilidadesService } from './disponibilidades/disponibilidades.service.js';
+import type { EntregaveisService } from './entregaveis/entregaveis.service.js';
+import type { ObservacoesService } from './observacoes/observacoes.service.js';
+import type { ConsultaPedidosService } from './pedidos/consulta.service.js';
+import type { DistribuicaoService } from './pedidos/distribuicao.service.js';
+import { PedidosAdminController } from './pedidos/pedidos.admin.controller.js';
+import { PedidosAdvogadoController } from './pedidos/pedidos.advogado.controller.js';
+import { PedidosClienteController } from './pedidos/pedidos.cliente.controller.js';
 import { PreCadastrosAdminController } from './pre-cadastros/pre-cadastros.admin.controller.js';
 import { PreCadastrosController } from './pre-cadastros/pre-cadastros.controller.js';
 import type { PreCadastrosService } from './pre-cadastros/pre-cadastros.service.js';
@@ -34,6 +46,18 @@ const ADMIN: UsuarioAutenticado = {
   uid: 'uid-admin',
   email: 'admin@escritorio.test',
   perfil: 'admin',
+};
+
+const CLIENTE: UsuarioAutenticado = {
+  uid: 'uid-clara',
+  email: 'clara@exemplo.test',
+  perfil: 'cliente',
+};
+
+const ADVOGADO: UsuarioAutenticado = {
+  uid: 'uid-ana',
+  email: 'ana@escritorio.test',
+  perfil: 'advogado',
 };
 
 /* -------------------------------------------------------------------------- */
@@ -53,6 +77,8 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['advogados', AdvogadosController],
     ['produtos', ProdutosController],
     ['pre-cadastros', PreCadastrosAdminController],
+    ['distribuicao de pedidos', PedidosAdminController],
+    ['clientes', ClientesAdminController],
   ])(
     'a superficie administrativa de %s exige admin, na classe',
     (_nome, classe) => {
@@ -524,5 +550,435 @@ describe('@UsuarioAtual', () => {
     expect(() => fabricaDeUsuarioAtual()(undefined, contextoCom())).toThrow(
       /sem autenticacao/,
     );
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Etapa 9 — as areas de cliente e de advogado                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A Etapa 9 acrescentou tres controladores separados POR PERFIL, e nao um
+ * controlador de pedidos com perfis por metodo.
+ *
+ * A diferenca importa: com `@Perfis` na classe, um endpoint novo em qualquer um
+ * dos tres nasce restrito ao perfil daquele arquivo. Num controlador unico, o
+ * endpoint novo nasceria aberto aos tres perfis autenticados — e o que nasceria
+ * aberto ali e a leitura de pedido alheio.
+ */
+describe('perfis das areas autenticadas', () => {
+  it.each([
+    ['cliente', PedidosClienteController, ['cliente']],
+    ['advogado', PedidosAdvogadoController, ['advogado']],
+    ['disponibilidade', DisponibilidadesController, ['advogado']],
+  ])('a area de %s declara o perfil na classe', (_nome, classe, esperado) => {
+    expect(reflector.get<readonly Perfil[]>(CHAVE_PERFIS, classe)).toEqual(
+      esperado,
+    );
+  });
+
+  /**
+   * O reverso da lista nominal de rotas publicas: nenhuma rota da area
+   * autenticada pode se declarar publica. Um `@Publico()` distraido em
+   * `PedidosClienteController` abriria os cartoes de todos os clientes.
+   */
+  it.each([
+    ['cliente.listar', PedidosClienteController.prototype.listar],
+    ['cliente.obter', PedidosClienteController.prototype.obter],
+    ['cliente.anexar', PedidosClienteController.prototype.anexar],
+    ['advogado.listar', PedidosAdvogadoController.prototype.listar],
+    ['advogado.anamnese', PedidosAdvogadoController.prototype.anamnese],
+    ['admin.atribuir', PedidosAdminController.prototype.atribuir],
+    ['clientes.buscar', ClientesAdminController.prototype.buscar],
+    ['disponibilidade.publicar', DisponibilidadesController.prototype.publicar],
+  ])('%s NAO e publico', (_nome, metodo) => {
+    expect(reflector.get(CHAVE_PUBLICO, metodo)).toBeUndefined();
+  });
+
+  /**
+   * A area do cliente nao expoe exclusao de observacao, e a ausencia e a decisao
+   * (item 2.3.3): observacao e append-only porque o advogado trabalha a partir
+   * do que o cliente escreveu. Decisao que so existe como ausencia ninguem
+   * defende numa revisao futura.
+   */
+  it('nao expoe exclusao nem edicao de observacao', () => {
+    const metodos = PedidosClienteController.prototype as unknown as Record<
+      string,
+      unknown
+    >;
+
+    expect(metodos['excluirObservacao']).toBeUndefined();
+    expect(metodos['editarObservacao']).toBeUndefined();
+  });
+});
+
+describe('PedidosClienteController', () => {
+  function montar(): {
+    controlador: PedidosClienteController;
+    chamadas: string[];
+  } {
+    const chamadas: string[] = [];
+    const registrar =
+      (nome: string) =>
+      (...argumentos: unknown[]): Promise<unknown> => {
+        chamadas.push(`${nome} ${argumentos.map(String).join(' ')}`);
+        return Promise.resolve([]);
+      };
+
+    return {
+      controlador: new PedidosClienteController(
+        {
+          listarDoCliente: registrar('listarDoCliente'),
+          obterCartao: registrar('obterCartao'),
+        } as unknown as ConsultaPedidosService,
+        {
+          confirmarEntrega: (alvo: { pedidoId: string }, uid: string) =>
+            registrar('confirmar')(alvo.pedidoId, uid),
+          pedirRevisao: (alvo: { pedidoId: string }, uid: string) =>
+            registrar('revisao')(alvo.pedidoId, uid),
+        } as unknown as EntregaveisService,
+        {
+          listar: registrar('observacoes.listar'),
+          registrar: registrar('observacoes.registrar'),
+        } as unknown as ObservacoesService,
+        {
+          listar: registrar('anexos.listar'),
+          registrar: registrar('anexos.registrar'),
+        } as unknown as AnexosService,
+      ),
+      chamadas,
+    };
+  }
+
+  /**
+   * O `clienteId` sai do TOKEN em toda rota — nenhuma delas o aceita no caminho
+   * ou na query. Um `GET /pedidos?clienteId=...` funcionaria e seria a forma mais
+   * direta de um cliente ler os pedidos de outro; estes testes fixam que o uid
+   * usado e sempre o do usuario autenticado.
+   */
+  it('lista e obtem usando o uid do token', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.listar(CLIENTE);
+    await controlador.obter('pedido-1', CLIENTE);
+
+    expect(chamadas).toEqual([
+      'listarDoCliente uid-clara',
+      'obterCartao pedido-1 uid-clara',
+    ]);
+  });
+
+  /**
+   * As acoes do entregavel sao EVENTOS, nao estados de destino: nao existe
+   * `PATCH { estado }` neste controlador. E a diferenca entre "mude para
+   * entregue" — a transicao manual que o ADR-11 proibe — e "o cliente
+   * confirmou".
+   */
+  it('dispara os dois eventos do cliente pelo uid do token', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.confirmar('pedido-1', '001', CLIENTE);
+    await controlador.pedirRevisao('pedido-1', '001', CLIENTE);
+
+    expect(chamadas).toEqual([
+      'confirmar pedido-1 uid-clara',
+      'revisao pedido-1 uid-clara',
+    ]);
+  });
+
+  it('delega observacoes e anexos com o autor do token', async () => {
+    const { controlador, chamadas } = montar();
+    const envio = { anexos: [] } as never;
+
+    await controlador.listarObservacoes('pedido-1', CLIENTE);
+    await controlador.registrarObservacao('pedido-1', { texto: 'oi' }, CLIENTE);
+    await controlador.listarAnexos('pedido-1', CLIENTE);
+    await controlador.anexar('pedido-1', envio, CLIENTE);
+
+    expect(chamadas).toEqual([
+      'observacoes.listar pedido-1 [object Object]',
+      'observacoes.registrar pedido-1 [object Object] [object Object]',
+      'anexos.listar pedido-1 [object Object]',
+      'anexos.registrar pedido-1 [object Object] [object Object]',
+    ]);
+  });
+});
+
+describe('PedidosAdvogadoController', () => {
+  function montar(): {
+    controlador: PedidosAdvogadoController;
+    chamadas: string[];
+  } {
+    const chamadas: string[] = [];
+    const registrar =
+      (nome: string) =>
+      (...argumentos: unknown[]): Promise<unknown> => {
+        chamadas.push(`${nome} ${argumentos.map(String).join(' ')}`);
+        return Promise.resolve([]);
+      };
+
+    return {
+      controlador: new PedidosAdvogadoController(
+        {
+          listarDoAdvogado: registrar('listarDoAdvogado'),
+          obterDemanda: (pedidoId: string, uid: string) => {
+            chamadas.push(`obterDemanda ${pedidoId} ${uid}`);
+            return Promise.resolve({ cliente: { uid: 'uid-clara' } });
+          },
+        } as unknown as ConsultaPedidosService,
+        {
+          iniciarTrabalho: (alvo: { pedidoId: string }, uid: string) =>
+            registrar('iniciar')(alvo.pedidoId, uid),
+          retomarTrabalho: (alvo: { pedidoId: string }, uid: string) =>
+            registrar('retomar')(alvo.pedidoId, uid),
+          registrarArquivo: (
+            alvo: { pedidoId: string },
+            arquivo: { nome: string },
+            uid: string,
+          ) => registrar('arquivo')(alvo.pedidoId, arquivo.nome, uid),
+        } as unknown as EntregaveisService,
+        {
+          listar: registrar('observacoes.listar'),
+          registrar: registrar('observacoes.registrar'),
+        } as unknown as ObservacoesService,
+        { listar: registrar('anexos.listar') } as unknown as AnexosService,
+        { anamneseDe: registrar('anamneseDe') } as unknown as ClientesService,
+      ),
+      chamadas,
+    };
+  }
+
+  it('lista e obtem usando o uid do token', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.listar(ADVOGADO);
+    await controlador.obter('pedido-1', ADVOGADO);
+
+    expect(chamadas).toEqual([
+      'listarDoAdvogado uid-ana',
+      'obterDemanda pedido-1 uid-ana',
+    ]);
+  });
+
+  /**
+   * A ORDEM AQUI E A SEGURANCA. `obterDemanda` roda ANTES de `anamneseDe`: sem
+   * isso, bastaria conhecer o id de um pedido qualquer para ler a ficha juridica
+   * do cliente dele, que e o dado mais sensivel do sistema (arquitetura, secao
+   * 13). Este teste falha se alguem inverter as duas linhas.
+   */
+  it('confere a atribuicao antes de ler a anamnese', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.anamnese('pedido-1', ADVOGADO);
+
+    expect(chamadas).toEqual([
+      'obterDemanda pedido-1 uid-ana',
+      'anamneseDe uid-clara',
+    ]);
+  });
+
+  it('dispara os eventos do advogado pelo uid do token', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.iniciar('pedido-1', '001', ADVOGADO);
+    await controlador.retomar('pedido-1', '001', ADVOGADO);
+    await controlador.enviarArquivo('pedido-1', '001', 'minuta.pdf', ADVOGADO);
+
+    expect(chamadas).toEqual([
+      'iniciar pedido-1 uid-ana',
+      'retomar pedido-1 uid-ana',
+      'arquivo pedido-1 minuta.pdf uid-ana',
+    ]);
+  });
+
+  it('le observacoes e anexos da demanda', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.listarObservacoes('pedido-1', ADVOGADO);
+    await controlador.registrarObservacao(
+      'pedido-1',
+      { texto: 'ok' },
+      ADVOGADO,
+    );
+    await controlador.listarAnexos('pedido-1', ADVOGADO);
+
+    expect(chamadas).toHaveLength(3);
+  });
+});
+
+describe('PedidosAdminController', () => {
+  function montar(): {
+    controlador: PedidosAdminController;
+    chamadas: string[];
+  } {
+    const chamadas: string[] = [];
+
+    return {
+      controlador: new PedidosAdminController({
+        listar: (situacao: string) => {
+          chamadas.push(`listar ${situacao}`);
+          return Promise.resolve([]);
+        },
+        atribuir: (pedidoId: string, advogadoId: string, admin: string) => {
+          chamadas.push(`atribuir ${pedidoId} a ${advogadoId} por ${admin}`);
+          return Promise.resolve({});
+        },
+        remover: (pedidoId: string, admin: string) => {
+          chamadas.push(`remover ${pedidoId} por ${admin}`);
+          return Promise.resolve({});
+        },
+      } as unknown as DistribuicaoService),
+      chamadas,
+    };
+  }
+
+  /**
+   * O padrao e `nao_distribuidos`, e nao `todos`: a caixa de entrada existe para
+   * mostrar o que ainda precisa de acao. Valor desconhecido cai no padrao em vez
+   * de derrubar a tela com 400, como em `produtos`.
+   */
+  it.each([
+    ['nao_distribuidos', 'nao_distribuidos'],
+    ['distribuidos', 'distribuidos'],
+    ['todos', 'todos'],
+    [undefined, 'nao_distribuidos'],
+    ['inventado', 'nao_distribuidos'],
+  ])('lista com situacao %s', async (recebido, esperado) => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.listar(recebido);
+
+    expect(chamadas).toEqual([`listar ${esperado}`]);
+  });
+
+  /** O autor da distribuicao sai do TOKEN, nunca do corpo: se viesse do corpo, um
+   * administrador poderia registrar a distribuicao em nome de outro. */
+  it('atribui e remove registrando o administrador autenticado', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.atribuir('pedido-1', { advogadoId: 'uid-ana' }, ADMIN);
+    await controlador.remover('pedido-1', ADMIN);
+
+    expect(chamadas).toEqual([
+      'atribuir pedido-1 a uid-ana por uid-admin',
+      'remover pedido-1 por uid-admin',
+    ]);
+  });
+});
+
+describe('ClientesAdminController', () => {
+  function montar(): {
+    controlador: ClientesAdminController;
+    chamadas: string[];
+  } {
+    const chamadas: string[] = [];
+
+    return {
+      controlador: new ClientesAdminController({
+        buscar: (filtro: Record<string, unknown>) => {
+          chamadas.push(`buscar ${JSON.stringify(filtro)}`);
+          return Promise.resolve([]);
+        },
+        anamneseDe: (uid: string) => {
+          chamadas.push(`anamnese ${uid}`);
+          return Promise.resolve([]);
+        },
+      } as unknown as ClientesService),
+      chamadas,
+    };
+  }
+
+  it('passa os dois filtros aparados', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.buscar('  ana  ', ' Parecer ');
+
+    expect(chamadas).toEqual(['buscar {"busca":"ana","produto":"Parecer"}']);
+  });
+
+  /** Query string e texto livre: termo absurdo deixa de filtrar em vez de
+   * derrubar a tela com 400. */
+  it('descarta termo longo demais sem estourar', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.buscar('a'.repeat(500));
+
+    expect(chamadas).toEqual(['buscar {}']);
+  });
+
+  it('le a anamnese pelo uid do caminho', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.anamnese('uid-clara');
+
+    expect(chamadas).toEqual(['anamnese uid-clara']);
+  });
+
+  /** Nao ha exclusao de cliente: eliminacao de titular e rotina com varredura
+   * entre colecoes (arquitetura, secao 13), nao botao numa tabela. */
+  it('nao expoe exclusao de cliente', () => {
+    const metodos = ClientesAdminController.prototype as unknown as Record<
+      string,
+      unknown
+    >;
+
+    expect(metodos['excluir']).toBeUndefined();
+    expect(metodos['remover']).toBeUndefined();
+  });
+});
+
+describe('DisponibilidadesController', () => {
+  function montar(): {
+    controlador: DisponibilidadesController;
+    chamadas: string[];
+  } {
+    const chamadas: string[] = [];
+
+    return {
+      controlador: new DisponibilidadesController({
+        obter: (advogadoId: string, semana?: string) => {
+          chamadas.push(`obter ${advogadoId} ${String(semana)}`);
+          return Promise.resolve([]);
+        },
+        publicar: (advogadoId: string, corpo: { semana: string }) => {
+          chamadas.push(`publicar ${advogadoId} ${corpo.semana}`);
+          return Promise.resolve([]);
+        },
+      } as unknown as DisponibilidadesService),
+      chamadas,
+    };
+  }
+
+  /**
+   * `semanas` viaja na resposta para a tela nao repetir a aritmetica de
+   * calendario. Duas implementacoes do "que semana e hoje" — uma no servidor, uma
+   * no navegador — discordam na noite de domingo, quando o navegador esta em
+   * Sao Paulo e o Cloud Run em UTC.
+   */
+  it('devolve a janela editavel junto da grade', async () => {
+    const { controlador, chamadas } = montar();
+
+    const resposta = await controlador.obter(ADVOGADO, '2026-09-07');
+
+    expect(resposta.semanas).toHaveLength(2);
+    expect(chamadas).toEqual(['obter uid-ana 2026-09-07']);
+  });
+
+  it('sem semana, deixa o servico calcular a corrente', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.obter(ADVOGADO);
+
+    expect(chamadas).toEqual(['obter uid-ana undefined']);
+  });
+
+  /** O advogado publica a PROPRIA grade: o uid sai do token, e o servico nao tem
+   * parametro por onde receber outro. */
+  it('publica com o uid do token', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.publicar({ semana: '2026-09-07', slots: [] }, ADVOGADO);
+
+    expect(chamadas).toEqual(['publicar uid-ana 2026-09-07']);
   });
 });

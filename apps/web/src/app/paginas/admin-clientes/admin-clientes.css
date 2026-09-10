@@ -1,0 +1,26 @@
+/* Direcao B (Pauta) por heranca da shell autenticada. */
+.clientes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+.clientes__titulo {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t1);
+  font-weight: var(--peso-titulo);
+  line-height: var(--altura-titulo);
+  letter-spacing: var(--letra-titulo);
+}
+
+.clientes__filtros {
+  display: grid;
+  gap: var(--s4);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 48rem) {
+  .clientes__filtros {
+    grid-template-columns: 2fr 1fr;
+  }
+}

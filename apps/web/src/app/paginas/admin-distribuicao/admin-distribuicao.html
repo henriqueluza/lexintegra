@@ -1,0 +1,78 @@
+<section class="distribuicao">
+  <h1 class="distribuicao__titulo">Distribuicao</h1>
+
+  <app-selecao
+    rotulo="Situacao"
+    [opcoes]="opcoesDeSituacao"
+    [formControl]="situacao"
+  />
+
+  @if (falha(); as mensagem) {
+  <app-mensagem-erro variante="bloco">{{ mensagem }}</app-mensagem-erro>
+  } @if (falhaDaLista()) {
+  <app-mensagem-erro variante="bloco">
+    Nao foi possivel carregar os pedidos. Recarregue a pagina.
+  </app-mensagem-erro>
+  }
+
+  <app-tabela
+    legenda="Pedidos recebidos e sua distribuicao"
+    [colunas]="colunas"
+    [linhas]="linhas()"
+    [carregando]="carregando()"
+    mensagemVazia="Nenhum pedido nesta situacao."
+  >
+    <!--
+      UM template para a tabela inteira, com `@switch` na coluna: e o contrato de
+      `app-tabela` (ver `CelulaTabela`). Um template por coluna nao funciona —
+      `contentChild` pega o primeiro e o usa em todas, e o sintoma e a mesma
+      celula repetida na linha inteira.
+    -->
+    <ng-template appCelulaTabela let-linha let-coluna="coluna">
+      @switch (coluna.chave) { @case ('produto') { {{ comoPedido(linha).produto
+      }} } @case ('cliente') { {{ comoPedido(linha).cliente.nome }} } @case
+      ('situacao') { {{ nomeDoAdvogado(comoPedido(linha).advogadoId) }} } @case
+      ('acoes') { @if (comoPedido(linha).distribuido) {
+      <app-botao
+        tamanho="p"
+        [carregando]="emCurso() === comoPedido(linha).id"
+        (click)="devolver(comoPedido(linha))"
+      >
+        Devolver a fila
+      </app-botao>
+      } @else {
+      <div class="distribuicao__acao">
+        <!--
+          `<select>` nativo e nao `app-selecao`: o componente e feito para
+          reactive forms, e aqui a escolha e por LINHA. Um `FormControl` por
+          linha viveria fora da tabela e teria que ser sincronizado com ela a
+          cada recarga.
+        -->
+        <label class="distribuicao__rotulo">
+          <span class="distribuicao__rotulo-texto">
+            Advogado para {{ comoPedido(linha).produto }}
+          </span>
+          <select
+            class="distribuicao__select"
+            (change)="escolher(comoPedido(linha).id, $event)"
+          >
+            <option value="">Escolha um advogado</option>
+            @for (opcao of opcoesDeAdvogado(); track opcao.valor) {
+            <option [value]="opcao.valor">{{ opcao.rotulo }}</option>
+            }
+          </select>
+        </label>
+
+        <app-botao
+          variante="primario"
+          tamanho="p"
+          [carregando]="emCurso() === comoPedido(linha).id"
+          (click)="atribuir(comoPedido(linha))"
+        >
+          Distribuir
+        </app-botao>
+      </div>
+      } } }
+    </ng-template>
+  </app-tabela>
+</section>
