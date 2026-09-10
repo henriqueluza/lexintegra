@@ -1,14 +1,18 @@
 import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
 import {
   esquemaNovaObservacao,
+  esquemaPedidoDeUpload,
   type AnexoResumo,
   type AnamneseResumo,
   type DemandaResumo,
   type EntregavelResumo,
   type NovaObservacao,
   type ObservacaoResumo,
+  type PedidoDeUpload,
 } from 'shared';
 import { AnexosService } from '../anexos/anexos.service.js';
+import { PortaoDeArquivos } from '../arquivos/portao.js';
+import { UploadDeEntregavelService } from '../entregaveis/upload.service.js';
 import { Perfis, UsuarioAtual } from '../autenticacao/decoradores.js';
 import type { UsuarioAutenticado } from '../autenticacao/usuario.js';
 import { ClientesService } from '../clientes/clientes.service.js';
@@ -39,6 +43,8 @@ export class PedidosAdvogadoController {
     private readonly observacoes: ObservacoesService,
     private readonly anexos: AnexosService,
     private readonly clientes: ClientesService,
+    private readonly upload: UploadDeEntregavelService,
+    private readonly portao: PortaoDeArquivos,
   ) {}
 
   @Get()
@@ -106,38 +112,72 @@ export class PedidosAdvogadoController {
   }
 
   /**
-   * PLACEHOLDER DA ETAPA 9 — registra o nome do entregavel enviado, nao o
-   * arquivo.
+   * PASSO 1 do envio do entregavel: pede a URL assinada de escrita.
    *
-   * ESTE E O SEGUNDO FLUXO DE UPLOAD, e ele e distinto do anexo do cliente por
-   * decisao de arquitetura (secao 6.2): autorizacao diferente (advogado atribuido
-   * contra cliente dono), efeito diferente (aqui ha versao de entregavel; la nao
-   * ha efeito nenhum sobre o estado) e retencao diferente. Nao devem compartilhar
-   * endpoint, e nao compartilham.
+   * ESTE E O SEGUNDO FLUXO DE UPLOAD, distinto do anexo do cliente por decisao de
+   * arquitetura (secao 6.2): autorizacao diferente (advogado atribuido contra
+   * cliente dono), efeito diferente (aqui ha versao nova de entregavel; la nao ha
+   * efeito sobre o estado), prefixo diferente no bucket e retencao diferente. Nao
+   * compartilham endpoint, e nao compartilham.
    *
-   * O upload NAO muda estado — no diagrama do ADR-11, "cliente revisa o PDF" nao
-   * e estado. O que ele faz e gravar `arquivoAtual`, e e a existencia desse campo
-   * que habilita a confirmacao do cliente.
+   * ⚠️ A POLITICA DESTE FLUXO E PROVISORIA. O item 6 da secao 0.2 do plano
+   * registra que jpg/pdf/5 MB/3 arquivos foi confirmado para o CLIENTE, "nao
+   * necessariamente para o do advogado". Os valores em uso — PDF, 20 MB, um por
+   * envio — sao ponto de partida, e `POLITICA_UPLOAD` os marca como pendentes.
    *
-   * A REGRA DE TIPO E TAMANHO DESTE FLUXO AINDA NAO FOI CONFIRMADA (plano de
-   * execucao, 0.2, item 6): jpg/pdf/5 MB vale para o CLIENTE. Por isso nao ha
-   * validacao de politica aqui — assumir a do cliente por parecer igual seria
-   * decidir no lugar do Marcos. A politica do entregavel entra na Etapa 11,
-   * depois de confirmada.
+   * O upload NAO muda o estado do entregavel: no diagrama do ADR-11, "cliente
+   * revisa o PDF" nao e estado. O que ele faz e gravar `arquivoAtual`, e e a
+   * existencia desse campo que habilita a confirmacao do cliente.
    */
   @Post(':pedidoId/entregaveis/:entregavelId/arquivo')
-  @HttpCode(200)
-  enviarArquivo(
+  @HttpCode(201)
+  pedirEnvioDeArquivo(
     @Param('pedidoId') pedidoId: string,
     @Param('entregavelId') entregavelId: string,
-    @Body('nome') nome: string,
+    @Body(new ZodPipe(esquemaPedidoDeUpload)) arquivo: PedidoDeUpload,
     @UsuarioAtual() advogado: UsuarioAutenticado,
-  ): Promise<EntregavelResumo> {
-    return this.entregaveis.registrarArquivo(
+  ): Promise<{ url: string; versao: number; validoPorSegundos: number }> {
+    return this.upload.pedirEnvio(
       { pedidoId, entregavelId },
-      { nome },
       advogado.uid,
+      arquivo,
     );
+  }
+
+  /** PASSO 2: confirma o envio e enfileira a varredura. */
+  @Post(':pedidoId/entregaveis/:entregavelId/arquivo/confirmacao')
+  @HttpCode(202)
+  confirmarArquivo(
+    @Param('pedidoId') pedidoId: string,
+    @Param('entregavelId') entregavelId: string,
+    @UsuarioAtual() advogado: UsuarioAutenticado,
+  ): Promise<void> {
+    return this.upload.confirmarEnvio({ pedidoId, entregavelId }, advogado.uid);
+  }
+
+  /**
+   * O advogado tambem baixa pelo PORTAO — inclusive o arquivo que ele mesmo
+   * enviou. Nao ha atalho: enquanto o estado nao for `limpo`, ninguem serve nada
+   * (regra inviolavel 6), e um caminho especial "para quem enviou" seria
+   * exatamente a segunda porta que a regra existe para nao ter.
+   */
+  @Get(':pedidoId/entregaveis/:entregavelId/download')
+  baixarEntregavel(
+    @Param('pedidoId') pedidoId: string,
+    @Param('entregavelId') entregavelId: string,
+    @UsuarioAtual() advogado: UsuarioAutenticado,
+  ): Promise<{ url: string; validoPorSegundos: number }> {
+    return this.portao.linkDoEntregavel({ pedidoId, entregavelId }, advogado);
+  }
+
+  /** E os anexos de apoio que o cliente mandou, tambem pelo portao. */
+  @Get(':pedidoId/anexos/:anexoId/download')
+  baixarAnexo(
+    @Param('pedidoId') pedidoId: string,
+    @Param('anexoId') anexoId: string,
+    @UsuarioAtual() advogado: UsuarioAutenticado,
+  ): Promise<{ url: string; validoPorSegundos: number }> {
+    return this.portao.linkDoAnexo({ pedidoId, anexoId }, advogado);
   }
 
   /* ---------------------------------------------------------------------- */

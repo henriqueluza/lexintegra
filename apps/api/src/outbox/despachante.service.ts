@@ -9,6 +9,10 @@ import {
 import { descreverErro } from '../email/redigir.js';
 import type { RegistroOutbox } from './evento.js';
 import { montarLinkDeSenha, urlDaAplicacao } from './link-de-senha.js';
+import {
+  ASSUNTO_AVISO_EXCLUSAO,
+  TEXTO_AVISO_EXCLUSAO,
+} from '../termos/termos.textos.js';
 import { OutboxService } from './outbox.service.js';
 
 /**
@@ -82,6 +86,25 @@ export class DespachanteOutbox {
     const usuario = await this.auth.getUser(registro.destinatarioUid);
     if (usuario.email === undefined) {
       throw new Error(`usuario ${registro.destinatarioUid} nao tem e-mail`);
+    }
+
+    /*
+     * O AVISO PREVIO DE EXCLUSAO (Etapa 11, arquitetura secao 13). Nao gera link
+     * de senha nenhum — e por isso ele sai antes do bloco abaixo, e nao como um
+     * ramo dentro dele.
+     *
+     * ⚠️ O TEXTO NAO FOI APROVADO pela CONTRATANTE. `TEXTO_AVISO_EXCLUSAO` e um
+     * marcador literal, e ha teste que cai quando ele for substituido — ver
+     * `termos/termos.textos.ts`. O e-mail SAI mesmo assim, de propósito: a
+     * alternativa seria uma rotina de conformidade que nao roda ate alguem
+     * lembrar de aprovar um texto.
+     */
+    if (registro.tipo === 'aviso-exclusao-arquivos') {
+      return {
+        para: [usuario.email],
+        assunto: ASSUNTO_AVISO_EXCLUSAO,
+        corpoTexto: TEXTO_AVISO_EXCLUSAO,
+      };
     }
 
     const linkDoFirebase = await this.auth.generatePasswordResetLink(

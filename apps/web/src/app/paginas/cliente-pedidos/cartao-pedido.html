@@ -29,6 +29,28 @@
 
       <app-selo-estado [estado]="entregavel.estado" />
 
+      <div class="cartao-pedido__acoes">
+        <!--
+          O BOTAO DE BAIXAR SO APARECE COM O ARQUIVO VARRIDO. `arquivoServivel`
+          vem da MESMA funcao que o portao da API consulta — mas quem decide de
+          verdade e o portao (regra inviolavel 6): esconder o botao nao impede uma
+          chamada, e a chamada e recusada.
+        -->
+        @if (podeBaixar(entregavel)) {
+        <app-botao
+          tamanho="p"
+          [carregando]="emCurso() === 'download-' + entregavel.id"
+          (click)="baixar(entregavel)"
+        >
+          Aceitar termos e baixar
+        </app-botao>
+        } @else if (entregavel.temArquivo) {
+        <span class="cartao-pedido__saldo">
+          Arquivo em verificacao de seguranca.
+        </span>
+        }
+      </div>
+
       @if (podeDecidir(entregavel)) {
       <div class="cartao-pedido__acoes">
         <app-botao
@@ -130,6 +152,12 @@
         Enviar observacao
       </app-botao>
     </form>
+
+    <!--
+      ⚠️ TEXTO PENDENTE DE APROVACAO. Sai literal, como o aviso de privacidade da
+      Etapa 6 — e ha teste que cai quando for substituido.
+    -->
+    <p class="cartao-pedido__vazio">{{ textoDoTermo }}</p>
 
     <h3 class="cartao-pedido__subtitulo">Arquivos de apoio</h3>
 

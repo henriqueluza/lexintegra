@@ -98,12 +98,30 @@ jobs:
           docker build -f apps/api/Dockerfile -t "$IMAGEM" .
           docker push "$IMAGEM"
 
+      # O SCANNER E UMA IMAGEM PROPRIA (arquitetura 3.2): o ClamAV carrega ~1 GB
+      # de assinaturas em memoria, e junta-lo a imagem da API inflaria o cold
+      # start de toda requisicao da aplicacao.
+      #
+      # As duas saem do MESMO commit, e nao de builds independentes: assim um
+      # deploy nunca deixa uma API nova conversando com um scanner velho, cujo
+      # contrato de resposta pode ter mudado.
+      #
+      # Contexto em `apps/scanner`, e nao na raiz: este contentor nao depende do
+      # workspace pnpm — e o que permite construi-lo e implanta-lo sozinho.
+      - name: Construir e enviar a imagem do scanner
+        env:
+          IMAGEM: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/scanner:${{ github.sha }}
+        run: |
+          docker build -f apps/scanner/Dockerfile -t "$IMAGEM" apps/scanner
+          docker push "$IMAGEM"
+
       # Unica fonte de verdade do servico Cloud Run e o Terraform. Nao ha
       # `gcloud run deploy` neste pipeline: duas ferramentas escrevendo o mesmo
       # servico produzem drift a cada apply.
       - name: Aplicar a infraestrutura e publicar a imagem
         env:
           TF_VAR_api_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/api:${{ github.sha }}
+          TF_VAR_scanner_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/scanner:${{ github.sha }}
           TF_VAR_commit_sha: ${{ github.sha }}
         run: terraform apply -input=false -auto-approve -lock-timeout=10m
         working-directory: infra/terraform

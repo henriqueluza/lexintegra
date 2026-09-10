@@ -11,7 +11,17 @@ import type { Timestamp } from 'firebase-admin/firestore';
  * propria senha". Colapsa-los perderia a trilha de auditoria e impediria que a
  * Etapa 7 desse a cada um o seu texto.
  */
-export const TIPOS_EVENTO = ['definir-senha', 'redefinir-senha'] as const;
+export const TIPOS_EVENTO = [
+  'definir-senha',
+  'redefinir-senha',
+  /**
+   * O aviso previo de exclusao (Etapa 11, arquitetura secao 13): "antes de
+   * qualquer exclusao de dado, o titular recebe e-mail avisando com
+   * antecedencia". Nasce no outbox como os outros — o aviso que nao chega e
+   * exatamente o que a secao 13 nao admite.
+   */
+  'aviso-exclusao-arquivos',
+] as const;
 
 export type TipoEvento = (typeof TIPOS_EVENTO)[number];
 
@@ -63,6 +73,16 @@ export function idDoEvento(
   agora: number = Date.now(),
 ): string {
   if (tipo === 'definir-senha') return `definir-senha_${uid}`;
+
+  /*
+   * O aviso de exclusao acontece UMA vez por pedido fechado, e o pedido ja e
+   * marcado como avisado na mesma transacao. O uid basta — e se o job repetir a
+   * passagem no mesmo dia, o `create` estoura como duplicata esperada em vez de
+   * mandar o mesmo aviso duas vezes.
+   */
+  if (tipo === 'aviso-exclusao-arquivos') {
+    return `aviso-exclusao_${uid}`;
+  }
 
   const janela = Math.floor(agora / JANELA_REDEFINICAO_MS);
   return `redefinir-senha_${uid}_${janela}`;
