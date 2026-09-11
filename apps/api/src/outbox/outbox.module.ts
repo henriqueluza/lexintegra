@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { EmailModule } from '../email/email.module.js';
 import { DespachanteOutbox } from './despachante.service.js';
 import { OutboxService } from './outbox.service.js';
+import { CONFIGURACAO_OUTBOX, configuracaoDoOutbox } from './politica.js';
 
 /**
  * Escrita e entrega ficam no mesmo modulo, mas em servicos separados de proposito.
@@ -14,7 +15,11 @@ import { OutboxService } from './outbox.service.js';
  */
 @Module({
   imports: [EmailModule],
-  providers: [OutboxService, DespachanteOutbox],
-  exports: [OutboxService, DespachanteOutbox],
+  providers: [
+    OutboxService,
+    DespachanteOutbox,
+    { provide: CONFIGURACAO_OUTBOX, useFactory: () => configuracaoDoOutbox() },
+  ],
+  exports: [OutboxService, DespachanteOutbox, CONFIGURACAO_OUTBOX],
 })
 export class OutboxModule {}

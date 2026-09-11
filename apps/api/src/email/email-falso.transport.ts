@@ -24,6 +24,7 @@ export class EmailFalsoTransport implements EmailTransport {
   private readonly log = new Logger('EmailFalso');
   private readonly registro: EmailMensagem[] = [];
   private sequencia = 0;
+  private falha: string | null = null;
 
   get enviadas(): readonly EmailMensagem[] {
     return this.registro;
@@ -32,9 +33,34 @@ export class EmailFalsoTransport implements EmailTransport {
   limpar(): void {
     this.registro.length = 0;
     this.sequencia = 0;
+    this.falha = null;
+  }
+
+  /**
+   * Passa a recusar tudo, como um provedor fora do ar ou uma chave invalida.
+   *
+   * Existe para o criterio de aceite da Etapa 7: "com a chave do transporte de
+   * e-mail invalida, o envio falha, aparece como pendente no painel, e e entregue
+   * corretamente apos a correcao". O teste precisa ALTERNAR o modo no meio do
+   * cenario, e um dublê inline por teste nao faz isso sem virar arame.
+   *
+   * A mensagem recusada NAO entra em `enviadas`: o provedor nao a aceitou, e
+   * registrar ali faria o teste de "exatamente uma entrega" contar tentativa como
+   * entrega.
+   */
+  falharCom(motivo: string): void {
+    this.falha = motivo;
+  }
+
+  voltarAFuncionar(): void {
+    this.falha = null;
   }
 
   enviar(mensagem: EmailMensagem): Promise<EmailResultado> {
+    if (this.falha !== null) {
+      return Promise.resolve({ sucesso: false, motivo: this.falha });
+    }
+
     this.registro.push(mensagem);
     this.sequencia += 1;
 

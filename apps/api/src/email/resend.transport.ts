@@ -27,6 +27,14 @@ export class ResendEmailTransport implements EmailTransport {
     try {
       const { data, error } = await this.cliente.emails.send(
         this.montar(mensagem),
+        /*
+         * O SDK manda isto como cabecalho `Idempotency-Key`. Quem escolhe a chave
+         * e o outbox; aqui so se repassa — nenhuma decisao de reentrega entra
+         * neste arquivo (ADR-07.1).
+         */
+        mensagem.chaveIdempotencia === undefined
+          ? undefined
+          : { idempotencyKey: mensagem.chaveIdempotencia },
       );
 
       if (error !== null) {

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AdvogadosModule } from './advogados/advogados.module.js';
+import { AlertasModule } from './alertas/alertas.module.js';
 import { AppCheckModule } from './app-check/app-check.module.js';
 import { AutenticacaoModule } from './autenticacao/autenticacao.module.js';
 import { ArmazenamentoModule } from './armazenamento/armazenamento.module.js';
@@ -23,6 +24,7 @@ import { VitrineModule } from './vitrine/vitrine.module.js';
 @Module({
   imports: [
     FirebaseModule,
+    AlertasModule,
     /*
      * ORDEM CARREGA SIGNIFICADO daqui para baixo: o Nest executa os `APP_GUARD`
      * na ordem em que os modulos que os registram sao importados. O limite roda

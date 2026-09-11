@@ -16,6 +16,7 @@ import {
   limparEmuladores,
   passarUmSegundo,
 } from '../emulador.js';
+import { AlertaFalso } from '../alertas/alerta.js';
 import { DespachanteOutbox } from '../outbox/despachante.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import { AdvogadosService } from './advogados.service.js';
@@ -46,12 +47,12 @@ beforeEach(async () => {
   await limparEmuladores();
   transporte = new EmailFalsoTransport();
 
-  const outbox = new OutboxService(banco);
+  const outbox = new OutboxService(banco, { atrasoDoVarredorMs: 0, arrendamentoMs: 60_000, loteDoVarredor: 100 });
   servico = new AdvogadosService(
     auth,
     banco,
     outbox,
-    new DespachanteOutbox(outbox, auth, transporte),
+    new DespachanteOutbox(outbox, auth, transporte, new AlertaFalso()),
   );
   autenticacao = new AutenticacaoGuard(new Reflector(), auth);
 });

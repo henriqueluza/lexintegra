@@ -37,10 +37,68 @@ export interface RegistroOutbox {
   readonly destinatarioUid: string;
   readonly estado: EstadoEntrega;
   readonly criadoEm: Timestamp;
+  /** Quantas vezes o registro foi REIVINDICADO. Ver `OutboxService.reivindicar`. */
   readonly tentativas: number;
+  /**
+   * Quantas vezes o administrador reabriu este registro a mao. Comeca em zero.
+   *
+   * Entra na chave de idempotencia mandada ao provedor. Sem ele, o reenvio manual
+   * carregaria a mesma chave da entrega que falhou e seria DEDUPLICADO pelo
+   * provedor — o botao que existe para consertar uma falha nao enviaria nada, e
+   * nada no sistema diria por que.
+   */
+  readonly ciclo: number;
+  /**
+   * Antes disto, o varredor nao encosta no registro.
+   *
+   * Existe porque ha DOIS mecanismos de retentativa — a fila, que reentrega
+   * sozinha com o proprio backoff, e o varredor, que so existe para o caso de a
+   * tarefa ter se perdido (ADR-03, "falha conhecida"). Sem este campo os dois
+   * atuariam sobre o mesmo registro na mesma janela.
+   *
+   * NAO E RETRY MANUAL: o intervalo ENTRE tentativas continua sendo inteiramente
+   * da fila. Isto so diz ao varredor quando parar de esperar.
+   *
+   * Sempre escrito, nunca ausente. `where(campo, '!=', null)` ignora documentos
+   * sem o campo, e essa armadilha ja mordeu o projeto duas vezes — `distribuido`
+   * na Etapa 9 e `retencaoEm` na Etapa 11.
+   */
+  readonly varrerApos: Timestamp;
+  /**
+   * Ate quando a reivindicacao corrente segura o registro. Ausente quando ninguem
+   * o segura.
+   */
+  readonly arrendadoAte?: Timestamp;
+  readonly ultimaTentativaEm?: Timestamp;
   readonly enviadoEm?: Timestamp;
   /** Ja limpo de endereco pelo adaptador (ver `redigirEnderecos`). */
   readonly ultimoErro?: string;
+}
+
+/**
+ * O nome da tarefa no Cloud Tasks, que DEDUPLICA por ele.
+ *
+ * E a primeira das tres camadas contra entrega duplicada: impede o varredor de
+ * criar uma segunda tarefa para um registro cuja tarefa ainda esta viva na fila.
+ * As outras duas sao o arrendamento (`reivindicar`) e a chave de idempotencia do
+ * provedor.
+ *
+ * INCLUI `tentativas` DE PROPOSITO. Depois de uma tentativa que falhou de verdade,
+ * queremos uma tarefa nova — e uma tarefa nova precisa de nome novo, senao a
+ * deduplicacao que protege no caso comum passa a impedir a reentrega no caso que
+ * mais precisa dela.
+ *
+ * Cloud Tasks aceita letras, numeros, hifen e sublinhado no nome; o id do evento
+ * ja e formado assim (`redefinir-senha_uid_janela`), mas o uid vem do Firebase e
+ * nao ha promessa disso — dai a limpeza.
+ */
+export function nomeDaTarefa(
+  id: string,
+  ciclo: number,
+  tentativas: number,
+): string {
+  const limpo = id.replace(/[^A-Za-z0-9_-]/g, '-');
+  return `${limpo}-c${String(ciclo)}-t${String(tentativas)}`;
 }
 
 /** Janela de deduplicacao do pedido de redefinicao, em milissegundos. */

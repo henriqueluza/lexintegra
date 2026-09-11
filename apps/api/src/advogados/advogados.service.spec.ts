@@ -200,7 +200,7 @@ function montar(): {
   const banco = new FirestoreFalso();
   const despachados: string[] = [];
 
-  const outbox = new OutboxService(banco as unknown as Firestore);
+  const outbox = new OutboxService(banco as unknown as Firestore, { atrasoDoVarredorMs: 0, arrendamentoMs: 60_000, loteDoVarredor: 100 });
   const despachante = {
     despachar: (id: string) => {
       despachados.push(id);

@@ -72,7 +72,7 @@ function montar(usuarios: UsuarioFalso[]): {
     servico: new RedefinicaoSenhaService(
       auth,
       banco as unknown as Firestore,
-      new OutboxService(banco as unknown as Firestore),
+      new OutboxService(banco as unknown as Firestore, { atrasoDoVarredorMs: 0, arrendamentoMs: 60_000, loteDoVarredor: 100 }),
       despachante,
     ),
     banco,

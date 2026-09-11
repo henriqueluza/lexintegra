@@ -4,9 +4,11 @@ import { AUTH_FIREBASE } from '../firebase/firebase.module.js';
 import {
   EMAIL_TRANSPORT,
   type EmailMensagem,
+  type EmailResultado,
   type EmailTransport,
 } from '../email/email-transport.js';
 import { descreverErro } from '../email/redigir.js';
+import { ALERTAS, type CanalDeAlerta } from '../alertas/alerta.js';
 import type { RegistroOutbox } from './evento.js';
 import { montarLinkDeSenha, urlDaAplicacao } from './link-de-senha.js';
 import {
@@ -14,6 +16,7 @@ import {
   TEXTO_AVISO_EXCLUSAO,
 } from '../termos/termos.textos.js';
 import { OutboxService } from './outbox.service.js';
+import { POLITICA } from './politica.js';
 
 /**
  * Alias do modelo publicado no painel do Resend, com a variavel `LINK`.
@@ -27,13 +30,26 @@ import { OutboxService } from './outbox.service.js';
 const MODELO_SENHA = 'password-reset';
 
 /**
- * Le um registro do outbox e entrega. Chamado hoje logo depois do commit da
- * transacao que criou o registro; na Etapa 7, por Cloud Tasks (ADR-03).
+ * O que aconteceu com uma tentativa de entrega. O controlador traduz cada caso
+ * num status HTTP, e e por esse status que o Cloud Tasks decide reentregar ou
+ * nao — por isso a distincao nao pode ser um booleano.
+ */
+export type ResultadoDoDespacho =
+  | 'entregue'
+  | 'falhou'
+  | 'abandonado'
+  | 'inexistente'
+  | 'ja-entregue'
+  | 'em-andamento';
+
+/**
+ * Le um registro do outbox e entrega. Chamado pelo Cloud Tasks (ADR-03), pelo
+ * varredor do Scheduler e pelo reenvio manual do administrador — os tres pelo
+ * mesmo endpoint interno, com a mesma mensagem: o id.
  *
- * O QUE MUDA NA ETAPA 7 E QUEM CHAMA, NAO O QUE ESTA AQUI. Por isso o metodo
- * recebe so o id: ele ja e a mensagem que a fila vai carregar, e ja e idempotente
- * — um registro `enviado` que chegar de novo e ignorado, que e exatamente o que
- * uma fila com entrega ao-menos-uma-vez exige.
+ * NADA AQUI DECIDE SE VALE ENVIAR. Quem decide e `reivindicar`, numa transacao,
+ * e ele e o unico lugar do sistema que decide — tres caminhos de entrada e uma
+ * trava so. O despachante monta, envia e reporta.
  */
 @Injectable()
 export class DespachanteOutbox {
@@ -43,38 +59,94 @@ export class DespachanteOutbox {
     private readonly outbox: OutboxService,
     @Inject(AUTH_FIREBASE) private readonly auth: Auth,
     @Inject(EMAIL_TRANSPORT) private readonly transporte: EmailTransport,
+    @Inject(ALERTAS) private readonly alertas: CanalDeAlerta,
   ) {}
 
-  async despachar(id: string): Promise<void> {
-    const registro = await this.outbox.ler(id);
-    if (registro === null) {
-      this.log.warn(`registro ${id} nao existe mais; nada a entregar`);
-      return;
-    }
-    if (registro.estado === 'enviado') return;
+  async despachar(id: string): Promise<ResultadoDoDespacho> {
+    const reivindicacao = await this.outbox.reivindicar(id);
 
-    try {
-      const resultado = await this.transporte.enviar(
-        await this.montar(registro),
-      );
-      if (resultado.sucesso) {
-        await this.outbox.marcarEnviado(id);
-        this.log.log(`registro ${id} entregue`);
-        return;
+    if (reivindicacao.situacao !== 'concedida') {
+      if (reivindicacao.situacao === 'inexistente') {
+        this.log.warn(`registro ${id} nao existe mais; nada a entregar`);
       }
-      await this.registrarFalha(id, resultado.motivo);
+      return reivindicacao.situacao;
+    }
+
+    const registro = reivindicacao.registro;
+
+    let entrega: EmailResultado;
+    try {
+      entrega = await this.transporte.enviar(
+        await this.montarComChave(id, registro),
+      );
     } catch (erro) {
       // Falha ao MONTAR (usuario sumiu, Auth fora do ar). O transporte nunca
       // lanca; se lancou, foi antes dele.
-      await this.registrarFalha(id, descreverErro(erro));
+      entrega = { sucesso: false, motivo: descreverErro(erro) };
     }
+
+    if (entrega.sucesso) {
+      await this.outbox.concluir(id, registro, { sucesso: true });
+      this.log.log(`registro ${id} entregue`);
+      return 'entregue';
+    }
+
+    return this.registrarFalha(id, registro, entrega.motivo);
   }
 
-  private async registrarFalha(id: string, motivo: string): Promise<void> {
+  private async registrarFalha(
+    id: string,
+    registro: RegistroOutbox,
+    motivo: string,
+  ): Promise<'falhou' | 'abandonado'> {
     // `motivo` ja vem sem endereco de e-mail (ver `redigirEnderecos`). O id do
     // registro nao identifica ninguem por si so.
-    this.log.error(`registro ${id} falhou: ${motivo}`);
-    await this.outbox.marcarFalha(id, motivo);
+    const estado = await this.outbox.concluir(id, registro, {
+      sucesso: false,
+      motivo,
+    });
+
+    this.log.error(
+      `registro ${id} falhou na tentativa ${String(registro.tentativas)}: ${motivo}`,
+    );
+
+    if (estado !== 'abandonado') return 'falhou';
+
+    /*
+     * O ALERTA SO SAI NO FIM, e nao a cada falha. Uma falha isolada e o caso que
+     * a fila existe para resolver sozinha, e alertar nela treinaria quem recebe a
+     * ignorar — a arquitetura, secao 9, ja diz que a metrica util e "outbox
+     * pendente ha mais de N minutos", nao "outbox falhou uma vez".
+     */
+    this.alertas.emitir({
+      nivel: POLITICA[registro.tipo].criticidade,
+      assunto: 'outbox.abandonado',
+      detalhe:
+        `registro ${id} (${registro.tipo}) abandonado apos ` +
+        `${String(registro.tentativas)} tentativas: ${motivo}`,
+    });
+
+    return 'abandonado';
+  }
+
+  /**
+   * A CHAVE DE IDEMPOTENCIA E DECIDIDA AQUI, e nao dentro do adaptador.
+   *
+   * O ADR-07.1 diz que nenhuma decisao de reentrega pode vazar para o transporte.
+   * Isto nao e uma: e o outbox dizendo ao provedor QUAL mensagem esta mandando. O
+   * adaptador so repassa o cabecalho e continua sem decidir nada.
+   *
+   * `ciclo` entra e `tentativas` nao. A intencao e "este e-mail": uma retentativa
+   * depois de falha real nao deve produzir segunda entrega, mas um reenvio manual
+   * do administrador tem que produzir — senao o botao seria deduplicado do outro
+   * lado e nao mandaria nada.
+   */
+  private async montarComChave(
+    id: string,
+    registro: RegistroOutbox,
+  ): Promise<EmailMensagem> {
+    const mensagem = await this.montar(registro);
+    return { ...mensagem, chaveIdempotencia: `${id}-c${String(registro.ciclo)}` };
   }
 
   /**

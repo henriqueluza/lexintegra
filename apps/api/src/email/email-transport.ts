@@ -53,6 +53,18 @@ interface EmailBase {
   readonly para: readonly string[];
   readonly anexos?: readonly EmailAnexo[];
   /**
+   * Chave que o provedor usa para nao entregar a mesma mensagem duas vezes.
+   *
+   * NAO E UMA DECISAO DE REENTREGA, e por isso nao contradiz a regra acima: quem
+   * decide tentar de novo continua sendo o outbox. Isto e o chamador dizendo ao
+   * provedor QUAL mensagem esta mandando, e o adaptador so repassa o cabecalho.
+   *
+   * Fecha a janela que trava local nenhuma fecha: o provedor aceita a mensagem e
+   * o processo morre antes de gravar `enviado`. Na volta, a mesma chave faz o
+   * provedor reconhecer a duplicata em vez de entregar de novo.
+   */
+  readonly chaveIdempotencia?: string;
+  /**
    * Parte alternativa do e-mail, distinta de anexo. O cartao de resposta do Gmail
    * e mais confiavel quando o iCalendar vai como parte alternativa (ADR-05, risco
    * de entregabilidade). Se o provedor escolhido nao expuser esse controle, e o
