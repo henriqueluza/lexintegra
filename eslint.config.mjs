@@ -110,6 +110,21 @@ export default tseslint.config(
     },
   },
   {
+    /*
+     * O scanner e um contentor AVULSO: nao tem Nest, nao tem `Logger`, e nao
+     * depende do workspace (e o que permite construi-lo sozinho — ver
+     * `apps/scanner/Dockerfile`). Num contentor do Cloud Run, o `stdout` E o log:
+     * o `console.log` daqui vira entrada estruturada no Cloud Logging igual ao
+     * `Logger` do Nest na API.
+     *
+     * A excecao e por DIRETORIO, e nao global: no resto do projeto a regra
+     * continua valendo, porque la existe `Logger` e usar `console` significaria
+     * escapar do formato que a observabilidade espera.
+     */
+    files: ['apps/scanner/**/*.ts'],
+    rules: { 'no-console': 'off' },
+  },
+  {
     // Testes podem ser longos e repetitivos: o valor de um teste esta na clareza
     // do caso, nao na concisao.
     files: ['**/*.spec.ts', '**/*.integration-spec.ts'],

@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { AnexosService } from '../anexos/anexos.service.js';
+import { ArquivosModule } from '../arquivos/arquivos.module.js';
 import { ClientesModule } from '../clientes/clientes.module.js';
 import { EntregaveisModule } from '../entregaveis/entregaveis.module.js';
+import { TermosModule } from '../termos/termos.module.js';
 import { ObservacoesService } from '../observacoes/observacoes.service.js';
-import { AcessoPedidoService } from './acesso.service.js';
+import { AcessoPedidoModule } from './acesso.module.js';
 import { ConsultaPedidosService } from './consulta.service.js';
 import { DistribuicaoService } from './distribuicao.service.js';
 import { PedidosAdminController } from './pedidos.admin.controller.js';
@@ -22,12 +24,21 @@ import { PedidosService } from './pedidos.service.js';
  * `ObservacoesService` e `AnexosService` sao providos AQUI e nao em modulos
  * proprios porque nao tem controlador proprio: as rotas deles sao subcaminhos do
  * cartao, e vivem nos controladores de cliente e de advogado. Um modulo por
- * servico daria fiacao a mais sem fronteira nenhuma a mais — e `AcessoPedidoService`,
- * que os dois usam, teria que ser exportado por um modulo que `PedidosModule`
- * importa e que importa `PedidosModule` de volta.
+ * servico daria fiacao a mais sem fronteira nenhuma a mais.
+ *
+ * `AcessoPedidoService` E A EXCECAO, e tem modulo proprio: o portao de leitura
+ * (`ArquivosModule`) tambem precisa dele, e este modulo ja importa aquele — sem
+ * o modulo-folha haveria ciclo, ou duas instancias do mesmo servico de
+ * autorizacao. Ver `acesso.module.ts`.
  */
 @Module({
-  imports: [ClientesModule, EntregaveisModule],
+  imports: [
+    AcessoPedidoModule,
+    ClientesModule,
+    EntregaveisModule,
+    ArquivosModule,
+    TermosModule,
+  ],
   controllers: [
     PedidosClienteController,
     PedidosAdvogadoController,
@@ -37,7 +48,6 @@ import { PedidosService } from './pedidos.service.js';
     PedidosService,
     ConsultaPedidosService,
     DistribuicaoService,
-    AcessoPedidoService,
     ObservacoesService,
     AnexosService,
   ],

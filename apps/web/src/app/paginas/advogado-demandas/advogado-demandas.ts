@@ -11,6 +11,7 @@ import type { AnamneseResumo } from 'shared/esquemas/cliente';
 import type { ObservacaoResumo } from 'shared/esquemas/observacao';
 import type { DemandaResumo, EntregavelResumo } from 'shared/esquemas/pedido';
 import { ApiAdvogadoService } from '../../autenticacao/api-advogado.service';
+import { enviarParaUrlAssinada } from '../../comum/enviar-arquivo';
 import { Botao } from '../../ui/botao/botao';
 import { Campo } from '../../ui/campo/campo';
 import { Cartao, CartaoRodape } from '../../ui/cartao/cartao';
@@ -132,13 +133,13 @@ export class AdvogadoDemandas implements OnInit {
   }
 
   /**
-   * PLACEHOLDER DA ETAPA 9 — manda o NOME do arquivo, nao o arquivo.
+   * O envio do entregavel, em DUAS FASES — como o anexo do cliente, e por um
+   * caminho inteiramente separado (arquitetura 6.2).
    *
-   * ESTE E O SEGUNDO FLUXO DE UPLOAD, distinto do anexo do cliente por decisao de
-   * arquitetura (secao 6.2): autorizacao, efeito e retencao diferentes. Nao ha
-   * validacao de tipo e tamanho aqui porque a regra do ADVOGADO ainda nao foi
-   * confirmada (plano de execucao, 0.2, item 6) — jpg/pdf/5 MB vale para o
-   * cliente. Assumir a mesma por parecer igual seria decidir no lugar do Marcos.
+   * A TELA NAO VALIDA TIPO NEM TAMANHO, e a ausencia e deliberada: a politica
+   * deste fluxo ainda nao foi confirmada (0.2, item 6), e duplicar aqui um valor
+   * provisorio faria a tela recusar por uma regra que pode nao ser a final.
+   * Quem recusa e o servidor, com a mensagem que vier de la.
    */
   protected async enviarArquivo(
     pedidoId: string,
@@ -149,9 +150,37 @@ export class AdvogadoDemandas implements OnInit {
     const arquivo = entrada.files?.[0];
     if (arquivo === undefined) return;
 
-    await this.agir(entregavel.id, () =>
-      this.api.enviarEntregavel(pedidoId, entregavel.id, arquivo.name),
-    );
+    await this.agir(entregavel.id, async () => {
+      const { url } = await this.api.pedirEnvioDeEntregavel(
+        pedidoId,
+        entregavel.id,
+        {
+          nome: arquivo.name,
+          tipo: arquivo.type,
+          tamanhoBytes: arquivo.size,
+        },
+      );
+
+      // O PUT antes da confirmacao: confirmar primeiro enfileiraria a varredura
+      // de um objeto que ainda nao existe.
+      await enviarParaUrlAssinada(url, arquivo);
+      await this.api.confirmarEntregavel(pedidoId, entregavel.id);
+    });
+  }
+
+  /** Tambem pelo portao — nao ha atalho para quem enviou (regra inviolavel 6). */
+  protected async baixar(
+    pedidoId: string,
+    entregavel: EntregavelResumo,
+  ): Promise<void> {
+    await this.agir(`download-${entregavel.id}`, async () => {
+      const { url } = await this.api.baixarEntregavel(pedidoId, entregavel.id);
+      globalThis.open(url, '_blank', 'noopener');
+    });
+  }
+
+  protected podeBaixar(entregavel: EntregavelResumo): boolean {
+    return entregavel.arquivoServivel;
   }
 
   protected async responder(pedidoId: string): Promise<void> {

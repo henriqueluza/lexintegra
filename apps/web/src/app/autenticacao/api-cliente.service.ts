@@ -1,7 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import type { AnexoResumo, EnvioDeAnexos } from 'shared/esquemas/anexo';
+import type { AnexoResumo } from 'shared/esquemas/anexo';
+import type { PedidoDeUpload } from 'shared/esquemas/upload';
 import type {
   NovaObservacao,
   ObservacaoResumo,
@@ -93,21 +94,76 @@ export class ApiClienteService {
   }
 
   /**
-   * PLACEHOLDER DA ETAPA 9: manda METADADO, nao arquivo.
+   * PASSO 1 do upload: pede as URLs assinadas de escrita.
    *
-   * Nenhum byte sai daqui — o corpo leva nome, tipo e tamanho. A Etapa 11 troca
-   * este metodo por dois (pedir a URL assinada, confirmar o envio) e o `FormData`
-   * nunca chega a existir: o arquivo vai do navegador DIRETO para o bucket de
-   * quarentena, sem passar pela API (arquitetura 7.3).
+   * O ARQUIVO NAO PASSA POR AQUI, e nem pela API (arquitetura 7.3). O corpo leva
+   * nome, tipo e tamanho; a resposta traz URLs para o navegador escrever DIRETO
+   * no bucket de quarentena, com `enviarParaUrlAssinada`.
    */
-  anexarAoPedido(
+  pedirEnvioDeAnexos(
     pedidoId: string,
-    envio: EnvioDeAnexos,
-  ): Promise<AnexoResumo[]> {
+    arquivos: readonly PedidoDeUpload[],
+  ): Promise<{ id: string; url: string; validoPorSegundos: number }[]> {
     return firstValueFrom(
-      this.http.post<AnexoResumo[]>(
+      this.http.post<{ id: string; url: string; validoPorSegundos: number }[]>(
         `/api/pedidos/${encodeURIComponent(pedidoId)}/anexos`,
-        envio,
+        { arquivos },
+      ),
+    );
+  }
+
+  /** PASSO 2: avisa que subiu. A API enfileira a varredura. */
+  confirmarAnexo(pedidoId: string, anexoId: string): Promise<void> {
+    return firstValueFrom(
+      this.http.post<void>(
+        `/api/pedidos/${encodeURIComponent(pedidoId)}/anexos/${encodeURIComponent(anexoId)}/confirmacao`,
+        {},
+      ),
+    );
+  }
+
+  /**
+   * O aceite dos termos, antes do download (arquitetura 7.3).
+   *
+   * POR VERSAO DO ARQUIVO: cada upload do advogado produz uma versao nova, e o
+   * aceite da anterior nao vale — a evidencia de conformidade apontaria para um
+   * arquivo que o cliente nunca viu.
+   */
+  aceitarTermos(
+    pedidoId: string,
+    entregavelId: string,
+    versaoArquivo: number,
+  ): Promise<{ aceito: true }> {
+    return firstValueFrom(
+      this.http.post<{ aceito: true }>(
+        `${entregavel(pedidoId, entregavelId)}/aceite`,
+        { versaoArquivo },
+      ),
+    );
+  }
+
+  /**
+   * O link de download. Sai do PORTAO da API, que confere estado e aceite —
+   * nunca montado aqui.
+   */
+  baixarEntregavel(
+    pedidoId: string,
+    entregavelId: string,
+  ): Promise<{ url: string; validoPorSegundos: number }> {
+    return firstValueFrom(
+      this.http.get<{ url: string; validoPorSegundos: number }>(
+        `${entregavel(pedidoId, entregavelId)}/download`,
+      ),
+    );
+  }
+
+  baixarAnexo(
+    pedidoId: string,
+    anexoId: string,
+  ): Promise<{ url: string; validoPorSegundos: number }> {
+    return firstValueFrom(
+      this.http.get<{ url: string; validoPorSegundos: number }>(
+        `/api/pedidos/${encodeURIComponent(pedidoId)}/anexos/${encodeURIComponent(anexoId)}/download`,
       ),
     );
   }
