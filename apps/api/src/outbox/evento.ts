@@ -1,31 +1,22 @@
 import type { Timestamp } from 'firebase-admin/firestore';
+import type { EstadoEntrega, TipoEvento } from 'shared';
 
-/**
- * Tipos de evento que o outbox entrega. Fixos no codigo, nao dado configuravel:
- * cada tipo tem um montador de mensagem correspondente no despachante, e um tipo
- * sem montador seria um registro que nunca sai.
+/*
+ * O VOCABULARIO MORA EM `packages/shared`, e nao aqui.
  *
- * Os dois desta etapa produzem o mesmo e-mail — um link de definicao de senha —
- * e mesmo assim sao eventos DIFERENTES. Sao fatos de negocio distintos: "o
- * administrador criou um acesso de advogado" e "alguem pediu para redefinir a
- * propria senha". Colapsa-los perderia a trilha de auditoria e impediria que a
- * Etapa 7 desse a cada um o seu texto.
+ * A tela de reenvio do administrador (Etapa 7) mostra tipo e estado de cada
+ * registro e precisa dos mesmos valores que o servidor grava. Duas listas em
+ * lugares diferentes divergem, e aqui divergir significa um estado que a tela nao
+ * sabe desenhar. Este arquivo fica com o que e so do servidor: a forma do
+ * documento, o id deterministico e a leitura do erro do Firestore.
  */
-export const TIPOS_EVENTO = [
-  'definir-senha',
-  'redefinir-senha',
-  /**
-   * O aviso previo de exclusao (Etapa 11, arquitetura secao 13): "antes de
-   * qualquer exclusao de dado, o titular recebe e-mail avisando com
-   * antecedencia". Nasce no outbox como os outros — o aviso que nao chega e
-   * exatamente o que a secao 13 nao admite.
-   */
-  'aviso-exclusao-arquivos',
-] as const;
-
-export type TipoEvento = (typeof TIPOS_EVENTO)[number];
-
-export type EstadoEntrega = 'pendente' | 'enviado' | 'falhou';
+export {
+  TIPOS_EVENTO,
+  ESTADOS_ENTREGA,
+  type TipoEvento,
+  type EstadoEntrega,
+  type Criticidade,
+} from 'shared';
 
 /**
  * O documento gravado em `outbox/{id}`.
