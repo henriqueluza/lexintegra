@@ -32,11 +32,21 @@ import type { Auth } from 'firebase/auth';
  */
 export const CAMINHO_CONFIGURACAO = '/__/firebase/init.json';
 
-/** Só o que a autenticação precisa. `appId` e `storageBucket` não entram. */
+/**
+ * O que a autenticação e o App Check precisam. `storageBucket` não entra —
+ * regra inviolavel 7, nenhuma referência a Firestore/Storage em `apps/web`.
+ *
+ * `appId` foi ADICIONADO na Etapa 6 junto com o App Check. Sem ele,
+ * `initializeApp` monta uma aplicação sem `options.appId`, e o SDK do App Check
+ * monta a URL de troca do token do reCAPTCHA com `undefined` no lugar do App
+ * ID — o servidor responde 400 "Invalid App ID: undefined", e o erro não tem
+ * nenhuma pista de que a causa é a configuração, e não a chave do reCAPTCHA.
+ */
 export interface ConfiguracaoFirebase {
   readonly apiKey: string;
   readonly authDomain: string;
   readonly projectId: string;
+  readonly appId: string;
 }
 
 /**
@@ -53,6 +63,8 @@ const CONFIGURACAO_EMULADOR: ConfiguracaoFirebase = {
   apiKey: 'chave-ignorada-pelo-emulador',
   authDomain: 'localhost',
   projectId: 'demo-lexintegra',
+  /* Nunca usado de verdade: `montarAppCheck` retorna cedo em localhost. */
+  appId: 'chave-ignorada-pelo-emulador',
 };
 
 /** Porta do emulador de Auth, a mesma declarada em `firebase.json`. */
@@ -79,24 +91,26 @@ export async function carregarConfiguracao(
   }
 
   const bruto = (await resposta.json()) as Partial<ConfiguracaoFirebase>;
-  const { apiKey, authDomain, projectId } = bruto;
+  const { apiKey, authDomain, projectId, appId } = bruto;
 
   /*
    * Conferência explícita em vez de confiar no formato. Um `init.json` truncado
    * ou servido por um rewrite errado produziria `initializeApp({})`, e o erro
-   * apareceria bem longe daqui — dentro do SDK, na primeira tentativa de login.
+   * apareceria bem longe daqui — dentro do SDK, na primeira tentativa de login
+   * ou, no caso do appId, dentro da troca de token do App Check.
    */
   if (
     apiKey === undefined ||
     authDomain === undefined ||
-    projectId === undefined
+    projectId === undefined ||
+    appId === undefined
   ) {
     throw new Error(
-      `${CAMINHO_CONFIGURACAO} veio sem apiKey, authDomain ou projectId.`,
+      `${CAMINHO_CONFIGURACAO} veio sem apiKey, authDomain, projectId ou appId.`,
     );
   }
 
-  return { apiKey, authDomain, projectId };
+  return { apiKey, authDomain, projectId, appId };
 }
 
 /**

@@ -105,6 +105,7 @@ describe('carregarConfiguracao', () => {
             apiKey: 'chave-vinda-do-hosting',
             authDomain: 'projeto.firebaseapp.com',
             projectId: 'projeto',
+            appId: '1:123:web:abc',
             storageBucket: 'ignorado',
           }),
       });
@@ -120,6 +121,7 @@ describe('carregarConfiguracao', () => {
       apiKey: 'chave-vinda-do-hosting',
       authDomain: 'projeto.firebaseapp.com',
       projectId: 'projeto',
+      appId: '1:123:web:abc',
     });
   });
 
@@ -135,14 +137,15 @@ describe('carregarConfiguracao', () => {
    * primeira tentativa de login.
    */
   it.each([
-    ['sem apiKey', { authDomain: 'a', projectId: 'p' }],
-    ['sem authDomain', { apiKey: 'k', projectId: 'p' }],
-    ['sem projectId', { apiKey: 'k', authDomain: 'a' }],
+    ['sem apiKey', { authDomain: 'a', projectId: 'p', appId: 'i' }],
+    ['sem authDomain', { apiKey: 'k', projectId: 'p', appId: 'i' }],
+    ['sem projectId', { apiKey: 'k', authDomain: 'a', appId: 'i' }],
+    ['sem appId', { apiKey: 'k', authDomain: 'a', projectId: 'p' }],
     ['vazio', {}],
   ])('recusa configuracao %s', async (_caso, corpo) => {
     await expect(
       carregarConfiguracao('https://x.test', respostaDe(corpo)),
-    ).rejects.toThrow(/apiKey, authDomain ou projectId/);
+    ).rejects.toThrow(/apiKey, authDomain, projectId ou appId/);
   });
 });
 
