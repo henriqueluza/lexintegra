@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Auth } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
 import { FIRESTORE, AUTH_FIREBASE } from '../../firebase/firebase.module.js';
-import { DespachanteOutbox } from '../../outbox/despachante.service.js';
+import { EnfileiradorDeEventos } from '../../outbox/enfileirador.service.js';
 import { ehDuplicata } from '../../outbox/evento.js';
 import { OutboxService } from '../../outbox/outbox.service.js';
 
@@ -17,13 +17,13 @@ import { OutboxService } from '../../outbox/outbox.service.js';
  * verificador de quem tem conta na plataforma — e num escritorio de advocacia,
  * saber quem e cliente ja e informacao sensivel.
  *
- * LACUNA CONHECIDA, e ela fica registrada em vez de mal resolvida: o tempo de
- * resposta ainda difere entre e-mail conhecido e desconhecido, porque o caso
- * conhecido escreve no Firestore e chama o provedor antes de responder. Adiar
- * esse trabalho para depois da resposta nao resolve hoje — o Cloud Run esta com
- * `cpu_idle = true`, e trabalho iniciado depois do fim da requisicao pode
- * simplesmente nao rodar. A correcao e a fila da Etapa 7: com Cloud Tasks, o
- * caminho sincrono vira so o enfileiramento, e os dois casos custam o mesmo.
+ * A LACUNA DE TEMPO FECHOU NA ETAPA 7. Ate ela, o caso conhecido escrevia no
+ * Firestore E chamava o provedor antes de responder, entao o tempo de resposta
+ * denunciava quem tem conta — e adiar o trabalho para depois da resposta nao
+ * resolvia, porque o Cloud Run roda com `cpu_idle = true` e trabalho iniciado
+ * depois do fim da requisicao pode simplesmente nao rodar. Com a fila, o caminho
+ * sincrono e so o enfileiramento: resta a escrita no Firestore, que e uma ordem
+ * de grandeza menor que uma ida ao provedor de e-mail.
  */
 @Injectable()
 export class RedefinicaoSenhaService {
@@ -33,7 +33,7 @@ export class RedefinicaoSenhaService {
     @Inject(AUTH_FIREBASE) private readonly auth: Auth,
     @Inject(FIRESTORE) private readonly db: Firestore,
     private readonly outbox: OutboxService,
-    private readonly despachante: DespachanteOutbox,
+    private readonly enfileirador: EnfileiradorDeEventos,
   ) {}
 
   async solicitar(email: string): Promise<void> {
@@ -53,7 +53,10 @@ export class RedefinicaoSenhaService {
       return;
     }
 
-    await this.despachante.despachar(id);
+    // Depois do commit, nunca dentro (regra inviolavel 2). Se o processo morrer
+    // entre um e outro, sobra registro pendente sem tarefa — e e a janela que o
+    // varredor do Scheduler fecha (ADR-03).
+    await this.enfileirador.enfileirarPorId(id);
   }
 
   private async uidPor(email: string): Promise<string | null> {

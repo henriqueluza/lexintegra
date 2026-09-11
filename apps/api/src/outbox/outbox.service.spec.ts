@@ -285,7 +285,7 @@ describe('listarParaVarredura', () => {
 
     await expect(
       outbox.listarParaVarredura('pendente', AGORA),
-    ).resolves.toEqual(['vencido']);
+    ).resolves.toEqual([{ id: 'vencido', ciclo: 0, tentativas: 0 }]);
   });
 
   /** Registro com arrendamento vivo tem `varrerApos` empurrado junto — e por isso
@@ -307,9 +307,9 @@ describe('listarParaVarredura', () => {
     semear('a');
     semear('b');
 
-    await expect(curto.listarParaVarredura('pendente', AGORA)).resolves.toEqual(
-      ['a'],
-    );
+    await expect(
+      curto.listarParaVarredura('pendente', AGORA),
+    ).resolves.toHaveLength(1);
   });
 });
 

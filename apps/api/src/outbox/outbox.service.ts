@@ -34,6 +34,17 @@ export type Reivindicacao =
   | { readonly situacao: 'abandonado' }
   | { readonly situacao: 'em-andamento' };
 
+/**
+ * O que o varredor precisa para reenfileirar: o id e o que compoe o NOME da
+ * tarefa. Devolvido pela propria consulta, e nao relido registro a registro — uma
+ * passagem do varredor mexe com ate um lote inteiro.
+ */
+export interface ReferenciaDeTarefa {
+  readonly id: string;
+  readonly ciclo: number;
+  readonly tentativas: number;
+}
+
 export type ResultadoDaEntrega =
   | { readonly sucesso: true }
   | { readonly sucesso: false; readonly motivo: string };
@@ -250,7 +261,7 @@ export class OutboxService {
   async listarParaVarredura(
     estado: EstadoEntrega,
     agora: number = Date.now(),
-  ): Promise<readonly string[]> {
+  ): Promise<readonly ReferenciaDeTarefa[]> {
     const consulta = await this.db
       .collection(COLECAO_OUTBOX)
       .where('estado', '==', estado)
@@ -259,7 +270,14 @@ export class OutboxService {
       .limit(this.config.loteDoVarredor)
       .get();
 
-    return consulta.docs.map((documento) => documento.id);
+    return consulta.docs.map((documento) => {
+      const registro = documento.data() as RegistroOutbox;
+      return {
+        id: documento.id,
+        ciclo: registro.ciclo,
+        tentativas: registro.tentativas,
+      };
+    });
   }
 
   /**

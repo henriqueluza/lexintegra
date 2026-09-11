@@ -12,6 +12,7 @@ import { EntregaveisModule } from './entregaveis/entregaveis.module.js';
 import { FirebaseModule } from './firebase/firebase.module.js';
 import { HealthModule } from './health/health.module.js';
 import { LimiteModule } from './limite/limite.module.js';
+import { OutboxModule } from './outbox/outbox.module.js';
 import { PedidosModule } from './pedidos/pedidos.module.js';
 import { PreCadastrosModule } from './pre-cadastros/pre-cadastros.module.js';
 import { RetencaoModule } from './retencao/retencao.module.js';
@@ -47,6 +48,12 @@ import { VitrineModule } from './vitrine/vitrine.module.js';
      */
     ArmazenamentoModule,
     VarreduraModule,
+    /*
+     * `@Global()`: o enfileirador e usado por `advogados` e por `senha`, e a
+     * Etapa 8 acrescenta o checkout. Tambem e quem publica os dois controladores
+     * do outbox — o interno das tarefas e o do painel do administrador.
+     */
+    OutboxModule,
     HealthModule,
     SenhaModule,
     AdvogadosModule,
