@@ -54,6 +54,11 @@ export class ShellAutenticada {
         { rota: '/admin/clientes', rotulo: 'Clientes' },
         { rota: '/admin/advogados', rotulo: 'Advogados' },
         { rota: '/admin/produtos', rotulo: 'Produtos' },
+        /*
+         * Por ultimo, e de proposito: e uma tela de diagnostico, visitada quando
+         * algo deu errado, e nao parte do trabalho do dia.
+         */
+        { rota: '/admin/entregas', rotulo: 'Entregas' },
       ];
     }
 

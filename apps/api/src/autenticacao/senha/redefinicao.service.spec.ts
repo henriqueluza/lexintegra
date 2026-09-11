@@ -1,6 +1,6 @@
 import type { Auth } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
-import type { DespachanteOutbox } from '../../outbox/despachante.service.js';
+import type { EnfileiradorDeEventos } from '../../outbox/enfileirador.service.js';
 import { OutboxService } from '../../outbox/outbox.service.js';
 import { RedefinicaoSenhaService } from './redefinicao.service.js';
 
@@ -61,19 +61,25 @@ function montar(usuarios: UsuarioFalso[]): {
     },
   } as unknown as Auth;
 
-  const despachante = {
-    despachar: (id: string) => {
+  /*
+   * O QUE SE VERIFICA AQUI E O ENFILEIRAMENTO, e nao a entrega. Desde a Etapa 7 o
+   * caminho sincrono termina na fila: quem entrega e o Cloud Tasks, chamando o
+   * endpoint interno. Um dublê que ainda entregasse em processo provaria um
+   * caminho que nao existe mais.
+   */
+  const enfileirador = {
+    enfileirarPorId: (id: string) => {
       despachados.push(id);
       return Promise.resolve();
     },
-  } as unknown as DespachanteOutbox;
+  } as unknown as EnfileiradorDeEventos;
 
   return {
     servico: new RedefinicaoSenhaService(
       auth,
       banco as unknown as Firestore,
-      new OutboxService(banco as unknown as Firestore),
-      despachante,
+      new OutboxService(banco as unknown as Firestore, { atrasoDoVarredorMs: 0, arrendamentoMs: 60_000, loteDoVarredor: 100 }),
+      enfileirador,
     ),
     banco,
     despachados,

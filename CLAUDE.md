@@ -106,7 +106,40 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 - **Cinco índices compostos** novos em `infra/terraform/firestore.tf`.
 - **Cobertura:** `apps/api` 94/84/95/96, `apps/web` 96/90/94/98, `packages/shared` 99/100/100/99.
 
-**Próximo trabalho recomendado:** revisar e abrir o PR da Etapa 9, e seguir para a Etapa 11 (upload e varredura), que parte da branch da Etapa 9 porque encaixa o upload real no mesmo ponto de UI. As Etapas 7, 8 e 10 seguem travadas por confirmação externa. O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde. O catálogo real da B&C continua pendente do lado da CONTRATANTE; os clientes e pedidos fictícios da Etapa 9 têm pendência própria, de revalidação contra o checkout da Etapa 8 (ver `scripts/dados-ficticios/LEIA-ME.md`).
+**Etapa 11 — upload e varredura de malware (mesclada na `main` pelo PR #14):**
+
+> ⚠️ O PR #10 foi mesclado com base em `feat/areas-cliente-advogado`, e não em `main` — e essa branch já tinha sido mesclada três dias antes. Os dois commits ficaram fora da `main` até o PR #14 da Etapa 7 integrá-los. **Confira a base ao abrir PR de etapa.**
+
+
+- **ADR-17 e ADR-18** novos em `docs/arquitetura.md`: armazenamento atrás de uma porta, e a topologia Cloud Tasks → API → scanner.
+- **Os dois fluxos de upload são separados de verdade** (arquitetura 6.2): módulos, controladores, prefixos de bucket, políticas e retenções distintas. Compartilham só a porta de armazenamento e o portão de leitura.
+- **A regra inviolável 6 virou LINT.** A emissão de link vive em `arquivos/leitura.ts` e só `arquivos/portao.ts` pode importá-la — regra de dependency-cruiser. Teste prova que o portão confere; o lint prova que ninguém contorna.
+- **Duas conferências:** ClamAV ("tem malware?") e magic bytes ("isto é mesmo um PDF?"). Nenhuma cobre a outra — um HTML com extensão `.pdf` passa limpo pelo antivírus.
+- **`indisponivel` não é `infectado`.** Scanner fora do ar faz a tarefa falhar para reentrega; tratá-lo como reprovação apagaria arquivo legítimo.
+- **O aceite de termos é por versão do arquivo**, não um "aceitei" global da conta.
+- **A retenção é em duas passagens** (avisa no 23º dia, exclui no 30º), com o aviso nascendo no outbox na mesma transação.
+- **Assinar URL sem chave JSON exige `roles/iam.serviceAccountTokenCreator` da SA sobre si mesma.** Sem isso falha em produção e **funciona** na máquina do desenvolvedor — a armadilha mais confusa do módulo, documentada no ADR-17.
+- **O scanner não usa `packages/shared`**, de propósito: é o que permite construí-lo e implantá-lo sozinho.
+- **Cobertura:** `apps/api` 93/82/92/94, `apps/web` 96/90/92/97, `shared` 99/100/100/99, `scanner` 100/88/100/100.
+
+**Etapa 7 — outbox e entrega de eventos (branch `feat/outbox-entrega-eventos`):**
+
+- **A infraestrutura de fila saiu de `varredura/` para `tarefas/`** — guard de tarefa interna, decorador, porta `Fila<T>`, adaptador do Cloud Tasks e a fábrica. Dois consumidores agora; `outbox/` importando de `varredura/` seria acoplamento sem razão. `enfileirar` ganhou um **nome** opcional, que é o que o Cloud Tasks usa para deduplicar.
+- **Entrega deixou de acontecer em processo.** `advogados` e `senha` enfileiram; quem entrega é o Cloud Tasks chamando `POST /api/interno/outbox`. **O status HTTP é o controle da reentrega**: `falhou` com orçamento vira 503 (a fila aplica o próprio backoff), `abandonado` e `em-andamento` viram 200. Antes, a falha era engolida e virava 200 — uma fila que nunca tentaria de novo, com toda a aparência de resiliência.
+- **Três camadas contra e-mail duplicado, e só a segunda é trava:** nome determinístico da tarefa, **arrendamento transacional** (`OutboxService.reivindicar`) e `Idempotency-Key` no Resend. O ADR-03 traz a justificativa — foi descoberta ao implementar. A verificação `if (estado === 'enviado')` que existia era TOCTOU.
+- **`tentativas` incrementa na REIVINDICAÇÃO, não na conclusão.** É o que faz um processo morto consumir uma tentativa e torna o teto real. Reintroduzir `increment` em `concluir` gasta o orçamento em dobro — há teste só para isso.
+- **`ciclo` existe para o reenvio manual chegar.** Ele entra na chave de idempotência; sem ele o botão carregaria a chave da entrega que falhou e seria deduplicado pelo provedor.
+- **`varrerApos` é sempre escrito e nunca fica antes de `arrendadoAte`.** É o amortecedor entre os dois mecanismos de retentativa. Campo sempre presente pela armadilha de sempre — `where(campo,'!=',null)` ignora documento sem o campo.
+- **Duas desigualdades sustentam o desenho**, comentadas onde alguém iria mexer: `max_attempts` da fila (12) **>** teto da política (10), e `OUTBOX_ARRENDAMENTO_SEGUNDOS` (900) **>** prazo de despacho da tarefa (10 min, padrão do Cloud Tasks).
+- **O varredor só enfileira.** Não lê usuário, não monta mensagem, não envia. Quem decide se vale entregar é `reivindicar`, e é um lugar só para os três caminhos de entrada.
+- **Três filas, não duas.** Produção usa Cloud Tasks; o teste usa a falsa, que segura as tarefas; e **desenvolvimento entrega no próprio processo** (`FilaEmProcesso`). Não existe emulador de Cloud Tasks — com a fila falsa, `pnpm dev` deixaria o e-mail sem sair, sem erro nenhum, com o desenvolvedor procurando o link no log do transporte falso.
+- **Alerta é log estruturado; o destinatário fica fora do código.** A política do Monitoring consome a entrada de log — é Etapa 12. Alerta não passa pelo outbox: seria circular.
+- **A verificação do token OIDC virou porta** (`VerificadorDeToken`). O teste de aceite troca só quem valida a assinatura; o guard continua na cadeia. Um teste que desliga o guard não prova que ele está lá.
+- **Duas extensões no dublê do Firestore:** o operador `<=` (campo ausente não casa, como no real) e `FieldValue.increment`/`delete` **aplicados** em vez de guardados crus.
+- **`EntregaResumo` é `type` e não `interface`** — `app-tabela` recebe `Record<string, unknown>`, e só alias de tipo ganha assinatura de índice implícita. Com `interface`, compila no teste e quebra no `ng build`.
+- **Cobertura:** `apps/api` 93/83/92/94, `apps/web` 96/89/92/97, `packages/shared` 99/100/100/99.
+
+**Próximo trabalho recomendado:** revisar e abrir o PR da Etapa 7, e seguir para a **Etapa 8** (checkout), que era o que a Etapa 7 destravava — o e-mail de liberação de acesso agora tem garantia de entrega. As Etapas 10 e 12 seguem dependendo de confirmação externa. O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde. Do lado da CONTRATANTE seguem pendentes: catálogo real da B&C, domínio verificado no Resend, chave de produção e os destinatários dos alertas.
 
 ## Stack
 
@@ -131,6 +164,7 @@ apps/web/          Angular 22, pré-renderização estática das rotas públicas
   src/app/paginas/advogado-disponibilidade/ grade semanal (ADR-06)
   src/app/paginas/admin-distribuicao/ caixa de entrada e atribuicao
   src/app/paginas/admin-clientes/ busca e filtro (item 2.5.8)
+  src/app/paginas/admin-entregas/ painel do outbox: o que falhou e o reenvio
   src/app/catalogo/ catálogo navegável, removido do build de produção
   e2e/             Playwright: regressão visual, axe e aninhamento de direção
   e2e/referencia/  imagens de referência da regressão visual
@@ -144,9 +178,11 @@ apps/api/          NestJS 12 (ESM-only), prefixo global /api
   src/produtos/     catálogo: CRUD administrativo, sem exclusão
   src/pedidos/      snapshot imutável; `preparar` lê, `gravar` escreve
   src/entregaveis/  máquina de estados do ADR-11 e a trilha de transições
-  src/outbox/       escrita na transação + despachante, separados
+  src/tarefas/      guard de tarefa interna, porta de fila e adaptador do Cloud Tasks
+  src/outbox/       escrita na transação, arrendamento, despachante e varredor
+  src/alertas/      porta de alerta; o destinatário é configurado no Monitoring
   src/email/        contrato EmailTransport, adaptador Resend, transporte falso
-apps/scanner/      ClamAV em contêiner, sem lógica de domínio (Etapa 11, ainda não existe)
+apps/scanner/      ClamAV em contêiner, sem lógica de domínio; não usa packages/shared
 packages/shared/   tipos e schemas compartilhados (importe por subcaminho: `shared/perfil`)
 packages/regras-firestore/  suíte das regras no emulador — ver o README de lá
 infra/terraform/   ver o README de lá antes de mexer
@@ -235,7 +271,7 @@ Estas vêm de decisões registradas nos ADRs. Violá-las é bug, não preferênc
 
 2. **Nenhum efeito colateral dentro de transação do Firestore.** Transações são reexecutadas sob contenção. Nada de chamada a Resend ou AbacatePay dentro do corpo — apenas escrita no outbox.
 
-3. **Toda notificação nasce no outbox**, escrita na mesma transação que produz o fato de negócio. Nunca envie e-mail direto de um handler.
+3. **Toda notificação nasce no outbox**, escrita na mesma transação que produz o fato de negócio. Nunca envie e-mail direto de um handler. E **nada decide sozinho se vale entregar**: `OutboxService.reivindicar` é a única trava, e os três caminhos de entrada — fila, varredor e reenvio manual — passam por ela. Um quarto caminho que envie por fora é entrega duplicada esperando acontecer.
 
 4. **Idempotência por ID determinístico de documento.** Webhook usa o ID do evento; slot de reunião usa `{advogadoId}_{inícioISO}`. `create` que falha por documento existente é duplicata esperada, não erro.
 
@@ -251,7 +287,7 @@ Estas vêm de decisões registradas nos ADRs. Violá-las é bug, não preferênc
 
 10. **Rotas públicas não chamam a API antes do pré-cadastro.** É a mitigação de cold start; quebrar isso derruba a performance da página de captação.
 
-11. **E-mail vai sempre por trás da interface `EmailTransport`.** Nunca chame o SDK do Resend (ou de qualquer provedor) diretamente de um handler. Produção usa Resend; testes automatizados usam um transporte falso que não toca rede. Reentrega é responsabilidade do outbox, não do transporte — o adaptador só reporta sucesso ou falha.
+11. **E-mail vai sempre por trás da interface `EmailTransport`.** Nunca chame o SDK do Resend (ou de qualquer provedor) diretamente de um handler. Produção usa Resend; testes automatizados usam um transporte falso que não toca rede. Reentrega é responsabilidade do outbox, não do transporte — o adaptador só reporta sucesso ou falha. A `chaveIdempotencia` não é exceção: quem a escolhe é o outbox, e o adaptador só repassa o cabeçalho.
 
 12. **Convite de calendário é iCalendar montado aqui, sem API externa.** `UID` estável e `SEQUENCE` incrementado a cada alteração são campos persistidos da reunião. Remarcação reusa o `UID`; cancelamento usa `METHOD:CANCEL`.
 

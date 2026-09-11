@@ -8,21 +8,28 @@ import { ResendEmailTransport } from './resend.transport.js';
 type Envio = Parameters<Resend['emails']['send']>[0];
 type Resposta = Awaited<ReturnType<Resend['emails']['send']>>;
 
+type Opcoes = Parameters<Resend['emails']['send']>[1];
+
 function clienteFalso(responder: () => Resposta): {
   cliente: Resend;
   envios: Envio[];
+  /* O SEGUNDO ARGUMENTO tambem e registrado: e por ele que vai a chave de
+   * idempotencia, e um dublê que o descartasse nao acusaria a chave perdida. */
+  opcoes: Opcoes[];
 } {
   const envios: Envio[] = [];
+  const opcoes: Opcoes[] = [];
   const cliente = {
     emails: {
-      send: (opcoes: Envio) => {
-        envios.push(opcoes);
+      send: (envio: Envio, extras?: Opcoes) => {
+        envios.push(envio);
+        opcoes.push(extras);
         return Promise.resolve().then(responder);
       },
     },
   } as unknown as Resend;
 
-  return { cliente, envios };
+  return { cliente, envios, opcoes };
 }
 
 function aceitando(id = 'id-do-provedor'): {
@@ -285,5 +292,52 @@ describe('criarTransporte', () => {
     ],
   ])('recusa subir em producao %s', (_caso, ambiente) => {
     expect(() => criarTransporte(ambiente)).toThrow(/producao/);
+  });
+});
+
+describe('chave de idempotencia', () => {
+  function montar(): { transporte: ResendEmailTransport; opcoes: Opcoes[] } {
+    const { cliente, opcoes } = clienteFalso(
+      () => ({ data: { id: 'x' }, error: null }) as Resposta,
+    );
+    return {
+      transporte: new ResendEmailTransport(cliente, 'remetente@teste.local'),
+      opcoes,
+    };
+  }
+
+  /**
+   * O SDK manda a chave como cabecalho `Idempotency-Key`, e e ela que fecha a
+   * janela que trava local nenhuma fecha: o provedor aceita a mensagem e o
+   * processo morre antes de gravar `enviado`.
+   *
+   * Quem escolhe a chave e o outbox — aqui so se repassa. Nenhuma decisao de
+   * reentrega entra neste arquivo (ADR-07.1).
+   */
+  it('repassa a chave ao SDK quando o outbox manda uma', async () => {
+    const { transporte, opcoes } = montar();
+
+    await transporte.enviar({
+      para: ['a@b.test'],
+      assunto: 'x',
+      corpoTexto: 'y',
+      chaveIdempotencia: 'evento-1-c0',
+    });
+
+    expect(opcoes[0]).toEqual({ idempotencyKey: 'evento-1-c0' });
+  });
+
+  /** Sem chave, nao inventa uma: a mensagem que nao pede deduplicacao nao pode
+   * ganhar uma silenciosamente. */
+  it('nao manda opcao nenhuma quando nao ha chave', async () => {
+    const { transporte, opcoes } = montar();
+
+    await transporte.enviar({
+      para: ['a@b.test'],
+      assunto: 'x',
+      corpoTexto: 'y',
+    });
+
+    expect(opcoes[0]).toBeUndefined();
   });
 });

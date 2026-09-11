@@ -8,7 +8,8 @@
  * numero deixar de dizer alguma coisa.
  *
  * O QUE ELE IMITA E O QUE NAO IMITA. Imita: caminho de documento, subcolecao,
- * consulta com `where`, `orderBy` (nas duas direcoes) e `limit`, transacao que le
+ * consulta com `where` (`==`, `array-contains` e `<=`), `orderBy` (nas duas
+ * direcoes, com instantes ordenando como instante) e `limit`, transacao que le
  * antes de escrever — inclusive lendo uma CONSULTA, que e como a publicacao de
  * disponibilidade descobre o que apagar —, `create` que estoura em documento
  * existente, `delete`, e a ORDEM das escritas. Nao imita: carimbo de servidor, reexecucao sob contencao, indices,
@@ -104,7 +105,7 @@ export class ReferenciaFalsa {
  * do que um que recusa: o segundo aparece na hora, o primeiro aparece em
  * producao.
  */
-type Operador = '==' | 'array-contains';
+type Operador = '==' | 'array-contains' | '<=';
 
 interface Filtro {
   readonly campo: string;
@@ -112,11 +113,43 @@ interface Filtro {
   readonly valor: unknown;
 }
 
+/**
+ * `Timestamp` do Admin SDK, reduzido ao que o dublê precisa. Nao se importa o
+ * tipo real: o dublê nao depende de `firebase-admin`, e um teste pode semear
+ * qualquer coisa com `toMillis`.
+ */
+function emMilissegundos(valor: unknown): number | null {
+  if (typeof valor === 'number') return valor;
+  if (
+    typeof valor === 'object' &&
+    valor !== null &&
+    typeof (valor as { toMillis?: unknown }).toMillis === 'function'
+  ) {
+    return (valor as { toMillis: () => number }).toMillis();
+  }
+  return null;
+}
+
 function casa(dados: Dados, filtro: Filtro): boolean {
   const campo = dados[filtro.campo];
 
   if (filtro.operador === 'array-contains') {
     return Array.isArray(campo) && campo.includes(filtro.valor);
+  }
+
+  /*
+   * `<=` entrou na Etapa 7, para o varredor do outbox (`varrerApos <= agora`).
+   *
+   * CAMPO AUSENTE NAO CASA, como no Firestore de verdade: um documento sem o
+   * campo nao aparece em consulta de intervalo sobre ele. E precisamente a
+   * armadilha que ja mordeu este projeto duas vezes, e o varredor so esta certo
+   * porque `varrerApos` e sempre escrito.
+   */
+  if (filtro.operador === '<=') {
+    const esquerda = emMilissegundos(campo);
+    const direita = emMilissegundos(filtro.valor);
+    if (esquerda === null || direita === null) return false;
+    return esquerda <= direita;
   }
 
   return campo === filtro.valor;
@@ -133,7 +166,11 @@ export class ConsultaFalsa {
   ) {}
 
   where(campo: string, operador: string, valor: unknown): ConsultaFalsa {
-    if (operador !== '==' && operador !== 'array-contains') {
+    if (
+      operador !== '==' &&
+      operador !== 'array-contains' &&
+      operador !== '<='
+    ) {
       throw new Error(
         `FirestoreFalso nao implementa o operador "${operador}". ` +
           'Implemente-o em `casa()` antes de usar — um operador ignorado ' +
@@ -174,7 +211,7 @@ export class ConsultaFalsa {
     );
   }
 
-  get(): Promise<{ docs: DocumentoFalso[] }> {
+  get(): Promise<{ docs: DocumentoFalso[]; size: number }> {
     /*
      * A LEITURA POR CONSULTA TAMBEM ENTRA NA TRILHA. Ela ficou de fora ate a
      * Etapa 9, quando `DisponibilidadesService.publicar` passou a ler a grade da
@@ -210,16 +247,69 @@ export class ConsultaFalsa {
       );
     }
 
-    return Promise.resolve({
-      docs: this.teto === null ? docs : docs.slice(0, this.teto),
-    });
+    const pagina = this.teto === null ? docs : docs.slice(0, this.teto);
+
+    /*
+     * `size` junto de `docs`, porque o `QuerySnapshot` de verdade tem os dois — e
+     * codigo que le `pagina.size` num dublê que so tem `docs` recebe `undefined`
+     * e falha em silencio: `undefined > 0` e falso, e a condicao inteira vira
+     * falso sem erro nenhum. Foi assim que `marcarSeFechou` passou a devolver
+     * `false` para um pedido inteiramente entregue.
+     */
+    return Promise.resolve({ docs: pagina, size: pagina.length });
   }
+}
+
+/**
+ * `FieldValue.increment` e `FieldValue.delete` SAO APLICADOS, e nao guardados.
+ *
+ * Entraram na Etapa 7. Ate ela, as assercoes olhavam so para a ORDEM das
+ * escritas, e guardar a sentinela crua nao incomodava. O arrendamento do outbox
+ * mudou isso: ele LE `tentativas` numa reivindicacao e decide na seguinte, entao
+ * um contador que ficasse valendo `{ operand: 1 }` faria o teto de tentativas ser
+ * testado contra lixo — e passar.
+ *
+ * A deteccao e estrutural de proposito. Importar `FieldValue` aqui acoplaria o
+ * dublê ao `firebase-admin`, que e justamente o que ele existe para nao precisar.
+ */
+function aplicarSentinelas(anterior: Dados | undefined, dados: Dados): Dados {
+  const resultado: Dados = { ...anterior };
+
+  for (const [campo, valor] of Object.entries(dados)) {
+    const nome =
+      typeof valor === 'object' && valor !== null
+        ? valor.constructor.name
+        : '';
+
+    if (nome === 'DeleteTransform') {
+      delete resultado[campo];
+      continue;
+    }
+
+    if (nome === 'NumericIncrementTransform') {
+      const passo = (valor as { operand: number }).operand;
+      const base = resultado[campo];
+      resultado[campo] = (typeof base === 'number' ? base : 0) + passo;
+      continue;
+    }
+
+    resultado[campo] = valor;
+  }
+
+  return resultado;
 }
 
 /** Numero compara como numero; o resto, como texto. `orderBy('ordem')` num
  * entregavel ordenaria 10 antes de 2 se tudo virasse string. */
 function comparar(a: unknown, b: unknown): number {
   if (typeof a === 'number' && typeof b === 'number') return a - b;
+
+  /* `orderBy('varrerApos')` ordena instantes, e instante como texto e o mesmo
+   * defeito que ordenaria 10 antes de 2. */
+  const esquerda = emMilissegundos(a);
+  const direita = emMilissegundos(b);
+  if (esquerda !== null && direita !== null) return esquerda - direita;
+
   return String(a ?? '').localeCompare(String(b ?? ''));
 }
 
@@ -245,10 +335,10 @@ export class TransacaoFalsa {
    * dentro da mesma transacao que grava a nova.
    */
   get(alvo: ReferenciaFalsa): Promise<DocumentoFalso>;
-  get(alvo: ConsultaFalsa): Promise<{ docs: DocumentoFalso[] }>;
+  get(alvo: ConsultaFalsa): Promise<{ docs: DocumentoFalso[]; size: number }>;
   get(
     alvo: ReferenciaFalsa | ConsultaFalsa,
-  ): Promise<DocumentoFalso | { docs: DocumentoFalso[] }> {
+  ): Promise<DocumentoFalso | { docs: DocumentoFalso[]; size: number }> {
     return alvo.get();
   }
 
@@ -303,7 +393,7 @@ export class FirestoreFalso {
     this.ordemDeEscrita.push(`${operacao} ${caminho}`);
     const anterior =
       operacao === 'set' ? undefined : this.documentos.get(caminho);
-    this.documentos.set(caminho, { ...anterior, ...dados });
+    this.documentos.set(caminho, aplicarSentinelas(anterior, dados));
   }
 
   /** So as escritas, sem os `get` — a maioria das assercoes so olha para elas. */

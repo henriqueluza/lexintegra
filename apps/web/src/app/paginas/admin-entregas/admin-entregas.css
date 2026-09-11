@@ -1,0 +1,39 @@
+/* Direcao B (Pauta) por heranca da shell autenticada. */
+.entregas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+.entregas__titulo {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t1);
+  font-weight: var(--peso-titulo);
+  line-height: var(--altura-titulo);
+  letter-spacing: var(--letra-titulo);
+}
+
+.entregas__nota {
+  max-width: var(--medida-texto);
+  color: var(--texto-2);
+}
+
+.entregas__estado {
+  font-weight: var(--peso-titulo);
+}
+
+/* O que parou de andar sozinho pede acao de gente, e por isso e o unico estado
+   que ganha cor. Pintar os quatro faria a tabela virar semaforo e o unico que
+   importa deixaria de saltar. */
+.entregas__estado--parado {
+  color: var(--estado-erro);
+}
+
+/* O motivo e texto do provedor, e pode ser longo. Quebrar e melhor do que
+   empurrar a coluna de acoes para fora da tela. */
+.entregas__motivo {
+  display: block;
+  max-width: var(--medida-auxiliar);
+  overflow-wrap: anywhere;
+  color: var(--texto-2);
+}

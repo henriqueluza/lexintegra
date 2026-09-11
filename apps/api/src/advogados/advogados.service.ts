@@ -18,7 +18,7 @@ import {
   type StatusAdvogado,
 } from 'shared';
 import { FIRESTORE, AUTH_FIREBASE } from '../firebase/firebase.module.js';
-import { DespachanteOutbox } from '../outbox/despachante.service.js';
+import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 
 export const COLECAO_ADVOGADOS = 'advogados';
@@ -58,7 +58,7 @@ export class AdvogadosService {
     @Inject(AUTH_FIREBASE) private readonly auth: Auth,
     @Inject(FIRESTORE) private readonly db: Firestore,
     private readonly outbox: OutboxService,
-    private readonly despachante: DespachanteOutbox,
+    private readonly enfileirador: EnfileiradorDeEventos,
   ) {}
 
   async criar(dados: NovoAdvogado, criadoPor: string): Promise<AdvogadoResumo> {
@@ -82,7 +82,7 @@ export class AdvogadosService {
     this.log.log(`advogado ${usuario.uid} provisionado por ${criadoPor}`);
 
     // Depois do commit, nunca dentro (regra inviolavel 2).
-    await this.despachante.despachar(idEvento);
+    await this.enfileirador.enfileirarPorId(idEvento);
 
     return {
       uid: usuario.uid,

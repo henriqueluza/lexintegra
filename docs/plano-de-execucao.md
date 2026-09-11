@@ -416,6 +416,58 @@ qualquer coisa que não seja um projeto `demo-`.
 
 **Critério de aceite.** Teste automatizado que simula falha de entrega e verifica a reentrega pelo varredor.
 
+### Registro de execução — Etapa 7
+
+**Metade já existia.** A coleção `outbox`, o `EmailTransport`, o adaptador do
+Resend e o transporte falso nasceram na Etapa 4, e o próprio código dizia o que
+faltava: *"o que muda na Etapa 7 é quem chama, não o que está aqui"*. O que esta
+etapa construiu foi a entrega assíncrona — fila, endpoint interno, varredor,
+política de tentativa, painel e alerta.
+
+**A Etapa 11 precisou ser integrada antes.** O PR #10 foi mesclado com base em
+`feat/areas-cliente-advogado` e não em `main`, e essa branch já tinha sido
+mesclada três dias antes — então os dois commits da Etapa 11 nunca chegaram à
+`main`. Importava porque a Etapa 11 escreveu a infraestrutura de fila que esta
+etapa reusa, e dizia isso em comentário. Integrada num PR próprio, sem conflito.
+
+**O que estava quebrado e não só faltando.** `despachar` engolia a falha e
+retornava normalmente. Sob Cloud Tasks isso viraria HTTP 200 e a fila concluiria
+que a tarefa deu certo — retentativa nenhuma, com toda a aparência de um sistema
+resiliente. O status HTTP passou a ser o controle da reentrega.
+
+**Três camadas contra entrega duplicada**, e a segunda é a única que é trava de
+verdade: nome determinístico da tarefa, arrendamento transacional e chave de
+idempotência no provedor. A justificativa completa está no ADR-03, na "terceira
+falha conhecida" — ela foi descoberta ao implementar, não estava prevista.
+
+**Entrega exatamente-uma-vez não existe**, e ficou registrada no ADR-03 em vez de
+deixada implícita.
+
+**A lacuna de tempo da redefinição de senha fechou junto.** Até aqui o caminho do
+e-mail conhecido chamava o provedor antes de responder, e o tempo denunciava quem
+tem conta. Com a fila, o caminho síncrono é só o enfileiramento.
+
+**Alerta é log estruturado, e o destinatário fica fora do código.** A política do
+Cloud Monitoring consome a entrada de log; quem recebe é um
+`google_monitoring_notification_channel`, que é Etapa 12. Foi a forma de entregar
+"alertas por criticidade" sem inventar resposta para uma decisão em aberto — e um
+alerta sobre falha do outbox que dependesse do outbox seria circular.
+
+**Errata do escopo: a criticidade não tinha definição em lugar nenhum.** Duas
+menções no repositório inteiro, nenhuma taxonomia. Ela virou uma tabela por tipo
+de evento (`politica.ts`) com criticidade e teto de tentativas, como o ADR-03
+descreve. O backoff ficou de fora porque no Cloud Tasks ele é por **fila**, não
+por tarefa — os três eventos de hoje são críticos e cabem numa fila só.
+
+**A verificação do token OIDC virou porta.** Era necessário para o teste de aceite
+exercitar a rota interna sem desligar o guard — e um teste que desliga o guard não
+prova que ele está na cadeia.
+
+**Custo recorrente novo: nenhum.** O varredor é o job nº 1 dos três gratuitos.
+
+**Cobertura:** `apps/api` 93/83/92/94, `apps/web` 96/89/92/97,
+`packages/shared` 99/100/100/99.
+
 ### Só você — Etapa 7
 
 **Impossível delegar**
@@ -555,6 +607,32 @@ Branch `feat/areas-cliente-advogado`. O que foi construído, e as decisões que 
 **Entregável.** Upload de arquivo legítimo que fica disponível após a varredura, e upload de arquivo de teste EICAR que é bloqueado e nunca servido. Demonstração do gate de termos: download só libera após o clique de aceite, e o aceite fica registrado. Demonstração do aviso de exclusão chegando por e-mail antes da remoção do arquivo.
 
 **Critério de aceite.** Nenhum caminho de código serve arquivo com status diferente de limpo — verificado por teste, incluindo tentativa direta pela URL do bucket. Upload que exceda 3 arquivos, ultrapasse 5 MB, ou envie tipo diferente de jpg/pdf é rejeitado no servidor, não só na interface.
+
+### Registro de execução — Etapa 11
+
+Branch `feat/upload-varredura`, saída da branch da Etapa 9 porque o upload real encaixa no mesmo ponto de interface.
+
+**Dois ADRs novos.** ADR-17 (armazenamento atrás de uma porta) e ADR-18 (topologia da varredura: Cloud Tasks → API → scanner). Ver `docs/arquitetura.md`.
+
+**Os dois fluxos são separados de verdade** (arquitetura 6.2), e não um módulo com `if (perfil)`: módulos distintos (`anexos/` e `entregaveis/upload.service.ts`), controladores com perfis distintos, prefixos distintos no bucket (`anexos/{pedidoId}/` e `entregaveis/{pedidoId}/{id}/`), políticas distintas e retenções distintas. O que compartilham, por regra, é a porta de armazenamento e o **portão de leitura** — que é a ponta oposta, e a regra inviolável 6 manda a checagem de `limpo` viver num lugar só.
+
+**A regra inviolável 6 virou lint.** Um teste prova que o portão confere o estado; nenhum teste prova que *alguém mais* não emitiu link por fora. A emissão foi isolada em `arquivos/leitura.ts` e uma regra de `dependency-cruiser` impede que qualquer módulo além do portão a importe — verificado nos dois sentidos: passa limpo, e acusa quando um arquivo tenta contornar.
+
+**Duas conferências, e nenhuma cobre a outra.** O ClamAV responde "tem malware conhecido?"; os magic bytes respondem "isto é mesmo um PDF?". Um HTML com extensão `.pdf` passa limpo pelo antivírus.
+
+**O aceite de termos é por versão do arquivo.** Cada upload do advogado produz uma versão nova; reaproveitar o aceite anterior faria a evidência de conformidade apontar para um arquivo que o cliente nunca viu.
+
+**A retenção é em duas passagens** — avisa no 23º dia, exclui no 30º —, e o aviso nasce no outbox na mesma transação que marca o pedido como avisado. O gatilho é o estado do pedido (todos os entregáveis em `entregue`), não a idade do objeto.
+
+**Um defeito de classe conhecida, encontrado de novo.** A varredura do job usava `where('retencaoEm','!=',null)`, que no Firestore exclui documentos onde o campo está **ausente** — a mesma armadilha do `distribuido` na Etapa 9. Trocado por igualdade num booleano sempre escrito. Quem pegou foi o dublê do Firestore, que recusa operador não implementado em vez de fingir suportá-lo.
+
+**Um erro de fiação que só o `app.integration-spec.ts` pegaria.** `PortaoDeArquivos` precisa de `AcessoPedidoService`, provido por `PedidosModule` — que já importa `ArquivosModule`. Exportá-lo daria ciclo; provê-lo nos dois daria duas instâncias do mesmo serviço de autorização. Resolvido com um módulo-folha (`pedidos/acesso.module.ts`). Os testes de unidade, que constroem os serviços à mão, nunca veriam isso.
+
+**Duas correções no dublê do Firestore**, ambas de defeitos silenciosos: `size` faltava no resultado de consulta (`undefined > 0` é falso, e `marcarSeFechou` devolvia `false` para um pedido inteiramente entregue), e leitura por consulta não entrava na trilha de ordem.
+
+**EICAR não foi executado.** O plano reserva esse teste para validação humana. Os caminhos de veredito são exercitados com um scanner falso configurável; nenhum byte de EICAR existe no repositório.
+
+**Cobertura:** `apps/api` 93/82/92/94, `apps/web` 96/90/92/97, `packages/shared` 99/100/100/99, `apps/scanner` 100/88/100/100.
 
 ### Só você — Etapa 11
 

@@ -12,6 +12,7 @@ import type {
   ObservacaoResumo,
 } from 'shared/esquemas/observacao';
 import type { DemandaResumo, EntregavelResumo } from 'shared/esquemas/pedido';
+import type { PedidoDeUpload } from 'shared/esquemas/upload';
 
 /**
  * A area do advogado (itens 2.6.1 a 2.6.3).
@@ -91,21 +92,57 @@ export class ApiAdvogadoService {
   }
 
   /**
-   * PLACEHOLDER DA ETAPA 9, como o anexo do cliente: so o nome do arquivo.
+   * PASSO 1 do envio do entregavel: pede a URL assinada.
    *
-   * E o SEGUNDO fluxo de upload, distinto do anexo por decisao de arquitetura
-   * (secao 6.2): autorizacao, efeito e retencao proprios. As regras de tipo e
-   * tamanho DESTE fluxo ainda nao foram confirmadas (0.2, item 6).
+   * E o SEGUNDO fluxo de upload, distinto do anexo do cliente por decisao de
+   * arquitetura (secao 6.2): autorizacao, efeito, prefixo e retencao proprios.
+   *
+   * ⚠️ A POLITICA DESTE FLUXO E PROVISORIA (0.2, item 6): jpg/pdf/5 MB foi
+   * confirmado para o CLIENTE. A tela nao a duplica — quem recusa e o servidor.
    */
-  enviarEntregavel(
+  pedirEnvioDeEntregavel(
     pedidoId: string,
     entregavelId: string,
-    nome: string,
-  ): Promise<EntregavelResumo> {
+    arquivo: PedidoDeUpload,
+  ): Promise<{ url: string; versao: number; validoPorSegundos: number }> {
     return firstValueFrom(
-      this.http.post<EntregavelResumo>(
-        `${entregavel(pedidoId, entregavelId)}/arquivo`,
-        { nome },
+      this.http.post<{
+        url: string;
+        versao: number;
+        validoPorSegundos: number;
+      }>(`${entregavel(pedidoId, entregavelId)}/arquivo`, arquivo),
+    );
+  }
+
+  /** PASSO 2: confirma o envio e a API enfileira a varredura. */
+  confirmarEntregavel(pedidoId: string, entregavelId: string): Promise<void> {
+    return firstValueFrom(
+      this.http.post<void>(
+        `${entregavel(pedidoId, entregavelId)}/arquivo/confirmacao`,
+        {},
+      ),
+    );
+  }
+
+  /** Tambem pelo portao: nao ha atalho para quem enviou (regra inviolavel 6). */
+  baixarEntregavel(
+    pedidoId: string,
+    entregavelId: string,
+  ): Promise<{ url: string; validoPorSegundos: number }> {
+    return firstValueFrom(
+      this.http.get<{ url: string; validoPorSegundos: number }>(
+        `${entregavel(pedidoId, entregavelId)}/download`,
+      ),
+    );
+  }
+
+  baixarAnexo(
+    pedidoId: string,
+    anexoId: string,
+  ): Promise<{ url: string; validoPorSegundos: number }> {
+    return firstValueFrom(
+      this.http.get<{ url: string; validoPorSegundos: number }>(
+        `${pedido(pedidoId)}/anexos/${encodeURIComponent(anexoId)}/download`,
       ),
     );
   }

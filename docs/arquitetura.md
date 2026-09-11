@@ -136,6 +136,18 @@ Cache distribuído não se justifica porque o Firebase Auth é stateless (JWT) e
 
 **Segunda falha conhecida.** Transações do Firestore são reexecutadas automaticamente sob contenção. Qualquer efeito colateral dentro do corpo da transação pode acontecer duas vezes. Regra absoluta: nenhuma chamada a Resend ou AbacatePay dentro de transação — apenas escrita no outbox.
 
+**Terceira falha conhecida, descoberta ao implementar (Etapa 7).** Os dois mecanismos de retentativa são independentes: a fila reentrega sozinha, e o varredor reenfileira o que parece perdido. Nada impede que os dois — mais o reenvio manual do painel — cheguem ao mesmo registro na mesma janela, e enviar e-mail não é idempotente: duas entregas são dois e-mails. Ler o estado antes de enviar não resolve, porque leitura seguida de ação não é atômica: duas tarefas leem `pendente`, ambas passam pela conferência e ambas enviam.
+
+São **três camadas**, com propósitos diferentes e nenhuma substituindo a outra:
+
+1. **Nome determinístico da tarefa** (`{id}-c{ciclo}-t{tentativa}`). O Cloud Tasks deduplica por nome, o que impede o varredor de criar uma segunda tarefa para um registro cuja tarefa ainda está viva. O nome inclui a tentativa de propósito: depois de uma falha real queremos tarefa nova, e tarefa nova precisa de nome novo — senão a deduplicação que protege no caso comum passaria a impedir a reentrega no caso que mais precisa dela.
+2. **Arrendamento transacional** (`OutboxService.reivindicar`). É a trava de verdade: uma transação do Firestore lê e decide, e isso é um compare-and-set — uma commita, a outra reexecuta e vê o arrendamento. É o único lugar do sistema que decide se vale enviar, e os três caminhos de entrada passam por ele.
+3. **Chave de idempotência no provedor** (`Idempotency-Key` do Resend). Fecha a janela que trava local nenhuma fecha: o provedor aceita a mensagem e o processo morre antes de gravar `enviado`. A chave carrega o **ciclo** e não a tentativa — uma reentrega depois de falha real não deve produzir segunda entrega, mas o reenvio manual do administrador tem que produzir.
+
+**Entrega exatamente-uma-vez não existe, e é melhor registrar isso do que deixar implícito.** O arrendamento remove a duplicata concorrente; a chave de idempotência remove a duplicata por processo morto, dentro da janela de idempotência do provedor. Fora dela, um registro reaberto manualmente meses depois entrega de novo — que é o comportamento desejado.
+
+**O contador de tentativas anda na reivindicação, não na conclusão.** É o que faz um processo que morre no meio consumir uma tentativa, e portanto o que torna o teto real. O teto da política é menor que o `max_attempts` da fila, porque o desfecho que se quer é `abandonado` — com alerta e registro visível no painel — e não uma tarefa que some da fila sem deixar rastro.
+
 ### ADR-04 — Idempotência por ID determinístico
 
 **Contexto.** O Firestore garante unicidade do ID do documento dentro da coleção, e a operação `create` falha se o documento já existir. Isso é funcionalmente equivalente a uma restrição `UNIQUE` com `ON CONFLICT DO NOTHING`.
@@ -212,6 +224,8 @@ Duas implementações cabem atrás dessa interface: **produção** (Resend) e **
 **Por que o transporte falso e não uma chamada real na suíte automatizada.** Um teste que depende de rede externa é mais lento e mais instável do que um teste que verifica apenas o estado do próprio outbox. A suíte deve provar que a mensagem certa foi produzida e registrada, não que um provedor de terceiro está no ar.
 
 **O que não pode vazar para dentro do adaptador.** Nenhuma decisão de reentrega. Se o provedor falhar, a responsabilidade de tentar de novo é do outbox e do Cloud Tasks (ADR-03), não do transporte — o adaptador só reporta sucesso ou falha.
+
+**A chave de idempotência não é uma exceção a isso** (acrescentada na Etapa 7). `EmailMensagem` carrega um `chaveIdempotencia` opcional, que o adaptador repassa ao provedor como `Idempotency-Key`. Quem a escolhe é o outbox; o adaptador só repassa o cabeçalho e continua sem decidir nada. A distinção que importa: decidir *tentar de novo* é do outbox, e dizer ao provedor *qual mensagem é esta* é do chamador.
 
 **Sequenciamento.** A verificação de domínio no Resend depende do domínio estar comprado e do DNS sob controle, então essa ordem é: domínio primeiro, verificação do Resend depois. Recomenda-se um subdomínio dedicado ao envio (por exemplo `notificacoes.<dominio>`), para isolar a reputação de envio transacional do domínio institucional. Durante o desenvolvimento, antes de o domínio existir, uma conta pessoal de desenvolvimento sem domínio verificado já permite enviar — com a restrição de só entregar ao próprio endereço cadastrado — e é descartada ao final do projeto sem nunca entrar no entregável da cláusula 4.3.
 
@@ -408,6 +422,41 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 
 **Consequência assumida.** O rate limiting por instância tolera até três vezes o limite configurado (`max_instance_count = 3`), e um atacante com muitos endereços consegue zerar o contador de uma vítima ao encher o mapa. As duas aproximações são conhecidas; a defesa contra automação em massa é o App Check, não o contador.
 
+### ADR-17 — Armazenamento atrás de uma porta, com adaptador falso
+
+**Contexto.** A Etapa 11 precisa emitir URL assinada, ler faixa de bytes, mover objeto entre buckets e excluir. O projeto **não tem emulador de Cloud Storage** configurado no `firebase.json`, e não há um oficial que cubra URL assinada com a fidelidade necessária.
+
+**Decisão.** O SDK do Cloud Storage vive atrás da interface `Armazenamento` (`apps/api/src/armazenamento/`), com dois adaptadores: `GcsArmazenamento` em produção e `ArmazenamentoFalso` em memória para desenvolvimento e testes. É a mesma forma do ADR-07.1 para e-mail, e pelo mesmo motivo.
+
+**Consequências.**
+
+- A suíte de integração roda o ciclo inteiro — pedido de URL, confirmação, veredito, movimentação, exclusão — sem tocar a rede. Sem a porta, "testar contra o de verdade" significaria testar contra o bucket de produção.
+- Em produção, `BUCKET_QUARENTENA` e `BUCKET_ARQUIVOS` ausentes são **erro de inicialização**, não degradação para o falso. Um serviço que sobe "saudável" guardando arquivos num `Map` só aparece quando um cliente diz que o entregável sumiu.
+- Sob emulador, o falso é usado **mesmo com os buckets definidos** — senão a suíte de integração falaria com o Cloud Storage real.
+- Uma regra de `dependency-cruiser` impede que qualquer módulo fora de `armazenamento/` importe `@google-cloud/storage`.
+
+**A armadilha que isto documenta.** O Cloud Run usa credencial de ambiente, sem chave privada em disco. Assinar uma URL passa pela API de IAM (`signBlob`), o que exige `roles/iam.serviceAccountTokenCreator` da service account **sobre si mesma** (`infra/terraform/varredura.tf`). Sem essa concessão, a emissão falha em produção e **funciona na máquina do desenvolvedor**, que tem credencial de usuário com chave.
+
+---
+
+### ADR-18 — Topologia da varredura: Cloud Tasks → API → scanner
+
+**Contexto.** O ClamAV precisa rodar isolado (seção 3.2). A questão é quem orquestra: o scanner poderia receber a tarefa da fila e escrever o resultado no banco sozinho.
+
+**Decisão.** A fila chama a **API**; a API chama o scanner e decide. O scanner recebe um caminho e devolve um veredito — não lê Firestore, não conhece pedido, entregável nem cliente, e não escreve nada.
+
+**Por quê.** É o que mantém a exceção da seção 3.2 honesta. O contêiner separado se justifica "porque o scanner não contém regra de negócio"; um scanner que escrevesse status no banco recriaria exatamente o problema que a Cloud Function tinha — lógica de domínio num segundo artefato de deploy, com dois pipelines, dois IAM e duas suítes de teste.
+
+**Consequências.**
+
+- **A conferência de magic bytes fica na API**, que lê os primeiros bytes por faixa (`Range: bytes=0-N`). Pô-la no scanner economizaria uma leitura e traria conhecimento de política de upload para dentro do contêiner burro.
+- **São duas conferências, e nenhuma cobre a outra.** O ClamAV responde "tem malware conhecido?"; os magic bytes respondem "isto é mesmo um PDF?". Um HTML com extensão `.pdf` passa limpo pelo antivírus e, servido de um domínio que compartilhe cookie com a aplicação, vira XSS na própria origem.
+- **`indisponivel` não é `infectado`.** Scanner fora do ar faz a tarefa falhar para o Cloud Tasks reentregar; tratá-lo como reprovação apagaria arquivo legítimo por indisponibilidade de infraestrutura.
+- O scanner **não aceita invocação anônima** — diferente da API, que precisa aceitar por causa do rewrite do Hosting (ADR-15). Só a service account da API tem `run.invoker`.
+- Primeira fila do Cloud Tasks do projeto. A Etapa 7 reusa a mesma infraestrutura para o outbox.
+
+---
+
 ## 5. Modelo de dados
 
 ### 5.1 Coleções raiz
@@ -422,6 +471,7 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 | `advogados` | Perfil e licença Microsoft confirmada |
 | `disponibilidades` | Slots com ID determinístico |
 | `outbox` | Eventos pendentes de entrega |
+| `aceites-de-termos` | Evidência de aceite antes do download (Etapa 11) |
 
 **Sobre a atribuição de pedidos a advogados (Etapa 9).** Ela mora no **pedido** (`pedidos.advogadoId`), não no advogado — esta tabela dizia "atribuições" em `advogados`, e foi corrigida acima. A razão é a consulta que existe de verdade: "quais pedidos são meus", feita pelo advogado a cada abertura de tela. Do lado do advogado, seria um array que cresce sem limite dentro de um documento e que precisa ser lido inteiro para filtrar; no pedido, é uma igualdade indexada (`advogadoId` + `criadoEm`). O documento carrega ainda `distribuido`, um booleano redundante com `advogadoId !== null` que existe porque igualdade contra `null` no Firestore mistura o campo ausente com o campo nulo — e um pedido gravado antes do campo existir cairia do lado errado do filtro da caixa de entrada sem erro nenhum.
 
@@ -596,6 +646,8 @@ Defesas complementares ao ClamAV: verificação de magic bytes contra a extensã
 
 **Falha operacional prevista.** Com `min-instances = 0`, a instância do scanner morre e a base de assinaturas envelhece. Um job diário atualiza a base num bucket, de onde o scanner carrega no boot.
 
+**Retenção dos anexos do cliente: não definida.** Os 30 dias são dos **entregáveis**. A retenção dos arquivos de apoio que o cliente envia não foi decidida em lugar nenhum — e apagar documento de identificação por conta própria não é um default que se inventa. O job de retenção não os toca; fica como pendência do controlador (Etapa 11).
+
 **Observação contratual.** Upload de arquivos não consta na cláusula 2ª. É acréscimo de escopo.
 
 ### 7.4 Provisionamento de advogados
@@ -610,7 +662,7 @@ Suspensão precisa revogar tokens ativos, não apenas marcar um campo — senão
 
 Os três jobs gratuitos do Cloud Scheduler ficam integralmente ocupados:
 
-1. **Varredor do outbox** — reenfileira pendências não entregues.
+1. **Varredor do outbox** — reenfileira pendências não entregues. *Implementado na Etapa 7, a cada minuto.*
 2. **Atualização da base ClamAV** — mantém assinaturas atuais no bucket.
 3. **Expiração da janela de 12 meses** — encerra saldos de reunião vencidos conforme o 2.7.2.
 
