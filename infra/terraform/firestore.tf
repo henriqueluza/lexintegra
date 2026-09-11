@@ -170,3 +170,53 @@ resource "google_firestore_index" "disponibilidades_por_semana" {
     order      = "ASCENDING"
   }
 }
+
+# `POST /api/interno/outbox/varredura` — `VarredorDoOutbox.reenfileirar` monta
+# `where('estado','==',X).where('varrerApos','<=',agora).orderBy('varrerApos')`.
+#
+# UM INDICE PARA AS DUAS CONSULTAS: o varredor roda uma passagem para `pendente` e
+# outra para `falhou`, e as duas tem a mesma forma — igualdade em `estado`, faixa e
+# ordenacao em `varrerApos`. Foi por isso que o servico ficou com duas consultas de
+# igualdade em vez de uma com `in`: a forma mais simples tambem e a que cabe num
+# indice so.
+#
+# A ordem dos blocos espelha a consulta: igualdade primeiro, faixa depois.
+# Invertida, o indice existe e a consulta continua falhando em producao pedindo
+# outro.
+resource "google_firestore_index" "outbox_para_varredura" {
+  project    = var.project_id
+  database   = google_firestore_database.default.name
+  collection = "outbox"
+
+  fields {
+    field_path = "estado"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "varrerApos"
+    order      = "ASCENDING"
+  }
+}
+
+# `GET /api/admin/outbox` — a listagem do painel, `where('estado','==',X)` mais
+# `orderBy('criadoEm','desc')`.
+#
+# O filtro "todos" NAO precisa deste indice: sem `where`, o `orderBy('criadoEm')`
+# sozinho usa o indice de campo unico que o Firestore mantem automaticamente. E a
+# mesma distincao de `produtos_por_situacao`.
+resource "google_firestore_index" "outbox_por_estado" {
+  project    = var.project_id
+  database   = google_firestore_database.default.name
+  collection = "outbox"
+
+  fields {
+    field_path = "estado"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "criadoEm"
+    order      = "DESCENDING"
+  }
+}
