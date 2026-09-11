@@ -1,4 +1,5 @@
 import type { CanActivate, ExecutionContext, Type } from '@nestjs/common';
+import { ServiceUnavailableException } from '@nestjs/common';
 import {
   GUARDS_METADATA,
   ROUTE_ARGS_METADATA,
@@ -17,6 +18,12 @@ import type { RedefinicaoSenhaService } from './autenticacao/senha/redefinicao.s
 import type { UsuarioAutenticado } from './autenticacao/usuario.js';
 import { HealthController } from './health/health.controller.js';
 import { OutboxAdminController } from './outbox/outbox.admin.controller.js';
+import type { OutboxAdminService } from './outbox/outbox.admin.service.js';
+import type {
+  DespachanteOutbox,
+  ResultadoDoDespacho,
+} from './outbox/despachante.service.js';
+import type { VarredorDoOutbox } from './outbox/varredor.service.js';
 import { OutboxController } from './outbox/outbox.controller.js';
 import type { Limite as ConfiguracaoDeLimite } from './limite/contador.js';
 import { CHAVE_SEM_APP_CHECK } from './app-check/decoradores.js';
@@ -1111,5 +1118,121 @@ describe('DisponibilidadesController', () => {
     await controlador.publicar({ semana: '2026-09-07', slots: [] }, ADVOGADO);
 
     expect(chamadas).toEqual(['publicar uid-ana 2026-09-07']);
+  });
+});
+
+describe('OutboxController', () => {
+  function montar(situacao: ResultadoDoDespacho): {
+    controlador: OutboxController;
+    chamadas: string[];
+  } {
+    const chamadas: string[] = [];
+
+    const despachante = {
+      despachar: (id: string) => {
+        chamadas.push(`despachar ${id}`);
+        return Promise.resolve(situacao);
+      },
+    } as unknown as DespachanteOutbox;
+
+    const varredor = {
+      varrer: () => {
+        chamadas.push('varrer');
+        return Promise.resolve({ pendentes: 2, falhados: 1 });
+      },
+    } as unknown as VarredorDoOutbox;
+
+    return {
+      controlador: new OutboxController(despachante, varredor),
+      chamadas,
+    };
+  }
+
+  /**
+   * O STATUS HTTP E O QUE CONTROLA A REENTREGA, e nao detalhe de apresentacao: o
+   * Cloud Tasks reentrega o que respondeu erro e conclui o que respondeu 2xx. Um
+   * `falhou` respondendo 200 seria uma fila que nunca tenta de novo, com toda a
+   * aparencia de um sistema resiliente.
+   */
+  it('so `falhou` vira erro, para a fila tentar de novo', async () => {
+    const { controlador } = montar('falhou');
+
+    await expect(controlador.entregar({ id: 'id-1' })).rejects.toThrow(
+      ServiceUnavailableException,
+    );
+  });
+
+  /**
+   * `abandonado` responde 2xx porque o orcamento acabou e insistir nao e o que se
+   * quer; `em-andamento` porque outra tarefa esta com o registro, e insistir em
+   * cima de quem ja trabalha so gastaria a fila; os outros dois porque nao ha
+   * nada a fazer.
+   */
+  it.each([
+    ['entregue'],
+    ['abandonado'],
+    ['em-andamento'],
+    ['ja-entregue'],
+    ['inexistente'],
+  ] as ResultadoDoDespacho[][])('%s conclui a tarefa', async (situacao) => {
+    const { controlador, chamadas } = montar(situacao);
+
+    await expect(controlador.entregar({ id: 'id-1' })).resolves.toEqual({
+      situacao,
+    });
+    expect(chamadas).toEqual(['despachar id-1']);
+  });
+
+  it('delega a varredura e devolve o resumo', async () => {
+    const { controlador, chamadas } = montar('entregue');
+
+    await expect(controlador.varrer()).resolves.toEqual({
+      pendentes: 2,
+      falhados: 1,
+    });
+    expect(chamadas).toEqual(['varrer']);
+  });
+});
+
+describe('OutboxAdminController', () => {
+  function montar(): {
+    controlador: OutboxAdminController;
+    chamadas: string[];
+  } {
+    const chamadas: string[] = [];
+    const servico = {
+      listar: (situacao?: string) => {
+        chamadas.push(`listar ${situacao ?? 'todos'}`);
+        return Promise.resolve([]);
+      },
+      reenviar: (id: string, admin: string) => {
+        chamadas.push(`reenviar ${id} por ${admin}`);
+        return Promise.resolve({ reenviado: true });
+      },
+    } as unknown as OutboxAdminService;
+
+    return { controlador: new OutboxAdminController(servico), chamadas };
+  }
+
+  it('repassa o filtro de situacao', async () => {
+    const { controlador, chamadas } = montar();
+    await controlador.listar('falhou');
+    expect(chamadas).toEqual(['listar falhou']);
+  });
+
+  it('lista tudo quando nao ha filtro', async () => {
+    const { controlador, chamadas } = montar();
+    await controlador.listar();
+    expect(chamadas).toEqual(['listar todos']);
+  });
+
+  /** Quem reenviou vem do TOKEN, nunca do corpo — e o unico registro de autoria
+   * que esta acao tem. */
+  it('reenvia atribuindo a autoria ao administrador autenticado', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.reenviar('id-1', ADMIN);
+
+    expect(chamadas).toEqual(['reenviar id-1 por uid-admin']);
   });
 });

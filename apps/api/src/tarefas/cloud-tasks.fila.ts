@@ -25,11 +25,24 @@ export interface ConfiguracaoDaFila {
  * service account configurada. E o que `TarefaGuard` verifica do outro lado — a
  * credencial nunca passa por este codigo, e por isso nao ha o que vazar em log.
  */
+/** So o que este adaptador usa do SDK. Existe para o teste nao precisar de rede
+ * nem de credencial de projeto. */
+export interface ClienteDeTarefas {
+  queuePath(projeto: string, regiao: string, fila: string): string;
+  createTask(pedido: Record<string, unknown>): Promise<unknown>;
+}
+
 @Injectable()
 export class CloudTasksFila<T> implements Fila<T> {
-  private readonly cliente = new CloudTasksClient();
-
-  constructor(private readonly config: ConfiguracaoDaFila) {}
+  /*
+   * O cliente entra pelo construtor com um padrao. Nunca e resolvido pelo Nest —
+   * quem constroi esta classe e `criarFila`, com `new` — entao nao vale aqui a
+   * armadilha de parametro com padrao que derrubou o boot do `AlertaEmLog`.
+   */
+  constructor(
+    private readonly config: ConfiguracaoDaFila,
+    private readonly cliente: ClienteDeTarefas = new CloudTasksClient(),
+  ) {}
 
   async enfileirar(tarefa: T, nome?: string): Promise<void> {
     const caminhoDaFila = this.cliente.queuePath(

@@ -1,6 +1,10 @@
 import { Global, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { TarefaGuard } from './tarefa.guard.js';
+import {
+  VERIFICADOR_DE_TOKEN,
+  VerificadorOidcGoogle,
+} from './verificador.js';
 
 /**
  * A fronteira das rotas chamadas por Cloud Tasks e Cloud Scheduler.
@@ -16,6 +20,10 @@ import { TarefaGuard } from './tarefa.guard.js';
  */
 @Global()
 @Module({
-  providers: [{ provide: APP_GUARD, useClass: TarefaGuard }],
+  providers: [
+    { provide: VERIFICADOR_DE_TOKEN, useClass: VerificadorOidcGoogle },
+    { provide: APP_GUARD, useClass: TarefaGuard },
+  ],
+  exports: [VERIFICADOR_DE_TOKEN],
 })
 export class TarefasModule {}
