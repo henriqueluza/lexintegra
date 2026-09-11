@@ -1,74 +1,85 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { FieldValue } from 'firebase-admin/firestore';
 import {
-  STATUS_ANEXO_SEM_ARQUIVO,
+  conferirPolitica,
+  POLITICA_UPLOAD,
+  prefixoDoFluxo,
   type AnexoResumo,
-  type EnvioDeAnexos,
-  type TipoAnexo,
+  type PedidoDeUpload,
 } from 'shared';
+import {
+  ARMAZENAMENTO,
+  type Armazenamento,
+} from '../armazenamento/armazenamento.js';
+import type { DocumentoArquivo } from '../arquivos/arquivo.js';
 import {
   AcessoPedidoService,
   type QuemAcessa,
 } from '../pedidos/acesso.service.js';
 import { paraIso, SUBCOLECAO_ANEXOS } from '../pedidos/pedido.js';
+import { FILA_DE_VARREDURA, type FilaDeVarredura } from '../varredura/fila.js';
 
-interface DocumentoAnexo {
-  nome: string;
-  tipo: TipoAnexo;
-  tamanhoBytes: number;
-  status: typeof STATUS_ANEXO_SEM_ARQUIVO;
-  enviadoPor: string;
-  criadoEm: FieldValue;
-}
+const FLUXO = 'anexo-cliente' as const;
+
+/** Dez minutos para o navegador subir o arquivo. Curto o bastante para uma URL
+ * vazada nao valer amanha; longo o bastante para 5 MB numa conexao ruim. */
+const VALIDADE_DA_ESCRITA_SEGUNDOS = 600;
 
 const TETO = 100;
 
 /**
- * ===================================================================
- * PLACEHOLDER DA ETAPA 9 — O UPLOAD DE VERDADE E A ETAPA 11.
- * ===================================================================
+ * PRIMEIRO dos dois fluxos de upload: os arquivos de apoio do CLIENTE
+ * (item 2.3.3, arquitetura 6.2 e 7.3).
  *
- * Este servico grava METADADO: nome, tipo e tamanho declarados pelo navegador.
- * Nenhum byte vai para bucket nenhum, nenhuma URL assinada e emitida, e nada aqui
- * fala com o Cloud Storage.
+ * O ARQUIVO NUNCA PASSA PELA API. O navegador recebe uma URL assinada e escreve
+ * DIRETO no bucket de quarentena — o que economiza exatamente o recurso que o
+ * Cloud Run cobra. A API emite, valida e decide; ela nao transporta bytes.
  *
- * O QUE A ETAPA 11 ENCAIXA NESTE MESMO PONTO (ver `docs/plano-de-execucao.md`,
- * Etapa 11, e `docs/arquitetura.md` 7.3):
+ * O QUE SEPARA ESTE FLUXO DO ENTREGAVEL DO ADVOGADO (arquitetura 6.2: "nao devem
+ * compartilhar o mesmo endpoint nem o mesmo bucket logico"):
  *
- *   1. `registrar` passa a emitir URL assinada de escrita para o bucket de
- *      QUARENTENA, e o documento nasce com `status: 'pendente_upload'`.
- *   2. Uma confirmacao do navegador move o documento para `pendente_scan` e
- *      enfileira a varredura no Cloud Tasks.
- *   3. O veredito do ClamAV, mais a conferencia de magic bytes, leva o documento
- *      a `limpo` (com o objeto movido para o bucket de arquivos) ou o descarta.
- *
- * O `status` de agora NAO E, e nao pode virar, `limpo` — ver
- * `STATUS_ANEXO_SEM_ARQUIVO` em `packages/shared`. E a regra inviolavel 6
- * continuando a valer sobre um documento que ainda nao tem arquivo: quando a
- * emissao de link existir, ela vai perguntar pelo status, e o placeholder ja
- * responde "nao".
- *
- * QUEM ENVIA E SO O CLIENTE. A arquitetura 6.2 e explicita: sao dois fluxos de
- * upload distintos, com autorizacao e retencao proprias, e nao devem compartilhar
- * endpoint. O entregavel do advogado tem caminho proprio
- * (`EntregaveisService.registrarArquivo`) e nao passa por aqui.
+ *   - autorizacao: aqui e o CLIENTE DO PEDIDO; la, o advogado atribuido;
+ *   - politica: aqui jpg/pdf, 5 MB, 3 por envio — CONFIRMADA na reuniao; la,
+ *     provisoria (0.2, item 6);
+ *   - prefixo: `anexos/{pedidoId}/`; la, `entregaveis/{pedidoId}/{id}/`;
+ *   - efeito: aqui, nenhum sobre o estado do entregavel; la, versao nova;
+ *   - retencao: a dos entregaveis e de 30 dias a partir de `entregue`; a DESTES
+ *     nao esta definida em lugar nenhum, e e pendencia do controlador — por isso
+ *     o job de retencao nao os toca.
  */
 @Injectable()
 export class AnexosService {
-  constructor(private readonly acesso: AcessoPedidoService) {}
+  constructor(
+    private readonly acesso: AcessoPedidoService,
+    @Inject(ARMAZENAMENTO) private readonly armazenamento: Armazenamento,
+    @Inject(FILA_DE_VARREDURA) private readonly fila: FilaDeVarredura,
+  ) {}
 
-  async registrar(
+  /**
+   * Emite as URLs de escrita e cria os registros em `pendente_upload`.
+   *
+   * O REGISTRO NASCE ANTES DO ARQUIVO. Um objeto no bucket sem documento
+   * correspondente e um arquivo que ninguem sabe de quem e — e que nenhum job de
+   * retencao alcanca. Na ordem inversa, uma falha entre as duas escritas deixaria
+   * lixo permanente na quarentena.
+   */
+  async pedirEnvio(
     pedidoId: string,
     quem: QuemAcessa,
-    envio: EnvioDeAnexos,
-  ): Promise<AnexoResumo[]> {
+    arquivos: readonly PedidoDeUpload[],
+  ): Promise<{ id: string; url: string; validoPorSegundos: number }[]> {
     const { referencia, pedido } = await this.acesso.exigir(pedidoId, quem);
 
     /*
-     * `exigir` ja recusou quem nao alcanca o pedido — mas ele deixa passar o
-     * advogado atribuido e o administrador, que PODEM LER o cartao e nao podem
-     * anexar documento de apoio em nome do cliente. Um anexo gravado por outra
-     * pessoa apareceria na tela do cliente como se ele mesmo tivesse enviado.
+     * `exigir` deixa passar o advogado atribuido e o administrador, que PODEM LER
+     * o cartao. Anexar em nome do cliente e outra coisa: o arquivo apareceria na
+     * tela dele como se ele mesmo tivesse enviado.
      */
     if (quem.uid !== pedido.clienteId) {
       throw new ForbiddenException(
@@ -76,46 +87,91 @@ export class AnexosService {
       );
     }
 
+    /*
+     * A validacao do SERVIDOR, contra a politica DESTE fluxo. A tela valida antes
+     * com a mesma funcao, mas o `POST` e alcancavel com curl — e a URL assinada
+     * que sai daqui carrega tipo e tamanho maximo na assinatura, entao um pedido
+     * aceito aqui e o teto que o Cloud Storage vai impor.
+     */
+    const problema = conferirPolitica(FLUXO, arquivos);
+    if (problema !== null) throw new BadRequestException(problema);
+
     const colecao = referencia.collection(SUBCOLECAO_ANEXOS);
 
-    /*
-     * Um `set` por anexo, sem transacao. Sao no maximo tres documentos
-     * independentes: nao ha invariante entre eles que uma falha no meio quebre —
-     * o cliente reenvia o que faltou, e o que entrou continua valendo. Uma
-     * transacao aqui daria atomicidade sobre algo que nao precisa dela.
-     */
-    const gravados = await Promise.all(
-      envio.anexos.map(async (anexo) => {
+    return Promise.all(
+      arquivos.map(async (arquivo) => {
         const documento = colecao.doc();
+        const caminho = `${prefixoDoFluxo(FLUXO, pedidoId)}/${documento.id}`;
+
         await documento.set({
-          nome: anexo.nome,
-          tipo: anexo.tipo,
-          tamanhoBytes: anexo.tamanhoBytes,
-          status: STATUS_ANEXO_SEM_ARQUIVO,
+          nome: arquivo.nome,
+          tipo: arquivo.tipo,
+          tamanhoBytes: arquivo.tamanhoBytes,
+          estado: 'pendente_upload',
+          fluxo: FLUXO,
+          caminho,
           enviadoPor: quem.uid,
           criadoEm: FieldValue.serverTimestamp(),
-        } satisfies DocumentoAnexo);
+        } satisfies DocumentoArquivo);
+
+        const url = await this.armazenamento.urlDeEscrita({
+          objeto: { balde: 'quarentena', caminho },
+          tipo: arquivo.tipo,
+          tamanhoMaximoBytes: POLITICA_UPLOAD[FLUXO].tamanhoMaximoBytes,
+          validadeSegundos: VALIDADE_DA_ESCRITA_SEGUNDOS,
+        });
 
         return {
           id: documento.id,
-          nome: anexo.nome,
-          tipo: anexo.tipo,
-          tamanhoBytes: anexo.tamanhoBytes,
-          status: STATUS_ANEXO_SEM_ARQUIVO,
-          enviadoPor: quem.uid,
-          criadoEm: null,
-        } satisfies AnexoResumo;
+          url,
+          validoPorSegundos: VALIDADE_DA_ESCRITA_SEGUNDOS,
+        };
       }),
     );
-
-    return gravados;
   }
 
   /**
-   * Lista os anexos do pedido. Alcancavel pelo cliente, pelo advogado atribuido e
-   * pelo administrador — ler o que o cliente enviou e justamente o que o item
-   * 2.6.2 pede que o advogado consiga fazer.
+   * O navegador confirma que subiu. Passa a `pendente_scan` e enfileira.
+   *
+   * A CONFIRMACAO E DO NAVEGADOR e nao um gatilho do bucket, e isso e uma
+   * escolha: um gatilho do Cloud Storage seria um segundo artefato de deploy com
+   * logica de dominio (arquitetura 3.1), que e justamente o que a API unica
+   * evita. O preco e um arquivo que sobe e nunca e confirmado — e a regra de
+   * ciclo de vida de 7 dias da quarentena, ja declarada no Terraform, o varre.
    */
+  async confirmarEnvio(
+    pedidoId: string,
+    anexoId: string,
+    quem: QuemAcessa,
+  ): Promise<void> {
+    const { referencia, pedido } = await this.acesso.exigir(pedidoId, quem);
+
+    if (quem.uid !== pedido.clienteId) {
+      throw new ForbiddenException(
+        'Apenas o cliente do pedido pode confirmar o envio.',
+      );
+    }
+
+    const alvo = referencia.collection(SUBCOLECAO_ANEXOS).doc(anexoId);
+    const documento = await alvo.get();
+    if (!documento.exists) throw new NotFoundException('Anexo nao encontrado.');
+
+    const anexo = documento.data() as DocumentoArquivo;
+
+    await alvo.update({
+      estado: 'pendente_scan',
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+
+    // Depois do commit, nunca dentro (regra inviolavel 2).
+    await this.fila.enfileirar({
+      fluxo: FLUXO,
+      pedidoId,
+      alvoId: anexoId,
+      caminho: anexo.caminho,
+    });
+  }
+
   async listar(pedidoId: string, quem: QuemAcessa): Promise<AnexoResumo[]> {
     const { referencia } = await this.acesso.exigir(pedidoId, quem);
 
@@ -126,13 +182,13 @@ export class AnexosService {
       .get();
 
     return pagina.docs.map((documento) => {
-      const dados = documento.data() as DocumentoAnexo;
+      const dados = documento.data() as DocumentoArquivo;
       return {
         id: documento.id,
         nome: dados.nome,
         tipo: dados.tipo,
         tamanhoBytes: dados.tamanhoBytes,
-        status: dados.status,
+        estado: dados.estado,
         enviadoPor: dados.enviadoPor,
         criadoEm: paraIso(dados.criadoEm),
       };

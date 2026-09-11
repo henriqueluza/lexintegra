@@ -39,9 +39,19 @@ const AGUARDANDO = {
   estado: 'em_elaboracao' as const,
   revisoesUsadas: 0,
   temArquivo: true,
+  arquivoServivel: true,
+  versaoDoArquivo: 1,
 };
 
-const SEM_ARQUIVO = { ...AGUARDANDO, temArquivo: false };
+/** Enviado, mas ainda em varredura: o portao recusaria, e a tela nao oferece. */
+const EM_VARREDURA = { ...AGUARDANDO, arquivoServivel: false };
+
+const SEM_ARQUIVO = {
+  ...AGUARDANDO,
+  temArquivo: false,
+  arquivoServivel: false,
+  versaoDoArquivo: null,
+};
 const ESGOTADO = { ...AGUARDANDO, revisoesUsadas: 2 };
 
 interface ApiDeTeste {
@@ -102,9 +112,30 @@ async function montar(opcoes: Partial<ApiDeTeste> = {}): Promise<{
               criadoEm: null,
             });
           },
-          anexarAoPedido: (id: string, envio: { anexos: unknown[] }) => {
-            api.chamadas.push(`anexar ${id}: ${String(envio.anexos.length)}`);
-            return Promise.resolve([]);
+          pedirEnvioDeAnexos: (id: string, arquivos: unknown[]) => {
+            api.chamadas.push(`pedirUrl ${id}: ${String(arquivos.length)}`);
+            return Promise.resolve(
+              arquivos.map((_a, i) => ({
+                id: `anexo-${String(i)}`,
+                url: `https://bucket.example/quarentena/${String(i)}`,
+                validoPorSegundos: 600,
+              })),
+            );
+          },
+          confirmarAnexo: (id: string, anexoId: string) => {
+            api.chamadas.push(`confirmar ${id}/${anexoId}`);
+            return Promise.resolve();
+          },
+          aceitarTermos: (id: string, eid: string, versao: number) => {
+            api.chamadas.push(`aceite ${id}/${eid} v${String(versao)}`);
+            return Promise.resolve({ aceito: true as const });
+          },
+          baixarEntregavel: (id: string, eid: string) => {
+            api.chamadas.push(`download ${id}/${eid}`);
+            return Promise.resolve({
+              url: 'https://bucket.example/arquivos/x',
+              validoPorSegundos: 300,
+            });
           },
         },
       },
@@ -319,17 +350,68 @@ describe('ClientePedidos', () => {
       fixture.detectChanges();
     }
 
-    it('manda apenas metadado, nunca o conteudo', async () => {
+    /**
+     * O UPLOAD E DE DUAS FASES: pede a URL, escreve DIRETO no bucket, confirma.
+     * O `fetch` e substituido porque o arquivo nao passa pela API — nem no teste.
+     */
+    it('pede a URL, escreve no bucket e so entao confirma', async () => {
+      const original = globalThis.fetch;
+      const puts: string[] = [];
+      globalThis.fetch = ((url: string) => {
+        puts.push(String(url));
+        return Promise.resolve({ ok: true, status: 200 } as Response);
+      }) as unknown as typeof fetch;
+
+      try {
+        const { fixture, api } = await montar({
+          pedidos: [pedido('p1', [AGUARDANDO])],
+        });
+        await abrirDetalhes(fixture);
+
+        escolher(fixture, arquivo('rg.jpg', 'image/jpeg', 200_000));
+        botaoCom(fixture, 'Anexar ao pedido')?.click();
+        await fixture.whenStable();
+
+        expect(api.chamadas).toContain('pedirUrl p1: 1');
+        expect(puts).toEqual(['https://bucket.example/quarentena/0']);
+        // A confirmacao vem DEPOIS do PUT: confirmar antes enfileiraria a
+        // varredura de um objeto que ainda nao existe.
+        expect(api.chamadas.indexOf('confirmar p1/anexo-0')).toBeGreaterThan(
+          api.chamadas.indexOf('pedirUrl p1: 1'),
+        );
+      } finally {
+        globalThis.fetch = original;
+      }
+    });
+
+    /**
+     * O botao de baixar so aparece com o arquivo VARRIDO. Quem decide de verdade
+     * e o portao da API (regra inviolavel 6) — isto e para nao oferecer o que
+     * seria recusado.
+     */
+    it('nao oferece download de arquivo em varredura', async () => {
+      const { fixture } = await montar({
+        pedidos: [pedido('p1', [EM_VARREDURA])],
+      });
+
+      expect(botaoCom(fixture, 'Aceitar termos e baixar')).toBeUndefined();
+      expect(textoDe(fixture)).toContain('verificacao de seguranca');
+    });
+
+    /** O aceite dos termos precede o link, e vai com a VERSAO do arquivo. */
+    it('aceita os termos antes de pedir o link', async () => {
       const { fixture, api } = await montar({
         pedidos: [pedido('p1', [AGUARDANDO])],
       });
-      await abrirDetalhes(fixture);
 
-      escolher(fixture, arquivo('rg.jpg', 'image/jpeg', 200_000));
-      botaoCom(fixture, 'Anexar ao pedido')?.click();
+      botaoCom(fixture, 'Aceitar termos e baixar')?.click();
       await fixture.whenStable();
 
-      expect(api.chamadas).toContain('anexar p1: 1');
+      expect(api.chamadas).toEqual([
+        'listar',
+        'aceite p1/001 v1',
+        'download p1/001',
+      ]);
     });
 
     it('recusa arquivo fora da politica antes de mandar', async () => {

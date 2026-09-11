@@ -63,7 +63,16 @@ async function comprar(revisoes: number): Promise<void> {
 async function ateAguardandoCliente(revisoes = 1): Promise<void> {
   await comprar(revisoes);
   await entregaveis.iniciarTrabalho(ALVO, ADVOGADO);
-  await entregaveis.registrarArquivo(ALVO, { nome: 'parecer.pdf' }, ADVOGADO);
+  await entregaveis.registrarArquivo(
+    ALVO,
+    {
+      nome: 'parecer.pdf',
+      tipo: 'application/pdf',
+      tamanhoBytes: 1000,
+      caminho: 'entregaveis/pedido-1/001/parecer',
+    },
+    ADVOGADO,
+  );
 }
 
 async function estado(): Promise<string> {
@@ -142,7 +151,16 @@ describe('maquina de estados contra o Firestore', () => {
 
       await entregaveis.pedirRevisao(ALVO, CLIENTE);
       await entregaveis.retomarTrabalho(ALVO, ADVOGADO);
-      await entregaveis.registrarArquivo(ALVO, { nome: 'v2.pdf' }, ADVOGADO);
+      await entregaveis.registrarArquivo(
+        ALVO,
+        {
+          nome: 'v2.pdf',
+          tipo: 'application/pdf',
+          tamanhoBytes: 1000,
+          caminho: 'entregaveis/pedido-1/001/v2',
+        },
+        ADVOGADO,
+      );
 
       await expect(entregaveis.pedirRevisao(ALVO, CLIENTE)).rejects.toThrow(
         /Saldo de revisoes esgotado/,
@@ -206,7 +224,16 @@ describe('maquina de estados contra o Firestore', () => {
      */
     it('nao cria transicao para o upload', async () => {
       await ateAguardandoCliente();
-      await entregaveis.registrarArquivo(ALVO, { nome: 'v2.pdf' }, ADVOGADO);
+      await entregaveis.registrarArquivo(
+        ALVO,
+        {
+          nome: 'v2.pdf',
+          tipo: 'application/pdf',
+          tamanhoBytes: 1000,
+          caminho: 'entregaveis/pedido-1/001/v2',
+        },
+        ADVOGADO,
+      );
 
       const trilha = await banco.collection(`${CAMINHO}/transicoes`).get();
       expect(trilha.size).toBe(2);

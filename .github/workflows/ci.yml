@@ -196,6 +196,7 @@ jobs:
         id: plan
         env:
           TF_VAR_api_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/api:${{ github.event.pull_request.head.sha }}
+          TF_VAR_scanner_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/scanner:${{ github.event.pull_request.head.sha }}
           TF_VAR_commit_sha: ${{ github.event.pull_request.head.sha }}
         run: terraform plan -input=false -no-color -lock-timeout=5m
         working-directory: infra/terraform

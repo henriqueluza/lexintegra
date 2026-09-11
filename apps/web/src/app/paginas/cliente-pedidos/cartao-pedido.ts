@@ -11,6 +11,7 @@ import type { AnexoDeclarado, AnexoResumo } from 'shared/esquemas/anexo';
 import type { ObservacaoResumo } from 'shared/esquemas/observacao';
 import type { CartaoPedido, EntregavelResumo } from 'shared/esquemas/pedido';
 import { ApiClienteService } from '../../autenticacao/api-cliente.service';
+import { enviarParaUrlAssinada } from '../../comum/enviar-arquivo';
 import { paraReais } from '../../comum/moeda';
 import { Botao } from '../../ui/botao/botao';
 import { Campo } from '../../ui/campo/campo';
@@ -19,6 +20,7 @@ import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
 import { SeloEstado } from '../../ui/selo-estado/selo-estado';
 import { mensagemDoErro } from '../erros';
 import { anexosDeclarados, MAXIMO_ANEXOS } from './anexos-do-navegador';
+import { TEXTO_TERMO_DOWNLOAD } from './termo';
 
 /**
  * UM CARTAO POR PEDIDO (item 2.3.2), e tudo do pedido acontece DENTRO dele.
@@ -58,6 +60,8 @@ export class CartaoPedidoComponent {
   readonly recarregado = output<void>();
 
   protected readonly maximoAnexos = MAXIMO_ANEXOS;
+  /** ⚠️ Marcador: o texto do termo ainda nao foi aprovado pela CONTRATANTE. */
+  protected readonly textoDoTermo = TEXTO_TERMO_DOWNLOAD;
 
   protected readonly observacoes = signal<readonly ObservacaoResumo[]>([]);
   protected readonly anexos = signal<readonly AnexoResumo[]>([]);
@@ -66,6 +70,9 @@ export class CartaoPedidoComponent {
   protected readonly emCurso = signal<string | null>(null);
   protected readonly falha = signal<string | null>(null);
   protected readonly selecionados = signal<readonly AnexoDeclarado[]>([]);
+  /** Os `File` de verdade, para o PUT. Ficam fora do signal exibido: o conteudo
+   * do arquivo nao e estado de tela. */
+  private arquivos: readonly File[] = [];
 
   protected readonly observacao = new FormControl('', {
     nonNullable: true,
@@ -163,23 +170,86 @@ export class CartaoPedidoComponent {
 
     this.falha.set(erro);
     this.selecionados.set(anexos);
+    this.arquivos = erro === null ? [...(entrada.files ?? [])] : [];
   }
 
+  /**
+   * O upload em DUAS FASES (arquitetura 7.3).
+   *
+   *   1. Pede as URLs assinadas a API — que valida quem envia, tipo e tamanho.
+   *   2. Escreve DIRETO no bucket de quarentena, sem passar pela API.
+   *   3. Avisa a API, que enfileira a varredura.
+   *
+   * A ORDEM IMPORTA. Confirmar antes de o PUT terminar enfileiraria a varredura
+   * de um objeto que ainda nao existe — a tarefa acharia o bucket vazio e
+   * devolveria o arquivo a fila para sempre.
+   *
+   * A confirmacao e por arquivo, e nao do lote: se o terceiro PUT falhar, os dois
+   * primeiros ja estao no bucket e precisam ser varridos.
+   */
   protected async anexar(): Promise<void> {
-    const anexos = this.selecionados();
-    if (anexos.length === 0 || this.emCurso() !== null) return;
+    const arquivos = this.arquivos;
+    if (arquivos.length === 0 || this.emCurso() !== null) return;
 
     await this.agir(
       'anexo',
       async () => {
-        const gravados = await this.api.anexarAoPedido(this.pedido().id, {
-          anexos: [...anexos],
-        });
-        this.anexos.update((lista) => [...lista, ...gravados]);
+        const emitidas = await this.api.pedirEnvioDeAnexos(
+          this.pedido().id,
+          this.selecionados(),
+        );
+
+        for (const [indice, emitida] of emitidas.entries()) {
+          await enviarParaUrlAssinada(emitida.url, arquivos[indice]);
+          await this.api.confirmarAnexo(this.pedido().id, emitida.id);
+        }
+
         this.selecionados.set([]);
+        this.arquivos = [];
+        this.anexos.set(await this.api.listarAnexos(this.pedido().id));
       },
       false,
     );
+  }
+
+  /**
+   * O aceite dos termos, e so entao o link.
+   *
+   * ⚠️ O TEXTO DO TERMO ainda nao foi aprovado pela CONTRATANTE — a tela mostra o
+   * marcador literal, como o aviso de privacidade da Etapa 6.
+   *
+   * O LINK NAO E MONTADO AQUI. Ele vem do portao da API, que confere estado e
+   * aceite antes de emitir, e vale minutos.
+   */
+  protected async baixar(entregavel: EntregavelResumo): Promise<void> {
+    await this.agir(
+      `download-${entregavel.id}`,
+      async () => {
+        await this.api.aceitarTermos(
+          this.pedido().id,
+          entregavel.id,
+          entregavel.versaoDoArquivo ?? 1,
+        );
+
+        const { url } = await this.api.baixarEntregavel(
+          this.pedido().id,
+          entregavel.id,
+        );
+
+        /*
+         * `window.open` e nao `<a download>`: o link e de outro dominio (Cloud
+         * Storage), e o atributo `download` so vale para a mesma origem. O
+         * `Content-Disposition: attachment` que a API assina e o que faz o
+         * navegador baixar em vez de abrir.
+         */
+        globalThis.open(url, '_blank', 'noopener');
+      },
+      false,
+    );
+  }
+
+  protected podeBaixar(entregavel: EntregavelResumo): boolean {
+    return entregavel.arquivoServivel;
   }
 
   private async agir(
