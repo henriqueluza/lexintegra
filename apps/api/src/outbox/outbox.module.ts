@@ -3,9 +3,12 @@ import { EmailModule } from '../email/email.module.js';
 import { criarFila } from '../tarefas/criar-fila.js';
 import { DespachanteOutbox } from './despachante.service.js';
 import { EnfileiradorDeEventos } from './enfileirador.service.js';
+import { FilaFalsa } from '../tarefas/fila.js';
+import { FilaEmProcesso } from './fila-em-processo.js';
 import {
   CAMINHO_DO_OUTBOX,
   FILA_DE_EVENTOS,
+  type FilaDeEventos,
   type TarefaDeEvento,
 } from './fila.js';
 import { OutboxAdminController } from './outbox.admin.controller.js';
@@ -28,6 +31,33 @@ export const PEDIDO_DA_FILA = {
     'redefinicao de senha — e os registros ficariam pendentes sem que nada os ' +
     'entregasse.',
 } as const;
+
+/**
+ * Qual fila, e por que sao TRES e nao duas.
+ *
+ * Producao usa Cloud Tasks, e `criarFila` derruba o boot se faltar configuracao —
+ * um servico que sobe com fila falsa nunca entregaria e-mail nenhum.
+ *
+ * O teste automatizado usa a falsa, que guarda as tarefas para a suite
+ * inspecionar e dispara so quando ela mandar. E o que permite ao teste de aceite
+ * fazer o papel do Cloud Tasks passo a passo.
+ *
+ * DESENVOLVIMENTO ENTREGA NA HORA, e este e o caso que quase passou batido: nao
+ * existe emulador de Cloud Tasks, entao uma fila falsa em `pnpm dev` deixaria o
+ * e-mail sem sair, sem erro nenhum, com o desenvolvedor procurando o link no log
+ * do transporte falso. Ver `FilaEmProcesso`.
+ */
+export function criarFilaDeEventos(
+  despachante: DespachanteOutbox,
+  ambiente: NodeJS.ProcessEnv = process.env,
+): FilaDeEventos {
+  if (ambiente['NODE_ENV'] === 'production') {
+    return criarFila<TarefaDeEvento>(PEDIDO_DA_FILA, ambiente);
+  }
+  if (ambiente['NODE_ENV'] === 'test') return new FilaFalsa<TarefaDeEvento>();
+
+  return new FilaEmProcesso(despachante);
+}
 
 /**
  * Escrita, entrega e reenvio.
@@ -55,7 +85,9 @@ export const PEDIDO_DA_FILA = {
     { provide: CONFIGURACAO_OUTBOX, useFactory: () => configuracaoDoOutbox() },
     {
       provide: FILA_DE_EVENTOS,
-      useFactory: () => criarFila<TarefaDeEvento>(PEDIDO_DA_FILA),
+      useFactory: (despachante: DespachanteOutbox) =>
+        criarFilaDeEventos(despachante),
+      inject: [DespachanteOutbox],
     },
   ],
   exports: [
