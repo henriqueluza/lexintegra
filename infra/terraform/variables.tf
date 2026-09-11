@@ -74,7 +74,7 @@ variable "app_check_enforce" {
     a home parar de aceitar cadastro.
   EOT
   type        = string
-  default     = "false"
+  default     = "true"
 
   validation {
     condition     = contains(["true", "false"], var.app_check_enforce)
