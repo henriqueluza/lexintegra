@@ -4,7 +4,7 @@ import { SemAppCheck } from '../app-check/decoradores.js';
 import { Publico } from '../autenticacao/decoradores.js';
 import { SemLimite } from '../limite/decoradores.js';
 import { ZodPipe } from '../validacao/zod.pipe.js';
-import { TarefaInterna } from './decoradores.js';
+import { TarefaInterna } from '../tarefas/decoradores.js';
 import { VarreduraService } from './varredura.service.js';
 
 const esquemaTarefa = z.object({

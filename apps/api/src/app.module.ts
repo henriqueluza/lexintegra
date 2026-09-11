@@ -14,6 +14,7 @@ import { LimiteModule } from './limite/limite.module.js';
 import { PedidosModule } from './pedidos/pedidos.module.js';
 import { PreCadastrosModule } from './pre-cadastros/pre-cadastros.module.js';
 import { RetencaoModule } from './retencao/retencao.module.js';
+import { TarefasModule } from './tarefas/tarefas.module.js';
 import { TermosModule } from './termos/termos.module.js';
 import { VarreduraModule } from './varredura/varredura.module.js';
 import { ProdutosModule } from './produtos/produtos.module.js';
@@ -32,10 +33,15 @@ import { VitrineModule } from './vitrine/vitrine.module.js';
     AppCheckModule,
     AutenticacaoModule,
     /*
+     * O guard das rotas internas (Cloud Tasks e Cloud Scheduler). Vem depois da
+     * autenticacao porque a rota interna e `@Publico()` — passa batido pelos
+     * guards de sessao e e aqui que a credencial dela e conferida.
+     */
+    TarefasModule,
+    /*
      * Etapa 11. `ArmazenamentoModule` e `VarreduraModule` sao `@Global`: a porta
      * de armazenamento e a fila sao usadas por quatro modulos, e importa-las em
-     * cada um seria fiacao repetida sem fronteira a mais. `VarreduraModule`
-     * registra tambem o `TarefaGuard` global.
+     * cada um seria fiacao repetida sem fronteira a mais.
      */
     ArmazenamentoModule,
     VarreduraModule,

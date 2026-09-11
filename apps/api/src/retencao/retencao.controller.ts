@@ -2,7 +2,7 @@ import { Controller, HttpCode, Post } from '@nestjs/common';
 import { SemAppCheck } from '../app-check/decoradores.js';
 import { Publico } from '../autenticacao/decoradores.js';
 import { SemLimite } from '../limite/decoradores.js';
-import { TarefaInterna } from '../varredura/decoradores.js';
+import { TarefaInterna } from '../tarefas/decoradores.js';
 import { RetencaoService, type ResumoDaPassagem } from './retencao.service.js';
 
 /**

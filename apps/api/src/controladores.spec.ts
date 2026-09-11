@@ -36,7 +36,7 @@ import { PedidosAdvogadoController } from './pedidos/pedidos.advogado.controller
 import { PedidosClienteController } from './pedidos/pedidos.cliente.controller.js';
 import { PreCadastrosAdminController } from './pre-cadastros/pre-cadastros.admin.controller.js';
 import { RetencaoController } from './retencao/retencao.controller.js';
-import { CHAVE_TAREFA_INTERNA } from './varredura/tarefa.guard.js';
+import { CHAVE_TAREFA_INTERNA } from './tarefas/tarefa.guard.js';
 import { VarreduraController } from './varredura/varredura.controller.js';
 import { PreCadastrosController } from './pre-cadastros/pre-cadastros.controller.js';
 import type { PreCadastrosService } from './pre-cadastros/pre-cadastros.service.js';
