@@ -202,6 +202,7 @@ describe('montarAppCheck', () => {
     apiKey: 'chave',
     authDomain: 'lexintegra.com.br',
     projectId: 'plataforma',
+    appId: '1:123:web:teste',
   };
 
   function registro(): Registro {
