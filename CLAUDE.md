@@ -238,6 +238,21 @@ docs/
 - **A API recusa iniciar sem `GCP_PROJECT_ID` e sem emulador.** É deliberado:
   um default silencioso faria ela escrever no projeto errado, e o único sintoma
   seria dado de produção aparecendo onde não deveria.
+- **Toda variável do root module do Terraform precisa de `default` — e isso é
+  lint** (`pnpm lint` → `scripts/conferir-defaults-terraform.mjs`). O deploy tem
+  um apply **parcial** logo no começo ("Garantir o Artifact Registry"), porque a
+  imagem precisa de um repositório para onde ser empurrada e quem cria o
+  repositório é o Terraform — e esse passo roda **antes de qualquer `TF_VAR_*`
+  existir**. O Terraform valida *todas* as variáveis do root module antes de
+  aplicar, mesmo com `-target` restringindo o que será tocado, então variável sem
+  default derruba o deploy antes de construir qualquer coisa. **O `plan` dos PRs
+  não pega**, porque o job de plan define os `TF_VAR_*` — foi assim que
+  `scanner_image` passou verde na Etapa 11 e só quebrou no primeiro deploy depois
+  do merge. Para variável de **imagem ou tag**, o default é `""`: um diff
+  obviamente inválido é recusado na hora, enquanto um placeholder plausível
+  (`gcr.io/cloudrun/hello`, como `api_image`) pode ser aplicado e publicar o
+  contêiner errado — o que no caso do scanner seria trocar o antivírus por algo
+  que não varre nada.
 
 ## Comandos
 

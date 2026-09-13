@@ -2,7 +2,7 @@
   "name": "lexintegra",
   "version": "0.0.0",
   "private": true,
-  "description": "LexIntegra — plataforma juridica de comercializacao e acompanhamento de produtos juridicos",
+  "description": "LexIntegra \u2014 plataforma juridica de comercializacao e acompanhamento de produtos juridicos",
   "packageManager": "pnpm@11.25.0",
   "engines": {
     "node": ">=22.22.3"
@@ -13,10 +13,11 @@
     "test": "pnpm --filter \"./apps/*\" --filter \"./packages/*\" test",
     "test:integration": "scripts/emuladores.sh",
     "test:e2e": "pnpm --filter web test:e2e",
-    "lint": "pnpm run lint:eslint && pnpm run lint:styles && pnpm run lint:deps",
+    "lint": "pnpm run lint:eslint && pnpm run lint:styles && pnpm run lint:deps && pnpm run lint:terraform",
     "lint:eslint": "eslint .",
     "lint:styles": "stylelint \"apps/web/src/**/*.css\"",
     "lint:deps": "depcruise apps packages --config .dependency-cruiser.cjs",
+    "lint:terraform": "node scripts/conferir-defaults-terraform.mjs",
     "quality": "pnpm run lint && pnpm run test:coverage",
     "test:coverage": "pnpm --filter \"./apps/*\" --filter \"./packages/*\" test:coverage",
     "format": "prettier --write .",

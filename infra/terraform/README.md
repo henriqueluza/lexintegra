@@ -109,6 +109,39 @@ O `for_each` de um bloco de import precisa ser resolvível em tempo de plan, ent
 `local.secrets` é um mapa de **literais**, não de referências a atributo de recurso;
 a ordenação que a referência dava de graça virou `depends_on` explícito.
 
+## Armadilha do apply parcial: variável sem `default`
+
+O deploy tem um apply **parcial** logo no começo — o passo "Garantir o Artifact
+Registry" roda:
+
+```
+terraform apply -target=google_artifact_registry_repository.lexintegra
+```
+
+Ovo antes da galinha: a imagem precisa de um repositório para onde ser empurrada,
+e quem cria o repositório é o Terraform. Esse passo acontece **antes de qualquer
+imagem existir** e, portanto, antes de qualquer `TF_VAR_*` ser definido no
+workflow.
+
+O Terraform valida **todas** as variáveis do root module antes de aplicar, mesmo
+com `-target` restringindo o que será tocado. Variável sem `default` derruba esse
+passo, e o deploy inteiro para antes de construir qualquer coisa.
+
+Aconteceu com `scanner_image`, declarada na Etapa 11 sem default. O `plan` dos
+PRs continuou verde o tempo todo — **o job de plan define os `TF_VAR_*`** — e a
+quebra só apareceu no primeiro deploy depois do merge, no passo mais cedo do
+pipeline, com uma mensagem que não menciona o Artifact Registry nem o `-target`.
+
+**Regra:** toda variável daqui tem `default`. Verificado por
+`scripts/conferir-defaults-terraform.mjs`, que roda em `pnpm lint`.
+
+**Para imagem ou tag, o default é `""`.** `api_image` usa
+`gcr.io/cloudrun/hello` por razões de Etapa 2 — era a imagem que o serviço de
+fato rodava —, mas a convenção para variáveis novas é string vazia: um diff
+obviamente inválido é recusado na hora pelo Cloud Run, enquanto um placeholder
+plausível pode ser aplicado e publicar o contêiner errado. No caso do scanner,
+isso seria trocar o antivírus por algo que não varre nada.
+
 ## `imports.tf` é temporário
 
 Contém os blocos `import` dos recursos do bootstrap. **Remover num commit seguinte,
