@@ -66,9 +66,28 @@ export interface ConfiguracaoDoOutbox {
   readonly loteDoVarredor: number;
 }
 
+/**
+ * O piso do arrendamento, e por que ele existe.
+ *
+ * O Cloud Tasks desiste de uma entrega e a REPETE depois do prazo de despacho da
+ * tarefa — 10 minutos por padrao para alvo HTTP, e a fila nao tem esse campo, ele
+ * e da tarefa. Se o arrendamento vencer antes disso, a reentrega encontra o
+ * registro livre e dois processos montam e enviam a MESMA mensagem: exatamente o
+ * que o arrendamento existe para impedir, desligado por um numero.
+ *
+ * 11 minutos e o piso, nao o valor recomendado: e o prazo de despacho mais um
+ * minuto de folga para relogio e latencia de commit. O Terraform usa 15.
+ */
+export const ARRENDAMENTO_MINIMO_SEGUNDOS = 660;
+
 const PADRAO: ConfiguracaoDoOutbox = {
   atrasoDoVarredorMs: 5 * 60_000,
-  arrendamentoMs: 10 * 60_000,
+  /*
+   * O padrao acompanha o Terraform, e nao o piso. Um padrao exatamente no limite
+   * transformaria "esqueci de definir a variavel" numa configuracao sem folga
+   * nenhuma — e a variavel esta no `cloud_run.tf` justamente para nunca faltar.
+   */
+  arrendamentoMs: 900_000,
   loteDoVarredor: 100,
 };
 
@@ -77,9 +96,18 @@ const PADRAO: ConfiguracaoDoOutbox = {
  * de ambiente. `VARREDOR_ATRASO_MINUTOS=0` e o que permite ao teste de integracao
  * provar a varredura sem esperar cinco minutos de relogio.
  *
- * Valor invalido cai no padrao em vez de derrubar o boot: diferente de
- * `RESEND_API_KEY`, um numero errado aqui nao faz o sistema perder e-mail, so
- * varrer com cadencia diferente da pretendida.
+ * OS DOIS VALORES TEM TRATAMENTOS DIFERENTES PARA ENTRADA RUIM, e a diferenca e o
+ * estrago que cada um causa.
+ *
+ * Cadencia do varredor e lote invalidos caem no padrao: o sistema varre com ritmo
+ * diferente do pretendido e mais nada. Ja um arrendamento CURTO DEMAIS produz
+ * e-mail duplicado, em silencio, e so em producao — e por isso ele derruba o
+ * boot, como `RESEND_API_KEY` e `APP_CHECK_ENFORCE`. Um servico que sobe
+ * "saudavel" com o arrendamento desligado e pior do que um que se recusa a subir.
+ *
+ * A recusa vale em TODO ambiente, e nao so em producao. Em desenvolvimento a fila
+ * entrega no proprio processo e o numero seria inofensivo — mas um valor que
+ * passa local e derruba o deploy e a pior forma de descobrir um limite.
  */
 export function configuracaoDoOutbox(
   ambiente: NodeJS.ProcessEnv = process.env,
@@ -87,6 +115,17 @@ export function configuracaoDoOutbox(
   const minutos = numero(ambiente['VARREDOR_ATRASO_MINUTOS']);
   const segundos = numero(ambiente['OUTBOX_ARRENDAMENTO_SEGUNDOS']);
   const lote = numero(ambiente['VARREDOR_LOTE']);
+
+  if (segundos !== null && segundos < ARRENDAMENTO_MINIMO_SEGUNDOS) {
+    throw new Error(
+      `OUTBOX_ARRENDAMENTO_SEGUNDOS e ${String(segundos)}, abaixo do minimo de ` +
+        `${String(ARRENDAMENTO_MINIMO_SEGUNDOS)}. O Cloud Tasks reentrega uma ` +
+        'tarefa depois do prazo de despacho (10 minutos por padrao para alvo ' +
+        'HTTP); com o arrendamento vencendo antes disso, a reentrega encontra o ' +
+        'registro livre e dois processos enviam a MESMA mensagem. Recusando ' +
+        'subir com o arrendamento desligado por um numero.',
+    );
+  }
 
   return {
     atrasoDoVarredorMs:
