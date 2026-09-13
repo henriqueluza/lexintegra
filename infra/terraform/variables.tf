@@ -102,6 +102,28 @@ variable "proxies_confiaveis" {
 # Etapa 11. Publicada pelo pipeline junto da imagem da API — as duas saem do
 # mesmo commit, entao um deploy nunca deixa API nova falando com scanner velho.
 variable "scanner_image" {
-  description = "Imagem do contentor do scanner de malware (ClamAV)."
+  description = <<-EOT
+    Imagem do contentor do scanner de malware (ClamAV). O pipeline passa via
+    TF_VAR_scanner_image junto com a da API, no apply completo.
+
+    O DEFAULT EXISTE PARA O APPLY PARCIAL DO ARTIFACT REGISTRY, e nao para ser
+    usado. O passo "Garantir o Artifact Registry" do deploy roda
+    `terraform apply -target=google_artifact_registry_repository.lexintegra`
+    ANTES de qualquer imagem existir — e portanto antes de qualquer TF_VAR ser
+    definido. O Terraform valida TODAS as variaveis do root module antes de
+    aplicar, mesmo com `-target` restringindo o que sera tocado: variavel sem
+    default derruba esse passo, e o deploy inteiro para antes de construir
+    qualquer coisa. Foi o que aconteceu no primeiro deploy depois da Etapa 11.
+
+    VAZIO, E NAO UMA IMAGEM PLACEHOLDER como `api_image`. A divergencia e
+    deliberada: um plan local sem a variavel propoe trocar a imagem do scanner
+    pelo default, e as duas formas de errar nao custam o mesmo. Vazio produz um
+    diff obviamente invalido, que ninguem aplica por engano e que o Cloud Run
+    recusa na hora. Um placeholder plausivel — `gcr.io/cloudrun/hello` — produz
+    um diff que PARECE certo e, aplicado, poe um contentor que nao varre nada no
+    lugar do antivirus. Para o componente que decide se um arquivo e seguro,
+    falha barulhenta vale mais que falha discreta.
+  EOT
   type        = string
+  default     = ""
 }
