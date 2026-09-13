@@ -1,0 +1,62 @@
+<section class="entregas">
+  <h1 class="entregas__titulo">Entregas</h1>
+
+  <p class="entregas__nota">
+    Cada linha e um e-mail que o sistema se comprometeu a entregar. O que falha e
+    tentado de novo sozinho; o reenvio manual serve para o que ja parou.
+  </p>
+
+  <app-selecao
+    rotulo="Situacao"
+    [opcoes]="opcoesDeSituacao"
+    [formControl]="situacao"
+  />
+
+  @if (falha(); as mensagem) {
+  <app-mensagem-erro variante="bloco">{{ mensagem }}</app-mensagem-erro>
+  } @if (falhaDaLista()) {
+  <app-mensagem-erro variante="bloco">
+    Nao foi possivel carregar as entregas. Recarregue a pagina.
+  </app-mensagem-erro>
+  }
+
+  <app-tabela
+    legenda="Entregas de e-mail registradas pelo sistema"
+    [colunas]="colunas"
+    [linhas]="linhas()"
+    [carregando]="carregando()"
+    mensagemVazia="Nenhuma entrega nesta situacao."
+  >
+    <!--
+      UM template para a tabela inteira, com `@switch` na coluna: e o contrato de
+      `app-tabela` (ver `CelulaTabela`). Um template por coluna nao funciona —
+      `contentChild` pega o primeiro e o usa em todas.
+    -->
+    <ng-template appCelulaTabela let-linha let-coluna="coluna">
+      @switch (coluna.chave) { @case ('tipo') { {{
+      rotuloDoTipo(comoEntrega(linha).tipo) }} } @case ('estado') {
+      <span
+        class="entregas__estado"
+        [class.entregas__estado--parado]="!podeReenviar(comoEntrega(linha))"
+      >
+        {{ rotuloDoEstado(comoEntrega(linha).estado) }}
+      </span>
+      } @case ('tentativas') { {{ comoEntrega(linha).tentativas }} } @case
+      ('quando') { {{ quando(comoEntrega(linha).ultimaTentativaEm) }} } @case
+      ('erro') {
+      <span class="entregas__motivo">{{
+        comoEntrega(linha).ultimoErro ?? '—'
+      }}</span>
+      } @case ('acoes') { @if (podeReenviar(comoEntrega(linha))) {
+      <app-botao
+        variante="primario"
+        tamanho="p"
+        [carregando]="emCurso() === comoEntrega(linha).id"
+        (click)="reenviar(comoEntrega(linha))"
+      >
+        Reenviar agora
+      </app-botao>
+      } @else { — } } }
+    </ng-template>
+  </app-tabela>
+</section>

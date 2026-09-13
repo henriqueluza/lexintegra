@@ -11,7 +11,8 @@ import {
   AcessoPedidoService,
   type QuemAcessa,
 } from '../pedidos/acesso.service.js';
-import { FilaFalsa } from '../varredura/fila.js';
+import { FilaFalsa } from '../tarefas/fila.js';
+import type { TarefaDeVarredura } from '../varredura/fila.js';
 import { AnexosService } from './anexos.service.js';
 
 const CLIENTE: QuemAcessa = { uid: 'uid-clara', perfil: 'cliente' };
@@ -34,7 +35,7 @@ const JPG: PedidoDeUpload = {
 interface Arranjo {
   banco: FirestoreFalso;
   armazenamento: ArmazenamentoFalso;
-  fila: FilaFalsa;
+  fila: FilaFalsa<TarefaDeVarredura>;
   anexos: AnexosService;
 }
 
@@ -47,7 +48,7 @@ function montar(): Arranjo {
   });
 
   const armazenamento = new ArmazenamentoFalso();
-  const fila = new FilaFalsa();
+  const fila = new FilaFalsa<TarefaDeVarredura>();
 
   return {
     banco,

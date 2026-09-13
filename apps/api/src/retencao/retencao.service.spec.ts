@@ -85,7 +85,7 @@ function montar(
     retencao: new RetencaoService(
       banco as unknown as Firestore,
       armazenamento,
-      new OutboxService(banco as unknown as Firestore),
+      new OutboxService(banco as unknown as Firestore, { atrasoDoVarredorMs: 0, arrendamentoMs: 60_000, loteDoVarredor: 100 }),
       despachante,
     ),
   };

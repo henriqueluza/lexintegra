@@ -136,6 +136,18 @@ Cache distribuído não se justifica porque o Firebase Auth é stateless (JWT) e
 
 **Segunda falha conhecida.** Transações do Firestore são reexecutadas automaticamente sob contenção. Qualquer efeito colateral dentro do corpo da transação pode acontecer duas vezes. Regra absoluta: nenhuma chamada a Resend ou AbacatePay dentro de transação — apenas escrita no outbox.
 
+**Terceira falha conhecida, descoberta ao implementar (Etapa 7).** Os dois mecanismos de retentativa são independentes: a fila reentrega sozinha, e o varredor reenfileira o que parece perdido. Nada impede que os dois — mais o reenvio manual do painel — cheguem ao mesmo registro na mesma janela, e enviar e-mail não é idempotente: duas entregas são dois e-mails. Ler o estado antes de enviar não resolve, porque leitura seguida de ação não é atômica: duas tarefas leem `pendente`, ambas passam pela conferência e ambas enviam.
+
+São **três camadas**, com propósitos diferentes e nenhuma substituindo a outra:
+
+1. **Nome determinístico da tarefa** (`{id}-c{ciclo}-t{tentativa}`). O Cloud Tasks deduplica por nome, o que impede o varredor de criar uma segunda tarefa para um registro cuja tarefa ainda está viva. O nome inclui a tentativa de propósito: depois de uma falha real queremos tarefa nova, e tarefa nova precisa de nome novo — senão a deduplicação que protege no caso comum passaria a impedir a reentrega no caso que mais precisa dela.
+2. **Arrendamento transacional** (`OutboxService.reivindicar`). É a trava de verdade: uma transação do Firestore lê e decide, e isso é um compare-and-set — uma commita, a outra reexecuta e vê o arrendamento. É o único lugar do sistema que decide se vale enviar, e os três caminhos de entrada passam por ele.
+3. **Chave de idempotência no provedor** (`Idempotency-Key` do Resend). Fecha a janela que trava local nenhuma fecha: o provedor aceita a mensagem e o processo morre antes de gravar `enviado`. A chave carrega o **ciclo** e não a tentativa — uma reentrega depois de falha real não deve produzir segunda entrega, mas o reenvio manual do administrador tem que produzir.
+
+**Entrega exatamente-uma-vez não existe, e é melhor registrar isso do que deixar implícito.** O arrendamento remove a duplicata concorrente; a chave de idempotência remove a duplicata por processo morto, dentro da janela de idempotência do provedor. Fora dela, um registro reaberto manualmente meses depois entrega de novo — que é o comportamento desejado.
+
+**O contador de tentativas anda na reivindicação, não na conclusão.** É o que faz um processo que morre no meio consumir uma tentativa, e portanto o que torna o teto real. O teto da política é menor que o `max_attempts` da fila, porque o desfecho que se quer é `abandonado` — com alerta e registro visível no painel — e não uma tarefa que some da fila sem deixar rastro.
+
 ### ADR-04 — Idempotência por ID determinístico
 
 **Contexto.** O Firestore garante unicidade do ID do documento dentro da coleção, e a operação `create` falha se o documento já existir. Isso é funcionalmente equivalente a uma restrição `UNIQUE` com `ON CONFLICT DO NOTHING`.
@@ -212,6 +224,8 @@ Duas implementações cabem atrás dessa interface: **produção** (Resend) e **
 **Por que o transporte falso e não uma chamada real na suíte automatizada.** Um teste que depende de rede externa é mais lento e mais instável do que um teste que verifica apenas o estado do próprio outbox. A suíte deve provar que a mensagem certa foi produzida e registrada, não que um provedor de terceiro está no ar.
 
 **O que não pode vazar para dentro do adaptador.** Nenhuma decisão de reentrega. Se o provedor falhar, a responsabilidade de tentar de novo é do outbox e do Cloud Tasks (ADR-03), não do transporte — o adaptador só reporta sucesso ou falha.
+
+**A chave de idempotência não é uma exceção a isso** (acrescentada na Etapa 7). `EmailMensagem` carrega um `chaveIdempotencia` opcional, que o adaptador repassa ao provedor como `Idempotency-Key`. Quem a escolhe é o outbox; o adaptador só repassa o cabeçalho e continua sem decidir nada. A distinção que importa: decidir *tentar de novo* é do outbox, e dizer ao provedor *qual mensagem é esta* é do chamador.
 
 **Sequenciamento.** A verificação de domínio no Resend depende do domínio estar comprado e do DNS sob controle, então essa ordem é: domínio primeiro, verificação do Resend depois. Recomenda-se um subdomínio dedicado ao envio (por exemplo `notificacoes.<dominio>`), para isolar a reputação de envio transacional do domínio institucional. Durante o desenvolvimento, antes de o domínio existir, uma conta pessoal de desenvolvimento sem domínio verificado já permite enviar — com a restrição de só entregar ao próprio endereço cadastrado — e é descartada ao final do projeto sem nunca entrar no entregável da cláusula 4.3.
 
@@ -648,7 +662,7 @@ Suspensão precisa revogar tokens ativos, não apenas marcar um campo — senão
 
 Os três jobs gratuitos do Cloud Scheduler ficam integralmente ocupados:
 
-1. **Varredor do outbox** — reenfileira pendências não entregues.
+1. **Varredor do outbox** — reenfileira pendências não entregues. *Implementado na Etapa 7, a cada minuto.*
 2. **Atualização da base ClamAV** — mantém assinaturas atuais no bucket.
 3. **Expiração da janela de 12 meses** — encerra saldos de reunião vencidos conforme o 2.7.2.
 

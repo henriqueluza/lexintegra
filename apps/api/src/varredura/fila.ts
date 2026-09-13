@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import type { Fila } from '../tarefas/fila.js';
 
 /**
- * A fila de varredura (regra inviolavel 1, ADR-03).
+ * A tarefa de varredura (ADR-18).
  *
- * "Trabalho assincrono vai para Cloud Tasks." A varredura e o primeiro uso de
- * fila do projeto — a Etapa 7 vai reusar a mesma infraestrutura para o outbox.
+ * O TIPO E O DOMINIO; o mecanismo esta em `tarefas/`. A varredura foi o primeiro
+ * uso de fila do projeto, e por isso a infraestrutura nasceu aqui — a Etapa 7 a
+ * moveu para `tarefas/` quando o outbox virou o segundo consumidor.
  *
  * POR QUE FILA E NAO CHAMADA DIRETA. O scanner sobe com `min-instances = 0` e
  * carrega ~1 GB de assinaturas no boot: a primeira varredura depois de um periodo
@@ -22,19 +23,9 @@ export interface TarefaDeVarredura {
   readonly caminho: string;
 }
 
-export interface FilaDeVarredura {
-  enfileirar(tarefa: TarefaDeVarredura): Promise<void>;
-}
+export type FilaDeVarredura = Fila<TarefaDeVarredura>;
 
 export const FILA_DE_VARREDURA = Symbol('FILA_DE_VARREDURA');
 
-/** Fila falsa: guarda as tarefas para o teste inspecionar e disparar na mao. */
-@Injectable()
-export class FilaFalsa implements FilaDeVarredura {
-  readonly tarefas: TarefaDeVarredura[] = [];
-
-  enfileirar(tarefa: TarefaDeVarredura): Promise<void> {
-    this.tarefas.push(tarefa);
-    return Promise.resolve();
-  }
-}
+/** O caminho que o Cloud Tasks chama. Vive junto do tipo que ele recebe. */
+export const CAMINHO_DA_VARREDURA = '/api/interno/varredura';

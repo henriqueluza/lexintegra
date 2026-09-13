@@ -103,7 +103,7 @@ describe('navegacao da shell', () => {
    * administrativas, sem menu o administrador so chegaria as demais digitando a
    * URL.
    */
-  it('oferece as quatro secoes administrativas ao admin', () => {
+  it('oferece as cinco secoes administrativas ao admin', () => {
     const { fixture } = montar(
       { nome: 'Marcos', email: 'admin@x.test' },
       'admin',
@@ -117,6 +117,8 @@ describe('navegacao da shell', () => {
       'Clientes',
       'Advogados',
       'Produtos',
+      /* Por ultimo: tela de diagnostico, visitada quando algo deu errado. */
+      'Entregas',
     ]);
   });
 
@@ -175,6 +177,7 @@ describe('navegacao da shell', () => {
       '/admin/clientes',
       '/admin/advogados',
       '/admin/produtos',
+      '/admin/entregas',
     ]);
   });
 });

@@ -36,18 +36,21 @@ function montar(
     SERVICE_ACCOUNT_TAREFAS: 'tarefas@projeto.iam.gserviceaccount.com',
   } as NodeJS.ProcessEnv,
 ): TarefaGuard {
-  const guard = new TarefaGuard(reflectorFalso());
-
   Object.assign(process.env, ambiente);
 
-  (guard as unknown as { cliente: unknown }).cliente = {
-    verifyIdToken: () => {
-      if (bilhete instanceof Error) return Promise.reject(bilhete);
-      return Promise.resolve({ getPayload: () => bilhete });
-    },
+  /*
+   * A verificacao da assinatura entra pela porta, e nao por troca de campo
+   * privado. O que se exercita aqui e a decisao do guard — audiencia, emissor,
+   * configuracao ausente —, e nao a biblioteca do Google.
+   */
+  const verificador = {
+    verificar: () =>
+      bilhete instanceof Error
+        ? Promise.reject(bilhete)
+        : Promise.resolve(bilhete),
   };
 
-  return guard;
+  return new TarefaGuard(reflectorFalso(), verificador);
 }
 
 const VALIDO = {

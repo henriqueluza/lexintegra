@@ -416,6 +416,58 @@ qualquer coisa que não seja um projeto `demo-`.
 
 **Critério de aceite.** Teste automatizado que simula falha de entrega e verifica a reentrega pelo varredor.
 
+### Registro de execução — Etapa 7
+
+**Metade já existia.** A coleção `outbox`, o `EmailTransport`, o adaptador do
+Resend e o transporte falso nasceram na Etapa 4, e o próprio código dizia o que
+faltava: *"o que muda na Etapa 7 é quem chama, não o que está aqui"*. O que esta
+etapa construiu foi a entrega assíncrona — fila, endpoint interno, varredor,
+política de tentativa, painel e alerta.
+
+**A Etapa 11 precisou ser integrada antes.** O PR #10 foi mesclado com base em
+`feat/areas-cliente-advogado` e não em `main`, e essa branch já tinha sido
+mesclada três dias antes — então os dois commits da Etapa 11 nunca chegaram à
+`main`. Importava porque a Etapa 11 escreveu a infraestrutura de fila que esta
+etapa reusa, e dizia isso em comentário. Integrada num PR próprio, sem conflito.
+
+**O que estava quebrado e não só faltando.** `despachar` engolia a falha e
+retornava normalmente. Sob Cloud Tasks isso viraria HTTP 200 e a fila concluiria
+que a tarefa deu certo — retentativa nenhuma, com toda a aparência de um sistema
+resiliente. O status HTTP passou a ser o controle da reentrega.
+
+**Três camadas contra entrega duplicada**, e a segunda é a única que é trava de
+verdade: nome determinístico da tarefa, arrendamento transacional e chave de
+idempotência no provedor. A justificativa completa está no ADR-03, na "terceira
+falha conhecida" — ela foi descoberta ao implementar, não estava prevista.
+
+**Entrega exatamente-uma-vez não existe**, e ficou registrada no ADR-03 em vez de
+deixada implícita.
+
+**A lacuna de tempo da redefinição de senha fechou junto.** Até aqui o caminho do
+e-mail conhecido chamava o provedor antes de responder, e o tempo denunciava quem
+tem conta. Com a fila, o caminho síncrono é só o enfileiramento.
+
+**Alerta é log estruturado, e o destinatário fica fora do código.** A política do
+Cloud Monitoring consome a entrada de log; quem recebe é um
+`google_monitoring_notification_channel`, que é Etapa 12. Foi a forma de entregar
+"alertas por criticidade" sem inventar resposta para uma decisão em aberto — e um
+alerta sobre falha do outbox que dependesse do outbox seria circular.
+
+**Errata do escopo: a criticidade não tinha definição em lugar nenhum.** Duas
+menções no repositório inteiro, nenhuma taxonomia. Ela virou uma tabela por tipo
+de evento (`politica.ts`) com criticidade e teto de tentativas, como o ADR-03
+descreve. O backoff ficou de fora porque no Cloud Tasks ele é por **fila**, não
+por tarefa — os três eventos de hoje são críticos e cabem numa fila só.
+
+**A verificação do token OIDC virou porta.** Era necessário para o teste de aceite
+exercitar a rota interna sem desligar o guard — e um teste que desliga o guard não
+prova que ele está na cadeia.
+
+**Custo recorrente novo: nenhum.** O varredor é o job nº 1 dos três gratuitos.
+
+**Cobertura:** `apps/api` 93/83/92/94, `apps/web` 96/89/92/97,
+`packages/shared` 99/100/100/99.
+
 ### Só você — Etapa 7
 
 **Impossível delegar**

@@ -1,31 +1,22 @@
 import type { Timestamp } from 'firebase-admin/firestore';
+import type { EstadoEntrega, TipoEvento } from 'shared';
 
-/**
- * Tipos de evento que o outbox entrega. Fixos no codigo, nao dado configuravel:
- * cada tipo tem um montador de mensagem correspondente no despachante, e um tipo
- * sem montador seria um registro que nunca sai.
+/*
+ * O VOCABULARIO MORA EM `packages/shared`, e nao aqui.
  *
- * Os dois desta etapa produzem o mesmo e-mail — um link de definicao de senha —
- * e mesmo assim sao eventos DIFERENTES. Sao fatos de negocio distintos: "o
- * administrador criou um acesso de advogado" e "alguem pediu para redefinir a
- * propria senha". Colapsa-los perderia a trilha de auditoria e impediria que a
- * Etapa 7 desse a cada um o seu texto.
+ * A tela de reenvio do administrador (Etapa 7) mostra tipo e estado de cada
+ * registro e precisa dos mesmos valores que o servidor grava. Duas listas em
+ * lugares diferentes divergem, e aqui divergir significa um estado que a tela nao
+ * sabe desenhar. Este arquivo fica com o que e so do servidor: a forma do
+ * documento, o id deterministico e a leitura do erro do Firestore.
  */
-export const TIPOS_EVENTO = [
-  'definir-senha',
-  'redefinir-senha',
-  /**
-   * O aviso previo de exclusao (Etapa 11, arquitetura secao 13): "antes de
-   * qualquer exclusao de dado, o titular recebe e-mail avisando com
-   * antecedencia". Nasce no outbox como os outros — o aviso que nao chega e
-   * exatamente o que a secao 13 nao admite.
-   */
-  'aviso-exclusao-arquivos',
-] as const;
-
-export type TipoEvento = (typeof TIPOS_EVENTO)[number];
-
-export type EstadoEntrega = 'pendente' | 'enviado' | 'falhou';
+export {
+  TIPOS_EVENTO,
+  ESTADOS_ENTREGA,
+  type TipoEvento,
+  type EstadoEntrega,
+  type Criticidade,
+} from 'shared';
 
 /**
  * O documento gravado em `outbox/{id}`.
@@ -46,7 +37,39 @@ export interface RegistroOutbox {
   readonly destinatarioUid: string;
   readonly estado: EstadoEntrega;
   readonly criadoEm: Timestamp;
+  /** Quantas vezes o registro foi REIVINDICADO. Ver `OutboxService.reivindicar`. */
   readonly tentativas: number;
+  /**
+   * Quantas vezes o administrador reabriu este registro a mao. Comeca em zero.
+   *
+   * Entra na chave de idempotencia mandada ao provedor. Sem ele, o reenvio manual
+   * carregaria a mesma chave da entrega que falhou e seria DEDUPLICADO pelo
+   * provedor — o botao que existe para consertar uma falha nao enviaria nada, e
+   * nada no sistema diria por que.
+   */
+  readonly ciclo: number;
+  /**
+   * Antes disto, o varredor nao encosta no registro.
+   *
+   * Existe porque ha DOIS mecanismos de retentativa — a fila, que reentrega
+   * sozinha com o proprio backoff, e o varredor, que so existe para o caso de a
+   * tarefa ter se perdido (ADR-03, "falha conhecida"). Sem este campo os dois
+   * atuariam sobre o mesmo registro na mesma janela.
+   *
+   * NAO E RETRY MANUAL: o intervalo ENTRE tentativas continua sendo inteiramente
+   * da fila. Isto so diz ao varredor quando parar de esperar.
+   *
+   * Sempre escrito, nunca ausente. `where(campo, '!=', null)` ignora documentos
+   * sem o campo, e essa armadilha ja mordeu o projeto duas vezes — `distribuido`
+   * na Etapa 9 e `retencaoEm` na Etapa 11.
+   */
+  readonly varrerApos: Timestamp;
+  /**
+   * Ate quando a reivindicacao corrente segura o registro. Ausente quando ninguem
+   * o segura.
+   */
+  readonly arrendadoAte?: Timestamp;
+  readonly ultimaTentativaEm?: Timestamp;
   readonly enviadoEm?: Timestamp;
   /** Ja limpo de endereco pelo adaptador (ver `redigirEnderecos`). */
   readonly ultimoErro?: string;

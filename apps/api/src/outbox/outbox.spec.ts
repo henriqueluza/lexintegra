@@ -1,6 +1,7 @@
 import type { Auth } from 'firebase-admin/auth';
 import { EmailFalsoTransport } from '../email/email-falso.transport.js';
 import type { EmailTransport } from '../email/email-transport.js';
+import { AlertaFalso } from '../alertas/alerta.js';
 import { DespachanteOutbox } from './despachante.service.js';
 import {
   ehDuplicata,
@@ -9,7 +10,7 @@ import {
   type RegistroOutbox,
 } from './evento.js';
 import { montarLinkDeSenha, urlDaAplicacao } from './link-de-senha.js';
-import type { OutboxService } from './outbox.service.js';
+import type { OutboxService, Reivindicacao } from './outbox.service.js';
 
 /* -------------------------------------------------------------------------- */
 /* Identidade e deduplicacao dos eventos                                       */
@@ -173,38 +174,60 @@ const REGISTRO: RegistroOutbox = {
   destinatarioUid: 'uid-advogado',
   estado: 'pendente',
   criadoEm: null as never,
-  tentativas: 0,
+  tentativas: 1,
+  ciclo: 0,
+  varrerApos: null as never,
 };
 
 interface Cenario {
   despachante: DespachanteOutbox;
   transporte: EmailFalsoTransport;
-  marcados: Array<{
+  alertas: AlertaFalso;
+  concluidos: Array<{
     id: string;
-    estado: 'enviado' | 'falhou';
+    estado: 'enviado' | 'falhou' | 'abandonado';
     motivo?: string;
   }>;
 }
 
 function montarCenario(opcoes: {
   registro?: RegistroOutbox | null;
+  /** O que `reivindicar` devolve, quando nao e uma concessao. */
+  reivindicacao?: Reivindicacao;
   /** `null` reproduz o usuario do Auth sem endereco cadastrado. */
   email?: string | null;
   linkGerado?: string | (() => never);
   transporte?: EmailTransport;
+  /** Faz `concluir` responder `abandonado`, como se o orcamento tivesse acabado. */
+  esgotado?: boolean;
 }): Cenario {
-  const marcados: Cenario['marcados'] = [];
+  const concluidos: Cenario['concluidos'] = [];
 
   const registro = opcoes.registro === undefined ? REGISTRO : opcoes.registro;
+  const reivindicacao: Reivindicacao =
+    opcoes.reivindicacao ??
+    (registro === null
+      ? { situacao: 'inexistente' }
+      : { situacao: 'concedida', registro });
+
   const outbox = {
-    ler: () => Promise.resolve(registro),
-    marcarEnviado: (id: string) => {
-      marcados.push({ id, estado: 'enviado' });
-      return Promise.resolve();
-    },
-    marcarFalha: (id: string, motivo: string) => {
-      marcados.push({ id, estado: 'falhou', motivo });
-      return Promise.resolve();
+    reivindicar: () => Promise.resolve(reivindicacao),
+    concluir: (
+      id: string,
+      _registro: RegistroOutbox,
+      resultado: { sucesso: boolean; motivo?: string },
+    ) => {
+      const estado = resultado.sucesso
+        ? 'enviado'
+        : opcoes.esgotado === true
+          ? 'abandonado'
+          : 'falhou';
+      concluidos.push({
+        id,
+        estado,
+        ...(resultado.motivo === undefined ? {} : { motivo: resultado.motivo }),
+      });
+      return Promise.resolve(estado);
     },
   } as unknown as OutboxService;
 
@@ -221,14 +244,17 @@ function montarCenario(opcoes: {
   } as unknown as Auth;
 
   const transporte = new EmailFalsoTransport();
+  const alertas = new AlertaFalso();
   return {
     despachante: new DespachanteOutbox(
       outbox,
       auth,
       opcoes.transporte ?? transporte,
+      alertas,
     ),
     transporte,
-    marcados,
+    alertas,
+    concluidos,
   };
 }
 
@@ -247,57 +273,77 @@ describe('DespachanteOutbox', () => {
             LINK: 'http://localhost:4200/definir-senha?oobCode=CODIGO',
           },
         },
+        chaveIdempotencia: 'definir-senha_uid-advogado-c0',
       },
     ]);
   });
 
-  it('marca como enviado quando o transporte confirma', async () => {
-    const { despachante, marcados } = montarCenario({});
-
-    await despachante.despachar('id-1');
-
-    expect(marcados).toEqual([{ id: 'id-1', estado: 'enviado' }]);
-  });
-
   /**
-   * Entrega ao-menos-uma-vez e o contrato do Cloud Tasks que entra na Etapa 7.
-   * Um registro ja entregue chegando de novo precisa ser um no-op, nao um segundo
-   * e-mail.
+   * A CHAVE CARREGA O CICLO, E NAO A TENTATIVA.
+   *
+   * A intencao e "este e-mail": uma reentrega depois de falha real nao pode
+   * produzir segunda entrega, e por isso a tentativa fica de fora. Ja o reenvio
+   * manual do administrador TEM que produzir — e incrementar o ciclo e o que
+   * muda a chave. Sem isso, o botao que existe para consertar uma falha seria
+   * deduplicado do outro lado e nao mandaria nada.
    */
-  it('ignora registro ja entregue', async () => {
-    const { despachante, transporte, marcados } = montarCenario({
-      registro: { ...REGISTRO, estado: 'enviado' },
+  it('muda a chave de idempotencia quando o ciclo muda', async () => {
+    const { despachante, transporte } = montarCenario({
+      registro: { ...REGISTRO, ciclo: 2, tentativas: 5 },
     });
 
     await despachante.despachar('id-1');
 
-    expect(transporte.enviadas).toEqual([]);
-    expect(marcados).toEqual([]);
+    expect(transporte.enviadas[0].chaveIdempotencia).toBe('id-1-c2');
   });
 
-  it('nao explode quando o registro nao existe mais', async () => {
-    const { despachante, transporte } = montarCenario({ registro: null });
+  it('conclui como enviado quando o transporte confirma', async () => {
+    const { despachante, concluidos } = montarCenario({});
 
-    await expect(despachante.despachar('id-sumido')).resolves.toBeUndefined();
-    expect(transporte.enviadas).toEqual([]);
+    await expect(despachante.despachar('id-1')).resolves.toBe('entregue');
+
+    expect(concluidos).toEqual([{ id: 'id-1', estado: 'enviado' }]);
   });
 
-  it('marca falha quando o transporte recusa', async () => {
+  /**
+   * Entrega ao-menos-uma-vez e o contrato do Cloud Tasks. Um registro ja entregue
+   * chegando de novo precisa ser um no-op, nao um segundo e-mail.
+   *
+   * Quem recusa e `reivindicar`, numa transacao — e nao uma leitura solta seguida
+   * de comparacao, que deixaria duas tarefas simultaneas passarem as duas.
+   */
+  it.each([
+    ['ja-entregue'],
+    ['abandonado'],
+    ['em-andamento'],
+    ['inexistente'],
+  ] as const)('nao envia nada quando a reivindicacao devolve %s', async (situacao) => {
+    const { despachante, transporte, concluidos } = montarCenario({
+      reivindicacao: { situacao },
+    });
+
+    await expect(despachante.despachar('id-1')).resolves.toBe(situacao);
+
+    expect(transporte.enviadas).toEqual([]);
+    expect(concluidos).toEqual([]);
+  });
+
+  it('conclui como falha quando o transporte recusa', async () => {
     const recusando: EmailTransport = {
       enviar: () =>
         Promise.resolve({ sucesso: false, motivo: 'Rate limit exceeded' }),
     };
-    const { despachante, marcados } = montarCenario({ transporte: recusando });
+    const { despachante, concluidos } = montarCenario({ transporte: recusando });
 
-    await despachante.despachar('id-1');
+    await expect(despachante.despachar('id-1')).resolves.toBe('falhou');
 
-    expect(marcados).toEqual([
+    expect(concluidos).toEqual([
       { id: 'id-1', estado: 'falhou', motivo: 'Rate limit exceeded' },
     ]);
   });
 
-  it('marca falha quando a geracao do link estoura', async () => {
-    const { despachante, marcados, transporte } = montarCenario({
+  it('conclui como falha quando a geracao do link estoura', async () => {
+    const { despachante, concluidos, transporte } = montarCenario({
       linkGerado: () => {
         throw new Error('AUTH_BACKEND_UNAVAILABLE');
       },
@@ -306,7 +352,7 @@ describe('DespachanteOutbox', () => {
     await despachante.despachar('id-1');
 
     expect(transporte.enviadas).toEqual([]);
-    expect(marcados[0]).toMatchObject({ estado: 'falhou' });
+    expect(concluidos[0]).toMatchObject({ estado: 'falhou' });
   });
 
   /**
@@ -314,7 +360,7 @@ describe('DespachanteOutbox', () => {
    * motivo e gravado no Firestore e registrado em log.
    */
   it('tira o endereco do motivo antes de gravar a falha', async () => {
-    const { despachante, marcados } = montarCenario({
+    const { despachante, concluidos } = montarCenario({
       linkGerado: () => {
         throw new Error('no user record for advogado@teste.local');
       },
@@ -322,23 +368,78 @@ describe('DespachanteOutbox', () => {
 
     await despachante.despachar('id-1');
 
-    expect(marcados[0].motivo).toBe('no user record for [e-mail]');
+    expect(concluidos[0].motivo).toBe('no user record for [e-mail]');
   });
 
-  it('marca falha quando o usuario nao tem e-mail', async () => {
-    const { despachante, marcados, transporte } = montarCenario({
+  it('conclui como falha quando o usuario nao tem e-mail', async () => {
+    const { despachante, concluidos, transporte } = montarCenario({
       email: null,
     });
 
     await despachante.despachar('id-sem-email');
 
     expect(transporte.enviadas).toEqual([]);
-    expect(marcados).toEqual([
+    expect(concluidos).toEqual([
       {
         id: 'id-sem-email',
         estado: 'falhou',
         motivo: 'usuario uid-advogado nao tem e-mail',
       },
     ]);
+  });
+
+  /**
+   * O ALERTA SO SAI NO FIM. Alertar a cada falha treinaria quem recebe a ignorar
+   * — e uma falha isolada e exatamente o caso que a fila resolve sozinha.
+   */
+  it('nao alerta numa falha comum', async () => {
+    const recusando: EmailTransport = {
+      enviar: () => Promise.resolve({ sucesso: false, motivo: 'timeout' }),
+    };
+    const { despachante, alertas } = montarCenario({ transporte: recusando });
+
+    await despachante.despachar('id-1');
+
+    expect(alertas.emitidos).toEqual([]);
+  });
+
+  it('alerta com a criticidade do evento quando abandona', async () => {
+    const recusando: EmailTransport = {
+      enviar: () => Promise.resolve({ sucesso: false, motivo: 'timeout' }),
+    };
+    const { despachante, alertas } = montarCenario({
+      transporte: recusando,
+      esgotado: true,
+    });
+
+    await expect(despachante.despachar('id-1')).resolves.toBe('abandonado');
+
+    expect(alertas.emitidos).toEqual([
+      {
+        nivel: 'critico',
+        assunto: 'outbox.abandonado',
+        detalhe: expect.stringContaining('id-1'),
+      },
+    ]);
+  });
+
+  /** O alerta vai para log e para o painel. Endereco ali seria dado pessoal em
+   * repouso, de novo. */
+  it('nao poe endereco no detalhe do alerta', async () => {
+    const recusando: EmailTransport = {
+      enviar: () =>
+        Promise.resolve({
+          sucesso: false,
+          motivo: 'rejected for [e-mail]',
+        }),
+    };
+    const { despachante, alertas } = montarCenario({
+      transporte: recusando,
+      esgotado: true,
+    });
+
+    await despachante.despachar('id-1');
+
+    expect(alertas.emitidos[0].detalhe).not.toMatch(/@/);
   });
 });

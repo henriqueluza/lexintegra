@@ -8,7 +8,8 @@ import type { Firestore } from 'firebase-admin/firestore';
 import type { PedidoDeUpload } from 'shared';
 import { ArmazenamentoFalso } from '../armazenamento/armazenamento-falso.js';
 import { FirestoreFalso } from '../firestore-falso.js';
-import { FilaFalsa } from '../varredura/fila.js';
+import { FilaFalsa } from '../tarefas/fila.js';
+import type { TarefaDeVarredura } from '../varredura/fila.js';
 import { EntregaveisService } from './entregaveis.service.js';
 import { UploadDeEntregavelService } from './upload.service.js';
 
@@ -26,7 +27,7 @@ const ALVO = { pedidoId: 'pedido-1', entregavelId: '001' };
 interface Arranjo {
   banco: FirestoreFalso;
   armazenamento: ArmazenamentoFalso;
-  fila: FilaFalsa;
+  fila: FilaFalsa<TarefaDeVarredura>;
   upload: UploadDeEntregavelService;
 }
 
@@ -50,7 +51,7 @@ function montar(estadoDoEntregavel = 'em_elaboracao'): Arranjo {
   });
 
   const armazenamento = new ArmazenamentoFalso();
-  const fila = new FilaFalsa();
+  const fila = new FilaFalsa<TarefaDeVarredura>();
 
   return {
     banco,

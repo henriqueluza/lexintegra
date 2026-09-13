@@ -158,6 +158,25 @@ describe('rotas', () => {
     expect(cliente?.canMatch?.[1]).not.toBe(advogado?.canMatch?.[1]);
   });
 
+  /**
+   * A superficie administrativa, nominal. A tela de entregas e o painel do outbox
+   * (Etapa 7) — ela vive SOB `admin`, e nao no topo, porque herda o guard de
+   * perfil da arvore. Uma rota de topo `/entregas` ficaria aberta a qualquer
+   * autenticado, e o que ela mostra e a lista de tudo que o sistema tentou
+   * entregar.
+   */
+  it.each([
+    'advogados',
+    'produtos',
+    'distribuicao',
+    'clientes',
+    'entregas',
+  ])('registra a tela administrativa %s sob admin', (caminho) => {
+    const admin = routes.find((r) => r.path === 'admin');
+
+    expect(admin?.children?.some((f) => f.path === caminho)).toBe(true);
+  });
+
   it('define titulo em todas as rotas, para aba e leitor de tela', () => {
     for (const rota of routes) {
       expect(typeof rota.title).toBe('string');

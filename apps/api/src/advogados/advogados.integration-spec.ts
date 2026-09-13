@@ -16,7 +16,11 @@ import {
   limparEmuladores,
   passarUmSegundo,
 } from '../emulador.js';
+import { AlertaFalso } from '../alertas/alerta.js';
+import { FilaFalsa } from '../tarefas/fila.js';
 import { DespachanteOutbox } from '../outbox/despachante.service.js';
+import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
+import type { TarefaDeEvento } from '../outbox/fila.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import { AdvogadosService } from './advogados.service.js';
 
@@ -31,6 +35,8 @@ import { AdvogadosService } from './advogados.service.js';
 let auth: Auth;
 let banco: Firestore;
 let transporte: EmailFalsoTransport;
+let fila: FilaFalsa<TarefaDeEvento>;
+let despachante: DespachanteOutbox;
 let servico: AdvogadosService;
 let autenticacao: AutenticacaoGuard;
 
@@ -46,15 +52,42 @@ beforeEach(async () => {
   await limparEmuladores();
   transporte = new EmailFalsoTransport();
 
-  const outbox = new OutboxService(banco);
+  fila = new FilaFalsa<TarefaDeEvento>();
+
+  const outbox = new OutboxService(banco, {
+    atrasoDoVarredorMs: 0,
+    arrendamentoMs: 60_000,
+    loteDoVarredor: 100,
+  });
+  despachante = new DespachanteOutbox(
+    outbox,
+    auth,
+    transporte,
+    new AlertaFalso(),
+  );
   servico = new AdvogadosService(
     auth,
     banco,
     outbox,
-    new DespachanteOutbox(outbox, auth, transporte),
+    new EnfileiradorDeEventos(outbox, fila),
   );
   autenticacao = new AutenticacaoGuard(new Reflector(), auth);
 });
+
+/**
+ * Faz o papel do Cloud Tasks: tira o que foi enfileirado e entrega.
+ *
+ * Desde a Etapa 7 `criar` termina no enfileiramento, e nao na entrega. Manter o
+ * envio dentro de `criar` so para o teste ficar curto provaria um caminho que
+ * producao nao tem.
+ */
+async function entregarFila(): Promise<void> {
+  const tarefas = [...fila.tarefas];
+  fila.limpar();
+  for (const tarefa of tarefas) {
+    await despachante.despachar(tarefa.id);
+  }
+}
 
 /* -------------------------------------------------------------------------- */
 
@@ -111,6 +144,8 @@ describe('provisionamento de advogado', () => {
     // Carimbo de servidor: so existe de verdade contra o Firestore.
     expect(documento.data()?.['criadoEm']).toBeDefined();
 
+    await entregarFila();
+
     const registro = await banco
       .collection('outbox')
       .doc(`definir-senha_${resumo.uid}`)
@@ -133,6 +168,7 @@ describe('provisionamento de advogado', () => {
    */
   it('entrega um oobCode real, apontando para a nossa pagina', async () => {
     await servico.criar(ANA, UID_ADMIN);
+    await entregarFila();
 
     const link = transporte.enviadas[0].modelo?.variaveis['LINK'] ?? '';
     const url = new URL(link);
@@ -146,6 +182,8 @@ describe('provisionamento de advogado', () => {
    */
   it('nao guarda link nem endereco no outbox', async () => {
     const resumo = await servico.criar(ANA, UID_ADMIN);
+
+    await entregarFila();
 
     const registro = await banco
       .collection('outbox')

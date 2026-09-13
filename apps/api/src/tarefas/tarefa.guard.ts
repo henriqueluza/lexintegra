@@ -1,13 +1,17 @@
 import {
+  Inject,
   Injectable,
   Logger,
   UnauthorizedException,
   type CanActivate,
   type ExecutionContext,
 } from '@nestjs/common';
-import { OAuth2Client } from 'google-auth-library';
 import { Reflector } from '@nestjs/core';
 import { extrairTokenBearer } from '../autenticacao/usuario.js';
+import {
+  VERIFICADOR_DE_TOKEN,
+  type VerificadorDeToken,
+} from './verificador.js';
 
 export const CHAVE_TAREFA_INTERNA = 'lexintegra:tarefa-interna';
 
@@ -33,9 +37,12 @@ export const CHAVE_TAREFA_INTERNA = 'lexintegra:tarefa-interna';
 @Injectable()
 export class TarefaGuard implements CanActivate {
   private readonly log = new Logger('TarefaInterna');
-  private readonly cliente = new OAuth2Client();
 
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    @Inject(VERIFICADOR_DE_TOKEN)
+    private readonly verificador: VerificadorDeToken,
+  ) {}
 
   /**
    * Configuracao ausente RECUSA, e nao deixa passar. Uma rota interna que aceita
@@ -75,12 +82,8 @@ export class TarefaGuard implements CanActivate {
     const { audiencia, emissor } = this.configuracao();
 
     try {
-      const bilhete = await this.cliente.verifyIdToken({
-        idToken: token,
-        audience: audiencia,
-      });
+      const dados = await this.verificador.verificar(token, audiencia);
 
-      const dados = bilhete.getPayload();
       if (dados?.email !== emissor || dados.email_verified !== true) {
         throw new UnauthorizedException('Emissor da tarefa nao reconhecido.');
       }

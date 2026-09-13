@@ -1,4 +1,5 @@
 import type { CanActivate, ExecutionContext, Type } from '@nestjs/common';
+import { ServiceUnavailableException } from '@nestjs/common';
 import {
   GUARDS_METADATA,
   ROUTE_ARGS_METADATA,
@@ -16,6 +17,14 @@ import { AutenticacaoController } from './autenticacao/senha/redefinicao.control
 import type { RedefinicaoSenhaService } from './autenticacao/senha/redefinicao.service.js';
 import type { UsuarioAutenticado } from './autenticacao/usuario.js';
 import { HealthController } from './health/health.controller.js';
+import { OutboxAdminController } from './outbox/outbox.admin.controller.js';
+import type { OutboxAdminService } from './outbox/outbox.admin.service.js';
+import type {
+  DespachanteOutbox,
+  ResultadoDoDespacho,
+} from './outbox/despachante.service.js';
+import type { VarredorDoOutbox } from './outbox/varredor.service.js';
+import { OutboxController } from './outbox/outbox.controller.js';
 import type { Limite as ConfiguracaoDeLimite } from './limite/contador.js';
 import { CHAVE_SEM_APP_CHECK } from './app-check/decoradores.js';
 import { CHAVE_LIMITE, CHAVE_SEM_LIMITE } from './limite/decoradores.js';
@@ -36,7 +45,7 @@ import { PedidosAdvogadoController } from './pedidos/pedidos.advogado.controller
 import { PedidosClienteController } from './pedidos/pedidos.cliente.controller.js';
 import { PreCadastrosAdminController } from './pre-cadastros/pre-cadastros.admin.controller.js';
 import { RetencaoController } from './retencao/retencao.controller.js';
-import { CHAVE_TAREFA_INTERNA } from './varredura/tarefa.guard.js';
+import { CHAVE_TAREFA_INTERNA } from './tarefas/tarefa.guard.js';
 import { VarreduraController } from './varredura/varredura.controller.js';
 import { PreCadastrosController } from './pre-cadastros/pre-cadastros.controller.js';
 import type { PreCadastrosService } from './pre-cadastros/pre-cadastros.service.js';
@@ -85,6 +94,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['pre-cadastros', PreCadastrosAdminController],
     ['distribuicao de pedidos', PedidosAdminController],
     ['clientes', ClientesAdminController],
+    ['entregas do outbox', OutboxAdminController],
   ])(
     'a superficie administrativa de %s exige admin, na classe',
     (_nome, classe) => {
@@ -105,6 +115,8 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['produtos.ativar', ProdutosController.prototype.ativar],
     ['produtos.desativar', ProdutosController.prototype.desativar],
     ['pre-cadastros.listar', PreCadastrosAdminController.prototype.listar],
+    ['outbox.listar', OutboxAdminController.prototype.listar],
+    ['outbox.reenviar', OutboxAdminController.prototype.reenviar],
   ])('o metodo administrativo %s nao se declara publico', (_nome, metodo) => {
     expect(reflector.get(CHAVE_PUBLICO, metodo)).toBeUndefined();
   });
@@ -130,8 +142,11 @@ describe('anotacoes de seguranca dos controladores', () => {
    * portanto nao consegue autenticar; o pre-cadastro e a porta de entrada de quem
    * ainda nao existe como usuario (arquitetura, secao 6, fronteira 1).
    *
+   * As quatro internas sao publicas num sentido diferente, e o teste logo abaixo
+   * e que cobra a contrapartida: elas exigem credencial de tarefa.
+   *
    * A lista e nominal para que ABRIR uma rota nova exija editar este arquivo.
-   * Uma contagem (`expect(publicas).toHaveLength(3)`) passaria a mesma sensacao
+   * Uma contagem (`expect(publicas).toHaveLength(8)`) passaria a mesma sensacao
    * de rigor e aceitaria a troca de uma rota por outra sem ninguem notar.
    */
   it.each([
@@ -141,12 +156,14 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['vitrine', VitrineController.prototype.listar],
     ['varredura (interna)', VarreduraController.prototype.processar],
     ['retencao (interna)', RetencaoController.prototype.executar],
+    ['entrega do outbox (interna)', OutboxController.prototype.entregar],
+    ['varredura do outbox (interna)', OutboxController.prototype.varrer],
   ])('%s e publico', (_nome, metodo) => {
     expect(reflector.get(CHAVE_PUBLICO, metodo)).toBe(true);
   });
 
   /**
-   * AS DUAS ROTAS INTERNAS DA ETAPA 11 SAO `@Publico()` NUM SENTIDO ESTREITO:
+   * AS ROTAS INTERNAS SAO `@Publico()` NUM SENTIDO ESTREITO:
    * nao ha usuario. Elas nao sao abertas — sao chamadas por Cloud Tasks e Cloud
    * Scheduler, e autenticadas por assinatura OIDC do Google, na mesma familia do
    * webhook do AbacatePay (arquitetura, secao 6, fronteira 2).
@@ -158,6 +175,8 @@ describe('anotacoes de seguranca dos controladores', () => {
   it.each([
     ['varredura', VarreduraController.prototype.processar],
     ['retencao', RetencaoController.prototype.executar],
+    ['entrega do outbox', OutboxController.prototype.entregar],
+    ['varredura do outbox', OutboxController.prototype.varrer],
   ])('a rota interna de %s exige credencial de tarefa', (_nome, metodo) => {
     expect(reflector.get(CHAVE_TAREFA_INTERNA, metodo)).toBe(true);
   });
@@ -173,6 +192,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['pre-cadastro', PreCadastrosController.prototype.registrar],
     ['vitrine', VitrineController.prototype.listar],
     ['cliente.listar', PedidosClienteController.prototype.listar],
+    ['outbox.reenviar (painel)', OutboxAdminController.prototype.reenviar],
   ])('%s NAO e tarefa interna', (_nome, metodo) => {
     expect(reflector.get(CHAVE_TAREFA_INTERNA, metodo)).toBeUndefined();
   });
@@ -260,23 +280,47 @@ describe('limite de requisicoes das rotas publicas', () => {
   });
 
   /**
-   * Pelo mesmo motivo, o health e a unica rota publica isenta de App Check: o
-   * probe nao e um navegador e nao tem como produzir o token. As outras tres
-   * rotas publicas sao verificadas — e este teste as lista para que tirar uma da
-   * verificacao exija editar este arquivo.
+   * O App Check prova que a chamada veio do NOSSO frontend. Quem nao e navegador
+   * nao tem como produzir o token, e por isso ha duas listas aqui, as duas
+   * nominais: quem e isento e quem e verificado.
+   *
+   * O health e isento porque o startup probe do Cloud Run nao e um navegador. As
+   * internas, porque Cloud Tasks e Cloud Scheduler tambem nao sao — e elas nao
+   * ficam desprotegidas por isso: `@TarefaInterna()` exige token OIDC do Google,
+   * o que o teste acima cobra.
+   *
+   * Tirar uma rota de navegador da verificacao exige editar este arquivo, e e
+   * esse o ponto. Uma rota publica de navegador sem App Check e um formulario
+   * aberto a qualquer script.
    */
-  it('o health e a UNICA rota publica isenta de App Check', () => {
-    expect(
-      reflector.get(CHAVE_SEM_APP_CHECK, HealthController.prototype.obter),
-    ).toBe(true);
+  it.each([
+    ['health', HealthController.prototype.obter],
+    ['varredura (interna)', VarreduraController.prototype.processar],
+    ['retencao (interna)', RetencaoController.prototype.executar],
+    ['entrega do outbox (interna)', OutboxController.prototype.entregar],
+    ['varredura do outbox (interna)', OutboxController.prototype.varrer],
+  ])('%s e isento de App Check', (_nome, metodo) => {
+    expect(reflector.get(CHAVE_SEM_APP_CHECK, metodo)).toBe(true);
+  });
 
-    for (const metodo of [
-      PreCadastrosController.prototype.registrar,
-      AutenticacaoController.prototype.redefinirSenha,
-      VitrineController.prototype.listar,
-    ]) {
-      expect(reflector.get(CHAVE_SEM_APP_CHECK, metodo)).toBeUndefined();
-    }
+  it.each([
+    ['pre-cadastro', PreCadastrosController.prototype.registrar],
+    ['redefinicao de senha', AutenticacaoController.prototype.redefinirSenha],
+    ['vitrine', VitrineController.prototype.listar],
+  ])('%s e verificado pelo App Check', (_nome, metodo) => {
+    expect(reflector.get(CHAVE_SEM_APP_CHECK, metodo)).toBeUndefined();
+  });
+
+  /**
+   * As internas tambem ficam fora do limitador: uma rajada de reentregas
+   * legitima nao pode ser barrada por um contador que conta por instancia e veria
+   * todas as tarefas vindo do mesmo endereco.
+   */
+  it.each([
+    ['entrega do outbox', OutboxController.prototype.entregar],
+    ['varredura do outbox', OutboxController.prototype.varrer],
+  ])('a rota interna de %s e isenta do limitador', (_nome, metodo) => {
+    expect(reflector.get(CHAVE_SEM_LIMITE, metodo)).toBe(true);
   });
 });
 
@@ -1074,5 +1118,121 @@ describe('DisponibilidadesController', () => {
     await controlador.publicar({ semana: '2026-09-07', slots: [] }, ADVOGADO);
 
     expect(chamadas).toEqual(['publicar uid-ana 2026-09-07']);
+  });
+});
+
+describe('OutboxController', () => {
+  function montar(situacao: ResultadoDoDespacho): {
+    controlador: OutboxController;
+    chamadas: string[];
+  } {
+    const chamadas: string[] = [];
+
+    const despachante = {
+      despachar: (id: string) => {
+        chamadas.push(`despachar ${id}`);
+        return Promise.resolve(situacao);
+      },
+    } as unknown as DespachanteOutbox;
+
+    const varredor = {
+      varrer: () => {
+        chamadas.push('varrer');
+        return Promise.resolve({ pendentes: 2, falhados: 1 });
+      },
+    } as unknown as VarredorDoOutbox;
+
+    return {
+      controlador: new OutboxController(despachante, varredor),
+      chamadas,
+    };
+  }
+
+  /**
+   * O STATUS HTTP E O QUE CONTROLA A REENTREGA, e nao detalhe de apresentacao: o
+   * Cloud Tasks reentrega o que respondeu erro e conclui o que respondeu 2xx. Um
+   * `falhou` respondendo 200 seria uma fila que nunca tenta de novo, com toda a
+   * aparencia de um sistema resiliente.
+   */
+  it('so `falhou` vira erro, para a fila tentar de novo', async () => {
+    const { controlador } = montar('falhou');
+
+    await expect(controlador.entregar({ id: 'id-1' })).rejects.toThrow(
+      ServiceUnavailableException,
+    );
+  });
+
+  /**
+   * `abandonado` responde 2xx porque o orcamento acabou e insistir nao e o que se
+   * quer; `em-andamento` porque outra tarefa esta com o registro, e insistir em
+   * cima de quem ja trabalha so gastaria a fila; os outros dois porque nao ha
+   * nada a fazer.
+   */
+  it.each([
+    ['entregue'],
+    ['abandonado'],
+    ['em-andamento'],
+    ['ja-entregue'],
+    ['inexistente'],
+  ] as ResultadoDoDespacho[][])('%s conclui a tarefa', async (situacao) => {
+    const { controlador, chamadas } = montar(situacao);
+
+    await expect(controlador.entregar({ id: 'id-1' })).resolves.toEqual({
+      situacao,
+    });
+    expect(chamadas).toEqual(['despachar id-1']);
+  });
+
+  it('delega a varredura e devolve o resumo', async () => {
+    const { controlador, chamadas } = montar('entregue');
+
+    await expect(controlador.varrer()).resolves.toEqual({
+      pendentes: 2,
+      falhados: 1,
+    });
+    expect(chamadas).toEqual(['varrer']);
+  });
+});
+
+describe('OutboxAdminController', () => {
+  function montar(): {
+    controlador: OutboxAdminController;
+    chamadas: string[];
+  } {
+    const chamadas: string[] = [];
+    const servico = {
+      listar: (situacao?: string) => {
+        chamadas.push(`listar ${situacao ?? 'todos'}`);
+        return Promise.resolve([]);
+      },
+      reenviar: (id: string, admin: string) => {
+        chamadas.push(`reenviar ${id} por ${admin}`);
+        return Promise.resolve({ reenviado: true });
+      },
+    } as unknown as OutboxAdminService;
+
+    return { controlador: new OutboxAdminController(servico), chamadas };
+  }
+
+  it('repassa o filtro de situacao', async () => {
+    const { controlador, chamadas } = montar();
+    await controlador.listar('falhou');
+    expect(chamadas).toEqual(['listar falhou']);
+  });
+
+  it('lista tudo quando nao ha filtro', async () => {
+    const { controlador, chamadas } = montar();
+    await controlador.listar();
+    expect(chamadas).toEqual(['listar todos']);
+  });
+
+  /** Quem reenviou vem do TOKEN, nunca do corpo — e o unico registro de autoria
+   * que esta acao tem. */
+  it('reenvia atribuindo a autoria ao administrador autenticado', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.reenviar('id-1', ADMIN);
+
+    expect(chamadas).toEqual(['reenviar id-1 por uid-admin']);
   });
 });

@@ -102,6 +102,37 @@ resource "google_cloud_run_v2_service" "api" {
         value = var.region
       }
 
+      # Etapa 7. Sem `FILA_EVENTOS` a API RECUSA SUBIR em producao (ver
+      # `criar-fila.ts`): com a fila falsa, nenhum e-mail sairia — nem o link de
+      # acesso do advogado, nem a redefinicao de senha — e os registros ficariam
+      # pendentes sem que nada os entregasse.
+      env {
+        name  = "FILA_EVENTOS"
+        value = google_cloud_tasks_queue.eventos.name
+      }
+
+      # ESTE VALOR PRECISA SER MAIOR QUE O PRAZO DE DESPACHO DA TAREFA, que para
+      # alvo HTTP o Cloud Tasks fixa em 10 minutos por padrao (a fila nao tem esse
+      # campo; ele e da tarefa). A desigualdade e o que sustenta o arrendamento:
+      # menor, a fila reentrega a tarefa depois do prazo com o arrendamento ja
+      # vencido, e dois processos montam e enviam a mesma mensagem — exatamente o
+      # que ele existe para impedir. Baixar daqui exige subir o prazo de despacho
+      # junto.
+      env {
+        name  = "OUTBOX_ARRENDAMENTO_SEGUNDOS"
+        value = "900"
+      }
+
+      # Quanto tempo depois de uma tentativa o varredor pode encostar no registro.
+      # E o amortecedor entre os dois mecanismos de retentativa: curto demais, o
+      # varredor cria uma segunda tarefa para algo que a fila ainda ia entregar, e
+      # o arrendamento passa a ser a unica coisa impedindo e-mail duplicado em vez
+      # da segunda linha de defesa.
+      env {
+        name  = "VARREDOR_ATRASO_MINUTOS"
+        value = "15"
+      }
+
       # A identidade que assina o OIDC das tarefas. `TarefaGuard` compara o
       # `email` do token com este valor — sem ele, a rota interna recusa tudo, o
       # que e o comportamento certo para configuracao ausente.

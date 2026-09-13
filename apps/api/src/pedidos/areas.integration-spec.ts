@@ -4,7 +4,8 @@ import { CATALOGO_FICTICIO } from '../../../../scripts/dados-ficticios/catalogo-
 import { normalizarParaBusca } from 'shared';
 import { AnexosService } from '../anexos/anexos.service.js';
 import { ArmazenamentoFalso } from '../armazenamento/armazenamento-falso.js';
-import { FilaFalsa } from '../varredura/fila.js';
+import { FilaFalsa } from '../tarefas/fila.js';
+import type { TarefaDeVarredura } from '../varredura/fila.js';
 import { ClientesService } from '../clientes/clientes.service.js';
 import { firestoreDeTeste, limparEmuladores } from '../emulador.js';
 import { EntregaveisService } from '../entregaveis/entregaveis.service.js';
@@ -49,7 +50,7 @@ beforeEach(async () => {
 
   const acesso = new AcessoPedidoService(banco);
   observacoes = new ObservacoesService(acesso);
-  anexos = new AnexosService(acesso, new ArmazenamentoFalso(), new FilaFalsa());
+  anexos = new AnexosService(acesso, new ArmazenamentoFalso(), new FilaFalsa<TarefaDeVarredura>());
 });
 
 async function comprar(itens: NovoPedido[]): Promise<void> {

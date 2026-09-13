@@ -164,6 +164,14 @@ export const routes: Routes = [
           ),
         title: 'Clientes — LexIntegra',
       },
+      {
+        path: 'entregas',
+        loadComponent: () =>
+          import('./paginas/admin-entregas/admin-entregas').then(
+            (m) => m.AdminEntregas,
+          ),
+        title: 'Entregas — LexIntegra',
+      },
     ],
   },
 

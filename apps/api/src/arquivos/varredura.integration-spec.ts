@@ -16,7 +16,8 @@ import { PedidosService } from '../pedidos/pedidos.service.js';
 import { ClientesService } from '../clientes/clientes.service.js';
 import { ProdutosService } from '../produtos/produtos.service.js';
 import { TermosService } from '../termos/termos.service.js';
-import { FilaFalsa } from '../varredura/fila.js';
+import { FilaFalsa } from '../tarefas/fila.js';
+import type { TarefaDeVarredura } from '../varredura/fila.js';
 import { ScannerFalso } from '../varredura/scanner.js';
 import { VarreduraService } from '../varredura/varredura.service.js';
 import { EmissorDeLinkDeLeitura } from './leitura.js';
@@ -35,7 +36,7 @@ const PARECER = CATALOGO_FICTICIO[1];
 let banco: Firestore;
 let armazenamento: ArmazenamentoFalso;
 let scanner: ScannerFalso;
-let fila: FilaFalsa;
+let fila: FilaFalsa<TarefaDeVarredura>;
 let anexos: AnexosService;
 let upload: UploadDeEntregavelService;
 let varredura: VarreduraService;
@@ -51,7 +52,7 @@ beforeEach(async () => {
 
   armazenamento = new ArmazenamentoFalso();
   scanner = new ScannerFalso();
-  fila = new FilaFalsa();
+  fila = new FilaFalsa<TarefaDeVarredura>();
 
   const acesso = new AcessoPedidoService(banco);
   termos = new TermosService(banco);
