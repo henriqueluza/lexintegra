@@ -106,7 +106,20 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 - **Cinco índices compostos** novos em `infra/terraform/firestore.tf`.
 - **Cobertura:** `apps/api` 94/84/95/96, `apps/web` 96/90/94/98, `packages/shared` 99/100/100/99.
 
-**Próximo trabalho recomendado:** revisar e abrir o PR da Etapa 9, e seguir para a Etapa 11 (upload e varredura), que parte da branch da Etapa 9 porque encaixa o upload real no mesmo ponto de UI. As Etapas 7, 8 e 10 seguem travadas por confirmação externa. O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde. O catálogo real da B&C continua pendente do lado da CONTRATANTE; os clientes e pedidos fictícios da Etapa 9 têm pendência própria, de revalidação contra o checkout da Etapa 8 (ver `scripts/dados-ficticios/LEIA-ME.md`).
+**Etapa 11 — upload e varredura de malware (branch `feat/upload-varredura`, sai da branch da Etapa 9):**
+
+- **ADR-17 e ADR-18** novos em `docs/arquitetura.md`: armazenamento atrás de uma porta, e a topologia Cloud Tasks → API → scanner.
+- **Os dois fluxos de upload são separados de verdade** (arquitetura 6.2): módulos, controladores, prefixos de bucket, políticas e retenções distintas. Compartilham só a porta de armazenamento e o portão de leitura.
+- **A regra inviolável 6 virou LINT.** A emissão de link vive em `arquivos/leitura.ts` e só `arquivos/portao.ts` pode importá-la — regra de dependency-cruiser. Teste prova que o portão confere; o lint prova que ninguém contorna.
+- **Duas conferências:** ClamAV ("tem malware?") e magic bytes ("isto é mesmo um PDF?"). Nenhuma cobre a outra — um HTML com extensão `.pdf` passa limpo pelo antivírus.
+- **`indisponivel` não é `infectado`.** Scanner fora do ar faz a tarefa falhar para reentrega; tratá-lo como reprovação apagaria arquivo legítimo.
+- **O aceite de termos é por versão do arquivo**, não um "aceitei" global da conta.
+- **A retenção é em duas passagens** (avisa no 23º dia, exclui no 30º), com o aviso nascendo no outbox na mesma transação.
+- **Assinar URL sem chave JSON exige `roles/iam.serviceAccountTokenCreator` da SA sobre si mesma.** Sem isso falha em produção e **funciona** na máquina do desenvolvedor — a armadilha mais confusa do módulo, documentada no ADR-17.
+- **O scanner não usa `packages/shared`**, de propósito: é o que permite construí-lo e implantá-lo sozinho.
+- **Cobertura:** `apps/api` 93/82/92/94, `apps/web` 96/90/92/97, `shared` 99/100/100/99, `scanner` 100/88/100/100.
+
+**Próximo trabalho recomendado:** revisar e mergear os PRs das Etapas 9 e 11, nessa ordem — o da 11 aponta para a branch da 9. Depois, as Etapas 7, 8 e 10, conforme as confirmações externas destravarem. O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde.
 
 ## Stack
 
@@ -146,7 +159,7 @@ apps/api/          NestJS 12 (ESM-only), prefixo global /api
   src/entregaveis/  máquina de estados do ADR-11 e a trilha de transições
   src/outbox/       escrita na transação + despachante, separados
   src/email/        contrato EmailTransport, adaptador Resend, transporte falso
-apps/scanner/      ClamAV em contêiner, sem lógica de domínio (Etapa 11, ainda não existe)
+apps/scanner/      ClamAV em contêiner, sem lógica de domínio; não usa packages/shared
 packages/shared/   tipos e schemas compartilhados (importe por subcaminho: `shared/perfil`)
 packages/regras-firestore/  suíte das regras no emulador — ver o README de lá
 infra/terraform/   ver o README de lá antes de mexer

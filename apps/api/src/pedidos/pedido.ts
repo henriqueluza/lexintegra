@@ -61,6 +61,27 @@ export interface DocumentoPedido {
 
   atribuidoEm?: Timestamp | FieldValue;
   atribuidoPor?: string;
+
+  /**
+   * Quando TODOS os entregaveis do pedido chegaram a `entregue` — o gatilho da
+   * retencao de 30 dias (arquitetura 7.3 e secao 13, decidido na reuniao).
+   *
+   * `null` enquanto o pedido nao fechou. E escrito pelo fluxo de confirmacao, nao
+   * calculado pelo job: varrer todos os pedidos abertos a cada passagem para
+   * descobrir quais fecharam seria trabalho proporcional ao total, e nao ao que
+   * mudou.
+   */
+  retencaoEm?: Timestamp | FieldValue | null;
+  /**
+   * Redundante com `retencaoEm != null`, e existe pela mesma razao de
+   * `distribuido`: no Firestore, desigualdade contra `null` exclui o documento em
+   * que o campo esta AUSENTE, e todo pedido anterior a este campo cairia fora da
+   * varredura do job sem erro nenhum. O sintoma seria arquivo retido para sempre.
+   */
+  retencaoPendente?: boolean;
+  avisoDeExclusaoEnviado?: boolean;
+  avisadoEm?: Timestamp | FieldValue;
+  arquivosExcluidosEm?: Timestamp | FieldValue;
 }
 
 /** ISO 8601, ou `null` enquanto o carimbo do servidor nao materializou. */

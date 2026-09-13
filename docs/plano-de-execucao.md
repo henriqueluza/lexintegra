@@ -556,6 +556,32 @@ Branch `feat/areas-cliente-advogado`. O que foi construído, e as decisões que 
 
 **Critério de aceite.** Nenhum caminho de código serve arquivo com status diferente de limpo — verificado por teste, incluindo tentativa direta pela URL do bucket. Upload que exceda 3 arquivos, ultrapasse 5 MB, ou envie tipo diferente de jpg/pdf é rejeitado no servidor, não só na interface.
 
+### Registro de execução — Etapa 11
+
+Branch `feat/upload-varredura`, saída da branch da Etapa 9 porque o upload real encaixa no mesmo ponto de interface.
+
+**Dois ADRs novos.** ADR-17 (armazenamento atrás de uma porta) e ADR-18 (topologia da varredura: Cloud Tasks → API → scanner). Ver `docs/arquitetura.md`.
+
+**Os dois fluxos são separados de verdade** (arquitetura 6.2), e não um módulo com `if (perfil)`: módulos distintos (`anexos/` e `entregaveis/upload.service.ts`), controladores com perfis distintos, prefixos distintos no bucket (`anexos/{pedidoId}/` e `entregaveis/{pedidoId}/{id}/`), políticas distintas e retenções distintas. O que compartilham, por regra, é a porta de armazenamento e o **portão de leitura** — que é a ponta oposta, e a regra inviolável 6 manda a checagem de `limpo` viver num lugar só.
+
+**A regra inviolável 6 virou lint.** Um teste prova que o portão confere o estado; nenhum teste prova que *alguém mais* não emitiu link por fora. A emissão foi isolada em `arquivos/leitura.ts` e uma regra de `dependency-cruiser` impede que qualquer módulo além do portão a importe — verificado nos dois sentidos: passa limpo, e acusa quando um arquivo tenta contornar.
+
+**Duas conferências, e nenhuma cobre a outra.** O ClamAV responde "tem malware conhecido?"; os magic bytes respondem "isto é mesmo um PDF?". Um HTML com extensão `.pdf` passa limpo pelo antivírus.
+
+**O aceite de termos é por versão do arquivo.** Cada upload do advogado produz uma versão nova; reaproveitar o aceite anterior faria a evidência de conformidade apontar para um arquivo que o cliente nunca viu.
+
+**A retenção é em duas passagens** — avisa no 23º dia, exclui no 30º —, e o aviso nasce no outbox na mesma transação que marca o pedido como avisado. O gatilho é o estado do pedido (todos os entregáveis em `entregue`), não a idade do objeto.
+
+**Um defeito de classe conhecida, encontrado de novo.** A varredura do job usava `where('retencaoEm','!=',null)`, que no Firestore exclui documentos onde o campo está **ausente** — a mesma armadilha do `distribuido` na Etapa 9. Trocado por igualdade num booleano sempre escrito. Quem pegou foi o dublê do Firestore, que recusa operador não implementado em vez de fingir suportá-lo.
+
+**Um erro de fiação que só o `app.integration-spec.ts` pegaria.** `PortaoDeArquivos` precisa de `AcessoPedidoService`, provido por `PedidosModule` — que já importa `ArquivosModule`. Exportá-lo daria ciclo; provê-lo nos dois daria duas instâncias do mesmo serviço de autorização. Resolvido com um módulo-folha (`pedidos/acesso.module.ts`). Os testes de unidade, que constroem os serviços à mão, nunca veriam isso.
+
+**Duas correções no dublê do Firestore**, ambas de defeitos silenciosos: `size` faltava no resultado de consulta (`undefined > 0` é falso, e `marcarSeFechou` devolvia `false` para um pedido inteiramente entregue), e leitura por consulta não entrava na trilha de ordem.
+
+**EICAR não foi executado.** O plano reserva esse teste para validação humana. Os caminhos de veredito são exercitados com um scanner falso configurável; nenhum byte de EICAR existe no repositório.
+
+**Cobertura:** `apps/api` 93/82/92/94, `apps/web` 96/90/92/97, `packages/shared` 99/100/100/99, `apps/scanner` 100/88/100/100.
+
 ### Só você — Etapa 11
 
 **Impossível delegar**

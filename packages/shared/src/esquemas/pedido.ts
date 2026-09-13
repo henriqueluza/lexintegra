@@ -31,6 +31,19 @@ export type EntregavelResumo = {
   readonly estado: EstadoEntregavel;
   readonly revisoesUsadas: number;
   readonly temArquivo: boolean;
+  /**
+   * Se o arquivo ja passou pela varredura (Etapa 11). `temArquivo` diz que existe
+   * versao enviada; ISTO diz se ela pode ser baixada.
+   *
+   * SAO DOIS CAMPOS PORQUE SAO DUAS PERGUNTAS. O ADR-11 usa `temArquivo` para
+   * habilitar a confirmacao do cliente — o cliente confirma o entregavel, e nao o
+   * resultado do antivirus. `arquivoServivel` decide apenas se o botao de baixar
+   * aparece, e a decisao de verdade continua no portao da API (regra inviolavel
+   * 6): a tela nao servir nao e o mesmo que o servidor nao emitir.
+   */
+  readonly arquivoServivel: boolean;
+  /** Versao do arquivo atual, `null` sem envio. O aceite de termos e POR VERSAO. */
+  readonly versaoDoArquivo: number | null;
 };
 
 /**

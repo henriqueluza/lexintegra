@@ -44,6 +44,12 @@ importers:
 
   apps/api:
     dependencies:
+      '@google-cloud/storage':
+        specifier: ^7.22.0
+        version: 7.22.0(supports-color@10.2.2)
+      '@google-cloud/tasks':
+        specifier: ^7.0.0
+        version: 7.0.0(supports-color@10.2.2)
       '@nestjs/common':
         specifier: ^12.0.0
         version: 12.0.1(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2)
@@ -56,6 +62,9 @@ importers:
       firebase-admin:
         specifier: ^14.3.0
         version: 14.3.0(@firebase/app-compat@0.5.17)(@firebase/app@0.16.1)(supports-color@10.2.2)
+      google-auth-library:
+        specifier: ^10.5.0
+        version: 10.9.1(supports-color@10.2.2)
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -96,6 +105,28 @@ importers:
       supertest:
         specifier: ^7.1.1
         version: 7.2.2(supports-color@10.2.2)
+      ts-jest:
+        specifier: ^29.4.6
+        version: 29.4.12(@babel/core@7.29.7(supports-color@10.2.2))(@jest/transform@30.5.1(supports-color@10.2.2))(@jest/types@30.5.1)(babel-jest@30.5.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(esbuild@0.28.2)(jest-util@30.5.1)(jest@30.5.1(@types/node@22.20.1)(supports-color@10.2.2)(ts-node@10.9.2(@types/node@22.20.1)(typescript@6.0.3)))(typescript@6.0.3)
+      typescript:
+        specifier: ~6.0.2
+        version: 6.0.3
+
+  apps/scanner:
+    dependencies:
+      '@google-cloud/storage':
+        specifier: ^7.22.0
+        version: 7.22.0(supports-color@10.2.2)
+    devDependencies:
+      '@types/jest':
+        specifier: ^30.0.0
+        version: 30.0.0
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      jest:
+        specifier: ^30.5.1
+        version: 30.5.1(@types/node@22.20.1)(supports-color@10.2.2)(ts-node@10.9.2(@types/node@22.20.1)(typescript@6.0.3))
       ts-jest:
         specifier: ^29.4.6
         version: 29.4.12(@babel/core@7.29.7(supports-color@10.2.2))(@jest/transform@30.5.1(supports-color@10.2.2))(@jest/types@30.5.1)(babel-jest@30.5.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(esbuild@0.28.2)(jest-util@30.5.1)(jest@30.5.1(@types/node@22.20.1)(supports-color@10.2.2)(ts-node@10.9.2(@types/node@22.20.1)(typescript@6.0.3)))(typescript@6.0.3)
@@ -1340,6 +1371,10 @@ packages:
   '@google-cloud/storage@7.22.0':
     resolution: {integrity: sha512-W98gTQOAntEeEQ7/pZxSQXxfUO5CiQcXJRsxBpUa6UU25n8YN/VtogPBi0H+MAmUrn/6bY/sBhFansoWEsr2/g==}
     engines: {node: '>=18'}
+
+  '@google-cloud/tasks@7.0.0':
+    resolution: {integrity: sha512-BJe5J4NyBFP/98/09LltESzd6YzRG+xZRyqhRaDVuEOIIzJk8zqTt9prT497CqLGGPdh6vd6R4tq5/LIGdXx/w==}
+    engines: {node: '>=22'}
 
   '@googleapis/sqladmin@38.0.0':
     resolution: {integrity: sha512-wbhu910a+ItZenYIUnLeUIieksvJUsO/gsbw9jNgeur/tv9kL/StLi0+8mKHhxWRuX13swuRsXi8xifJJ2OGxw==}
@@ -4525,6 +4560,10 @@ packages:
     resolution: {integrity: sha512-M4vpZcXQIC1gqIVGQ7eaU3jXQA6zecStyTXu514TYfThlgSurYJOxHZo9fzU6hAgwPWvuEynAVHWyaIk80VeEA==}
     engines: {node: '>=18'}
 
+  google-gax@6.2.0:
+    resolution: {integrity: sha512-Ii5SHZBTTD/Sya/RilYA4QwGY+odowapOns67HPQ9uvU0be6CF+owZIyPhuVegpMOqIt6EgeGAIbzw5N31btng==}
+    engines: {node: '>=22'}
+
   google-logging-utils@0.0.2:
     resolution: {integrity: sha512-NEgUnEcBiP5HrPzufUkBzJOD/Sxsco3rLNo1F1TNf7ieU8ryUzBhqba8r756CjLX7rn3fHl6iLEwPYuqpoKgQQ==}
     engines: {node: '>=14'}
@@ -6110,6 +6149,10 @@ packages:
     resolution: {integrity: sha512-E1sbAYg3aEbXrq0n1ojJkRHQJGE1kaE/O6GLA94y8rnJBfgvOPTOd1b9hOceQK1FFZI9qMh1vBERCyO2ifubcw==}
     engines: {node: '>=18'}
 
+  proto3-json-serializer@4.0.2:
+    resolution: {integrity: sha512-VUQlb/J2WjOG8BKhdLwJUz+MKxSMtBGYh+TaNmRtiYVhlIzXjzeAGIx7gtc3lXlA2iURzfF2+cXaQvC2ofwzpg==}
+    engines: {node: '>=22'}
+
   protobufjs@7.6.6:
     resolution: {integrity: sha512-dYDWdjSl5RNb7SgPxGQcRU+GtvP7s2fpkrY0r432PcOIaZ0/rBcxEZnQN67iJhFuQiVw754JDoPruPCNdGsbjg==}
     engines: {node: '>=12.0.0'}
@@ -6303,6 +6346,10 @@ packages:
   retry-request@8.0.4:
     resolution: {integrity: sha512-pI6/7eabUYkZxamkOq0g0uMxKLLGnjzhefY+vL8bVXag5rto4OU2YBTPytWLuHH7aEKD6fn7kJycQfid0Mwnkw==}
     engines: {node: '>=18'}
+
+  retry-request@9.0.1:
+    resolution: {integrity: sha512-4kGHEBl0ME6gR+8QB1sPMyg58jUxLUcCZNeqLDrfqzk0eWQN8XJFmeu7fmZCjlZCRW0S2u64Ik1HkO/0sWgCYQ==}
+    engines: {node: '>=22'}
 
   retry@0.13.1:
     resolution: {integrity: sha512-XQBQ3I8W1Cge0Seh+6gjj03LbmRFWuoszgK9ooCpwYIrhhoO80pfq4cUkU5DkknwfOfFteRwlZ56PYOGYyFWdg==}
@@ -6694,6 +6741,10 @@ packages:
   teeny-request@10.1.4:
     resolution: {integrity: sha512-R1Cg4Vu0UULeDfHL/kjABLaTW++9yD/B6n2g48y5dJ04hsEaxcfmAqbNDzNsbqAYJyIpZafjklLG9YxRu9uzOg==}
     engines: {node: '>=18'}
+
+  teeny-request@11.0.1:
+    resolution: {integrity: sha512-bNr5j2YjSdajgCVsp+8JVjRf1uHIbpNISLeKp/7V1NnVMX3Gh6H/kECNGlm2Q3I68ACODQ0iv6aZ3Rvm8WgLGA==}
+    engines: {node: '>=22'}
 
   teeny-request@9.0.0:
     resolution: {integrity: sha512-resvxdc6Mgb7YEThw6G6bExlXKkv6+YbuzGg9xuXxSgxJF7Ozs+o8Y9+2R3sArdWdW8nOokoQb1yrpFB0pQK2g==}
@@ -8531,7 +8582,6 @@ snapshots:
     dependencies:
       arrify: 2.0.1
       extend: 3.0.2
-    optional: true
 
   '@google-cloud/paginator@6.1.0':
     dependencies:
@@ -8539,13 +8589,11 @@ snapshots:
 
   '@google-cloud/precise-date@5.2.0': {}
 
-  '@google-cloud/projectify@4.0.0':
-    optional: true
+  '@google-cloud/projectify@4.0.0': {}
 
   '@google-cloud/projectify@5.2.0': {}
 
-  '@google-cloud/promisify@4.0.0':
-    optional: true
+  '@google-cloud/promisify@4.0.0': {}
 
   '@google-cloud/promisify@5.1.0': {}
 
@@ -8596,7 +8644,12 @@ snapshots:
     transitivePeerDependencies:
       - encoding
       - supports-color
-    optional: true
+
+  '@google-cloud/tasks@7.0.0(supports-color@10.2.2)':
+    dependencies:
+      google-gax: 6.2.0(supports-color@10.2.2)
+    transitivePeerDependencies:
+      - supports-color
 
   '@googleapis/sqladmin@38.0.0(supports-color@10.2.2)':
     dependencies:
@@ -9448,8 +9501,7 @@ snapshots:
 
   '@noble/hashes@1.8.0': {}
 
-  '@nodable/entities@3.0.0':
-    optional: true
+  '@nodable/entities@3.0.0': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
@@ -9886,8 +9938,7 @@ snapshots:
 
   '@tokenizer/token@0.3.0': {}
 
-  '@tootallnate/once@2.0.1':
-    optional: true
+  '@tootallnate/once@2.0.1': {}
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
 
@@ -9925,8 +9976,7 @@ snapshots:
     dependencies:
       '@babel/types': 7.29.8
 
-  '@types/caseless@0.12.5':
-    optional: true
+  '@types/caseless@0.12.5': {}
 
   '@types/cookiejar@2.1.5': {}
 
@@ -9980,7 +10030,6 @@ snapshots:
       '@types/node': 22.20.1
       '@types/tough-cookie': 4.0.5
       form-data: 2.5.6
-    optional: true
 
   '@types/stack-utils@2.0.3': {}
 
@@ -10217,7 +10266,6 @@ snapshots:
       debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   agent-base@7.1.4: {}
 
@@ -10298,8 +10346,7 @@ snapshots:
       normalize-path: 3.0.0
       picomatch: 2.3.2
 
-  anynum@1.0.1:
-    optional: true
+  anynum@1.0.1: {}
 
   append-field@1.0.0: {}
 
@@ -10358,7 +10405,6 @@ snapshots:
   async-retry@1.3.3:
     dependencies:
       retry: 0.13.1
-    optional: true
 
   async@3.2.6: {}
 
@@ -11472,7 +11518,6 @@ snapshots:
     dependencies:
       path-expression-matcher: 1.6.2
       xml-naming: 0.3.0
-    optional: true
 
   fast-xml-parser@5.11.1:
     dependencies:
@@ -11482,7 +11527,6 @@ snapshots:
       path-expression-matcher: 1.6.2
       strnum: 2.4.2
       xml-naming: 0.3.0
-    optional: true
 
   fastest-levenshtein@1.0.16: {}
 
@@ -11753,7 +11797,6 @@ snapshots:
       hasown: 2.0.4
       mime-types: 2.1.35
       safe-buffer: 5.2.1
-    optional: true
 
   form-data@4.0.6:
     dependencies:
@@ -12032,6 +12075,22 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  google-gax@6.2.0(supports-color@10.2.2):
+    dependencies:
+      '@grpc/grpc-js': 1.14.4
+      '@grpc/proto-loader': 0.8.1
+      '@opentelemetry/api': 1.9.1
+      duplexify: 4.1.3
+      google-auth-library: 11.0.2(supports-color@10.2.2)
+      google-logging-utils: 2.0.1
+      node-fetch: 3.3.2
+      object-hash: 3.0.0
+      proto3-json-serializer: 4.0.2
+      protobufjs: 7.6.6
+      retry-request: 9.0.1(supports-color@10.2.2)
+    transitivePeerDependencies:
+      - supports-color
+
   google-logging-utils@0.0.2: {}
 
   google-logging-utils@1.1.3: {}
@@ -12121,8 +12180,7 @@ snapshots:
     dependencies:
       whatwg-encoding: 3.1.1
 
-  html-entities@2.6.0:
-    optional: true
+  html-entities@2.6.0: {}
 
   html-escaper@2.0.2: {}
 
@@ -12154,7 +12212,6 @@ snapshots:
       debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   http-proxy-agent@7.0.2(supports-color@10.2.2):
     dependencies:
@@ -12169,7 +12226,6 @@ snapshots:
       debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   https-proxy-agent@7.0.6(supports-color@10.2.2):
     dependencies:
@@ -12341,8 +12397,7 @@ snapshots:
 
   is-unicode-supported@2.1.0: {}
 
-  is-unsafe@2.0.2:
-    optional: true
+  is-unsafe@2.0.2: {}
 
   is-url@1.2.4: {}
 
@@ -13211,8 +13266,7 @@ snapshots:
 
   mime@2.6.0: {}
 
-  mime@3.0.0:
-    optional: true
+  mime@3.0.0: {}
 
   mimic-fn@2.1.0: {}
 
@@ -13630,8 +13684,7 @@ snapshots:
 
   path-exists@4.0.0: {}
 
-  path-expression-matcher@1.6.2:
-    optional: true
+  path-expression-matcher@1.6.2: {}
 
   path-key@3.1.1: {}
 
@@ -13793,6 +13846,10 @@ snapshots:
   proto-list@1.2.4: {}
 
   proto3-json-serializer@3.0.4:
+    dependencies:
+      protobufjs: 7.6.6
+
+  proto3-json-serializer@4.0.2:
     dependencies:
       protobufjs: 7.6.6
 
@@ -14016,12 +14073,18 @@ snapshots:
     transitivePeerDependencies:
       - encoding
       - supports-color
-    optional: true
 
   retry-request@8.0.4(supports-color@10.2.2):
     dependencies:
       extend: 3.0.2
       teeny-request: 10.1.4(supports-color@10.2.2)
+    transitivePeerDependencies:
+      - supports-color
+
+  retry-request@9.0.1(supports-color@10.2.2):
+    dependencies:
+      extend: 3.0.2
+      teeny-request: 11.0.1(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -14384,7 +14447,6 @@ snapshots:
   strnum@2.4.2:
     dependencies:
       anynum: 1.0.1
-    optional: true
 
   strtok3@10.3.5:
     dependencies:
@@ -14571,6 +14633,15 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  teeny-request@11.0.1(supports-color@10.2.2):
+    dependencies:
+      http-proxy-agent: 7.0.2(supports-color@10.2.2)
+      https-proxy-agent: 7.0.6(supports-color@10.2.2)
+      node-fetch: 3.3.2
+      stream-events: 1.0.5
+    transitivePeerDependencies:
+      - supports-color
+
   teeny-request@9.0.0(supports-color@10.2.2):
     dependencies:
       http-proxy-agent: 5.0.0(supports-color@10.2.2)
@@ -14581,7 +14652,6 @@ snapshots:
     transitivePeerDependencies:
       - encoding
       - supports-color
-    optional: true
 
   teex@1.0.1:
     dependencies:
@@ -15062,8 +15132,7 @@ snapshots:
 
   xml-name-validator@5.0.0: {}
 
-  xml-naming@0.3.0:
-    optional: true
+  xml-naming@0.3.0: {}
 
   xmlchars@2.2.0: {}
 

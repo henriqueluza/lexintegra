@@ -1,21 +1,45 @@
 import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
+import { z } from 'zod';
 import {
-  esquemaEnvioDeAnexos,
   esquemaNovaObservacao,
+  esquemaPedidoDeUpload,
+  POLITICA_UPLOAD,
   type AnexoResumo,
   type CartaoPedido,
   type EntregavelResumo,
-  type EnvioDeAnexos,
   type NovaObservacao,
   type ObservacaoResumo,
 } from 'shared';
 import { AnexosService } from '../anexos/anexos.service.js';
+import { PortaoDeArquivos } from '../arquivos/portao.js';
+import { TermosService } from '../termos/termos.service.js';
 import { Perfis, UsuarioAtual } from '../autenticacao/decoradores.js';
 import type { UsuarioAutenticado } from '../autenticacao/usuario.js';
 import { EntregaveisService } from '../entregaveis/entregaveis.service.js';
 import { ObservacoesService } from '../observacoes/observacoes.service.js';
 import { ZodPipe } from '../validacao/zod.pipe.js';
 import { ConsultaPedidosService } from './consulta.service.js';
+
+/**
+ * O envio inteiro, validado contra a politica do fluxo do CLIENTE. O teto de
+ * tres esta em `POLITICA_UPLOAD`, e o servico o confere de novo — aqui e para a
+ * mensagem sair no formato do `ZodPipe`, campo a campo.
+ */
+const esquemaEnvioDeAnexos = z.object({
+  arquivos: z
+    .array(esquemaPedidoDeUpload)
+    .min(1, 'Escolha ao menos um arquivo.')
+    .max(
+      POLITICA_UPLOAD['anexo-cliente'].maximoPorEnvio,
+      'Sao no maximo 3 arquivos por envio.',
+    ),
+});
+
+type EnvioDeAnexos = z.infer<typeof esquemaEnvioDeAnexos>;
+
+const esquemaAceite = z.object({
+  versaoArquivo: z.int().positive('Informe a versao do arquivo aceito.'),
+});
 
 /**
  * A area do cliente (itens 2.3.2 a 2.3.4).
@@ -41,6 +65,8 @@ export class PedidosClienteController {
     private readonly entregaveis: EntregaveisService,
     private readonly observacoes: ObservacoesService,
     private readonly anexos: AnexosService,
+    private readonly portao: PortaoDeArquivos,
+    private readonly termos: TermosService,
   ) {}
 
   /** Um cartao por pedido (item 2.3.2), cada um com seus proprios entregaveis. */
@@ -126,24 +152,90 @@ export class PedidosClienteController {
   }
 
   /**
-   * PLACEHOLDER DA ETAPA 9 — grava metadado, nao arquivo.
+   * PASSO 1 do upload: pede as URLs assinadas de escrita.
    *
-   * Nenhum byte chega aqui: o corpo traz nome, tipo e tamanho declarados. A URL
-   * assinada de escrita, o bucket de quarentena e a varredura sao da Etapa 11 e
-   * encaixam neste mesmo endpoint — ver o cabecalho de `AnexosService`.
-   *
-   * A VALIDACAO DE TIPO, TAMANHO E QUANTIDADE JA VALE, porque e regra de negocio
-   * (jpg/pdf, 5 MB, 3 por envio, confirmados na reuniao) e nao detalhe de
-   * transporte. Sem ela, a tela desta etapa aceitaria um arquivo de 40 MB e a
-   * recusa so apareceria na etapa seguinte.
+   * O ARQUIVO NAO PASSA POR AQUI. O corpo traz nome, tipo e tamanho; a resposta
+   * traz URLs para o navegador escrever DIRETO no bucket de quarentena
+   * (arquitetura 7.3). A API valida quem envia, para qual pedido, com qual tipo e
+   * ate que tamanho — e esses limites entram na ASSINATURA da URL, entao o
+   * proprio Cloud Storage recusa um PUT que os viole.
    */
   @Post(':pedidoId/anexos')
   @HttpCode(201)
-  anexar(
+  pedirEnvioDeAnexos(
     @Param('pedidoId') pedidoId: string,
     @Body(new ZodPipe(esquemaEnvioDeAnexos)) envio: EnvioDeAnexos,
     @UsuarioAtual() cliente: UsuarioAutenticado,
-  ): Promise<AnexoResumo[]> {
-    return this.anexos.registrar(pedidoId, cliente, envio);
+  ): Promise<{ id: string; url: string; validoPorSegundos: number }[]> {
+    return this.anexos.pedirEnvio(pedidoId, cliente, envio.arquivos);
+  }
+
+  /**
+   * PASSO 2: o navegador avisa que subiu, e a varredura e enfileirada.
+   *
+   * Ate aqui o arquivo esta em `pendente_upload` e o portao nao emite link para
+   * ele. Depois daqui, `pendente_scan` — que tambem nao serve. So o veredito o
+   * leva a `limpo` (regra inviolavel 6).
+   */
+  @Post(':pedidoId/anexos/:anexoId/confirmacao')
+  @HttpCode(202)
+  confirmarAnexo(
+    @Param('pedidoId') pedidoId: string,
+    @Param('anexoId') anexoId: string,
+    @UsuarioAtual() cliente: UsuarioAutenticado,
+  ): Promise<void> {
+    return this.anexos.confirmarEnvio(pedidoId, anexoId, cliente);
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Download: sempre pelo PORTAO                                            */
+  /* ---------------------------------------------------------------------- */
+
+  /**
+   * O aceite dos termos, antes do download (arquitetura 7.3).
+   *
+   * E registrado por (usuario, pedido, entregavel, VERSAO DO ARQUIVO) — evidencia
+   * de conformidade, nao so UX. Cada versao nova do entregavel exige aceite
+   * proprio: reaproveitar o anterior faria a evidencia apontar para um arquivo
+   * que o cliente nunca viu.
+   *
+   * ⚠️ O TEXTO DO TERMO ainda nao foi aprovado pela CONTRATANTE — ver
+   * `termos.textos.ts`.
+   */
+  @Post(':pedidoId/entregaveis/:entregavelId/aceite')
+  @HttpCode(201)
+  async aceitarTermos(
+    @Param('pedidoId') pedidoId: string,
+    @Param('entregavelId') entregavelId: string,
+    @Body(new ZodPipe(esquemaAceite)) corpo: { versaoArquivo: number },
+    @UsuarioAtual() cliente: UsuarioAutenticado,
+  ): Promise<{ aceito: true }> {
+    await this.termos.registrar({
+      usuarioUid: cliente.uid,
+      pedidoId,
+      entregavelId,
+      versaoArquivo: corpo.versaoArquivo,
+    });
+    return { aceito: true };
+  }
+
+  /** Link do entregavel. Passa pelo portao: estado `limpo` E aceite registrado. */
+  @Get(':pedidoId/entregaveis/:entregavelId/download')
+  baixarEntregavel(
+    @Param('pedidoId') pedidoId: string,
+    @Param('entregavelId') entregavelId: string,
+    @UsuarioAtual() cliente: UsuarioAutenticado,
+  ): Promise<{ url: string; validoPorSegundos: number }> {
+    return this.portao.linkDoEntregavel({ pedidoId, entregavelId }, cliente);
+  }
+
+  /** Link do proprio anexo. Sem gate de termos — ver a nota em `portao.ts`. */
+  @Get(':pedidoId/anexos/:anexoId/download')
+  baixarAnexo(
+    @Param('pedidoId') pedidoId: string,
+    @Param('anexoId') anexoId: string,
+    @UsuarioAtual() cliente: UsuarioAutenticado,
+  ): Promise<{ url: string; validoPorSegundos: number }> {
+    return this.portao.linkDoAnexo({ pedidoId, anexoId }, cliente);
   }
 }

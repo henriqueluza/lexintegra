@@ -79,6 +79,13 @@ const CAMINHOS = [
   ['advogados', 'advogado-1'],
   ['disponibilidades', 'advogado-1_2026-09-04T14:00:00Z'],
   ['outbox', 'definir-senha_uid-1'],
+  /*
+   * A colecao da Etapa 11. Guarda a evidencia de que um titular aceitou os termos
+   * antes de baixar um entregavel — quem, qual arquivo, qual versao do texto,
+   * quando. E prova de conformidade: alteravel pelo navegador, ela deixaria de
+   * provar qualquer coisa.
+   */
+  ['aceites-de-termos', 'uid-1_pedido-1_001_v1'],
   ['colecao-que-nao-existe', 'documento-1'],
 ] as const;
 

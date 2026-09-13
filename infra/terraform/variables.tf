@@ -98,3 +98,10 @@ variable "proxies_confiaveis" {
   type        = number
   default     = 2
 }
+
+# Etapa 11. Publicada pelo pipeline junto da imagem da API — as duas saem do
+# mesmo commit, entao um deploy nunca deixa API nova falando com scanner velho.
+variable "scanner_image" {
+  description = "Imagem do contentor do scanner de malware (ClamAV)."
+  type        = string
+}

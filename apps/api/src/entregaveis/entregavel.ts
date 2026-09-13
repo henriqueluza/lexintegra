@@ -1,6 +1,8 @@
 import type { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { podeSerServido } from 'shared';
 import type {
   EntregavelResumo,
+  EstadoArquivo,
   EstadoEntregavel,
   EventoEntregavel,
 } from 'shared';
@@ -18,16 +20,33 @@ export const SUBCOLECAO_ENTREGAVEIS = 'entregaveis';
 export const SUBCOLECAO_TRANSICOES = 'transicoes';
 
 /**
- * O que se sabe do arquivo enviado pelo advogado nesta etapa. O caminho no bucket
- * de quarentena, o hash e o resultado do antivirus sao da Etapa 11 — aqui esta so
- * o fato de dominio que o ADR-11 precisa: existe versao entregue esperando o
- * cliente decidir.
+ * O arquivo do entregavel, enviado pelo advogado.
+ *
+ * A Etapa 9 gravava so o fato de dominio que o ADR-11 precisa — existe versao
+ * esperando o cliente decidir. A Etapa 11 acrescentou o que faz o arquivo
+ * existir de verdade: onde ele esta e em que estado de varredura.
+ *
+ * `estado` E O QUE O PORTAO CONSULTA. Enquanto ele nao for `limpo`, nenhum link
+ * e emitido (regra inviolavel 6) — inclusive `pendente_scan`, porque "ainda nao
+ * varrido" nao e "provavelmente seguro".
+ *
+ * `versao` continua sendo a trilha do arquivo: o upload nao muda o estado do
+ * entregavel (ADR-11), entao nao entra em `transicoes`. Ela tambem entra no id
+ * do aceite de termos — cada versao nova exige aceite proprio, senao a evidencia
+ * de conformidade apontaria para um arquivo que o cliente nunca viu.
  */
 export interface ArquivoEntregavel {
   nome: string;
+  tipo: string;
+  tamanhoBytes: number;
   versao: number;
+  estado: EstadoArquivo;
+  /** Caminho do objeto, SEM o balde — o balde e derivado do estado. */
+  caminho: string;
   enviadoPor: string;
   enviadoEm: Timestamp | FieldValue;
+  /** Preenchido quando o veredito recusa. Vai para o painel, nao para o cliente. */
+  motivo?: string;
 }
 
 export interface DocumentoEntregavel {
@@ -99,12 +118,22 @@ export function resumoDoEntregavel(
   id: string,
   dados: DocumentoEntregavel,
 ): EntregavelResumo {
+  const arquivo = dados.arquivoAtual;
+
   return {
     id,
     nome: dados.nome,
     ordem: dados.ordem,
     estado: dados.estado,
     revisoesUsadas: dados.revisoesUsadas,
-    temArquivo: dados.arquivoAtual !== null,
+    temArquivo: arquivo !== null,
+    /*
+     * `podeSerServido` e a MESMA funcao que o portao consulta. A tela usa-la nao
+     * a torna a fronteira — quem emite o link e `arquivos/portao.ts`, e e la que
+     * a regra inviolavel 6 e cumprida. Aqui e para nao oferecer um botao que vai
+     * ser recusado.
+     */
+    arquivoServivel: arquivo !== null && podeSerServido(arquivo.estado),
+    versaoDoArquivo: arquivo?.versao ?? null,
   };
 }

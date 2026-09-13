@@ -20,6 +20,9 @@ import type { Limite as ConfiguracaoDeLimite } from './limite/contador.js';
 import { CHAVE_SEM_APP_CHECK } from './app-check/decoradores.js';
 import { CHAVE_LIMITE, CHAVE_SEM_LIMITE } from './limite/decoradores.js';
 import { AnexosService } from './anexos/anexos.service.js';
+import type { PortaoDeArquivos } from './arquivos/portao.js';
+import type { UploadDeEntregavelService } from './entregaveis/upload.service.js';
+import type { TermosService } from './termos/termos.service.js';
 import { ClientesAdminController } from './clientes/clientes.admin.controller.js';
 import type { ClientesService } from './clientes/clientes.service.js';
 import { DisponibilidadesController } from './disponibilidades/disponibilidades.controller.js';
@@ -32,6 +35,9 @@ import { PedidosAdminController } from './pedidos/pedidos.admin.controller.js';
 import { PedidosAdvogadoController } from './pedidos/pedidos.advogado.controller.js';
 import { PedidosClienteController } from './pedidos/pedidos.cliente.controller.js';
 import { PreCadastrosAdminController } from './pre-cadastros/pre-cadastros.admin.controller.js';
+import { RetencaoController } from './retencao/retencao.controller.js';
+import { CHAVE_TAREFA_INTERNA } from './varredura/tarefa.guard.js';
+import { VarreduraController } from './varredura/varredura.controller.js';
 import { PreCadastrosController } from './pre-cadastros/pre-cadastros.controller.js';
 import type { PreCadastrosService } from './pre-cadastros/pre-cadastros.service.js';
 import { ProdutosController } from './produtos/produtos.controller.js';
@@ -133,8 +139,42 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['redefinicao de senha', AutenticacaoController.prototype.redefinirSenha],
     ['pre-cadastro', PreCadastrosController.prototype.registrar],
     ['vitrine', VitrineController.prototype.listar],
+    ['varredura (interna)', VarreduraController.prototype.processar],
+    ['retencao (interna)', RetencaoController.prototype.executar],
   ])('%s e publico', (_nome, metodo) => {
     expect(reflector.get(CHAVE_PUBLICO, metodo)).toBe(true);
+  });
+
+  /**
+   * AS DUAS ROTAS INTERNAS DA ETAPA 11 SAO `@Publico()` NUM SENTIDO ESTREITO:
+   * nao ha usuario. Elas nao sao abertas — sao chamadas por Cloud Tasks e Cloud
+   * Scheduler, e autenticadas por assinatura OIDC do Google, na mesma familia do
+   * webhook do AbacatePay (arquitetura, secao 6, fronteira 2).
+   *
+   * `TarefaGuard` so age no que esta anotado com `@TarefaInterna()`. Sem a
+   * anotacao, a rota fica aberta DE VERDADE — e nada mais quebraria. Este teste e
+   * o que impede isso: uma rota interna nova sem a marca cai aqui.
+   */
+  it.each([
+    ['varredura', VarreduraController.prototype.processar],
+    ['retencao', RetencaoController.prototype.executar],
+  ])('a rota interna de %s exige credencial de tarefa', (_nome, metodo) => {
+    expect(reflector.get(CHAVE_TAREFA_INTERNA, metodo)).toBe(true);
+  });
+
+  /**
+   * E o reverso: NENHUMA rota de usuario pode se declarar tarefa interna. A
+   * anotacao trocada de lugar transformaria uma rota da area do cliente em algo
+   * que o `TarefaGuard` tenta verificar com token de service account — e que
+   * passaria a recusar todo cliente legitimo.
+   */
+  it.each([
+    ['health', HealthController.prototype.obter],
+    ['pre-cadastro', PreCadastrosController.prototype.registrar],
+    ['vitrine', VitrineController.prototype.listar],
+    ['cliente.listar', PedidosClienteController.prototype.listar],
+  ])('%s NAO e tarefa interna', (_nome, metodo) => {
+    expect(reflector.get(CHAVE_TAREFA_INTERNA, metodo)).toBeUndefined();
   });
 
   /**
@@ -585,7 +625,7 @@ describe('perfis das areas autenticadas', () => {
   it.each([
     ['cliente.listar', PedidosClienteController.prototype.listar],
     ['cliente.obter', PedidosClienteController.prototype.obter],
-    ['cliente.anexar', PedidosClienteController.prototype.anexar],
+    ['cliente.anexar', PedidosClienteController.prototype.pedirEnvioDeAnexos],
     ['advogado.listar', PedidosAdvogadoController.prototype.listar],
     ['advogado.anamnese', PedidosAdvogadoController.prototype.anamnese],
     ['admin.atribuir', PedidosAdminController.prototype.atribuir],
@@ -643,8 +683,16 @@ describe('PedidosClienteController', () => {
         } as unknown as ObservacoesService,
         {
           listar: registrar('anexos.listar'),
-          registrar: registrar('anexos.registrar'),
+          pedirEnvio: registrar('anexos.pedirEnvio'),
+          confirmarEnvio: registrar('anexos.confirmarEnvio'),
         } as unknown as AnexosService,
+        {
+          linkDoEntregavel: registrar('portao.entregavel'),
+          linkDoAnexo: registrar('portao.anexo'),
+        } as unknown as PortaoDeArquivos,
+        {
+          registrar: registrar('termos.registrar'),
+        } as unknown as TermosService,
       ),
       chamadas,
     };
@@ -693,14 +741,45 @@ describe('PedidosClienteController', () => {
     await controlador.listarObservacoes('pedido-1', CLIENTE);
     await controlador.registrarObservacao('pedido-1', { texto: 'oi' }, CLIENTE);
     await controlador.listarAnexos('pedido-1', CLIENTE);
-    await controlador.anexar('pedido-1', envio, CLIENTE);
+    await controlador.pedirEnvioDeAnexos('pedido-1', envio, CLIENTE);
 
     expect(chamadas).toEqual([
       'observacoes.listar pedido-1 [object Object]',
       'observacoes.registrar pedido-1 [object Object] [object Object]',
       'anexos.listar pedido-1 [object Object]',
-      'anexos.registrar pedido-1 [object Object] [object Object]',
+      'anexos.pedirEnvio pedido-1 [object Object] undefined',
     ]);
+  });
+
+  /**
+   * O DOWNLOAD PASSA PELO PORTAO, sempre. Nenhuma rota deste controlador emite
+   * link por conta propria — e a regra inviolavel 6 depende disso: a checagem de
+   * `limpo` vive num lugar so, e o controlador nao e esse lugar.
+   */
+  it('os dois downloads delegam ao portao', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.baixarEntregavel('pedido-1', '001', CLIENTE);
+    await controlador.baixarAnexo('pedido-1', 'anexo-1', CLIENTE);
+
+    expect(chamadas).toEqual([
+      'portao.entregavel [object Object] [object Object]',
+      'portao.anexo [object Object] [object Object]',
+    ]);
+  });
+
+  /** O aceite de termos e por VERSAO do arquivo, e o uid sai do token. */
+  it('registra o aceite com o usuario do token e a versao', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.aceitarTermos(
+      'pedido-1',
+      '001',
+      { versaoArquivo: 2 },
+      CLIENTE,
+    );
+
+    expect(chamadas).toEqual(['termos.registrar [object Object]']);
   });
 });
 
@@ -731,11 +810,6 @@ describe('PedidosAdvogadoController', () => {
             registrar('iniciar')(alvo.pedidoId, uid),
           retomarTrabalho: (alvo: { pedidoId: string }, uid: string) =>
             registrar('retomar')(alvo.pedidoId, uid),
-          registrarArquivo: (
-            alvo: { pedidoId: string },
-            arquivo: { nome: string },
-            uid: string,
-          ) => registrar('arquivo')(alvo.pedidoId, arquivo.nome, uid),
         } as unknown as EntregaveisService,
         {
           listar: registrar('observacoes.listar'),
@@ -743,6 +817,19 @@ describe('PedidosAdvogadoController', () => {
         } as unknown as ObservacoesService,
         { listar: registrar('anexos.listar') } as unknown as AnexosService,
         { anamneseDe: registrar('anamneseDe') } as unknown as ClientesService,
+        {
+          pedirEnvio: (
+            alvo: { pedidoId: string },
+            uid: string,
+            arquivo: { nome: string },
+          ) => registrar('arquivo')(alvo.pedidoId, arquivo.nome, uid),
+          confirmarEnvio: (alvo: { pedidoId: string }, uid: string) =>
+            registrar('arquivo.confirmar')(alvo.pedidoId, uid),
+        } as unknown as UploadDeEntregavelService,
+        {
+          linkDoEntregavel: registrar('portao.entregavel'),
+          linkDoAnexo: registrar('portao.anexo'),
+        } as unknown as PortaoDeArquivos,
       ),
       chamadas,
     };
@@ -782,12 +869,19 @@ describe('PedidosAdvogadoController', () => {
 
     await controlador.iniciar('pedido-1', '001', ADVOGADO);
     await controlador.retomar('pedido-1', '001', ADVOGADO);
-    await controlador.enviarArquivo('pedido-1', '001', 'minuta.pdf', ADVOGADO);
+    await controlador.pedirEnvioDeArquivo(
+      'pedido-1',
+      '001',
+      { nome: 'minuta.pdf', tipo: 'application/pdf', tamanhoBytes: 1000 },
+      ADVOGADO,
+    );
+    await controlador.confirmarArquivo('pedido-1', '001', ADVOGADO);
 
     expect(chamadas).toEqual([
       'iniciar pedido-1 uid-ana',
       'retomar pedido-1 uid-ana',
       'arquivo pedido-1 minuta.pdf uid-ana',
+      'arquivo.confirmar pedido-1 uid-ana',
     ]);
   });
 

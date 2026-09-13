@@ -97,19 +97,50 @@ describe('contrato HTTP das areas autenticadas', () => {
       await criar;
     });
 
-    /** PLACEHOLDER DA ETAPA 9: o corpo e METADADO, e nao `FormData`. */
-    it('anexa mandando metadado em JSON, nunca FormData', async () => {
-      const promessa = cliente.anexarAoPedido('p1', {
-        anexos: [{ nome: 'rg.jpg', tipo: 'image/jpeg', tamanhoBytes: 100 }],
-      });
+    /**
+     * O PEDIDO DE URL LEVA METADADO, e nunca `FormData`.
+     *
+     * O arquivo vai do navegador DIRETO ao bucket (arquitetura 7.3). Se um dia
+     * alguem trocar isto por um upload multipart, o arquivo passa a transitar
+     * pelo Cloud Run — que e exatamente o custo que a arquitetura evita.
+     */
+    it('pede a URL mandando metadado em JSON, nunca FormData', async () => {
+      const promessa = cliente.pedirEnvioDeAnexos('p1', [
+        { nome: 'rg.jpg', tipo: 'image/jpeg', tamanhoBytes: 100 },
+      ]);
 
       const requisicao = http.expectOne('/api/pedidos/p1/anexos');
       expect(requisicao.request.method).toBe('POST');
       expect(requisicao.request.body).not.toBeInstanceOf(FormData);
       expect(requisicao.request.body).toEqual({
-        anexos: [{ nome: 'rg.jpg', tipo: 'image/jpeg', tamanhoBytes: 100 }],
+        arquivos: [{ nome: 'rg.jpg', tipo: 'image/jpeg', tamanhoBytes: 100 }],
       });
       requisicao.flush([]);
+      await promessa;
+    });
+
+    it('confirma o envio num sub-recurso proprio', async () => {
+      const promessa = cliente.confirmarAnexo('p1', 'anexo-1');
+      esperar('POST', '/api/pedidos/p1/anexos/anexo-1/confirmacao', {});
+      await promessa;
+    });
+
+    /** O aceite vai por VERSAO do arquivo — nao um "aceitei" global da conta. */
+    it('registra o aceite dos termos com a versao', async () => {
+      const promessa = cliente.aceitarTermos('p1', '001', 2);
+
+      const requisicao = http.expectOne(
+        '/api/pedidos/p1/entregaveis/001/aceite',
+      );
+      expect(requisicao.request.body).toEqual({ versaoArquivo: 2 });
+      requisicao.flush({ aceito: true });
+      await promessa;
+    });
+
+    /** O link vem do PORTAO da API; a tela nunca o monta. */
+    it('pede o link de download a API', async () => {
+      const promessa = cliente.baixarEntregavel('p1', '001');
+      esperar('GET', '/api/pedidos/p1/entregaveis/001/download', {});
       await promessa;
     });
   });
@@ -172,15 +203,40 @@ describe('contrato HTTP das areas autenticadas', () => {
       await promessa;
     });
 
-    /** PLACEHOLDER: o corpo leva o NOME do arquivo, nao o arquivo. */
-    it('envia o entregavel mandando so o nome', async () => {
-      const promessa = advogado.enviarEntregavel('p1', '001', 'minuta.pdf');
+    /** O SEGUNDO fluxo, com rota propria (arquitetura 6.2). Metadado, nao arquivo. */
+    it('pede a URL do entregavel numa rota separada da do anexo', async () => {
+      const promessa = advogado.pedirEnvioDeEntregavel('p1', '001', {
+        nome: 'minuta.pdf',
+        tipo: 'application/pdf',
+        tamanhoBytes: 5000,
+      });
 
       const requisicao = http.expectOne(
         '/api/advogado/pedidos/p1/entregaveis/001/arquivo',
       );
-      expect(requisicao.request.body).toEqual({ nome: 'minuta.pdf' });
+      expect(requisicao.request.body).not.toBeInstanceOf(FormData);
+      expect(requisicao.request.body).toEqual({
+        nome: 'minuta.pdf',
+        tipo: 'application/pdf',
+        tamanhoBytes: 5000,
+      });
       requisicao.flush({});
+      await promessa;
+    });
+
+    it('confirma o envio do entregavel', async () => {
+      const promessa = advogado.confirmarEntregavel('p1', '001');
+      esperar(
+        'POST',
+        '/api/advogado/pedidos/p1/entregaveis/001/arquivo/confirmacao',
+        {},
+      );
+      await promessa;
+    });
+
+    it('baixa pelo portao, na rota do advogado', async () => {
+      const promessa = advogado.baixarEntregavel('p1', '001');
+      esperar('GET', '/api/advogado/pedidos/p1/entregaveis/001/download', {});
       await promessa;
     });
 

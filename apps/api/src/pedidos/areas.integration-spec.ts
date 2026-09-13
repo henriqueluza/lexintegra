@@ -3,6 +3,8 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { CATALOGO_FICTICIO } from '../../../../scripts/dados-ficticios/catalogo-produtos.js';
 import { normalizarParaBusca } from 'shared';
 import { AnexosService } from '../anexos/anexos.service.js';
+import { ArmazenamentoFalso } from '../armazenamento/armazenamento-falso.js';
+import { FilaFalsa } from '../varredura/fila.js';
 import { ClientesService } from '../clientes/clientes.service.js';
 import { firestoreDeTeste, limparEmuladores } from '../emulador.js';
 import { EntregaveisService } from '../entregaveis/entregaveis.service.js';
@@ -47,7 +49,7 @@ beforeEach(async () => {
 
   const acesso = new AcessoPedidoService(banco);
   observacoes = new ObservacoesService(acesso);
-  anexos = new AnexosService(acesso);
+  anexos = new AnexosService(acesso, new ArmazenamentoFalso(), new FilaFalsa());
 });
 
 async function comprar(itens: NovoPedido[]): Promise<void> {
@@ -163,7 +165,16 @@ describe('o cliente ve um cartao por pedido', () => {
 
     const alvo = { pedidoId: 'clara-contrato', entregavelId: '001' };
     await entregaveis.iniciarTrabalho(alvo, ANA);
-    await entregaveis.registrarArquivo(alvo, { nome: 'minuta.pdf' }, ANA);
+    await entregaveis.registrarArquivo(
+      alvo,
+      {
+        nome: 'minuta.pdf',
+        tipo: 'application/pdf',
+        tamanhoBytes: 1000,
+        caminho: 'entregaveis/clara-contrato/001/minuta',
+      },
+      ANA,
+    );
     await entregaveis.pedirRevisao(alvo, CLARA);
 
     const cartoes = await consulta.listarDoCliente(CLARA);
@@ -263,12 +274,10 @@ describe('o ciclo completo do entregavel', () => {
 
     await entregaveis.iniciarTrabalho(alvo, ANA);
 
-    await anexos.registrar(
+    await anexos.pedirEnvio(
       'clara-contrato',
       { uid: CLARA, perfil: 'cliente' },
-      {
-        anexos: [{ nome: 'rg.jpg', tipo: 'image/jpeg', tamanhoBytes: 120_000 }],
-      },
+      [{ nome: 'rg.jpg', tipo: 'image/jpeg', tamanhoBytes: 120_000 }],
     );
 
     // O anexo do cliente NAO muda o estado do entregavel.
@@ -276,7 +285,16 @@ describe('o ciclo completo do entregavel', () => {
     expect(cartao.entregaveis[0].estado).toBe('em_elaboracao');
     expect(cartao.entregaveis[0].temArquivo).toBe(false);
 
-    await entregaveis.registrarArquivo(alvo, { nome: 'minuta.pdf' }, ANA);
+    await entregaveis.registrarArquivo(
+      alvo,
+      {
+        nome: 'minuta.pdf',
+        tipo: 'application/pdf',
+        tamanhoBytes: 1000,
+        caminho: 'entregaveis/clara-contrato/001/minuta',
+      },
+      ANA,
+    );
     await entregaveis.confirmarEntrega(alvo, CLARA);
 
     cartao = await consulta.obterCartao('clara-contrato', CLARA);
@@ -294,8 +312,26 @@ describe('o ciclo completo do entregavel', () => {
     const alvo = { pedidoId: 'clara-contrato', entregavelId: '001' };
 
     await entregaveis.iniciarTrabalho(alvo, ANA);
-    await entregaveis.registrarArquivo(alvo, { nome: 'v1.pdf' }, ANA);
-    await entregaveis.registrarArquivo(alvo, { nome: 'v2.pdf' }, ANA);
+    await entregaveis.registrarArquivo(
+      alvo,
+      {
+        nome: 'v1.pdf',
+        tipo: 'application/pdf',
+        tamanhoBytes: 1000,
+        caminho: 'entregaveis/clara-contrato/001/v1',
+      },
+      ANA,
+    );
+    await entregaveis.registrarArquivo(
+      alvo,
+      {
+        nome: 'v2.pdf',
+        tipo: 'application/pdf',
+        tamanhoBytes: 1000,
+        caminho: 'entregaveis/clara-contrato/001/v2',
+      },
+      ANA,
+    );
 
     const trilha = await banco
       .collection('pedidos')
@@ -347,15 +383,13 @@ describe('observacoes e anexos do cartao', () => {
     await cenario();
     const quem = { uid: CLARA, perfil: 'cliente' as const };
 
-    await anexos.registrar('clara-contrato', quem, {
-      anexos: [
-        {
-          nome: 'contrato.pdf',
-          tipo: 'application/pdf',
-          tamanhoBytes: 500_000,
-        },
-      ],
-    });
+    await anexos.pedirEnvio('clara-contrato', quem, [
+      {
+        nome: 'contrato.pdf',
+        tipo: 'application/pdf',
+        tamanhoBytes: 500_000,
+      },
+    ]);
 
     expect(await anexos.listar('clara-contrato', quem)).toHaveLength(1);
     expect(await anexos.listar('clara-parecer', quem)).toHaveLength(0);

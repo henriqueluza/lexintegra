@@ -72,6 +72,44 @@ resource "google_cloud_run_v2_service" "api" {
         value = var.email_remetente
       }
 
+      # Etapa 11. Sem estes, a API RECUSA SUBIR em producao (ver
+      # `armazenamento.module.ts` e `varredura.module.ts`): um servico que sobe
+      # "saudavel" com armazenamento em memoria e fila falsa aceita uploads,
+      # responde 202 e perde todo arquivo — e so aparece quando um cliente
+      # reclama que o entregavel sumiu.
+      env {
+        name  = "BUCKET_QUARENTENA"
+        value = google_storage_bucket.quarentena.name
+      }
+
+      env {
+        name  = "BUCKET_ARQUIVOS"
+        value = google_storage_bucket.arquivos.name
+      }
+
+      env {
+        name  = "URL_SCANNER"
+        value = google_cloud_run_v2_service.scanner.uri
+      }
+
+      env {
+        name  = "FILA_VARREDURA"
+        value = google_cloud_tasks_queue.varredura.name
+      }
+
+      env {
+        name  = "GCP_REGION"
+        value = var.region
+      }
+
+      # A identidade que assina o OIDC das tarefas. `TarefaGuard` compara o
+      # `email` do token com este valor — sem ele, a rota interna recusa tudo, o
+      # que e o comportamento certo para configuracao ausente.
+      env {
+        name  = "SERVICE_ACCOUNT_TAREFAS"
+        value = google_service_account.tarefas.email
+      }
+
       # Etapa 6. As duas defesas da fronteira publica que dependem do ambiente, e
       # nao do codigo. Ver as descricoes em `variables.tf`.
       env {

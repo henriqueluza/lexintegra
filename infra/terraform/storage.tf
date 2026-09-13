@@ -53,6 +53,23 @@ resource "google_storage_bucket" "quarentena" {
     }
   }
 
+  # CORS PARA O PUT DIRETO DO NAVEGADOR (Etapa 11).
+  #
+  # O arquivo vai do navegador DIRETO para ca, por URL assinada — nunca pela API
+  # (arquitetura 7.3). Sem esta configuracao o `PUT` e barrado pelo navegador
+  # antes de sair, e o sintoma e um upload que falha sem nada aparecer no log do
+  # servidor, porque a requisicao nunca chegou a ele.
+  #
+  # `origin` e o dominio da aplicacao e mais nada: a URL assinada ja limita o que
+  # pode ser escrito, e uma origem aberta permitiria que outra pagina usasse uma
+  # URL vazada a partir do navegador da vitima.
+  cors {
+    origin          = [var.url_aplicacao]
+    method          = ["PUT", "OPTIONS"]
+    response_header = ["Content-Type", "x-goog-content-length-range"]
+    max_age_seconds = 3600
+  }
+
   depends_on = [google_kms_crypto_key_iam_member.gcs_cmek]
 }
 

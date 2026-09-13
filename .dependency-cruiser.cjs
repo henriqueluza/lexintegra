@@ -50,6 +50,44 @@ module.exports = {
       },
     },
     {
+      name: 'so-o-portao-emite-link-de-leitura',
+      severity: 'error',
+      comment:
+        'Regra inviolavel 6: nenhum arquivo e servido com status diferente de ' +
+        '`limpo`, e essa checagem vive em UM lugar — `arquivos/portao.ts`. ' +
+        'Um teste prova que o portao confere o estado; nenhum teste prova que ' +
+        'ALGUEM MAIS nao emitiu um link por fora. Isolar a emissao em ' +
+        '`arquivos/leitura.ts` e restringir quem o importa e o que transforma ' +
+        'essa segunda garantia em lint — e lint roda em todo commit, inclusive ' +
+        'nos que ninguem revisou com atencao.',
+      from: {
+        path: '^apps/api',
+        pathNot: [
+          // O portao (que usa), o proprio emissor, e o modulo que os liga —
+          // fiacao declarativa do Nest, que nao chama nada.
+          '^apps/api/src/arquivos/(portao|leitura|arquivos\\.module)\\.ts$',
+          // `spec\.ts$` e nao `\.spec\.ts$`: cobre tambem os
+          // `*.integration-spec.ts`, que montam o portao a mao para exercita-lo.
+          'spec\\.ts$',
+        ],
+      },
+      to: { path: '^apps/api/src/arquivos/leitura\\.ts$' },
+    },
+    {
+      name: 'so-o-armazenamento-conhece-o-sdk-do-storage',
+      severity: 'error',
+      comment:
+        'ADR-17: o SDK do Cloud Storage vive atras da porta `Armazenamento`. ' +
+        'Um import direto em outro modulo desfaria o teste sem rede — e o ' +
+        'projeto nao tem emulador de Storage, entao "testar contra o de ' +
+        'verdade" significaria testar contra o bucket de producao.',
+      from: {
+        path: '^apps/api',
+        pathNot: '^apps/api/src/armazenamento/',
+      },
+      to: { path: '^@google-cloud/storage' },
+    },
+    {
       name: 'sem-dev-dep-em-producao',
       severity: 'error',
       comment: 'Modulo de producao dependendo de devDependency.',

@@ -107,13 +107,23 @@ export class EntregaveisService {
    * a trilha registra mudanca de estado, e `arquivoAtual.versao` e a trilha do
    * arquivo.
    *
-   * O caminho no bucket, o hash e o resultado do antivirus sao da Etapa 11. O que
-   * existe aqui e o fato de dominio de que o ADR-11 depende: ha versao entregue
-   * esperando o cliente decidir.
+   * O ARQUIVO NASCE EM `pendente_upload` (Etapa 11): a URL assinada foi emitida
+   * e o navegador ainda nao confirmou o envio. Ele so vira `limpo` depois da
+   * varredura e da conferencia de magic bytes — e ate la o portao recusa emitir
+   * link, inclusive para o proprio advogado que o mandou.
+   *
+   * A VERSAO SOBE A CADA ENVIO, e nao a cada veredito: um upload que falhe na
+   * varredura consome uma versao, e isso e proposital — a trilha precisa mostrar
+   * que houve uma tentativa, e o aceite de termos do cliente e por versao.
    */
   async registrarArquivo(
     alvo: Alvo,
-    arquivo: { nome: string },
+    arquivo: {
+      nome: string;
+      tipo: string;
+      tamanhoBytes: number;
+      caminho: string;
+    },
     advogadoUid: string,
   ): Promise<EntregavelResumo> {
     return this.db.runTransaction(async (transacao) => {
@@ -132,7 +142,11 @@ export class EntregaveisService {
 
       const arquivoAtual: ArquivoEntregavel = {
         nome: arquivo.nome,
+        tipo: arquivo.tipo,
+        tamanhoBytes: arquivo.tamanhoBytes,
         versao: (entregavel.arquivoAtual?.versao ?? 0) + 1,
+        estado: 'pendente_upload',
+        caminho: arquivo.caminho,
         enviadoPor: advogadoUid,
         enviadoEm: FieldValue.serverTimestamp(),
       };

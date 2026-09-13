@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { EstadoArquivo } from './upload.js';
 
 /**
  * Os arquivos de apoio que o CLIENTE anexa ao pedido (item 2.3.3, arquitetura
@@ -125,13 +126,20 @@ export const esquemaEnvioDeAnexos = z.object({
 
 export type EnvioDeAnexos = z.infer<typeof esquemaEnvioDeAnexos>;
 
-/** O que a API devolve. Sem URL, porque nao ha arquivo para servir. */
+/**
+ * O que a API devolve sobre um anexo.
+ *
+ * SEM URL, e nao por esquecimento: o link de leitura sai do PORTAO
+ * (`arquivos/portao.ts`), que confere o estado antes de emitir, e vale cinco
+ * minutos. Devolve-lo aqui, junto da listagem, significaria emitir link para todo
+ * anexo toda vez que a tela abre — inclusive para os que nao podem ser servidos.
+ */
 export type AnexoResumo = {
   readonly id: string;
   readonly nome: string;
-  readonly tipo: TipoAnexo;
+  readonly tipo: string;
   readonly tamanhoBytes: number;
-  readonly status: typeof STATUS_ANEXO_SEM_ARQUIVO;
+  readonly estado: EstadoArquivo;
   readonly enviadoPor: string;
   /** ISO 8601, ou `null` enquanto o carimbo do servidor nao materializou. */
   readonly criadoEm: string | null;

@@ -1,0 +1,23 @@
+{
+  "name": "scanner",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/servidor.js",
+    "atualizar-base": "node dist/atualizar-base.js",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage"
+  },
+  "dependencies": {
+    "@google-cloud/storage": "^7.22.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.10.0",
+    "jest": "^30.5.1",
+    "ts-jest": "^29.4.6",
+    "typescript": "~6.0.2"
+  }
+}

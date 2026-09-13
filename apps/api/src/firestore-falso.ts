@@ -174,7 +174,7 @@ export class ConsultaFalsa {
     );
   }
 
-  get(): Promise<{ docs: DocumentoFalso[] }> {
+  get(): Promise<{ docs: DocumentoFalso[]; size: number }> {
     /*
      * A LEITURA POR CONSULTA TAMBEM ENTRA NA TRILHA. Ela ficou de fora ate a
      * Etapa 9, quando `DisponibilidadesService.publicar` passou a ler a grade da
@@ -210,9 +210,16 @@ export class ConsultaFalsa {
       );
     }
 
-    return Promise.resolve({
-      docs: this.teto === null ? docs : docs.slice(0, this.teto),
-    });
+    const pagina = this.teto === null ? docs : docs.slice(0, this.teto);
+
+    /*
+     * `size` junto de `docs`, porque o `QuerySnapshot` de verdade tem os dois — e
+     * codigo que le `pagina.size` num dublê que so tem `docs` recebe `undefined`
+     * e falha em silencio: `undefined > 0` e falso, e a condicao inteira vira
+     * falso sem erro nenhum. Foi assim que `marcarSeFechou` passou a devolver
+     * `false` para um pedido inteiramente entregue.
+     */
+    return Promise.resolve({ docs: pagina, size: pagina.length });
   }
 }
 
@@ -245,10 +252,10 @@ export class TransacaoFalsa {
    * dentro da mesma transacao que grava a nova.
    */
   get(alvo: ReferenciaFalsa): Promise<DocumentoFalso>;
-  get(alvo: ConsultaFalsa): Promise<{ docs: DocumentoFalso[] }>;
+  get(alvo: ConsultaFalsa): Promise<{ docs: DocumentoFalso[]; size: number }>;
   get(
     alvo: ReferenciaFalsa | ConsultaFalsa,
-  ): Promise<DocumentoFalso | { docs: DocumentoFalso[] }> {
+  ): Promise<DocumentoFalso | { docs: DocumentoFalso[]; size: number }> {
     return alvo.get();
   }
 

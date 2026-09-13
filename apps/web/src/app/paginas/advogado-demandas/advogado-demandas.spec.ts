@@ -12,6 +12,8 @@ const SOLICITADO = {
   estado: 'solicitado' as const,
   revisoesUsadas: 0,
   temArquivo: false,
+  arquivoServivel: false,
+  versaoDoArquivo: null,
 };
 
 const EM_ELABORACAO = { ...SOLICITADO, estado: 'em_elaboracao' as const };
@@ -102,13 +104,30 @@ async function montar(opcoes: Partial<ApiDeTeste> = {}): Promise<{
             api.chamadas.push(`retomar ${pedidoId}/${entregavelId}`);
             return Promise.resolve(EM_ELABORACAO);
           },
-          enviarEntregavel: (
+          pedirEnvioDeEntregavel: (
             pedidoId: string,
             entregavelId: string,
-            nome: string,
+            arquivo: { nome: string },
           ) => {
-            api.chamadas.push(`arquivo ${pedidoId}/${entregavelId} ${nome}`);
-            return Promise.resolve(EM_ELABORACAO);
+            api.chamadas.push(
+              `pedirUrl ${pedidoId}/${entregavelId} ${arquivo.nome}`,
+            );
+            return Promise.resolve({
+              url: 'https://bucket.example/quarentena/e1',
+              versao: 1,
+              validoPorSegundos: 900,
+            });
+          },
+          confirmarEntregavel: (pedidoId: string, entregavelId: string) => {
+            api.chamadas.push(`confirmar ${pedidoId}/${entregavelId}`);
+            return Promise.resolve();
+          },
+          baixarEntregavel: (pedidoId: string, entregavelId: string) => {
+            api.chamadas.push(`download ${pedidoId}/${entregavelId}`);
+            return Promise.resolve({
+              url: 'https://bucket.example/arquivos/e1',
+              validoPorSegundos: 300,
+            });
           },
         },
       },
@@ -300,26 +319,40 @@ describe('AdvogadoDemandas', () => {
      * validacao de politica, porque a regra do ADVOGADO ainda nao foi confirmada
      * (0.2, item 6).
      */
-    it('envia o entregavel mandando so o nome do arquivo', async () => {
-      const { fixture, api } = await montar({
-        demandas: [demanda('p1', [EM_ELABORACAO])],
-      });
+    /** Duas fases aqui tambem, e por um caminho separado do anexo do cliente. */
+    it('pede a URL, escreve no bucket e confirma', async () => {
+      const original = globalThis.fetch;
+      const puts: string[] = [];
+      globalThis.fetch = ((url: string) => {
+        puts.push(String(url));
+        return Promise.resolve({ ok: true, status: 200 } as Response);
+      }) as unknown as typeof fetch;
 
-      const entrada = fixture.nativeElement.querySelector(
-        'input[type=file]',
-      ) as HTMLInputElement;
-      const arquivo = new File([''], 'minuta.pdf', {
-        type: 'application/pdf',
-      });
-      Object.defineProperty(entrada, 'files', {
-        value: { 0: arquivo, length: 1, item: () => arquivo },
-        configurable: true,
-      });
+      try {
+        const { fixture, api } = await montar({
+          demandas: [demanda('p1', [EM_ELABORACAO])],
+        });
 
-      entrada.dispatchEvent(new Event('change'));
-      await fixture.whenStable();
+        const entrada = fixture.nativeElement.querySelector(
+          'input[type=file]',
+        ) as HTMLInputElement;
+        const arquivo = new File([''], 'minuta.pdf', {
+          type: 'application/pdf',
+        });
+        Object.defineProperty(entrada, 'files', {
+          value: { 0: arquivo, length: 1, item: () => arquivo },
+          configurable: true,
+        });
 
-      expect(api.chamadas).toContain('arquivo p1/001 minuta.pdf');
+        entrada.dispatchEvent(new Event('change'));
+        await fixture.whenStable();
+
+        expect(api.chamadas).toContain('pedirUrl p1/001 minuta.pdf');
+        expect(puts).toEqual(['https://bucket.example/quarentena/e1']);
+        expect(api.chamadas).toContain('confirmar p1/001');
+      } finally {
+        globalThis.fetch = original;
+      }
     });
 
     it('nao chama a API quando nenhum arquivo foi escolhido', async () => {

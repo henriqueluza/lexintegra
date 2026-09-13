@@ -408,6 +408,41 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 
 **Consequência assumida.** O rate limiting por instância tolera até três vezes o limite configurado (`max_instance_count = 3`), e um atacante com muitos endereços consegue zerar o contador de uma vítima ao encher o mapa. As duas aproximações são conhecidas; a defesa contra automação em massa é o App Check, não o contador.
 
+### ADR-17 — Armazenamento atrás de uma porta, com adaptador falso
+
+**Contexto.** A Etapa 11 precisa emitir URL assinada, ler faixa de bytes, mover objeto entre buckets e excluir. O projeto **não tem emulador de Cloud Storage** configurado no `firebase.json`, e não há um oficial que cubra URL assinada com a fidelidade necessária.
+
+**Decisão.** O SDK do Cloud Storage vive atrás da interface `Armazenamento` (`apps/api/src/armazenamento/`), com dois adaptadores: `GcsArmazenamento` em produção e `ArmazenamentoFalso` em memória para desenvolvimento e testes. É a mesma forma do ADR-07.1 para e-mail, e pelo mesmo motivo.
+
+**Consequências.**
+
+- A suíte de integração roda o ciclo inteiro — pedido de URL, confirmação, veredito, movimentação, exclusão — sem tocar a rede. Sem a porta, "testar contra o de verdade" significaria testar contra o bucket de produção.
+- Em produção, `BUCKET_QUARENTENA` e `BUCKET_ARQUIVOS` ausentes são **erro de inicialização**, não degradação para o falso. Um serviço que sobe "saudável" guardando arquivos num `Map` só aparece quando um cliente diz que o entregável sumiu.
+- Sob emulador, o falso é usado **mesmo com os buckets definidos** — senão a suíte de integração falaria com o Cloud Storage real.
+- Uma regra de `dependency-cruiser` impede que qualquer módulo fora de `armazenamento/` importe `@google-cloud/storage`.
+
+**A armadilha que isto documenta.** O Cloud Run usa credencial de ambiente, sem chave privada em disco. Assinar uma URL passa pela API de IAM (`signBlob`), o que exige `roles/iam.serviceAccountTokenCreator` da service account **sobre si mesma** (`infra/terraform/varredura.tf`). Sem essa concessão, a emissão falha em produção e **funciona na máquina do desenvolvedor**, que tem credencial de usuário com chave.
+
+---
+
+### ADR-18 — Topologia da varredura: Cloud Tasks → API → scanner
+
+**Contexto.** O ClamAV precisa rodar isolado (seção 3.2). A questão é quem orquestra: o scanner poderia receber a tarefa da fila e escrever o resultado no banco sozinho.
+
+**Decisão.** A fila chama a **API**; a API chama o scanner e decide. O scanner recebe um caminho e devolve um veredito — não lê Firestore, não conhece pedido, entregável nem cliente, e não escreve nada.
+
+**Por quê.** É o que mantém a exceção da seção 3.2 honesta. O contêiner separado se justifica "porque o scanner não contém regra de negócio"; um scanner que escrevesse status no banco recriaria exatamente o problema que a Cloud Function tinha — lógica de domínio num segundo artefato de deploy, com dois pipelines, dois IAM e duas suítes de teste.
+
+**Consequências.**
+
+- **A conferência de magic bytes fica na API**, que lê os primeiros bytes por faixa (`Range: bytes=0-N`). Pô-la no scanner economizaria uma leitura e traria conhecimento de política de upload para dentro do contêiner burro.
+- **São duas conferências, e nenhuma cobre a outra.** O ClamAV responde "tem malware conhecido?"; os magic bytes respondem "isto é mesmo um PDF?". Um HTML com extensão `.pdf` passa limpo pelo antivírus e, servido de um domínio que compartilhe cookie com a aplicação, vira XSS na própria origem.
+- **`indisponivel` não é `infectado`.** Scanner fora do ar faz a tarefa falhar para o Cloud Tasks reentregar; tratá-lo como reprovação apagaria arquivo legítimo por indisponibilidade de infraestrutura.
+- O scanner **não aceita invocação anônima** — diferente da API, que precisa aceitar por causa do rewrite do Hosting (ADR-15). Só a service account da API tem `run.invoker`.
+- Primeira fila do Cloud Tasks do projeto. A Etapa 7 reusa a mesma infraestrutura para o outbox.
+
+---
+
 ## 5. Modelo de dados
 
 ### 5.1 Coleções raiz
@@ -422,6 +457,7 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 | `advogados` | Perfil e licença Microsoft confirmada |
 | `disponibilidades` | Slots com ID determinístico |
 | `outbox` | Eventos pendentes de entrega |
+| `aceites-de-termos` | Evidência de aceite antes do download (Etapa 11) |
 
 **Sobre a atribuição de pedidos a advogados (Etapa 9).** Ela mora no **pedido** (`pedidos.advogadoId`), não no advogado — esta tabela dizia "atribuições" em `advogados`, e foi corrigida acima. A razão é a consulta que existe de verdade: "quais pedidos são meus", feita pelo advogado a cada abertura de tela. Do lado do advogado, seria um array que cresce sem limite dentro de um documento e que precisa ser lido inteiro para filtrar; no pedido, é uma igualdade indexada (`advogadoId` + `criadoEm`). O documento carrega ainda `distribuido`, um booleano redundante com `advogadoId !== null` que existe porque igualdade contra `null` no Firestore mistura o campo ausente com o campo nulo — e um pedido gravado antes do campo existir cairia do lado errado do filtro da caixa de entrada sem erro nenhum.
 
@@ -595,6 +631,8 @@ Concluído o envio, a API enfileira a varredura. O scanner baixa, analisa e move
 Defesas complementares ao ClamAV: verificação de magic bytes contra a extensão declarada, `Content-Disposition: attachment` sempre, e leitura exclusivamente por URL assinada de curta duração — nunca a partir de um domínio que compartilhe cookies com a aplicação, para não transformar um HTML malicioso em XSS na própria origem.
 
 **Falha operacional prevista.** Com `min-instances = 0`, a instância do scanner morre e a base de assinaturas envelhece. Um job diário atualiza a base num bucket, de onde o scanner carrega no boot.
+
+**Retenção dos anexos do cliente: não definida.** Os 30 dias são dos **entregáveis**. A retenção dos arquivos de apoio que o cliente envia não foi decidida em lugar nenhum — e apagar documento de identificação por conta própria não é um default que se inventa. O job de retenção não os toca; fica como pendência do controlador (Etapa 11).
 
 **Observação contratual.** Upload de arquivos não consta na cláusula 2ª. É acréscimo de escopo.
 
