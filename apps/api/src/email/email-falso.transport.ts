@@ -25,6 +25,10 @@ export class EmailFalsoTransport implements EmailTransport {
   private readonly registro: EmailMensagem[] = [];
   private sequencia = 0;
   private falha: string | null = null;
+  private pausado = false;
+  private emVoo = 0;
+  private presos: (() => void)[] = [];
+  private aguardando: (() => void)[] = [];
 
   get enviadas(): readonly EmailMensagem[] {
     return this.registro;
@@ -34,6 +38,7 @@ export class EmailFalsoTransport implements EmailTransport {
     this.registro.length = 0;
     this.sequencia = 0;
     this.falha = null;
+    this.liberar();
   }
 
   /**
@@ -56,6 +61,40 @@ export class EmailFalsoTransport implements EmailTransport {
     this.falha = null;
   }
 
+  /**
+   * Segura o envio no meio do caminho, sem responder.
+   *
+   * Existe para um teste so, e ele nao teria como ser escrito de outro jeito: o
+   * arrendamento recusa a SEGUNDA entrega enquanto a primeira esta em curso, e
+   * "em curso" e uma janela que dura o tempo de uma chamada ao provedor. Duas
+   * requisicoes disparadas juntas competem de verdade, mas nada garante que se
+   * cruzem — se a primeira terminar antes de a segunda ler, a segunda ve o
+   * registro `enviado` e o caminho do arrendamento nunca e exercitado.
+   *
+   * Pausando aqui, a janela fica aberta pelo tempo que o teste quiser, e a recusa
+   * passa a ser deterministica.
+   */
+  pausar(): void {
+    this.pausado = true;
+  }
+
+  /** Resolve quando um envio pausado estiver de fato em curso. */
+  esperarEnvio(): Promise<void> {
+    if (this.emVoo > 0) return Promise.resolve();
+    return new Promise((resolve) => {
+      this.aguardando.push(resolve);
+    });
+  }
+
+  liberar(): void {
+    this.pausado = false;
+    this.emVoo = 0;
+    const soltar = this.presos;
+    this.presos = [];
+    this.aguardando = [];
+    for (const solta of soltar) solta();
+  }
+
   enviar(mensagem: EmailMensagem): Promise<EmailResultado> {
     if (this.falha !== null) {
       return Promise.resolve({ sucesso: false, motivo: this.falha });
@@ -63,6 +102,20 @@ export class EmailFalsoTransport implements EmailTransport {
 
     this.registro.push(mensagem);
     this.sequencia += 1;
+
+    if (this.pausado) {
+      const identificador = `falso-${String(this.sequencia)}`;
+      this.emVoo += 1;
+      const avisos = this.aguardando;
+      this.aguardando = [];
+      for (const avisar of avisos) avisar();
+
+      return new Promise((resolve) => {
+        this.presos.push(() =>
+          resolve({ sucesso: true, idProvedor: identificador }),
+        );
+      });
+    }
 
     this.log.debug?.(
       `mensagem ${this.sequencia}: ${mensagem.modelo?.alias ?? 'corpo proprio'}, ` +

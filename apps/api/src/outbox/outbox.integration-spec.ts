@@ -136,7 +136,12 @@ beforeEach(async () => {
    * varredor alcanca ou nao alcanca", e nao quanto tempo ela demora.
    */
   process.env['VARREDOR_ATRASO_MINUTOS'] = '0';
-  process.env['OUTBOX_ARRENDAMENTO_SEGUNDOS'] = '60';
+  /*
+   * Acima do piso de `politica.ts`, que recusa subir abaixo dele. Nenhum teste
+   * daqui espera o arrendamento vencer — o que se exercita e a recusa enquanto
+   * ele esta VIVO —, entao o valor so precisa ser valido.
+   */
+  process.env['OUTBOX_ARRENDAMENTO_SEGUNDOS'] = '900';
   /* O guard cobra os dois, e recusa tudo se faltar um. */
   process.env['URL_APLICACAO'] = 'https://lexintegra.com.br';
   process.env['SERVICE_ACCOUNT_TAREFAS'] = CONTA_DE_TAREFAS;
@@ -229,6 +234,69 @@ describe('resiliencia da entrega, fim a fim', () => {
 
 describe('entrega acontece no maximo uma vez', () => {
   /**
+   * A RECUSA DETERMINISTICA, com a janela mantida aberta a mao.
+   *
+   * O teste abaixo dispara duas requisicoes juntas e prova a INVARIANTE — uma
+   * entrega so. Mas ele nao escolhe QUAL caminho a perdedora percorre: se a
+   * primeira terminar antes de a segunda ler, a segunda ve `enviado` e o
+   * arrendamento nunca e exercitado. Duas execucoes do mesmo teste podem cobrir
+   * ramos diferentes, e nenhuma das duas falharia se o arrendamento sumisse.
+   *
+   * Aqui a janela fica aberta pelo tempo que o teste quiser: a primeira entrega
+   * para dentro do provedor, segurando o arrendamento, e a segunda chega com ele
+   * VIVO. A recusa passa a ser a unica resposta possivel.
+   */
+  it('recusa a segunda entrega enquanto a primeira esta em curso', async () => {
+    await pedirRedefinicao();
+    const id = fila.tarefas[0].id;
+
+    transporte.pausar();
+    /*
+     * `.then()` NAO E DECORACAO. O `Test` do supertest e preguicoso: ele so
+     * dispara a requisicao quando alguem o encadeia. Guardado sem isso, a
+     * primeira entrega nunca sairia e o `esperarEnvio` abaixo travaria ate o
+     * timeout do Jest — que foi exatamente o que aconteceu ao escrever este
+     * teste. E tambem por isso que o `Promise.all` do teste seguinte dispara as
+     * duas de verdade: ele encadeia as duas no mesmo tique.
+     */
+    const primeira = comoTarefa('/api/interno/outbox')
+      .send({ id })
+      .then((resposta) => resposta);
+
+    /* So seguir quando a primeira estiver DENTRO do provedor: ate ali ela ainda
+     * nao reivindicou, e a segunda ganharia a corrida por acidente. */
+    await transporte.esperarEnvio();
+
+    /*
+     * `finally` PARA O TESTE FALHAR RAPIDO. Sem ele, uma assercao que estoure
+     * aqui deixa a primeira entrega presa dentro do provedor pausado: a
+     * requisicao fica aberta, o `app.close()` do `afterEach` espera por ela, e o
+     * que deveria ser uma falha em milissegundos vira a suite inteira pendurada
+     * ate o timeout. Aconteceu ao provar este teste contra um arrendamento
+     * removido — o teste acusou, mas demorou minutos para dizer isso.
+     */
+    let segunda;
+    try {
+      segunda = await comoTarefa('/api/interno/outbox').send({ id });
+    } finally {
+      transporte.liberar();
+    }
+
+    expect(segunda.status).toBe(200);
+    expect(segunda.body).toEqual({ situacao: 'em-andamento' });
+
+    await expect(primeira).resolves.toMatchObject({
+      status: 200,
+      body: { situacao: 'entregue' },
+    });
+
+    expect(transporte.enviadas).toHaveLength(1);
+    await expect(linhasDoPainel()).resolves.toMatchObject([
+      { estado: 'enviado', tentativas: 1 },
+    ]);
+  });
+
+  /**
    * O TESTE QUE SO O EMULADOR CONSEGUE FAZER.
    *
    * Ha dois mecanismos de retentativa independentes — a fila e o varredor — mais
@@ -239,6 +307,12 @@ describe('entrega acontece no maximo uma vez', () => {
    * contencao, entao aqui — e so aqui — se prova que duas tarefas simultaneas
    * produzem uma entrega so. E a mesma razao pela qual as duas fases de
    * `PedidosService` so foram pegas na integracao.
+   *
+   * `Promise.all` DISPARA AS DUAS DE VERDADE: cada `Test` do supertest e um
+   * thenable, e `Promise.all` chama `.then()` nos dois no mesmo tique — as duas
+   * requisicoes vao para o socket antes de qualquer resposta voltar. O que ele
+   * NAO escolhe e o caminho da perdedora, e por isso a asserção aceita os dois; o
+   * teste acima e que fixa um deles.
    */
   it('duas tarefas simultaneas para o mesmo registro entregam uma vez', async () => {
     await pedirRedefinicao();
