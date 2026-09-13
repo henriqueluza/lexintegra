@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { nomeDaTarefa } from './evento.js';
+import { nomeDaTarefa } from './nome-da-tarefa.js';
 import { FILA_DE_EVENTOS, type FilaDeEventos } from './fila.js';
 import { OutboxService } from './outbox.service.js';
 import type { ReferenciaDeTarefa } from './outbox.service.js';

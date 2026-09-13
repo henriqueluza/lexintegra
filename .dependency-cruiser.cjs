@@ -74,6 +74,31 @@ module.exports = {
       to: { path: '^apps/api/src/arquivos/leitura\\.ts$' },
     },
     {
+      name: 'so-o-enfileirador-monta-nome-de-tarefa',
+      severity: 'error',
+      comment:
+        'O nome da tarefa e a camada de deduplicacao do Cloud Tasks (ADR-03): e ' +
+        'ele que impede o varredor de criar uma segunda tarefa para um registro ' +
+        'cuja tarefa ainda esta viva. Um chamador que monte o nome a mao, com um ' +
+        'campo a menos, nao quebra nada — a tarefa e criada, o teste passa, e a ' +
+        'deduplicacao deixa de acontecer. O sintoma so aparece em producao, como ' +
+        'e-mail duplicado. Mesma forma de `arquivos/leitura.ts`: ha teste ' +
+        'provando que o enfileirador monta o nome certo, e nenhum provando que ' +
+        'ALGUEM MAIS nao montou um por fora — isolar a funcao e restringir quem a ' +
+        'importa e o que transforma essa segunda garantia em lint.',
+      from: {
+        path: '^apps/api',
+        pathNot: [
+          // O enfileirador (que usa) e o proprio arquivo.
+          '^apps/api/src/outbox/(enfileirador\\.service|nome-da-tarefa)\\.ts$',
+          // `spec\.ts$` e nao `\.spec\.ts$`: cobre tambem os
+          // `*.integration-spec.ts`, que conferem o nome que chegou a fila.
+          'spec\\.ts$',
+        ],
+      },
+      to: { path: '^apps/api/src/outbox/nome-da-tarefa\\.ts$' },
+    },
+    {
       name: 'so-o-armazenamento-conhece-o-sdk-do-storage',
       severity: 'error',
       comment:

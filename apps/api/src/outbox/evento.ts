@@ -75,32 +75,6 @@ export interface RegistroOutbox {
   readonly ultimoErro?: string;
 }
 
-/**
- * O nome da tarefa no Cloud Tasks, que DEDUPLICA por ele.
- *
- * E a primeira das tres camadas contra entrega duplicada: impede o varredor de
- * criar uma segunda tarefa para um registro cuja tarefa ainda esta viva na fila.
- * As outras duas sao o arrendamento (`reivindicar`) e a chave de idempotencia do
- * provedor.
- *
- * INCLUI `tentativas` DE PROPOSITO. Depois de uma tentativa que falhou de verdade,
- * queremos uma tarefa nova — e uma tarefa nova precisa de nome novo, senao a
- * deduplicacao que protege no caso comum passa a impedir a reentrega no caso que
- * mais precisa dela.
- *
- * Cloud Tasks aceita letras, numeros, hifen e sublinhado no nome; o id do evento
- * ja e formado assim (`redefinir-senha_uid_janela`), mas o uid vem do Firebase e
- * nao ha promessa disso — dai a limpeza.
- */
-export function nomeDaTarefa(
-  id: string,
-  ciclo: number,
-  tentativas: number,
-): string {
-  const limpo = id.replace(/[^A-Za-z0-9_-]/g, '-');
-  return `${limpo}-c${String(ciclo)}-t${String(tentativas)}`;
-}
-
 /** Janela de deduplicacao do pedido de redefinicao, em milissegundos. */
 export const JANELA_REDEFINICAO_MS = 15 * 60 * 1000;
 
