@@ -58,8 +58,26 @@ resource "google_cloud_run_v2_service" "scanner" {
   # invocacao nao autenticada por causa do rewrite do Hosting (ADR-15). Um scanner
   # aberto seria um servico que baixa e processa qualquer objeto que alguem
   # apontar.
-  ingress             = "INGRESS_TRAFFIC_INTERNAL_ONLY"
-  deletion_protection = true
+  ingress = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+
+  # `false` AQUI, E `true` NA API — a assimetria e deliberada.
+  #
+  # O QUE ESTA PROTECAO CUSTOU: quando a criacao do servico falha depois de o
+  # recurso ja existir — foi o caso do primeiro deploy, com o startup probe
+  # reprovando —, o Terraform marca o recurso como TAINTED. O apply seguinte
+  # planeja destruir e recriar, o destroy esbarra na protecao, e o pipeline trava
+  # num estado que so sai com cirurgia manual no state (`terraform untaint`). Uma
+  # correcao de codigo perfeitamente boa nao consegue ser aplicada.
+  #
+  # O QUE ELA PROTEGIA: pouco. Este servico nao tem trafego de usuario, nao guarda
+  # nada e nao e alcancavel de fora (`INGRESS_TRAFFIC_INTERNAL_ONLY`, sem
+  # `allUsers`). Destrui-lo e recria-lo custa alguns minutos de veredito
+  # `indisponivel` — que a fila reentrega, e que a regra inviolavel 6 ja trata:
+  # arquivo nenhum e servido enquanto o estado nao for `limpo`.
+  #
+  # A API continua com `deletion_protection = true`, e a diferenca e essa: la um
+  # destroy e uma interrupcao de producao, aqui e um atraso de varredura.
+  deletion_protection = false
 
   template {
     service_account = google_service_account.scanner.email
