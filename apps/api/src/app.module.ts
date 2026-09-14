@@ -10,6 +10,7 @@ import { DisponibilidadesModule } from './disponibilidades/disponibilidades.modu
 import { SenhaModule } from './autenticacao/senha/senha.module.js';
 import { EntregaveisModule } from './entregaveis/entregaveis.module.js';
 import { FirebaseModule } from './firebase/firebase.module.js';
+import { GatewayPagamentoModule } from './pagamentos/gateway/gateway.module.js';
 import { HealthModule } from './health/health.module.js';
 import { LimiteModule } from './limite/limite.module.js';
 import { OutboxModule } from './outbox/outbox.module.js';
@@ -54,6 +55,12 @@ import { VitrineModule } from './vitrine/vitrine.module.js';
      * do outbox — o interno das tarefas e o do painel do administrador.
      */
     OutboxModule,
+    /*
+     * Etapa 8. `@Global()`: checkout, webhook e o despachante do outbox usam o
+     * gateway. A configuracao e validada aqui, no boot — `PAGAMENTOS_MODO`
+     * invalido ou `producao` derruba a inicializacao (regra inviolavel 20).
+     */
+    GatewayPagamentoModule,
     HealthModule,
     SenhaModule,
     AdvogadosModule,
