@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Storage } from '@google-cloud/storage';
+import { ehArquivoDeBase } from './base-do-clamav.js';
 
 /**
  * Traz a base do ClamAV do bucket para o disco, no boot do servico.
@@ -28,13 +29,6 @@ import { Storage } from '@google-cloud/storage';
 const BALDE = process.env['BUCKET_CLAMAV_DB'];
 const PASTA = process.argv[2] ?? '/var/lib/clamav';
 
-/** O que o clamd precisa encontrar. Qualquer outra coisa no bucket e ruido. */
-const EXTENSOES = ['.cvd', '.cld', '.cdb', '.hdb', '.ndb', '.info'];
-
-function ehBase(nome: string): boolean {
-  return EXTENSOES.some((extensao) => nome.endsWith(extensao));
-}
-
 async function principal(): Promise<number> {
   if (BALDE === undefined || BALDE === '') {
     console.error('BUCKET_CLAMAV_DB e obrigatorio.');
@@ -45,7 +39,7 @@ async function principal(): Promise<number> {
 
   const balde = new Storage().bucket(BALDE);
   const [objetos] = await balde.getFiles();
-  const bases = objetos.filter((objeto) => ehBase(objeto.name));
+  const bases = objetos.filter((objeto) => ehArquivoDeBase(objeto.name));
 
   if (bases.length === 0) {
     console.warn(
