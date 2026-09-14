@@ -1,4 +1,11 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import {
   FieldValue,
   type DocumentReference,
@@ -7,6 +14,7 @@ import {
 } from 'firebase-admin/firestore';
 import {
   congelarProduto,
+  esquemaProduto,
   type EntregavelResumo,
   type SnapshotProduto,
 } from 'shared';
@@ -20,13 +28,19 @@ import {
   type DocumentoTransicao,
 } from '../entregaveis/entregavel.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
-import { COLECAO_PRODUTOS } from '../produtos/produtos.service.js';
+import {
+  COLECAO_PRODUTOS,
+  type DocumentoProduto,
+} from '../produtos/produtos.service.js';
 import { COLECAO_PEDIDOS, type DocumentoPedido } from './pedido.js';
 
 export { COLECAO_PEDIDOS };
 
-/** Resultado da fase de leitura. `gravar` so aceita isto, entao nao ha como
- * escrever um pedido sem ter lido o produto antes. */
+/**
+ * O pedido pronto para gravar. `gravar` so aceita isto, e isto so sai de
+ * `preparar` — que valida o snapshot antes. Nao ha como escrever um pedido com
+ * um snapshot que ninguem conferiu.
+ */
 export interface PedidoPreparado {
   readonly dados: NovoPedido;
   readonly snapshot: SnapshotProduto;
@@ -37,6 +51,12 @@ export interface NovoPedido {
   readonly clienteId: string;
   readonly pagamentoId: string;
   readonly produtoOrigemId: string;
+}
+
+/** O que o checkout guarda de cada item: o produto e o snapshot DAQUELE momento. */
+export interface ItemCongelado {
+  readonly produtoOrigemId: string;
+  readonly snapshot: SnapshotProduto;
 }
 
 export interface PedidoResumo {
@@ -68,41 +88,70 @@ export class PedidosService {
   constructor(@Inject(FIRESTORE) private readonly db: Firestore) {}
 
   /**
-   * FASE 1 — so leitura. Congela o produto de cada item do carrinho.
+   * NO CHECKOUT — congela o produto de cada item, fora de transacao.
+   *
+   * E AQUI QUE O SNAPSHOT E TIRADO, e nao na confirmacao do pagamento (plano de
+   * execucao, risco da Etapa 8). Ate a Etapa 7 a leitura acontecia dentro da
+   * transacao que grava o pedido; chamada pelo webhook, ela congelaria o produto
+   * como ele estivesse no momento da CONFIRMACAO — e um administrador que mudasse
+   * o preco entre o QR code e o pagamento faria o cliente pagar um valor e
+   * receber o pedido de outro.
    *
    * O snapshot sai de `congelarProduto`, a MESMA funcao que o CRUD usa para saber
-   * o que escrever. Um campo novo no produto entra nos dois lugares de uma vez,
-   * ou em nenhum — o que nao pode acontecer e o catalogo ganhar campo que o
-   * pedido nao congela e passar a mudar retroativamente.
+   * o que escrever. Depois daqui o produto vivo NAO e consultado.
    *
-   * Depois daqui o produto vivo NAO e consultado. Nem para preco, nem para nome,
-   * nem para o numero de revisoes: tudo o que o pedido precisa esta dentro dele.
+   * Produto inativo e recusado: saiu da vitrine, nao pode entrar num carrinho. O
+   * mesmo produto repetido e lido uma vez so e congelado igual para os dois itens.
    */
-  async preparar(
-    transacao: Transaction,
-    itens: readonly NovoPedido[],
-  ): Promise<readonly PedidoPreparado[]> {
-    const preparados: PedidoPreparado[] = [];
+  async congelar(produtoIds: readonly string[]): Promise<ItemCongelado[]> {
+    const distintos = [...new Set(produtoIds)];
+    const lidos = await Promise.all(
+      distintos.map((id) => this.db.collection(COLECAO_PRODUTOS).doc(id).get()),
+    );
 
-    for (const dados of itens) {
-      const produto = await transacao.get(
-        this.db.collection(COLECAO_PRODUTOS).doc(dados.produtoOrigemId),
-      );
-      if (!produto.exists) {
-        throw new NotFoundException('Produto nao encontrado.');
+    const snapshots = new Map<string, SnapshotProduto>();
+    lidos.forEach((documento, indice) => {
+      const produto = documento.data() as DocumentoProduto | undefined;
+      if (produto?.ativo !== true) {
+        throw new UnprocessableEntityException(
+          'Um dos servicos do carrinho nao esta mais disponivel.',
+        );
       }
-      preparados.push({
-        dados,
-        snapshot: congelarProduto(produto.data() as SnapshotProduto),
-      });
-    }
+      snapshots.set(distintos[indice], congelarProduto(produto));
+    });
 
-    return preparados;
+    return produtoIds.map((produtoOrigemId) => ({
+      produtoOrigemId,
+      snapshot: snapshots.get(produtoOrigemId) as SnapshotProduto,
+    }));
   }
 
   /**
-   * FASE 2 — so escrita. Grava cada pedido e abre um entregavel por item do
-   * snapshot.
+   * NA CONFIRMACAO — reidrata o que o checkout congelou. NAO LE NADA.
+   *
+   * O snapshot atravessou um documento do Firestore entre o checkout e o webhook,
+   * e e validado de novo contra o schema do produto antes de virar pedido. Um
+   * documento corrompido ou escrito por uma versao antiga estoura aqui, antes de
+   * a transacao escrever qualquer coisa — e um pedido com preco `undefined` nunca
+   * existe.
+   */
+  preparar(
+    itens: readonly (NovoPedido & { readonly snapshot: unknown })[],
+  ): readonly PedidoPreparado[] {
+    return itens.map(({ snapshot, ...dados }) => {
+      const lido = esquemaProduto.safeParse(snapshot);
+      if (!lido.success) {
+        this.log.error(
+          `snapshot invalido para o pedido ${dados.pedidoId}; nada foi gravado`,
+        );
+        throw new InternalServerErrorException('Snapshot do produto invalido.');
+      }
+      return { dados, snapshot: congelarProduto(lido.data) };
+    });
+  }
+
+  /**
+   * So escrita. Grava cada pedido e abre um entregavel por item do snapshot.
    *
    * `create` e nao `set`: o `pedidoId` e deterministico (vem do evento de
    * pagamento), entao a reentrega do webhook estoura por documento existente, que

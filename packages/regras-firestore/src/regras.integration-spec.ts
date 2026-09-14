@@ -62,6 +62,13 @@ const CAMINHOS = [
   ['clientes', 'cliente-1'],
   ['clientes/cliente-1/anamnese', 'anamnese-1'],
   ['pagamentos', 'pagamento-1'],
+  /*
+   * A intencao de compra da Etapa 8. Guarda nome e e-mail de quem ainda nao e
+   * cliente, os itens congelados e o QR code da cobranca — lida ou escrita pelo
+   * navegador, seria a forma mais curta de trocar o preco de um pedido antes de
+   * ele existir.
+   */
+  ['checkouts', 'checkout-1'],
   ['pedidos', 'pedido-1'],
   ['pedidos/pedido-1/entregaveis', 'entregavel-1'],
   ['pedidos/pedido-1/entregaveis/entregavel-1/transicoes', 'transicao-1'],

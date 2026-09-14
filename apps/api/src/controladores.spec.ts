@@ -32,6 +32,8 @@ import { AnexosService } from './anexos/anexos.service.js';
 import type { PortaoDeArquivos } from './arquivos/portao.js';
 import type { UploadDeEntregavelService } from './entregaveis/upload.service.js';
 import type { TermosService } from './termos/termos.service.js';
+import { CheckoutController } from './checkout/checkout.controller.js';
+import type { CheckoutService } from './checkout/checkout.service.js';
 import { ClientesAdminController } from './clientes/clientes.admin.controller.js';
 import type { ClientesService } from './clientes/clientes.service.js';
 import { DisponibilidadesController } from './disponibilidades/disponibilidades.controller.js';
@@ -154,6 +156,8 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['redefinicao de senha', AutenticacaoController.prototype.redefinirSenha],
     ['pre-cadastro', PreCadastrosController.prototype.registrar],
     ['vitrine', VitrineController.prototype.listar],
+    ['checkout (Etapa 8)', CheckoutController.prototype.iniciar],
+    ['situacao do checkout (Etapa 8)', CheckoutController.prototype.situacao],
     ['varredura (interna)', VarreduraController.prototype.processar],
     ['retencao (interna)', RetencaoController.prototype.executar],
     ['entrega do outbox (interna)', OutboxController.prototype.entregar],
@@ -191,6 +195,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['health', HealthController.prototype.obter],
     ['pre-cadastro', PreCadastrosController.prototype.registrar],
     ['vitrine', VitrineController.prototype.listar],
+    ['checkout', CheckoutController.prototype.iniciar],
     ['cliente.listar', PedidosClienteController.prototype.listar],
     ['outbox.reenviar (painel)', OutboxAdminController.prototype.reenviar],
   ])('%s NAO e tarefa interna', (_nome, metodo) => {
@@ -236,6 +241,8 @@ describe('limite de requisicoes das rotas publicas', () => {
     ['pre-cadastro', PreCadastrosController.prototype.registrar],
     ['redefinicao de senha', AutenticacaoController.prototype.redefinirSenha],
     ['vitrine', VitrineController.prototype.listar],
+    ['checkout', CheckoutController.prototype.iniciar],
+    ['situacao do checkout', CheckoutController.prototype.situacao],
   ])('%s declara limite proprio', (_nome, metodo) => {
     const limite = reflector.get<ConfiguracaoDeLimite | undefined>(
       CHAVE_LIMITE,
@@ -265,6 +272,22 @@ describe('limite de requisicoes das rotas publicas', () => {
       limite.maximo / (limite.janelaMs / 60_000);
 
     expect(porMinuto(formulario)).toBeLessThan(porMinuto(vitrine));
+  });
+
+  /**
+   * Cada chamada ao checkout pode criar uma cobranca no gateway. O limite dele
+   * tem que ser mais apertado que o do polling, que e leitura repetida de
+   * proposito.
+   */
+  it('o checkout e mais apertado que o polling da situacao', () => {
+    const porMinuto = (metodo: object): number => {
+      const limite = reflector.get<ConfiguracaoDeLimite>(CHAVE_LIMITE, metodo);
+      return limite.maximo / (limite.janelaMs / 60_000);
+    };
+
+    expect(porMinuto(CheckoutController.prototype.iniciar)).toBeLessThan(
+      porMinuto(CheckoutController.prototype.situacao),
+    );
   });
 
   /**
@@ -307,6 +330,8 @@ describe('limite de requisicoes das rotas publicas', () => {
     ['pre-cadastro', PreCadastrosController.prototype.registrar],
     ['redefinicao de senha', AutenticacaoController.prototype.redefinirSenha],
     ['vitrine', VitrineController.prototype.listar],
+    ['checkout', CheckoutController.prototype.iniciar],
+    ['situacao do checkout', CheckoutController.prototype.situacao],
   ])('%s e verificado pelo App Check', (_nome, metodo) => {
     expect(reflector.get(CHAVE_SEM_APP_CHECK, metodo)).toBeUndefined();
   });
@@ -473,12 +498,56 @@ describe('ProdutosController', () => {
  * catalogo, em silencio. Este teste olha para a anotacao pela mesma razao que os
  * de `@Perfis` olham.
  */
-describe('a vitrine exige o token de pre-cadastro, na classe', () => {
-  it('declara o guard no controlador', () => {
-    const guards = Reflect.getMetadata(GUARDS_METADATA, VitrineController) as
+describe('a vitrine e o checkout exigem o token de pre-cadastro, na classe', () => {
+  it.each([
+    ['vitrine', VitrineController],
+    ['checkout (Etapa 8)', CheckoutController],
+  ])('%s declara o guard no controlador', (_nome, classe) => {
+    const guards = Reflect.getMetadata(GUARDS_METADATA, classe) as
       ReadonlyArray<Type<CanActivate>> | undefined;
 
     expect(guards).toContain(PreCadastroGuard);
+  });
+});
+
+describe('CheckoutController', () => {
+  function montar(): { controlador: CheckoutController; chamadas: string[] } {
+    const chamadas: string[] = [];
+    const controlador = new CheckoutController({
+      iniciar: (_dados: unknown, preCadastroId: string) => {
+        chamadas.push(`iniciar ${preCadastroId}`);
+        return Promise.resolve({});
+      },
+      situacao: (checkoutId: string, preCadastroId: string) => {
+        chamadas.push(`situacao ${checkoutId} ${preCadastroId}`);
+        return Promise.resolve({ estado: 'pago' });
+      },
+    } as unknown as CheckoutService);
+    return { controlador, chamadas };
+  }
+
+  /** O id sai do token que o guard ja validou — o segredo nunca chega ao servico. */
+  it('passa ao servico so o id do pre-cadastro', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.iniciar({} as never, 'id-do-lead.segredo');
+    await controlador.situacao('checkout-1', 'id-do-lead.segredo');
+
+    expect(chamadas).toEqual([
+      'iniciar id-do-lead',
+      'situacao checkout-1 id-do-lead',
+    ]);
+  });
+
+  it.each([
+    ['sem token', undefined],
+    ['token sem segredo', 'so-o-id'],
+  ])('recusa %s', (_caso, token) => {
+    const { controlador } = montar();
+
+    expect(() => controlador.iniciar({} as never, token)).toThrow(
+      'Conclua o pre-cadastro',
+    );
   });
 });
 

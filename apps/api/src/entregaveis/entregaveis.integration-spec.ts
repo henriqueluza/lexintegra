@@ -4,6 +4,7 @@ import { firestoreDeTeste, limparEmuladores } from '../emulador.js';
 import { PedidosService } from '../pedidos/pedidos.service.js';
 import { ProdutosService } from '../produtos/produtos.service.js';
 import { EntregaveisService } from './entregaveis.service.js';
+import { comSnapshot } from '../arnes-pedidos.js';
 
 const ADMIN = 'uid-admin';
 const CLIENTE = 'uid-cliente';
@@ -43,14 +44,16 @@ async function comprar(revisoes: number): Promise<void> {
   await banco.runTransaction(async (transacao) => {
     pedidos.gravar(
       transacao,
-      await pedidos.preparar(transacao, [
-        {
-          pedidoId: 'pedido-1',
-          clienteId: CLIENTE,
-          pagamentoId: 'pagamento-1',
-          produtoOrigemId: id,
-        },
-      ]),
+      pedidos.preparar(
+        await comSnapshot(pedidos, [
+          {
+            pedidoId: 'pedido-1',
+            clienteId: CLIENTE,
+            pagamentoId: 'pagamento-1',
+            produtoOrigemId: id,
+          },
+        ]),
+      ),
     );
   });
 

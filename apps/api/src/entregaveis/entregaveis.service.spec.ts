@@ -9,6 +9,7 @@ import { FirestoreFalso } from '../firestore-falso.js';
 import { PedidosService } from '../pedidos/pedidos.service.js';
 import { ProdutosService } from '../produtos/produtos.service.js';
 import { EntregaveisService } from './entregaveis.service.js';
+import { comSnapshot } from '../arnes-pedidos.js';
 
 const ADMIN = 'uid-admin';
 const CLIENTE = 'uid-cliente';
@@ -55,14 +56,16 @@ async function montar(
     const tr = transacao as unknown as Transaction;
     pedidos.gravar(
       tr,
-      await pedidos.preparar(tr, [
-        {
-          pedidoId: 'pedido-1',
-          clienteId: CLIENTE,
-          pagamentoId: 'pagamento-1',
-          produtoOrigemId,
-        },
-      ]),
+      pedidos.preparar(
+        await comSnapshot(pedidos, [
+          {
+            pedidoId: 'pedido-1',
+            clienteId: CLIENTE,
+            pagamentoId: 'pagamento-1',
+            produtoOrigemId,
+          },
+        ]),
+      ),
     );
   });
 
@@ -299,14 +302,16 @@ describe('EntregaveisService', () => {
         const tr = transacao as unknown as Transaction;
         pedidos.gravar(
           tr,
-          await pedidos.preparar(tr, [
-            {
-              pedidoId: 'pedido-1',
-              clienteId: CLIENTE,
-              pagamentoId: 'pagamento-1',
-              produtoOrigemId,
-            },
-          ]),
+          pedidos.preparar(
+            await comSnapshot(pedidos, [
+              {
+                pedidoId: 'pedido-1',
+                clienteId: CLIENTE,
+                pagamentoId: 'pagamento-1',
+                produtoOrigemId,
+              },
+            ]),
+          ),
         );
       });
       await banco

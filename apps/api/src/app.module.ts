@@ -5,6 +5,7 @@ import { AppCheckModule } from './app-check/app-check.module.js';
 import { AutenticacaoModule } from './autenticacao/autenticacao.module.js';
 import { ArmazenamentoModule } from './armazenamento/armazenamento.module.js';
 import { ArquivosModule } from './arquivos/arquivos.module.js';
+import { CheckoutModule } from './checkout/checkout.module.js';
 import { ClientesModule } from './clientes/clientes.module.js';
 import { DisponibilidadesModule } from './disponibilidades/disponibilidades.module.js';
 import { SenhaModule } from './autenticacao/senha/senha.module.js';
@@ -67,6 +68,7 @@ import { VitrineModule } from './vitrine/vitrine.module.js';
     ProdutosModule,
     PreCadastrosModule,
     VitrineModule,
+    CheckoutModule,
     ClientesModule,
     PedidosModule,
     EntregaveisModule,
