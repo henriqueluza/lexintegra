@@ -5,6 +5,7 @@
  * que ja esta FIXADO por ADR ou por decisao de seguranca e precisa ser identico
  * nas duas pontas — nao ha decisao de modelagem sendo antecipada.
  */
+export * from './carrinho.js';
 export * from './estado-entregavel.js';
 export * from './evento-outbox.js';
 export * from './esquemas/advogado.js';

@@ -101,3 +101,60 @@
   align-items: flex-start;
   gap: var(--s3);
 }
+
+.produto__acao {
+  margin-top: var(--s4);
+}
+
+/*
+ * O resumo do carrinho (Etapa 8). Fica abaixo da vitrine, e nao flutuando sobre
+ * ela: a pessoa compara servicos rolando, e um painel fixo cobriria justamente o
+ * que ela esta lendo.
+ */
+.carrinho {
+  margin-top: var(--s6);
+  border-top: var(--borda-fina) solid var(--divisor);
+  padding-top: var(--s5);
+}
+
+.carrinho h3 {
+  margin: 0;
+  font-family: var(--fonte-display);
+  font-weight: var(--peso-titulo);
+  font-size: var(--t-t3);
+  color: var(--texto);
+}
+
+.carrinho__itens {
+  margin: var(--s4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carrinho__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) 0;
+  border-bottom: var(--borda-fina) solid var(--divisor);
+  color: var(--texto-2);
+  font-size: var(--t-menor);
+}
+
+.carrinho__preco {
+  margin-left: auto;
+  color: var(--texto);
+}
+
+.carrinho__total {
+  margin: var(--s4) 0 0;
+  color: var(--texto);
+}
+
+.carrinho__aviso {
+  margin: var(--s2) 0 0;
+  color: var(--texto-3);
+  font-size: var(--t-mini);
+  line-height: var(--altura-solta);
+}

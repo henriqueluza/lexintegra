@@ -23,6 +23,7 @@ let resposta: ProdutoVitrine[] | Error = [PARECER];
 function montar(): ComponentFixture<Servicos> {
   liberado.set(false);
   pedidos = 0;
+  localStorage.clear();
 
   TestBed.configureTestingModule({
     imports: [Servicos],
@@ -223,6 +224,81 @@ describe('Servicos', () => {
 
       expect(texto(fixture)).toContain(TEXTOS.servicos.falha);
       expect(texto(fixture)).not.toContain('401');
+    });
+  });
+
+  /**
+   * O carrinho (Etapa 8). Nao chama a API: o contador de `listarVitrine` e o unico
+   * caminho de rede deste componente, e ele continua em um.
+   */
+  describe('carrinho', () => {
+    function botoes(
+      fixture: ComponentFixture<Servicos>,
+      seletor: string,
+    ): HTMLButtonElement[] {
+      return Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll(seletor),
+      );
+    }
+
+    async function clicarAdicionar(
+      fixture: ComponentFixture<Servicos>,
+      vezes = 1,
+    ): Promise<void> {
+      for (let i = 0; i < vezes; i += 1) {
+        botoes(fixture, '.produto__acao button')[0].click();
+        fixture.detectChanges();
+      }
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    it('nao mostra o resumo com o carrinho vazio', async () => {
+      const fixture = montar();
+
+      await liberar(fixture);
+
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('.carrinho'),
+      ).toBeNull();
+    });
+
+    it('acrescenta ao clicar e mostra o total estimado', async () => {
+      const fixture = montar();
+      await liberar(fixture);
+
+      await clicarAdicionar(fixture, 2);
+
+      const resumo = (fixture.nativeElement as HTMLElement).querySelector(
+        '.carrinho',
+      );
+      expect(resumo?.textContent).toContain(TEXTOS.servicos.carrinho.titulo);
+      expect(resumo?.textContent).toContain(
+        `2 ${TEXTOS.servicos.carrinho.itens}`,
+      );
+      expect(resumo?.textContent?.replace(/\s/g, ' ')).toContain('R$ 5.000,00');
+      expect(pedidos).toBe(1);
+    });
+
+    it('remove o item escolhido', async () => {
+      const fixture = montar();
+      await liberar(fixture);
+      await clicarAdicionar(fixture, 2);
+
+      botoes(fixture, '.carrinho__item button')[0].click();
+      fixture.detectChanges();
+
+      expect(botoes(fixture, '.carrinho__item')).toHaveLength(1);
+    });
+
+    it('desabilita o botao e avisa quando o carrinho enche', async () => {
+      const fixture = montar();
+      await liberar(fixture);
+
+      await clicarAdicionar(fixture, 10);
+
+      expect(botoes(fixture, '.produto__acao button')[0].disabled).toBe(true);
+      expect(texto(fixture)).toContain(TEXTOS.servicos.carrinho.cheio);
     });
   });
 });

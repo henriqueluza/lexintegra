@@ -101,6 +101,21 @@ export const TEXTOS = {
     revisoes: 'revisões por entregável',
     falha:
       'Não foi possível carregar os serviços agora. Tente novamente em instantes.',
+    /*
+     * O total do resumo e INDICATIVO e diz isso: quem congela o preco e o
+     * servidor, no checkout (regra inviolavel 5). O navegador pode estar mostrando
+     * o valor de ontem.
+     */
+    carrinho: {
+      adicionar: 'Adicionar ao carrinho',
+      titulo: 'Seu carrinho',
+      itens: 'serviço(s) no carrinho',
+      total: 'Total estimado',
+      aviso:
+        'O valor final é confirmado no checkout. Cada serviço vira um pedido separado, com reuniões e prazos próprios.',
+      remover: 'Remover',
+      cheio: 'O carrinho aceita até 10 serviços por compra.',
+    },
   },
 
   cadastro: {
