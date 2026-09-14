@@ -252,6 +252,16 @@ docs/
   scanner ficou com `deletion_protection = false` — ele é interno, sem tráfego e
   sem dado —, enquanto a API mantém `true`: lá um destroy é interrupção de
   produção, aqui é atraso de varredura que a fila reentrega.
+- **O deploy é reexecutável no mesmo commit, e isso precisou ser construído.** O
+  Artifact Registry tem `immutable_tags = true` e a tag da imagem é o SHA do
+  commit — então reexecutar o deploy (o que se faz sempre que um passo adiante
+  falha) batia em `cannot update tag ... The repository has enabled tag
+  immutability` e derrubava o pipeline **antes** de chegar no passo que se queria
+  repetir. Os passos de publicação agora pulam quando a tag já existe. Isso não é
+  atalho: sob imutabilidade, `api:<sha>` aponta para os mesmos bytes por
+  definição. **Não desligue a imutabilidade** — ela é o que torna a imagem
+  auditável; o que estava errado era o pipeline supor que publicar sempre dá
+  certo.
 - **Toda variável do root module do Terraform precisa de `default` — e isso é
   lint** (`pnpm lint` → `scripts/conferir-defaults-terraform.mjs`). O deploy tem
   um apply **parcial** logo no começo ("Garantir o Artifact Registry"), porque a
