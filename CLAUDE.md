@@ -239,6 +239,19 @@ docs/
 - **A API recusa iniciar sem `GCP_PROJECT_ID` e sem emulador.** É deliberado:
   um default silencioso faria ela escrever no projeto errado, e o único sintoma
   seria dado de produção aparecendo onde não deveria.
+- **Criação de Cloud Run que falha deixa o recurso `tainted`, e `deletion_protection`
+  transforma isso em impasse.** Quando o serviço é criado mas não fica pronto
+  (startup probe reprovando, por exemplo), o Terraform marca o recurso como
+  tainted; o apply seguinte planeja **destruir e recriar**, e o destroy é recusado
+  pela proteção. O pipeline trava, e uma correção de código perfeitamente boa não
+  consegue ser aplicada. **A saída é `terraform untaint <endereço>` e reaplicar** —
+  sem destroy, a proteção nem é consultada, e o apply vira atualização em lugar
+  com revisão nova. Trocar a proteção para `false` no código **não desatasca o
+  apply travado**: o provider avalia o valor que está no *state*, e um recurso
+  tainted nunca passa por uma atualização que gravaria o valor novo. Por isso o
+  scanner ficou com `deletion_protection = false` — ele é interno, sem tráfego e
+  sem dado —, enquanto a API mantém `true`: lá um destroy é interrupção de
+  produção, aqui é atraso de varredura que a fila reentrega.
 - **Toda variável do root module do Terraform precisa de `default` — e isso é
   lint** (`pnpm lint` → `scripts/conferir-defaults-terraform.mjs`). O deploy tem
   um apply **parcial** logo no começo ("Garantir o Artifact Registry"), porque a
