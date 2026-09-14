@@ -114,6 +114,62 @@ jobs:
   # imagens de referencia. Ler do package.json em vez de repetir aqui: uma
   # constante duplicada envelhece na primeira atualizacao de dependencia, e o
   # sintoma seria diferenca de renderizacao dificil de rastrear.
+  # ---------------------------------------------------------------------------
+  # A IMAGEM DO SCANNER, CONSTRUIDA E EXECUTADA.
+  #
+  # Ate aqui nada no CI tocava nesta imagem: ela so nascia no deploy, e so era
+  # executada em producao. O resultado foi uma imagem que NAO SOBE passar por
+  # duas revisoes — `package.json` nao era copiado para o estagio final, entao o
+  # Node tratava todo `.js` como CommonJS e morria no primeiro `import`. A suite
+  # de unidade nao pegava porque roda o TypeScript pelo ts-jest, fora do
+  # contentor; o `docker build` do deploy nao pegava porque construir uma imagem
+  # nao a executa.
+  #
+  # Constroi do MESMO jeito que o deploy — mesmo arquivo, mesmo contexto. Uma
+  # divergencia aqui faria este job passar sobre uma imagem que nao e a que vai
+  # para producao.
+  # ---------------------------------------------------------------------------
+  scanner:
+    name: Imagem do scanner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Construir a imagem
+        run: docker build -f apps/scanner/Dockerfile -t scanner-teste apps/scanner
+
+      # O primeiro comando que o entrypoint executa. Sem `BUCKET_CLAMAV_DB` ele
+      # deve recusar com a NOSSA mensagem — qualquer `SyntaxError` aqui significa
+      # que o modulo nem chegou a rodar, que e exatamente o defeito que passou.
+      - name: O modulo de download carrega como ESM
+        run: |
+          saida=$(docker run --rm --entrypoint node scanner-teste dist/baixar-base.js 2>&1 || true)
+          echo "$saida"
+          if echo "$saida" | grep -q "SyntaxError"; then
+            echo '::error::A imagem nao executa ESM. Falta package.json no estagio final?'
+            exit 1
+          fi
+          echo "$saida" | grep -q "BUCKET_CLAMAV_DB e obrigatorio"
+
+      # O que o startup probe do Cloud Run de fato faz. Sem clamd e sem GCS: o
+      # servidor HTTP precisa subir e responder, e e so isso que o probe exige.
+      - name: O servidor responde /saude
+        run: |
+          docker run -d --name scanner-saude -p 8080:8080 \
+            --entrypoint node scanner-teste dist/servidor.js
+          for _ in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/saude > /dev/null 2>&1; then
+              echo "scanner respondeu /saude"
+              docker rm -f scanner-saude > /dev/null
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::/saude nao respondeu em 60s"
+          docker logs scanner-saude
+          docker rm -f scanner-saude > /dev/null
+          exit 1
+
   versao-playwright:
     name: Versao do Playwright
     runs-on: ubuntu-latest
