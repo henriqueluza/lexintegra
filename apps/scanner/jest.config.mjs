@@ -33,6 +33,12 @@ export default {
      */
     '!servidor.ts',
     '!atualizar-base.ts',
+    /*
+     * `baixar-base.ts` entrou na mesma lista pelo mesmo motivo: ele lista e baixa
+     * objetos do Cloud Storage. A decisao que havia dentro dele — quais objetos
+     * sao base — saiu para `base-do-clamav.ts`, que e puro e tem suite propria.
+     */
+    '!baixar-base.ts',
   ],
   coverageDirectory: '../coverage',
   coverageReporters: ['text-summary', 'lcov', 'json-summary'],
