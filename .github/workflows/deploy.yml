@@ -138,10 +138,25 @@ jobs:
       - name: Autorizar o Docker no Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
 
+      # PUBLICAR E IDEMPOTENTE, e precisa ser: o repositorio tem
+      # `immutable_tags = true` e a tag e o SHA do commit, entao reexecutar o
+      # deploy no mesmo commit — que e o que se faz o tempo todo quando um passo
+      # adiante falha — esbarrava em "cannot update tag ... The repository has
+      # enabled tag immutability" e derrubava o pipeline ANTES de chegar no passo
+      # que se queria repetir.
+      #
+      # Pular quando a tag ja existe nao e atalho: sob imutabilidade, `api:<sha>`
+      # aponta para os mesmos bytes por definicao, entao reconstruir so poderia
+      # produzir o que ja esta la. A imutabilidade continua ligada de proposito —
+      # ela e o que torna a imagem auditavel.
       - name: Construir e enviar a imagem da API
         env:
           IMAGEM: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/api:${{ github.sha }}
         run: |
+          if gcloud artifacts docker images describe "$IMAGEM" > /dev/null 2>&1; then
+            echo "Imagem da API ja publicada em $IMAGEM; reaproveitando."
+            exit 0
+          fi
           # Contexto na raiz: o Dockerfile precisa do workspace pnpm inteiro.
           docker build -f apps/api/Dockerfile -t "$IMAGEM" .
           docker push "$IMAGEM"
@@ -160,6 +175,10 @@ jobs:
         env:
           IMAGEM: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/scanner:${{ github.sha }}
         run: |
+          if gcloud artifacts docker images describe "$IMAGEM" > /dev/null 2>&1; then
+            echo "Imagem do scanner ja publicada em $IMAGEM; reaproveitando."
+            exit 0
+          fi
           docker build -f apps/scanner/Dockerfile -t "$IMAGEM" apps/scanner
           docker push "$IMAGEM"
 
