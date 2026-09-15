@@ -194,6 +194,14 @@ export const routes: Routes = [
         title: 'Clientes — LexIntegra',
       },
       {
+        path: 'estornos',
+        loadComponent: () =>
+          import('./paginas/admin-estornos/admin-estornos').then(
+            (m) => m.AdminEstornos,
+          ),
+        title: 'Estornos — LexIntegra',
+      },
+      {
         path: 'entregas',
         loadComponent: () =>
           import('./paginas/admin-entregas/admin-entregas').then(

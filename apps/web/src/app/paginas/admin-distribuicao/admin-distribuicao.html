@@ -7,7 +7,15 @@
     [formControl]="situacao"
   />
 
-  @if (falha(); as mensagem) {
+  @if (aviso(); as mensagem) {
+  <p class="distribuicao__aviso" role="status">{{ mensagem }}</p>
+  } @if (aEstornar(); as pedido) {
+  <app-estorno-pedido
+    [pedido]="pedido"
+    (concluido)="estornado($event)"
+    (desistiu)="aEstornar.set(null)"
+  />
+  } @if (falha(); as mensagem) {
   <app-mensagem-erro variante="bloco">{{ mensagem }}</app-mensagem-erro>
   } @if (falhaDaLista()) {
   <app-mensagem-erro variante="bloco">
@@ -32,7 +40,17 @@
       @switch (coluna.chave) { @case ('produto') { {{ comoPedido(linha).produto
       }} } @case ('cliente') { {{ comoPedido(linha).cliente.nome }} } @case
       ('situacao') { {{ nomeDoAdvogado(comoPedido(linha).advogadoId) }} } @case
-      ('acoes') { @if (comoPedido(linha).distribuido) {
+      ('pedido') { {{ rotuloDaSituacao(comoPedido(linha)) }} } @case ('estorno')
+      { @if (comoPedido(linha).situacao === 'estornado') { — } @else {
+      <app-botao
+        variante="texto"
+        tamanho="p"
+        [rotuloAcessivel]="'Estornar ' + comoPedido(linha).produto"
+        (click)="abrirEstorno(comoPedido(linha))"
+      >
+        Estornar
+      </app-botao>
+      } } @case ('acoes') { @if (comoPedido(linha).distribuido) {
       <app-botao
         tamanho="p"
         [carregando]="emCurso() === comoPedido(linha).id"

@@ -54,6 +54,8 @@ export class ShellAutenticada {
         { rota: '/admin/clientes', rotulo: 'Clientes' },
         { rota: '/admin/advogados', rotulo: 'Advogados' },
         { rota: '/admin/produtos', rotulo: 'Produtos' },
+        /* Etapa 8: as devolucoes que o escritorio faz por fora do gateway. */
+        { rota: '/admin/estornos', rotulo: 'Estornos' },
         /*
          * Por ultimo, e de proposito: e uma tela de diagnostico, visitada quando
          * algo deu errado, e nao parte do trabalho do dia.
