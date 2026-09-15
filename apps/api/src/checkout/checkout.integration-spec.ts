@@ -177,6 +177,29 @@ describe('checkout sobre HTTP', () => {
     );
   });
 
+  /**
+   * O cartao sai pelo checkout hospedado (ADR-19): a resposta e a pagina do
+   * gateway, e o produto cadastrado la e o snapshot, com o preco congelado.
+   */
+  it('com cartao, devolve a pagina do gateway e mapeia o produto', async () => {
+    const liberacao = await token();
+    const { id } = await produtos.criar(PARECER, 'uid-admin');
+
+    const { body } = await http()
+      .post('/api/checkout')
+      .set('x-pre-cadastro', liberacao)
+      .send({ ...corpo([id, id]), metodo: 'cartao' })
+      .expect(201);
+
+    expect(body).toMatchObject({ metodo: 'cartao', totalCentavos: 500_000 });
+    expect(body.url).toContain(`/checkout?id=${body.checkoutId as string}`);
+
+    const mapeados = await firestoreDeTeste()
+      .collection('produtos-gateway')
+      .get();
+    expect(mapeados.size).toBe(1);
+  });
+
   it('a retentativa do mesmo carrinho devolve a mesma cobranca', async () => {
     const liberacao = await token();
     const { id } = await produtos.criar(PARECER, 'uid-admin');

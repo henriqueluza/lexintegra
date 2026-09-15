@@ -69,6 +69,11 @@ const CAMINHOS = [
    * ele existir.
    */
   ['checkouts', 'checkout-1'],
+  /*
+   * O mapeamento snapshot -> produto no gateway, para o cartao (Etapa 8). Escrito
+   * pelo navegador, apontaria um snapshot para um produto de outro preco.
+   */
+  ['produtos-gateway', 'lex_produto-1_0123456789abcdef'],
   ['pedidos', 'pedido-1'],
   ['pedidos/pedido-1/entregaveis', 'entregavel-1'],
   ['pedidos/pedido-1/entregaveis/entregavel-1/transicoes', 'transicao-1'],

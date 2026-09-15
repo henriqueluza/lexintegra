@@ -5,6 +5,7 @@ import { PreCadastroGuard } from '../vitrine/pre-cadastro.guard.js';
 import { CheckoutController } from './checkout.controller.js';
 import { CheckoutService } from './checkout.service.js';
 import { CobrancaDoCheckout } from './cobranca.service.js';
+import { ProdutosNoGateway } from './produtos-no-gateway.js';
 
 /**
  * `PedidosModule` pelo congelamento do snapshot; `PreCadastrosModule` pela
@@ -13,6 +14,11 @@ import { CobrancaDoCheckout } from './cobranca.service.js';
 @Module({
   imports: [PedidosModule, PreCadastrosModule],
   controllers: [CheckoutController],
-  providers: [CheckoutService, CobrancaDoCheckout, PreCadastroGuard],
+  providers: [
+    CheckoutService,
+    CobrancaDoCheckout,
+    ProdutosNoGateway,
+    PreCadastroGuard,
+  ],
 })
 export class CheckoutModule {}

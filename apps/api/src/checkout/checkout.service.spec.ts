@@ -21,10 +21,16 @@ import { ProdutosService } from '../produtos/produtos.service.js';
 import {
   COLECAO_CHECKOUTS,
   FOLGA_ANTES_DE_APAGAR_MS,
+  VALIDADE_CHECKOUT_HOSPEDADO_MS,
   type DocumentoCheckout,
 } from './checkout.js';
 import { CheckoutService } from './checkout.service.js';
 import { CobrancaDoCheckout } from './cobranca.service.js';
+import {
+  COLECAO_PRODUTOS_GATEWAY,
+  idDoProdutoNoGateway,
+  ProdutosNoGateway,
+} from './produtos-no-gateway.js';
 
 const ADMIN = 'uid-admin';
 const LEAD = 'hash-do-email-da-ana';
@@ -91,7 +97,11 @@ async function montar(
     db,
     auth,
     new PedidosService(db),
-    new CobrancaDoCheckout(db, gatewayAlternativo ?? gateway),
+    new CobrancaDoCheckout(
+      db,
+      gatewayAlternativo ?? gateway,
+      new ProdutosNoGateway(db, gatewayAlternativo ?? gateway),
+    ),
   );
 
   const { id: parecer } = await produtos.criar(PARECER, ADMIN);
@@ -482,18 +492,18 @@ describe('CheckoutService', () => {
   });
 
   describe('recusas antes de qualquer escrita', () => {
-    it.each([
-      ['termos de outra versao', { termosVersao: 'versao-antiga' }],
-      ['cartao, ainda indisponivel', { metodo: 'cartao' as const }],
-    ])('%s', async (_caso, alteracao) => {
-      const arranjo = await montar();
+    it.each([['termos de outra versao', { termosVersao: 'versao-antiga' }]])(
+      '%s',
+      async (_caso, alteracao) => {
+        const arranjo = await montar();
 
-      await expect(
-        arranjo.servico.iniciar(pedido(arranjo, alteracao), LEAD, AGORA),
-      ).rejects.toThrow(UnprocessableEntityException);
-      expect(checkouts(arranjo)).toEqual([]);
-      expect(arranjo.gateway.cobrancas.size).toBe(0);
-    });
+        await expect(
+          arranjo.servico.iniciar(pedido(arranjo, alteracao), LEAD, AGORA),
+        ).rejects.toThrow(UnprocessableEntityException);
+        expect(checkouts(arranjo)).toEqual([]);
+        expect(arranjo.gateway.cobrancas.size).toBe(0);
+      },
+    );
 
     it('produto inativo', async () => {
       const arranjo = await montar();
@@ -614,6 +624,219 @@ describe('CheckoutService', () => {
         estado: 'expirado',
       });
       expect(checkout(arranjo, checkoutId).estado).toBe('aguardando_pagamento');
+    });
+  });
+
+  /* ------------------------------------------------------------------------ */
+  /* Cartao pelo checkout hospedado (ADR-19)                                    */
+  /* ------------------------------------------------------------------------ */
+
+  describe('cartao', () => {
+    const CARTAO = { metodo: 'cartao' as const };
+
+    it('devolve a URL da pagina do gateway e grava a cobranca hospedada', async () => {
+      const arranjo = await montar();
+
+      const iniciado = await arranjo.servico.iniciar(
+        pedido(arranjo, CARTAO),
+        LEAD,
+        AGORA,
+      );
+
+      expect(iniciado).toMatchObject({
+        metodo: 'cartao',
+        totalCentavos: 370_000,
+      });
+      if (iniciado.metodo !== 'cartao') throw new Error('esperava cartao');
+      expect(iniciado.url).toContain(`/checkout?id=${iniciado.checkoutId}`);
+
+      const gravado = checkout(arranjo, iniciado.checkoutId);
+      expect(gravado.cobranca).toMatchObject({
+        origem: 'hospedado',
+        valorCentavos: 370_000,
+        pix: null,
+      });
+      expect(gravado.apagarApos.toMillis()).toBe(
+        AGORA + VALIDADE_CHECKOUT_HOSPEDADO_MS + FOLGA_ANTES_DE_APAGAR_MS,
+      );
+    });
+
+    /**
+     * O produto do gateway e o SNAPSHOT: o preco cobrado na pagina hospedada e o
+     * congelado. Dois itens iguais sao um produto com quantidade dois.
+     */
+    it('cadastra no gateway um produto por snapshot, com quantidade', async () => {
+      const arranjo = await montar();
+
+      await arranjo.servico.iniciar(
+        pedido(arranjo, {
+          ...CARTAO,
+          itens: [
+            { produtoId: arranjo.parecer },
+            { produtoId: arranjo.parecer },
+            { produtoId: arranjo.contrato },
+          ],
+        }),
+        LEAD,
+        AGORA,
+      );
+
+      const produtosNoGateway = [...arranjo.gateway.produtos.values()];
+      expect(produtosNoGateway.map((p) => p.precoCentavos).sort()).toEqual([
+        120_000, 250_000,
+      ]);
+      expect([...arranjo.gateway.cobrancas.values()][0]?.valorCentavos).toBe(
+        620_000,
+      );
+    });
+
+    /**
+     * Editar o catalogo cria OUTRO produto no gateway. O antigo continua cobrando
+     * o preco antigo — a regra inviolavel 5 valendo tambem do lado de la.
+     */
+    it('editar o preco gera outro produto no gateway, sem tocar o anterior', async () => {
+      const arranjo = await montar();
+      await arranjo.servico.iniciar(
+        pedido(arranjo, { ...CARTAO, itens: [{ produtoId: arranjo.parecer }] }),
+        LEAD,
+        AGORA,
+      );
+
+      await arranjo.produtos.editar(
+        arranjo.parecer,
+        { ...PARECER, precoCentavos: 300_000 },
+        ADMIN,
+      );
+      await arranjo.servico.iniciar(
+        pedido(arranjo, {
+          ...CARTAO,
+          itens: [{ produtoId: arranjo.parecer }],
+          chaveDoCarrinho: '22222222-2222-4222-8222-222222222222',
+        }),
+        LEAD,
+        AGORA,
+      );
+
+      expect(
+        [...arranjo.gateway.produtos.values()]
+          .map((p) => p.precoCentavos)
+          .sort(),
+      ).toEqual([250_000, 300_000]);
+    });
+
+    it('guarda o mapeamento e nao consulta o gateway de novo', async () => {
+      const arranjo = await montar();
+      const chamadas: string[] = [];
+      const original = arranjo.gateway.garantirProduto.bind(arranjo.gateway);
+      arranjo.gateway.garantirProduto = (produto) => {
+        chamadas.push(produto.externalId);
+        return original(produto);
+      };
+      const itens = [{ produtoId: arranjo.parecer }];
+
+      await arranjo.servico.iniciar(
+        pedido(arranjo, { ...CARTAO, itens }),
+        LEAD,
+        AGORA,
+      );
+      await arranjo.servico.iniciar(
+        pedido(arranjo, {
+          ...CARTAO,
+          itens,
+          chaveDoCarrinho: '33333333-3333-4333-8333-333333333333',
+        }),
+        LEAD,
+        AGORA,
+      );
+
+      expect(chamadas).toHaveLength(1);
+      expect(
+        arranjo.banco.documentos.has(
+          `${COLECAO_PRODUTOS_GATEWAY}/${chamadas[0]}`,
+        ),
+      ).toBe(true);
+    });
+
+    it('a retentativa devolve a mesma pagina', async () => {
+      const arranjo = await montar();
+
+      const primeiro = await arranjo.servico.iniciar(
+        pedido(arranjo, CARTAO),
+        LEAD,
+        AGORA,
+      );
+      const segundo = await arranjo.servico.iniciar(
+        pedido(arranjo, CARTAO),
+        LEAD,
+        AGORA + 60_000,
+      );
+
+      expect(segundo).toEqual(primeiro);
+    });
+
+    /** Trocar de PIX para cartao e outra cobranca; o QR sai da tela. */
+    it('trocar de PIX para cartao substitui o checkout do PIX', async () => {
+      const arranjo = await montar();
+      const pix = await arranjo.servico.iniciar(pedido(arranjo), LEAD, AGORA);
+
+      const cartao = await arranjo.servico.iniciar(
+        pedido(arranjo, CARTAO),
+        LEAD,
+        AGORA + 60_000,
+      );
+
+      expect(cartao.checkoutId).not.toBe(pix.checkoutId);
+      expect(checkout(arranjo, pix.checkoutId).estado).toBe('substituido');
+    });
+
+    it('valor divergente no checkout hospedado nao chega a tela', async () => {
+      const arranjo = await montar();
+      arranjo.gateway.forcarValor(1);
+
+      await expect(
+        arranjo.servico.iniciar(pedido(arranjo, CARTAO), LEAD, AGORA),
+      ).rejects.toThrow(ServiceUnavailableException);
+    });
+
+    it('falha ao cadastrar o produto marca o checkout e responde 503', async () => {
+      const arranjo = await montar();
+      arranjo.gateway.falharProximas(1);
+
+      await expect(
+        arranjo.servico.iniciar(pedido(arranjo, CARTAO), LEAD, AGORA),
+      ).rejects.toThrow(ServiceUnavailableException);
+
+      const [caminho] = checkouts(arranjo);
+      expect(arranjo.banco.documentos.get(caminho)?.['estado']).toBe(
+        'falhou_cobranca',
+      );
+    });
+  });
+
+  describe('idDoProdutoNoGateway', () => {
+    it('muda com preco, nome ou descricao, e nao com o resto', () => {
+      const base = idDoProdutoNoGateway('produto-1', PARECER);
+
+      expect(base).toMatch(/^lex_produto-1_[0-9a-f]{16}$/);
+      expect(idDoProdutoNoGateway('produto-1', { ...PARECER })).toBe(base);
+      expect(
+        idDoProdutoNoGateway('produto-1', { ...PARECER, precoCentavos: 1 }),
+      ).not.toBe(base);
+      expect(
+        idDoProdutoNoGateway('produto-1', { ...PARECER, nome: 'Outro' }),
+      ).not.toBe(base);
+      expect(
+        idDoProdutoNoGateway('produto-1', {
+          ...PARECER,
+          descricao: 'Outra descricao',
+        }),
+      ).not.toBe(base);
+      expect(
+        idDoProdutoNoGateway('produto-1', {
+          ...PARECER,
+          quantidadeReunioes: 9,
+        }),
+      ).toBe(base);
     });
   });
 });

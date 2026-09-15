@@ -19,6 +19,7 @@ import {
   ordenarItens,
   VERSAO_TERMOS_CHECKOUT,
   type CheckoutIniciado,
+  type MetodoPagamento,
   type NovoCheckout,
   type SituacaoCheckout,
 } from 'shared';
@@ -33,6 +34,7 @@ import {
   hashDosItens,
   idDoCarrinho,
   idDoCheckout,
+  VALIDADE_CHECKOUT_HOSPEDADO_MS,
   VALIDADE_PIX_SEGUNDOS,
   type DocumentoCheckout,
   type NovaIntencao,
@@ -81,11 +83,6 @@ export class CheckoutService {
     agora: number = Date.now(),
   ): Promise<CheckoutIniciado> {
     this.conferirTermos(dados.termosVersao);
-    if (dados.metodo === 'cartao') {
-      throw new UnprocessableEntityException(
-        'O pagamento com cartao ainda nao esta disponivel.',
-      );
-    }
     await this.conferirEmail(dados.comprador.email);
 
     const itens = ordenarItens(dados.itens);
@@ -97,7 +94,7 @@ export class CheckoutService {
     const reaproveitada = await this.abrir(intencao, agora);
     if (reaproveitada !== null) return reaproveitada;
 
-    return this.cobranca.cobrarPix(intencao, agora);
+    return this.cobranca.cobrar(intencao, agora);
   }
 
   /**
@@ -195,7 +192,7 @@ export class CheckoutService {
          * precisa sumir.
          */
         apagarApos: Timestamp.fromMillis(
-          agora + VALIDADE_PIX_SEGUNDOS * 1000 + FOLGA_ANTES_DE_APAGAR_MS,
+          agora + validade(dados.metodo) + FOLGA_ANTES_DE_APAGAR_MS,
         ),
         criadoEm: FieldValue.serverTimestamp(),
         atualizadoEm: FieldValue.serverTimestamp(),
@@ -264,4 +261,10 @@ function usuarioInexistente(erro: unknown): boolean {
     code === 'auth/user-not-found' ||
     (typeof message === 'string' && message.includes('auth/user-not-found'))
   );
+}
+
+function validade(metodo: MetodoPagamento): number {
+  return metodo === 'pix'
+    ? VALIDADE_PIX_SEGUNDOS * 1000
+    : VALIDADE_CHECKOUT_HOSPEDADO_MS;
 }
