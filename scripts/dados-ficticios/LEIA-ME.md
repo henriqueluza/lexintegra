@@ -32,6 +32,30 @@ Quando a Etapa 8 existir, conferir:
    campo/valor. A tela do advogado não muda quando ela chegar — ela renderiza o
    que existir, sem conhecer nome de campo —, mas o conteúdo destes exemplos sim.
 
+### Revalidação feita na Etapa 8 (parcial)
+
+A confirmação do pagamento (`apps/api/src/pagamentos/webhook/confirmacao.service.ts`)
+passou a escrever o agregado de verdade. Conferido contra ela:
+
+1. **Confirmado.** `produtosContratados` é mantido pela confirmação, com o nome
+   **congelado no snapshot do checkout**, sem repetição, e acrescentado — não
+   substituído — quando o cliente compra de novo.
+2. **Confirmado, com uma diferença de forma.** Um pagamento, N pedidos, e
+   `pagamentoId` agrupa. Mas o id real do pagamento é o **da cobrança** e o do
+   pedido é `{cobrançaId}_{nnn}` (errata do ADR-04); aqui as chaves são legíveis
+   (`clara-contrato`). Nenhuma tela lê o id por dentro, então a diferença não quebra
+   nada — e trocar as chaves só tornaria o seed mais difícil de ler.
+3. **Confirmado.** O documento do cliente nasce na confirmação com
+   `nomeNormalizado` e `emailNormalizado` preenchidos por `normalizarParaBusca`, e
+   um cliente existente mantém o `criadoEm` original.
+4. **Continua pendente.** A Etapa 8 trouxe só uma ficha **provisória** (stub, três
+   perguntas) — a real segue com a CONTRATANTE.
+
+Duas coisas que o seed **não** reproduz, e não precisa: os pedidos semeados não têm
+documento em `pagamentos` (então um estorno feito sobre eles nunca sai integral
+pelo gateway — fica manual) e já nascem com `situacao: 'ativo'`, como
+`PedidosService.gravar` escreve desde a Etapa 8.
+
 Divergência aqui não quebra teste automaticamente: os documentos são escritos
 direto na REST do emulador, não pelo `PedidosService`. O que pega divergência é a
 suíte de integração, que exercita os serviços de verdade contra o mesmo emulador.

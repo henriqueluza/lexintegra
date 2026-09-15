@@ -20,6 +20,7 @@ import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
 import { SeloEstado } from '../../ui/selo-estado/selo-estado';
 import { mensagemDoErro } from '../erros';
 import { anexosDeclarados, MAXIMO_ANEXOS } from './anexos-do-navegador';
+import { CancelamentoPedido } from './cancelamento-pedido';
 import { TEXTO_TERMO_DOWNLOAD } from './termo';
 
 /**
@@ -38,6 +39,7 @@ import { TEXTO_TERMO_DOWNLOAD } from './termo';
     ReactiveFormsModule,
     Botao,
     Campo,
+    CancelamentoPedido,
     Cartao,
     CartaoRodape,
     MensagemErro,
@@ -73,6 +75,17 @@ export class CartaoPedidoComponent {
   /** Os `File` de verdade, para o PUT. Ficam fora do signal exibido: o conteudo
    * do arquivo nao e estado de tela. */
   private arquivos: readonly File[] = [];
+
+  /**
+   * Cancelado e estornado ficam na tela, com a situacao escrita: o cartao e o
+   * registro do que o cliente contratou, e sumir com ele apagaria o historico.
+   */
+  protected situacao(): string {
+    const { situacao, distribuido } = this.pedido();
+    if (situacao === 'cancelado') return 'Cancelado';
+    if (situacao === 'estornado') return 'Estornado';
+    return distribuido ? 'Em andamento' : 'Em analise';
+  }
 
   protected readonly observacao = new FormControl('', {
     nonNullable: true,

@@ -148,6 +148,8 @@ São **três camadas**, com propósitos diferentes e nenhuma substituindo a outr
 
 **O contador de tentativas anda na reivindicação, não na conclusão.** É o que faz um processo que morre no meio consumir uma tentativa, e portanto o que torna o teto real. O teto da política é menor que o `max_attempts` da fila, porque o desfecho que se quer é `abandonado` — com alerta e registro visível no painel — e não uma tarefa que some da fila sem deixar rastro.
 
+**Desde a Etapa 8, o outbox carrega um efeito que não é e-mail.** O evento `estorno-integral` (ADR-12) passa pela mesma fila, pelo mesmo arrendamento e pela mesma política crítica, e o despachante, em vez do transporte, chama `GatewayPagamento.estornar`. É a regra 2 aplicada ao dinheiro: o estorno real nasce na transação que decide o estorno, e nunca de um endpoint síncrono. A terceira camada, aqui, é a idempotência do próprio gateway — um segundo estorno da mesma cobrança é tratado como sucesso. O outro evento novo, `acesso-cliente`, é o e-mail de definição de senha do cliente, no mesmo caminho do `definir-senha` do advogado.
+
 ### ADR-04 — Idempotência por ID determinístico
 
 **Contexto.** O Firestore garante unicidade do ID do documento dentro da coleção, e a operação `create` falha se o documento já existir. Isso é funcionalmente equivalente a uma restrição `UNIQUE` com `ON CONFLICT DO NOTHING`.
@@ -159,6 +161,14 @@ São **três camadas**, com propósitos diferentes e nenhuma substituindo a outr
 3. **Entrega de e-mail** — marcador de envio atualizado transacionalmente, já que a entrega via Cloud Tasks é "pelo menos uma vez".
 
 **Limitação estrutural.** Só se ganha unicidade em uma chave natural por coleção — a do ID. Se uma entidade precisar de duas restrições independentes (por exemplo, e-mail único e CPF único), é necessário criar coleções-índice auxiliares escritas dentro da mesma transação. Isso é complexidade que o PostgreSQL daria de graça, e é o preço concreto do ADR-01.
+
+**Errata da Etapa 8 — o ID do pagamento é o da COBRANÇA, não o do evento.** O item 1 dizia "o ID do evento vira o ID do documento de pagamento". Na API v2 do AbacatePay, o `id` do envelope do webhook é o id do **log** de entrega: dois eventos distintos sobre a mesma cobrança teriam ids diferentes e produziriam dois pagamentos, que é exatamente o que a regra existe para impedir. A chave natural do fato "esta cobrança foi paga" é a cobrança. Então:
+
+- `pagamentos/{cobrancaId}`, criado com `create` — a reentrega estoura com `ALREADY_EXISTS` e é duplicata esperada;
+- `pedidos/{cobrancaId}_{nnn}`, na ordem do carrinho congelado, para que a reexecução da transação escreva os mesmos documentos e não um segundo jogo;
+- o id do evento continua registrado no pagamento (`eventoId`), como trilha.
+
+Provado contra o emulador, por HTTP, com três entregas sequenciais **e** três concorrentes: um pagamento, dois pedidos, um cliente, uma conta no Auth, um evento de acesso no outbox (`pagamentos/webhook/confirmacao.integration-spec.ts`).
 
 ### ADR-05 — Microsoft Teams via Graph API para o link de reunião, iCalendar para o convite
 
@@ -346,6 +356,18 @@ Os eventos de domínio, com a aresta de cada um, vivem em `packages/shared/src/e
 
 **Cancelamento de reunião.** Cancelar com antecedência mínima de 24 horas devolve a reunião ao saldo do pedido. Cancelamento com menos de 24 horas de antecedência, ou não comparecimento, consome a reunião do saldo sem devolução. Essa janela precisa ser validada no servidor no momento do cancelamento, comparando o horário da solicitação com o `DTSTART` da reunião.
 
+**Errata da Etapa 8 — o gateway só estorna a cobrança inteira, e isso mudou a forma do estorno.** O ADR supunha estorno por pedido. A API v2 do AbacatePay estorna só integral, por cobrança — e um carrinho com três pedidos é uma cobrança. Estornar um pedido isolado não tem chamada correspondente no gateway. As decisões, tomadas pelo desenvolvedor na Etapa 8:
+
+- **O administrador estorna; o cliente cancela.** São duas operações, com donos diferentes. O cancelamento **não devolve dinheiro** — encerra o pedido, e a tela diz isso com todas as letras. O estorno é a devolução, e é decisão do escritório.
+- **As duas só valem sem trabalho iniciado**, isto é, com todos os entregáveis em `solicitado`. A elegibilidade vive em `packages/shared/src/situacao-pedido.ts` (`podeCancelar`, `podeEstornar`), é a mesma função na tela e no servidor, e o servidor a lê **dentro da transação**. Com um entregável em `em_elaboracao`, os dois endpoints respondem 409.
+- **Estorno de pedido isolado é registrado e executado à mão.** O servidor valida e grava `estornos/{pedidoId}` com `execucao: manual_pendente`; o escritório devolve o valor por fora e registra a devolução no painel (`manual_executado`).
+- **Quando todos os pedidos da cobrança ficam estornados**, e nenhum deles já foi devolvido à mão, sai o **estorno integral pelo gateway**: os pendentes manuais são absorvidos (`gateway_pendente`) e nasce o evento `estorno-integral` no outbox, na mesma transação. O webhook `*.refunded` confirma (`gateway_confirmado`). Com um `manual_executado` no grupo, o integral **não** sai — devolveria de novo o que o escritório já devolveu —, e o restante segue manual.
+- **Nenhuma chamada ao estorno real acontece fora do outbox** (regra inviolável 20). O endpoint do administrador só grava; quem chama `GatewayPagamento.estornar` é o despachante, que trata "já estornado" como sucesso — a reentrega depois de a baixa falhar não pode virar erro.
+
+**A situação do pedido é um eixo separado do estado dos entregáveis.** `pedidos.situacao` ∈ `ativo | cancelado | estornado`, sempre escrita; documento anterior à Etapa 8 sem o campo é lido como `ativo`. O ADR-11 continua intacto: cancelar não é transição de entregável. O outro lado da corrida está em `EntregaveisService`, que recusa `iniciar-trabalho` em pedido que não esteja `ativo`, também dentro da transação — o estorno e o início do trabalho leem o mesmo pedido, e um dos dois reexecuta.
+
+**O texto jurídico da regra ainda não existe.** O aceite no checkout sai com o marcador literal `{{TODO-TEXTO-REGRA-ESTORNO-ADR-12}}` e a versão `checkout-v0-pendente-adr-12`, e o cancelamento com `{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}`, cada um com teste que cai quando o marcador for substituído. A evidência do aceite (`termosVersao`, `termosAceitosEm`) é **copiada para o pagamento** na confirmação: o checkout some pela TTL, e a prova de que o cliente aceitou a regra não pode sumir com ele.
+
 ### ADR-13 — Projeto Google Cloud/Firebase no nome do CONTRATADO, faturamento separado
 
 **Contexto.** Ficou decidido que o CONTRATADO cria o projeto Google Cloud/Firebase, não o Marcos (ver Etapa 0.4 do plano de execução). Faltava resolver como o pagamento recorrente, que pela cláusula 3.4 é da CONTRATANTE, acontece sem o Marcos precisar de acesso administrativo ao projeto.
@@ -457,6 +479,83 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 
 ---
 
+### ADR-19 — Pagamento: PIX transparente, cartão pelo checkout hospedado, e a trava contra produção no código
+
+**Contexto.** A seção 7.1 e o escopo da Etapa 8 pediam "checkout transparente do AbacatePay com Pix e cartão", sem redirecionamento. A documentação atual da API v2, lida no início da Etapa 8, diz outra coisa:
+
+- o checkout **transparente** aceita **só PIX**;
+- **cartão** existe só no checkout **hospedado**, que redireciona o cliente para a página do gateway e exige os produtos cadastrados antes no gateway;
+- o estorno é **só integral**, por cobrança (ver a errata do ADR-12);
+- sandbox e produção usam **a mesma URL** — o ambiente é decidido pela chave (`abc_dev_…` ou `abc_prod_…`);
+- o webhook se autentica por `?webhookSecret=` na URL **e** por `X-Webhook-Signature` (HMAC-SHA256 em base64 sobre o corpo cru), e o envelope traz `id` (do log), `event`, `devMode` e `data`.
+
+**Decisões.**
+
+1. **PIX pelo transparente, cartão pelo hospedado.** O QR do PIX aparece na própria página; o cartão leva à página do gateway e volta para `/checkout?id=`, onde o polling mostra o resultado. **É desvio da 7.1** ("sem redirecionamento"), e precisa ser comunicado à CONTRATANTE.
+2. **O produto no gateway é função do snapshot**, e não do produto vivo: `lex_{produtoId}_{hash(nome, descrição, preço)}`, com o mapeamento guardado em `produtos-gateway/{externalId}`. O CRUD do catálogo continua sem efeito colateral externo; mudar o preço gera outro produto no gateway na próxima compra, e a cobrança sai sempre pelo preço congelado.
+3. **A intenção de compra existe antes da cobrança**, como a 7.1 já exigia. `checkouts/{checkoutId}` guarda o snapshot de cada item (regra inviolável 5), e `checkoutId = hash(carrinhoId + hashItens + metodo)`:
+   - repetir o checkout com o mesmo carrinho devolve a cobrança já criada;
+   - carrinho alterado gera outro documento, e o anterior vira `substituido`;
+   - se o QR do substituído for pago mesmo assim, o pagamento é honrado com o snapshot **dele** e emite alerta de aviso — o administrador decide estornar.
+   O `externalId` da cobrança é o `checkoutId`, e é por ele que o webhook acha a intenção.
+4. **Sem CPF.** No transparente, `customer` é opcional — e, se enviado, exige nome, CPF, e-mail **e celular** juntos. Foi **confirmado na documentação**, e não assumido, que a cobrança sai sem ele. O checkout pede só nome e e-mail, e a minimização da seção 13 continua de pé.
+5. **A trava contra produção vive no código**, porque a URL não separa os ambientes e a chave errada no secret certo não falharia em lugar nenhum — só cobraria de verdade:
+   - `PAGAMENTOS_MODO` aceita `desligado` ou `sandbox`, e em produção é obrigatória;
+   - `producao` **recusa subir** (regra inviolável 20);
+   - `sandbox` só aceita chave `abc_dev_`, e confere `devMode === true` em **toda** resposta do gateway e em **todo** webhook — evento simulado nunca cria conta paga;
+   - sem chave e fora de produção, o gateway é o **falso**, com segredos de webhook de desenvolvimento que só valem nesse caso;
+   - o Terraform declara `PAGAMENTOS_MODO = "desligado"` sem referenciar secret novo, e o hook do agente bloqueia `abc_prod_`.
+6. **O webhook recusa antes de ler.** `AssinaturaWebhookGuard` confere o segredo e o HMAC do corpo cru em tempo constante, e qualquer falha é 401 sem nenhuma escrita. O corpo cru chega porque `rawBody: true` está em `OPCOES_DA_APLICACAO`, usada por `main.ts` e por todo arnês HTTP de teste — uma opção só em `main.ts` faria a suíte validar um HMAC que produção nunca veria. Evento assinado e ilegível responde 422 com alerta crítico.
+7. **A confirmação é uma transação, com a conta resolvida antes dela.** A conta no Auth é criada fora da transação (efeito externo, regra 2), de forma idempotente, por `ContasClienteService` — o segundo escritor de claim da regra 17 emendada. Dentro da transação: o pagamento (`create`), os pedidos a partir do snapshot, o documento do cliente, o evento `acesso-cliente` no outbox e o checkout em `pago`.
+
+**Casos anômalos**, todos gravando o pagamento e nenhum respondendo 200 em silêncio:
+
+| Caso | `pagamentos.situacao` | Pedidos | Alerta |
+|---|---|---|---|
+| valor cobrado ≠ total congelado | `divergente` | não cria | crítico |
+| e-mail já é conta de advogado ou administrador | `conflito_de_conta` | não cria | crítico |
+| checkout inexistente (apagado pela TTL, ou desconhecido) | `orfao` | não cria | crítico |
+| checkout `substituido` pago | `confirmado`, com `checkoutSubstituido` | cria, com o snapshot dele | aviso |
+
+**Evento assinado que não vira pagamento nem estorno também não é silencioso** (acrescentado na revisão do PR #21). A tabela de eventos da documentação v2 (consultada em 15/09/2026) lista `checkout.completed` como o evento do checkout hospedado — mas **não mostra payload de evento nenhum, nem diz se o hospedado pago com cartão emite o mesmo nome** que o pago com PIX. Se o nome real for outro, responder "200, ignorado" seria cliente pago sem pedido e sem conta, sem nada falhar. Então o evento que não é pagamento nem estorno cai em três casos:
+
+| Evento | Resposta | Alerta |
+|---|---|---|
+| documentado e alheio a este sistema (`subscription.*`, `transfer.*`, `payout.*`) | 200, `ignorado` | nenhum |
+| chargeback (`checkout.disputed`, `transparent.disputed`) | 200, `alertado` — nenhum estado muda | crítico, `pagamento.contestacao`, com o id da cobrança |
+| qualquer outro nome | 200, `alertado` | crítico, `pagamento.webhook-evento-desconhecido`, com nome, id do log e da cobrança |
+
+200 e não 5xx: reentregar não faria o código entender o evento, e um webhook que recusa em série pode ser desativado pelo gateway. O nome do evento de conclusão do cartão é o **item 1** do roteiro do sandbox; se ele desmentir a documentação, a correção é uma linha em `EVENTOS` (`pagamentos/webhook/evento.ts`).
+
+**Não há coleção de eventos recebidos ("inbox").** A idempotência do pagamento é o próprio `pagamentos/{cobrancaId}` (errata do ADR-04), e a do estorno é o estado de `estornos` e `pagamentos.estornoGateway` — um `*.refunded` reentregue encontra `gateway_confirmado` e responde 200 sem escrita.
+
+**O `webhookSecret` na URL e o log de requisição — checado, NÃO mitigado.** É assim que o AbacatePay autentica ("cada webhook tem um secret único, que vai na query string"), e não há como mudar do lado de cá. A trava de verdade é o HMAC; o segredo da URL é a segunda fechadura. A checagem, feita em 15/09/2026 com leitura na configuração do projeto `plataforma-juridica-36bda`:
+
+- **O log de requisição do Cloud Run guarda a query string.** Confirmado em entradas reais de `run.googleapis.com/requests` do serviço `api-lexintegra`: o `httpRequest.requestUrl` vem com a parte depois do `?`. O Firebase Hosting não grava log no Cloud Logging (nenhuma entrada `firebase_domain` em 30 dias), então o Cloud Run é o único lugar.
+- **Não há exclusão.** O sink `_Default` só tem o filtro padrão (tira os logs de auditoria que vão para `_Required`), sem exclusão nenhuma; o bucket `_Default` não tem campo restrito (`restrictedFields` vazio) e retém **30 dias**. Não existe recurso `google_logging_*` no Terraform.
+- **Quem lê esse log, pelo IAM do projeto** (sem organização acima dele, então sem herança):
+  - a conta humana com `roles/owner` — que já lê o Secret Manager, então o log não amplia nada para ela;
+  - a **SA padrão do Compute** (`616781378293-compute@…`), com `roles/editor` — a concessão legada que o `CLAUDE.md` já marca para sair. **Aqui o log amplia o acesso:** `roles/editor` tem `logging.logEntries.list` e **não** tem `secretmanager.versions.access`. Hoje essa SA não lê o segredo; com ele na URL, leria.
+  - indiretamente, quem consegue emitir token para essa SA: `api-lexintegra-run` e `firebase-adminsdk-fbsvc`, que têm `roles/iam.serviceAccountTokenCreator` **no projeto inteiro**. Esse alcance é um problema em si, anterior a esta etapa, e está registrado à parte — ele já dá caminho até SAs com acesso ao Secret Manager, então o log não é a pior porta aberta.
+- **Hoje a exposição é zero**, porque não há webhook configurado nem segredo de webhook em produção (`PAGAMENTOS_MODO=desligado`). O risco nasce no dia em que o webhook for cadastrado no painel.
+
+**Decisão pendente, e é de uma pessoa — antes de cadastrar o webhook de produção.** Três saídas, que se somam:
+
+1. **Exclusão só desta rota:** `google_logging_project_exclusion` para `log_id("run.googleapis.com/requests")` com `httpRequest.requestUrl:"/api/pagamentos/webhook"`. Tira o segredo do log e perde só o log de requisição dessa rota (status e latência); os logs da aplicação — webhook recusado, alerta — continuam. **Exige conceder `roles/logging.configWriter` a `terraform-ci` à mão antes do apply**, pela mesma razão da Etapa 7.
+2. **Remover `roles/editor` da SA padrão do Compute**, que já estava planejado, e reduzir o `serviceAccountTokenCreator` da SA da API ao escopo dela mesma.
+3. **Aceitar conscientemente**, com o acesso ao Cloud Logging tratado como acesso a credencial e o segredo rotacionado se o log vazar.
+
+Campo restrito no bucket (`httpRequest.requestUrl`) foi descartado: esconderia a URL de todas as rotas, e não só desta.
+
+**Riscos aceitos.**
+
+- **O formato dos eventos e das respostas veio da documentação, não de um evento real.** A leitura aceita a cobrança em `data` ou aninhada (`data.checkout`, `data.transparent`) e exige os campos de que precisa; toda resposta do gateway é validada por schema. A conferência é o roteiro `docs/runbooks/checkout-sandbox.md`, **ainda não executado**.
+- **A validade do link do checkout hospedado não está documentada.** Vinte e quatro horas foi o valor conservador (`VALIDADE_CHECKOUT_HOSPEDADO_MS`); ele só decide quando a tela para de oferecer o link e quando a TTL apaga o documento.
+- **A resposta a um segundo estorno da mesma cobrança não está documentada.** Quando o gateway recusa, o adaptador consulta a cobrança e trata `REFUNDED` como "já estornado".
+- **O cartão redireciona**, e a experiência deixa a plataforma no momento mais sensível da compra.
+
+---
+
 ## 5. Modelo de dados
 
 ### 5.1 Coleções raiz
@@ -466,18 +565,29 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 | `produtos` | Catálogo vivo e editável pelo administrador global |
 | `pre-cadastros` | Leads da área pública, antes de existir conta (item 2.1.4) |
 | `clientes` | Conta do cliente final, com subcoleção de anamnese |
-| `pagamentos` | Um por transação confirmada pelo gateway |
+| `checkouts` | Intenção de compra com o snapshot dos itens; apagada pela TTL (Etapa 8) |
+| `pagamentos` | Um por cobrança do gateway, com a situação da confirmação (Etapa 8, ADR-19) |
 | `pedidos` | Um por produto comprado; snapshot imutável |
+| `estornos` | Um por pedido estornado, com a forma de execução (Etapa 8, ADR-12) |
+| `produtos-gateway` | Cache do produto cadastrado no gateway para o cartão (Etapa 8) |
 | `advogados` | Perfil e licença Microsoft confirmada |
 | `disponibilidades` | Slots com ID determinístico |
 | `outbox` | Eventos pendentes de entrega |
 | `aceites-de-termos` | Evidência de aceite antes do download (Etapa 11) |
+
+**Sobre `checkouts` (Etapa 8).** É a coleção de vida mais curta do sistema, e a que mais carrega dado de quem ainda não é cliente: nome e e-mail do comprador e o carrinho. Dois carimbos, com papéis diferentes de propósito — `expiraEm` é até quando a cobrança pode ser paga; `apagarApos` é quando o documento some, igual ao vencimento da cobrança mais 48 horas, e **sempre escrito**. A **TTL nativa do Firestore** sobre `apagarApos` está declarada em `infra/terraform/firestore.tf`. O emulador não executa TTL: a prova é o `terraform plan` e um teste de unidade que garante o campo presente. A folga de 48 horas cobre o webhook tardio; depois dela, o pagamento vira `orfao` com alerta (ADR-19), e a evidência do aceite dos termos já foi copiada para o pagamento. A TTL cobre o carrinho abandonado — **a eliminação a pedido do titular continua pendente** (seção 13, Etapa 12).
+
+**Sobre `pagamentos` e `pedidos` (Etapa 8).** O id do pagamento é o da cobrança, e o do pedido é `{cobrançaId}_{nnn}` (errata do ADR-04). O pedido ganhou `situacao` (`ativo | cancelado | estornado`), sempre escrita, e os carimbos de quem cancelou. O pagamento carrega a situação da confirmação (`confirmado | divergente | conflito_de_conta | orfao`), a evidência do aceite dos termos e, quando houver, o estado do estorno integral (`estornoGateway`).
+
+**Sobre `estornos` (Etapa 8).** Id do pedido — um segundo pedido de estorno do mesmo pedido estoura no `create`. Coleção raiz e não subcoleção do pagamento, porque o painel lista os pendentes de todas as cobranças, e consulta sobre subcoleção exigiria índice de grupo de coleções. Um índice composto novo, `estornos_pendentes` (`execucao` + `solicitadoEm`), para essa lista.
 
 **Sobre a atribuição de pedidos a advogados (Etapa 9).** Ela mora no **pedido** (`pedidos.advogadoId`), não no advogado — esta tabela dizia "atribuições" em `advogados`, e foi corrigida acima. A razão é a consulta que existe de verdade: "quais pedidos são meus", feita pelo advogado a cada abertura de tela. Do lado do advogado, seria um array que cresce sem limite dentro de um documento e que precisa ser lido inteiro para filtrar; no pedido, é uma igualdade indexada (`advogadoId` + `criadoEm`). O documento carrega ainda `distribuido`, um booleano redundante com `advogadoId !== null` que existe porque igualdade contra `null` no Firestore mistura o campo ausente com o campo nulo — e um pedido gravado antes do campo existir cairia do lado errado do filtro da caixa de entrada sem erro nenhum.
 
 **Sobre `pre-cadastros`.** ID determinístico do e-mail normalizado (ADR-04), o que faz a mesma pessoa ocupar um documento e não três. Guarda nome, e-mail, telefone, a contagem de envios e o hash do token que destrava a vitrine — **e nada além disso**: sem IP, sem user-agent, sem referenciador. São dados que um formulário de captação coleta por reflexo e que ninguém neste projeto vai usar, e a minimização da seção 13 é medida, não boa intenção. É também a coleção com o caminho de eliminação mais simples do sistema: um documento por titular.
 
 Subcoleções: `clientes/{id}/anamnese`, `pedidos/{id}/entregaveis`, `pedidos/{id}/reunioes`, `pedidos/{id}/entregaveis/{id}/transicoes`, `pedidos/{id}/observacoes` e `pedidos/{id}/anexos` (as duas últimas, da Etapa 9).
+
+**A anamnese da Etapa 8 é um STUB.** `clientes/{id}/anamnese/provisoria-v0` guarda três perguntas provisórias no formato `campos[{rotulo, valor}]` que a tela do advogado já lê. O id do documento carrega a versão do modelo: quando a ficha da CONTRATANTE chegar (plano 0.2, item 3), ela entra com outro id, e o que foi respondido no stub não se confunde com a ficha definitiva.
 
 **`observacoes` é append-only**, e isso é decisão e não limitação: o advogado trabalha a partir do que o cliente escreveu, e texto reescrito faz "o cliente pediu X" virar "o cliente sempre pediu Y", sem trilha. A API não expõe edição nem exclusão, e há teste que defende a ausência.
 
@@ -518,6 +628,8 @@ O documento do pedido guarda ainda `clienteId`, `pagamentoId`, `criadoEm` e `pro
 `produtos` permanece editável. `pedidos` é imutável. Isso resolve o requisito sem versionamento explícito de produto, que seria a solução relacional.
 
 **Como a escrita acontece (Etapa 5).** `PedidosService` expõe duas fases, e não uma: `preparar` só lê, `gravar` só escreve. A restrição do Firestore — toda leitura antes de toda escrita — vale para a *transação inteira*, não para cada chamada, então uma função única que lesse o produto e escrevesse o pedido funcionaria com um item do carrinho e falharia com dois. `gravar` só aceita o resultado de `preparar`, o que faz a ordem ser garantida pelo tipo.
+
+**Errata da Etapa 8 — o snapshot era tirado na hora errada.** O `preparar` da Etapa 5 lia o produto **vivo** dentro da transação. Chamado pelo webhook, congelaria o produto na **confirmação** — exatamente o risco que o plano de execução apontava para esta etapa. Agora são três passos: `congelar` lê os produtos **no checkout**, fora de transação, recusa inativo e devolve os snapshots que vão para `checkouts`; `preparar` passou a ser síncrono e só reidrata esses snapshots, validando cada um pelo schema do produto; `gravar` continua escrevendo. O teste "alterar o produto não altera o pedido" foi migrado para o intervalo que importa: o administrador muda nome e preço **entre o checkout e o webhook**, e o pedido sai com os valores antigos.
 
 ### 5.4 Saldos isolados
 
@@ -617,6 +729,15 @@ Sequência:
 - Pagamento confirmado para um produto que foi alterado ou desativado entre o checkout e a confirmação: o snapshot precisa ser tirado no momento do **checkout**, não no da confirmação, senão o cliente pode pagar um preço e receber outro produto.
 
 **Estorno e cancelamento — ver ADR-12.** Estorno só é permitido com o pedido em `solicitado`; a partir de `em_elaboracao`, o pedido não é mais elegível, regra que precisa constar nos termos aceitos no checkout. Cancelamento de pedido sem trabalho iniciado não afeta a conta do cliente nem os demais pedidos.
+
+**Errata da Etapa 8 — como a sequência ficou.** O desenho acima continua valendo, com quatro diferenças:
+
+- **Passo 2.** Só o PIX é transparente; o cartão redireciona para o checkout hospedado (ADR-19).
+- **Passo 4.** O pagamento tem o id da **cobrança**, não do evento (errata do ADR-04). A conta do cliente é criada **antes** da transação, e não dentro dela: criar usuário no Auth é efeito externo (regra 2), e é idempotente por e-mail. Os pedidos saem do snapshot guardado no checkout, nunca do produto vivo.
+- **Passo 5.** O evento é `acesso-cliente`, e o link é o mesmo da definição de senha do advogado (`/definir-senha?oobCode=`).
+- **Passo 6.** A ficha obrigatória é, por enquanto, um **stub** com três perguntas provisórias, e o guard da área do cliente leva a ela até ser respondida.
+
+O caminho inteiro — pré-cadastro, dois produtos, checkout, webhook assinado, conta, link capturado no transporte falso, senha definida, login, ficha, dois cartões — é um teste só, contra os emuladores: `apps/api/src/compra.integration-spec.ts`. Em desenvolvimento, `scripts/simular-webhook.mjs` faz o papel do gateway.
 
 ### 7.2 Agendamento de reunião
 

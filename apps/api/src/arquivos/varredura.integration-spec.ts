@@ -22,6 +22,7 @@ import { ScannerFalso } from '../varredura/scanner.js';
 import { VarreduraService } from '../varredura/varredura.service.js';
 import { EmissorDeLinkDeLeitura } from './leitura.js';
 import { PortaoDeArquivos } from './portao.js';
+import { comSnapshot } from '../arnes-pedidos.js';
 
 const ADMIN = 'uid-admin';
 const CLIENTE: QuemAcessa = { uid: 'uid-clara', perfil: 'cliente' };
@@ -79,14 +80,16 @@ beforeEach(async () => {
   await banco.runTransaction(async (transacao) => {
     pedidos.gravar(
       transacao,
-      await pedidos.preparar(transacao, [
-        {
-          pedidoId: 'pedido-1',
-          clienteId: CLIENTE.uid,
-          pagamentoId: 'pag-1',
-          produtoOrigemId,
-        },
-      ]),
+      pedidos.preparar(
+        await comSnapshot(pedidos, [
+          {
+            pedidoId: 'pedido-1',
+            clienteId: CLIENTE.uid,
+            pagamentoId: 'pag-1',
+            produtoOrigemId,
+          },
+        ]),
+      ),
     );
   });
 

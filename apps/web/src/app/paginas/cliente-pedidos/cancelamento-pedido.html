@@ -1,0 +1,29 @@
+@if (disponivel()) { @if (confirmando()) {
+<div class="cancelamento" role="group" aria-label="Confirmar cancelamento">
+  <p class="cancelamento__aviso">
+    Cancelar encerra este pedido e não devolve o valor pago. Para pedir a
+    devolução, fale com o escritório.
+  </p>
+  <p class="cancelamento__juridico">{{ textoJuridico }}</p>
+  @if (falha(); as mensagem) {
+  <app-mensagem-erro variante="linha">{{ mensagem }}</app-mensagem-erro>
+  }
+  <div class="cancelamento__acoes">
+    <app-botao variante="texto" tamanho="p" (click)="confirmando.set(false)">
+      Manter o pedido
+    </app-botao>
+    <app-botao
+      variante="secundario"
+      tamanho="p"
+      [carregando]="processando()"
+      (click)="confirmar()"
+    >
+      Confirmar cancelamento
+    </app-botao>
+  </div>
+</div>
+} @else {
+<app-botao variante="texto" tamanho="p" (click)="confirmando.set(true)">
+  Cancelar pedido
+</app-botao>
+} }

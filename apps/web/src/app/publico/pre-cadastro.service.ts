@@ -56,6 +56,14 @@ export class PreCadastroService {
     this.guardada.set(liberacao);
   }
 
+  /**
+   * O token corrente, ou `null` sem liberacao. O checkout o apresenta em cada
+   * chamada — e o servidor que decide se ele ainda vale.
+   */
+  token(): string | null {
+    return this.guardada()?.token ?? null;
+  }
+
   listarVitrine(): Promise<ProdutoVitrine[]> {
     const liberacao = this.guardada();
     if (liberacao === null) {

@@ -50,7 +50,59 @@
       {{ produto.quantidadeReunioes }} {{ textos.servicos.reunioes }} · {{
       produto.numeroRevisoesPermitidas }} {{ textos.servicos.revisoes }}
     </p>
+
+    <div class="produto__acao">
+      <app-botao
+        variante="secundario"
+        tamanho="p"
+        [desabilitado]="carrinho.cheio()"
+        (click)="adicionar(produto)"
+      >
+        {{ textos.servicos.carrinho.adicionar }}
+      </app-botao>
+    </div>
   </article>
   }
 </div>
-}
+
+@if (carrinho.quantidade() > 0) {
+<aside class="carrinho" [attr.aria-label]="textos.servicos.carrinho.titulo">
+  <h3>{{ textos.servicos.carrinho.titulo }}</h3>
+
+  <ul class="carrinho__itens">
+    @for (item of carrinho.itens(); track $index) {
+    <li class="carrinho__item">
+      <span>{{ item.nome }}</span>
+      <span class="carrinho__preco">{{ preco(item.precoCentavos) }}</span>
+      <app-botao
+        variante="texto"
+        tamanho="p"
+        [rotuloAcessivel]="textos.servicos.carrinho.remover + ' ' + item.nome"
+        (click)="remover($index)"
+      >
+        {{ textos.servicos.carrinho.remover }}
+      </app-botao>
+    </li>
+    }
+  </ul>
+
+  <p class="carrinho__total" aria-live="polite">
+    {{ carrinho.quantidade() }} {{ textos.servicos.carrinho.itens }} · {{
+    textos.servicos.carrinho.total }}:
+    <strong>{{ preco(carrinho.totalIndicativoCentavos()) }}</strong>
+  </p>
+  <p class="carrinho__aviso">{{ textos.servicos.carrinho.aviso }}</p>
+
+  <div class="carrinho__acao">
+    <app-link-acao destino="/checkout" variante="primario">
+      {{ textos.servicos.carrinho.pagar }}
+    </app-link-acao>
+  </div>
+
+  @if (carrinho.cheio()) {
+  <p class="carrinho__aviso" role="status">
+    {{ textos.servicos.carrinho.cheio }}
+  </p>
+  }
+</aside>
+} }

@@ -1,6 +1,10 @@
 import { Routes } from '@angular/router';
 import { catalogoRoutes } from './catalogo/catalogo.routes';
-import { exigirAutenticacao, exigirPerfil } from './autenticacao/guardas';
+import {
+  exigirAnamnese,
+  exigirAutenticacao,
+  exigirPerfil,
+} from './autenticacao/guardas';
 
 /**
  * Regra inviolavel 10: rota publica nao chama a API antes do pre-cadastro. E a
@@ -17,6 +21,7 @@ export const ROTAS_PUBLICAS = [
   'entrar',
   'recuperar-senha',
   'definir-senha',
+  'checkout',
 ];
 
 export const routes: Routes = [
@@ -45,6 +50,16 @@ export const routes: Routes = [
         (m) => m.RecuperarSenha,
       ),
     title: 'Redefinir senha — LexIntegra',
+  },
+  /*
+   * Etapa 8. Publica e sem guard: a pagina decide o que mostrar pelo estado do
+   * navegador (liberacao e carrinho), e nao chama a API ate a pessoa pagar.
+   */
+  {
+    path: 'checkout',
+    loadComponent: () =>
+      import('./paginas/checkout/checkout').then((m) => m.Checkout),
+    title: 'Finalizar compra — LexIntegra',
   },
   {
     path: 'definir-senha',
@@ -82,11 +97,25 @@ export const routes: Routes = [
     children: [
       {
         path: '',
+        canActivate: [exigirAnamnese],
         loadComponent: () =>
           import('./paginas/cliente-pedidos/cliente-pedidos').then(
             (m) => m.ClientePedidos,
           ),
         title: 'Meus pedidos — LexIntegra',
+      },
+      /*
+       * Etapa 8. A ficha inicial, obrigatoria depois da compra (item 2.2.5). E a
+       * unica tela da area do cliente fora de um cartao de pedido, e de proposito:
+       * a ficha e do CLIENTE, e nao de um pedido — e nada de reuniao passa por aqui.
+       */
+      {
+        path: 'anamnese',
+        loadComponent: () =>
+          import('./paginas/cliente-anamnese/cliente-anamnese').then(
+            (m) => m.ClienteAnamnese,
+          ),
+        title: 'Ficha inicial — LexIntegra',
       },
     ],
   },
@@ -163,6 +192,14 @@ export const routes: Routes = [
             (m) => m.AdminClientes,
           ),
         title: 'Clientes — LexIntegra',
+      },
+      {
+        path: 'estornos',
+        loadComponent: () =>
+          import('./paginas/admin-estornos/admin-estornos').then(
+            (m) => m.AdminEstornos,
+          ),
+        title: 'Estornos — LexIntegra',
       },
       {
         path: 'entregas',

@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import type { AdvogadoResumo } from 'shared/esquemas/advogado';
 import type { PedidoParaDistribuir } from 'shared/esquemas/pedido';
 import { ApiDistribuicaoService } from '../../autenticacao/api-distribuicao.service';
+import { ApiEstornosService } from '../../autenticacao/api-estornos.service';
 import { ApiService } from '../../autenticacao/api.service';
 import { AdminDistribuicao } from './admin-distribuicao';
 
@@ -28,6 +29,7 @@ const NA_FILA: PedidoParaDistribuir = {
   cliente: { uid: 'uid-clara', nome: 'Clara Nunes' },
   advogadoId: null,
   distribuido: false,
+  situacao: 'ativo',
   criadoEm: null,
 };
 
@@ -75,6 +77,21 @@ async function montar(opcoes: Partial<ApiDeTeste> = {}): Promise<{
           removerAtribuicao: (pedidoId: string) => {
             api.chamadas.push(`devolver ${pedidoId}`);
             return Promise.resolve(NA_FILA);
+          },
+        },
+      },
+      {
+        provide: ApiEstornosService,
+        useValue: {
+          estornar: (pedidoId: string, motivo: string) => {
+            api.chamadas.push(`estornar ${pedidoId}: ${motivo}`);
+            return Promise.resolve({
+              pedidoId,
+              execucao:
+                pedidoId === 'pedido-2'
+                  ? 'gateway_pendente'
+                  : 'manual_pendente',
+            });
           },
         },
       },
@@ -210,5 +227,71 @@ describe('AdminDistribuicao', () => {
     expect(
       fixture.nativeElement.querySelector('app-mensagem-erro'),
     ).toBeTruthy();
+  });
+
+  /**
+   * O ESTORNO (Etapa 8, ADR-12). A tela nao decide a elegibilidade: abre a
+   * confirmacao, e o servidor responde 409 fora de `solicitado`.
+   */
+  describe('estorno', () => {
+    it('mostra a situacao do pedido', async () => {
+      const { fixture } = await montar({
+        pedidos: [{ ...NA_FILA, situacao: 'cancelado' }],
+      });
+
+      expect(fixture.nativeElement.textContent).toContain(
+        'Cancelado pelo cliente',
+      );
+    });
+
+    it('pedido ja estornado nao oferece estornar de novo', async () => {
+      const { fixture } = await montar({
+        pedidos: [{ ...NA_FILA, situacao: 'estornado' }],
+      });
+
+      expect(botaoCom(fixture, 'Estornar')).toBeUndefined();
+      expect(fixture.nativeElement.textContent).toContain('Estornado');
+    });
+
+    it.each([
+      ['pedido-1', 'Devolva o valor ao cliente'],
+      ['pedido-2', 'estornada pelo gateway'],
+    ])(
+      'confirma o estorno de %s e avisa como o dinheiro volta',
+      async (id, aviso) => {
+        const { fixture, api } = await montar({
+          pedidos: [{ ...NA_FILA, id }],
+        });
+
+        botaoCom(fixture, 'Estornar')?.click();
+        fixture.detectChanges();
+        const campo = fixture.nativeElement.querySelector(
+          '.estorno textarea',
+        ) as HTMLTextAreaElement;
+        campo.value = 'Desistiu antes do inicio';
+        campo.dispatchEvent(new Event('input'));
+        botaoCom(fixture, 'Confirmar estorno')?.click();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(api.chamadas).toContain(
+          `estornar ${id}: Desistiu antes do inicio`,
+        );
+        expect(fixture.nativeElement.textContent).toContain(aviso);
+        expect(fixture.nativeElement.querySelector('.estorno')).toBeNull();
+      },
+    );
+
+    it('voltar fecha a confirmacao sem estornar', async () => {
+      const { fixture, api } = await montar({ pedidos: [NA_FILA] });
+
+      botaoCom(fixture, 'Estornar')?.click();
+      fixture.detectChanges();
+      botaoCom(fixture, 'Voltar')?.click();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.estorno')).toBeNull();
+      expect(api.chamadas.some((c) => c.startsWith('estornar'))).toBe(false);
+    });
   });
 });

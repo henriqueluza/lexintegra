@@ -37,11 +37,21 @@ const CAMINHOS_PUBLICOS = [
   '/api/vitrine',
   '/api/pre-cadastros',
   '/api/auth/redefinicao-senha',
+  '/api/checkout',
 ] as const;
 
+/**
+ * Rotas publicas com SUBCAMINHO. Separadas da lista acima de proposito: casar por
+ * prefixo e mais largo que casar pelo caminho exato, e so o checkout precisa
+ * disso — `GET /api/checkout/{id}` e o polling da tela de PIX (Etapa 8).
+ */
+const PREFIXOS_PUBLICOS = ['/api/checkout/'] as const;
+
 export function ehCaminhoPublico(url: string): boolean {
-  return CAMINHOS_PUBLICOS.some(
-    (caminho) => url === caminho || url.startsWith(`${caminho}?`),
+  return (
+    CAMINHOS_PUBLICOS.some(
+      (caminho) => url === caminho || url.startsWith(`${caminho}?`),
+    ) || PREFIXOS_PUBLICOS.some((prefixo) => url.startsWith(prefixo))
   );
 }
 

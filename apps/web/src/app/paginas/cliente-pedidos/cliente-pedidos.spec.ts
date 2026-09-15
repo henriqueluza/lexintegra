@@ -12,10 +12,12 @@ function pedido(
   id: string,
   entregaveis: CartaoPedido['entregaveis'],
   distribuido = true,
+  situacao: CartaoPedido['situacao'] = 'ativo',
 ): CartaoPedido {
   return {
     id,
     distribuido,
+    situacao,
     criadoEm: '2026-09-01T12:00:00.000Z',
     entregaveis,
     snapshot: {
@@ -60,6 +62,7 @@ interface ApiDeTeste {
   anexos: AnexoResumo[];
   chamadas: string[];
   erroAoListar: unknown;
+  erroAoCancelar: unknown;
 }
 
 async function montar(opcoes: Partial<ApiDeTeste> = {}): Promise<{
@@ -72,6 +75,7 @@ async function montar(opcoes: Partial<ApiDeTeste> = {}): Promise<{
     anexos: opcoes.anexos ?? [],
     chamadas: [],
     erroAoListar: opcoes.erroAoListar ?? null,
+    erroAoCancelar: opcoes.erroAoCancelar ?? null,
   };
 
   TestBed.configureTestingModule({
@@ -85,6 +89,12 @@ async function montar(opcoes: Partial<ApiDeTeste> = {}): Promise<{
             return api.erroAoListar === null
               ? Promise.resolve(api.pedidos)
               : Promise.reject(api.erroAoListar);
+          },
+          cancelarPedido: (id: string) => {
+            api.chamadas.push(`cancelar ${id}`);
+            return api.erroAoCancelar === null
+              ? Promise.resolve({ situacao: 'cancelado' })
+              : Promise.reject(api.erroAoCancelar);
           },
           listarObservacoes: (id: string) => {
             api.chamadas.push(`observacoes ${id}`);
@@ -475,5 +485,96 @@ describe('ClientePedidos', () => {
         'Incluir o socio novo.',
       );
     });
+  });
+
+  /**
+   * O CANCELAMENTO (Etapa 8, ADR-12), dentro do cartao do pedido. So aparece sem
+   * trabalho iniciado; a recusa do servidor, se vier, aparece no cartao.
+   */
+  describe('cancelamento', () => {
+    const SOLICITADO = {
+      ...SEM_ARQUIVO,
+      estado: 'solicitado' as const,
+    };
+
+    it('oferece cancelar o pedido sem trabalho iniciado', async () => {
+      const { fixture } = await montar({
+        pedidos: [pedido('p-1', [SOLICITADO], false)],
+      });
+
+      expect(botaoCom(fixture, 'Cancelar pedido')).toBeDefined();
+    });
+
+    it('nao oferece cancelar o pedido em elaboracao', async () => {
+      const { fixture } = await montar({
+        pedidos: [pedido('p-1', [AGUARDANDO])],
+      });
+
+      expect(botaoCom(fixture, 'Cancelar pedido')).toBeUndefined();
+    });
+
+    it('confirma, avisa que nao devolve o valor e recarrega', async () => {
+      const { fixture, api } = await montar({
+        pedidos: [pedido('p-1', [SOLICITADO], false)],
+      });
+
+      botaoCom(fixture, 'Cancelar pedido')?.click();
+      fixture.detectChanges();
+      expect(textoDe(fixture)).toContain('não devolve o valor pago');
+      expect(textoDe(fixture)).toContain(
+        '{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}',
+      );
+
+      botaoCom(fixture, 'Confirmar cancelamento')?.click();
+      await fixture.whenStable();
+
+      expect(api.chamadas).toContain('cancelar p-1');
+      expect(api.chamadas.filter((c) => c === 'listar')).toHaveLength(2);
+    });
+
+    it('manter o pedido fecha a confirmacao sem cancelar', async () => {
+      const { fixture, api } = await montar({
+        pedidos: [pedido('p-1', [SOLICITADO], false)],
+      });
+
+      botaoCom(fixture, 'Cancelar pedido')?.click();
+      fixture.detectChanges();
+      botaoCom(fixture, 'Manter o pedido')?.click();
+      fixture.detectChanges();
+
+      expect(botaoCom(fixture, 'Confirmar cancelamento')).toBeUndefined();
+      expect(api.chamadas).not.toContain('cancelar p-1');
+    });
+
+    it('mostra a recusa do servidor quando o trabalho ja comecou', async () => {
+      const { HttpErrorResponse } = await import('@angular/common/http');
+      const { fixture } = await montar({
+        pedidos: [pedido('p-1', [SOLICITADO], false)],
+        erroAoCancelar: new HttpErrorResponse({ status: 409 }),
+      });
+
+      botaoCom(fixture, 'Cancelar pedido')?.click();
+      fixture.detectChanges();
+      botaoCom(fixture, 'Confirmar cancelamento')?.click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(textoDe(fixture)).toContain('ja comecou');
+    });
+
+    it.each([
+      ['cancelado', 'Cancelado'],
+      ['estornado', 'Estornado'],
+    ] as const)(
+      'pedido %s continua na tela, com a situacao',
+      async (situacao, rotulo) => {
+        const { fixture } = await montar({
+          pedidos: [pedido('p-1', [SOLICITADO], false, situacao)],
+        });
+
+        expect(textoDe(fixture)).toContain(rotulo);
+        expect(botaoCom(fixture, 'Cancelar pedido')).toBeUndefined();
+      },
+    );
   });
 });

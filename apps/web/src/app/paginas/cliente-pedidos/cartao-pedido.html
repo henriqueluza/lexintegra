@@ -1,10 +1,14 @@
 <app-cartao [titulo]="pedido().snapshot.nome">
   <p class="cartao-pedido__linha">
     <span class="cartao-pedido__preco">{{ preco() }}</span>
-    <span class="cartao-pedido__situacao">
-      {{ pedido().distribuido ? 'Em andamento' : 'Em analise' }}
-    </span>
+    <span class="cartao-pedido__situacao">{{ situacao() }}</span>
   </p>
+
+  <!-- Etapa 8 (ADR-12): so aparece com o pedido ativo e sem trabalho iniciado. -->
+  <app-cancelamento-pedido
+    [pedido]="pedido()"
+    (cancelado)="recarregado.emit()"
+  />
 
   <p class="cartao-pedido__descricao">{{ pedido().snapshot.descricao }}</p>
 

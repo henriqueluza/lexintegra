@@ -5,10 +5,14 @@
  * que ja esta FIXADO por ADR ou por decisao de seguranca e precisa ser identico
  * nas duas pontas — nao ha decisao de modelagem sendo antecipada.
  */
+export * from './anamnese-provisoria.js';
+export * from './carrinho.js';
 export * from './estado-entregavel.js';
 export * from './evento-outbox.js';
 export * from './esquemas/advogado.js';
+export * from './esquemas/anamnese-provisoria.js';
 export * from './esquemas/anexo.js';
+export * from './esquemas/checkout.js';
 export * from './esquemas/cliente.js';
 export * from './esquemas/disponibilidade.js';
 export * from './esquemas/observacao.js';
@@ -22,5 +26,7 @@ export * from './magic-bytes.js';
 export * from './perfil.js';
 export * from './retencao.js';
 export * from './semana.js';
+export * from './situacao-pedido.js';
 export * from './telefone.js';
+export * from './termos-checkout.js';
 export * from './texto.js';

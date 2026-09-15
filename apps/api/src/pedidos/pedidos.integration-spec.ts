@@ -7,6 +7,7 @@ import {
   PedidosService,
   type NovoPedido,
 } from './pedidos.service.js';
+import { comSnapshot } from '../arnes-pedidos.js';
 
 const ADMIN = 'uid-admin';
 const CLIENTE = 'uid-cliente';
@@ -33,7 +34,10 @@ beforeEach(async () => {
  */
 async function comprarTudo(...itens: NovoPedido[]): Promise<void> {
   await banco.runTransaction(async (transacao) => {
-    pedidos.gravar(transacao, await pedidos.preparar(transacao, itens));
+    pedidos.gravar(
+      transacao,
+      pedidos.preparar(await comSnapshot(pedidos, itens)),
+    );
   });
 }
 

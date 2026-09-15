@@ -1,0 +1,33 @@
+<section class="ficha">
+  <h1>Ficha inicial</h1>
+  <p class="ficha__apoio">
+    Antes de o escritório começar, conte o contexto do seu caso. As respostas
+    ficam disponíveis para o advogado responsável pelos seus pedidos.
+  </p>
+  <p class="ficha__aviso">{{ aviso }}</p>
+
+  <form
+    class="ficha__formulario"
+    [formGroup]="formulario"
+    (ngSubmit)="enviar()"
+  >
+    @for (pergunta of perguntas; track pergunta.chave) {
+    <app-campo
+      [rotulo]="pergunta.rotulo"
+      [multilinha]="true"
+      [linhas]="4"
+      [formControlName]="pergunta.chave"
+      [obrigatorio]="pergunta.obrigatoria"
+      [erro]="erro(pergunta.chave)"
+    />
+    } @if (falha() !== null) {
+    <app-mensagem-erro variante="bloco">{{ falha() }}</app-mensagem-erro>
+    }
+
+    <div class="ficha__acoes">
+      <app-botao variante="primario" tipo="submit" [carregando]="enviando()">
+        Enviar ficha
+      </app-botao>
+    </div>
+  </form>
+</section>

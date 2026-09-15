@@ -1,15 +1,20 @@
 import { Module } from '@nestjs/common';
 import { AdvogadosModule } from './advogados/advogados.module.js';
+import { AnamneseProvisoriaModule } from './anamnese-provisoria/anamnese-provisoria.module.js';
 import { AlertasModule } from './alertas/alertas.module.js';
 import { AppCheckModule } from './app-check/app-check.module.js';
 import { AutenticacaoModule } from './autenticacao/autenticacao.module.js';
 import { ArmazenamentoModule } from './armazenamento/armazenamento.module.js';
 import { ArquivosModule } from './arquivos/arquivos.module.js';
+import { CheckoutModule } from './checkout/checkout.module.js';
 import { ClientesModule } from './clientes/clientes.module.js';
 import { DisponibilidadesModule } from './disponibilidades/disponibilidades.module.js';
 import { SenhaModule } from './autenticacao/senha/senha.module.js';
 import { EntregaveisModule } from './entregaveis/entregaveis.module.js';
+import { EstornosModule } from './estornos/estornos.module.js';
 import { FirebaseModule } from './firebase/firebase.module.js';
+import { GatewayPagamentoModule } from './pagamentos/gateway/gateway.module.js';
+import { WebhookModule } from './pagamentos/webhook/webhook.module.js';
 import { HealthModule } from './health/health.module.js';
 import { LimiteModule } from './limite/limite.module.js';
 import { OutboxModule } from './outbox/outbox.module.js';
@@ -54,12 +59,22 @@ import { VitrineModule } from './vitrine/vitrine.module.js';
      * do outbox — o interno das tarefas e o do painel do administrador.
      */
     OutboxModule,
+    /*
+     * Etapa 8. `@Global()`: checkout, webhook e o despachante do outbox usam o
+     * gateway. A configuracao e validada aqui, no boot — `PAGAMENTOS_MODO`
+     * invalido ou `producao` derruba a inicializacao (regra inviolavel 20).
+     */
+    GatewayPagamentoModule,
     HealthModule,
     SenhaModule,
     AdvogadosModule,
     ProdutosModule,
     PreCadastrosModule,
     VitrineModule,
+    CheckoutModule,
+    WebhookModule,
+    AnamneseProvisoriaModule,
+    EstornosModule,
     ClientesModule,
     PedidosModule,
     EntregaveisModule,

@@ -5,12 +5,14 @@ import { AlertaFalso } from '../alertas/alerta.js';
 import { DespachanteOutbox } from './despachante.service.js';
 import {
   ehDuplicata,
+  chaveDoEvento,
   idDoEvento,
   JANELA_REDEFINICAO_MS,
   type RegistroOutbox,
 } from './evento.js';
 import { montarLinkDeSenha, urlDaAplicacao } from './link-de-senha.js';
 import type { OutboxService, Reivindicacao } from './outbox.service.js';
+import { GatewayPagamentoFalso } from '../pagamentos/gateway/gateway-falso.js';
 
 /* -------------------------------------------------------------------------- */
 /* Identidade e deduplicacao dos eventos                                       */
@@ -60,6 +62,46 @@ describe('idDoEvento', () => {
     expect(idDoEvento('redefinir-senha', 'uid-1', base)).not.toBe(
       idDoEvento('redefinir-senha', 'uid-1', base + JANELA_REDEFINICAO_MS),
     );
+  });
+
+  /**
+   * O acesso do cliente sai UMA vez por conta, na primeira compra (Etapa 8). A
+   * segunda compra cai no mesmo documento e nao manda outro link.
+   */
+  it('da um id so por conta para o acesso do cliente, a qualquer hora', () => {
+    expect(idDoEvento('acesso-cliente', 'uid-1', 0)).toBe(
+      'acesso-cliente_uid-1',
+    );
+    expect(idDoEvento('acesso-cliente', 'uid-1', 10 ** 12)).toBe(
+      'acesso-cliente_uid-1',
+    );
+  });
+
+  it('nao confunde o acesso do cliente com o do advogado', () => {
+    expect(idDoEvento('acesso-cliente', 'uid-1')).not.toBe(
+      idDoEvento('definir-senha', 'uid-1'),
+    );
+  });
+
+  /** Um estorno integral por pagamento: o id vem do pagamento, e nao do uid. */
+  it('da o id do estorno integral pelo pagamento', () => {
+    expect(
+      chaveDoEvento({
+        tipo: 'estorno-integral',
+        destinatarioUid: 'uid-cliente',
+        estorno: {
+          pagamentoId: 'pix_1',
+          cobrancaId: 'pix_1',
+          origem: 'transparente',
+        },
+      }),
+    ).toBe('pix_1');
+    expect(idDoEvento('estorno-integral', 'pix_1')).toBe(
+      'estorno-integral_pix_1',
+    );
+    expect(
+      chaveDoEvento({ tipo: 'acesso-cliente', destinatarioUid: 'uid-1' }),
+    ).toBe('uid-1');
   });
 
   it('nao mistura os dois tipos de evento', () => {
@@ -183,6 +225,7 @@ interface Cenario {
   despachante: DespachanteOutbox;
   transporte: EmailFalsoTransport;
   alertas: AlertaFalso;
+  gateway: GatewayPagamentoFalso;
   concluidos: Array<{
     id: string;
     estado: 'enviado' | 'falhou' | 'abandonado';
@@ -198,6 +241,7 @@ function montarCenario(opcoes: {
   email?: string | null;
   linkGerado?: string | (() => never);
   transporte?: EmailTransport;
+  gateway?: GatewayPagamentoFalso;
   /** Faz `concluir` responder `abandonado`, como se o orcamento tivesse acabado. */
   esgotado?: boolean;
 }): Cenario {
@@ -245,16 +289,19 @@ function montarCenario(opcoes: {
 
   const transporte = new EmailFalsoTransport();
   const alertas = new AlertaFalso();
+  const gateway = opcoes.gateway ?? new GatewayPagamentoFalso();
   return {
     despachante: new DespachanteOutbox(
       outbox,
       auth,
       opcoes.transporte ?? transporte,
       alertas,
+      gateway,
     ),
     transporte,
     alertas,
     concluidos,
+    gateway,
   };
 }
 
@@ -276,6 +323,127 @@ describe('DespachanteOutbox', () => {
         chaveIdempotencia: 'definir-senha_uid-advogado-c0',
       },
     ]);
+  });
+
+  /**
+   * O acesso do cliente (Etapa 8) sai pelo mesmo caminho do link de senha: o link
+   * nasce no envio e nao volta ao banco. Um tipo sem montador seria um registro
+   * que nunca sai — este teste e o que prova que ele tem.
+   */
+  it('entrega o acesso do cliente com o link de definicao de senha', async () => {
+    const { despachante, transporte } = montarCenario({
+      registro: { ...REGISTRO, tipo: 'acesso-cliente' },
+    });
+
+    await expect(despachante.despachar('acesso-cliente_uid-1')).resolves.toBe(
+      'entregue',
+    );
+
+    expect(transporte.enviadas[0]).toMatchObject({
+      modelo: {
+        alias: 'password-reset',
+        variaveis: {
+          LINK: 'http://localhost:4200/definir-senha?oobCode=CODIGO',
+        },
+      },
+    });
+  });
+
+  /**
+   * O ESTORNO INTEGRAL (Etapa 8) sai pelo gateway, e nao pelo transporte de e-mail.
+   */
+  describe('estorno integral', () => {
+    const ESTORNO: RegistroOutbox = {
+      ...REGISTRO,
+      tipo: 'estorno-integral',
+      destinatarioUid: 'uid-cliente',
+      estorno: {
+        pagamentoId: 'pix_char_1',
+        cobrancaId: 'pix_char_1',
+        origem: 'transparente',
+      },
+    };
+
+    async function comCobranca(): Promise<GatewayPagamentoFalso> {
+      const gateway = new GatewayPagamentoFalso();
+      const { cobrancaId } = await gateway.criarCobrancaPix({
+        valorCentavos: 100,
+        externalId: 'checkout-1',
+        descricao: 'x',
+        expiraEmSegundos: 60,
+      });
+      /* O falso numera as cobrancas; o registro precisa apontar para a criada. */
+      Object.assign(ESTORNO.estorno ?? {}, {
+        cobrancaId,
+        pagamentoId: cobrancaId,
+      });
+      return gateway;
+    }
+
+    it('pede o estorno ao gateway e nao manda e-mail', async () => {
+      const gateway = await comCobranca();
+      const { despachante, transporte, concluidos } = montarCenario({
+        registro: ESTORNO,
+        gateway,
+      });
+
+      await expect(
+        despachante.despachar('estorno-integral_pix_char_1'),
+      ).resolves.toBe('entregue');
+
+      expect(gateway.estornos).toHaveLength(1);
+      expect(transporte.enviadas).toEqual([]);
+      expect(concluidos[0]?.estado).toBe('enviado');
+    });
+
+    /**
+     * REENTREGA NAO VIRA ESTORNO DUPLO. O processo morreu depois de o gateway
+     * devolver o dinheiro e antes de `concluir`: a reentrega chama de novo, e o
+     * contrato da porta devolve "ja estornado" como sucesso.
+     */
+    it('reentregue depois de sucesso, conclui sem estornar de novo', async () => {
+      const gateway = await comCobranca();
+
+      for (const _vez of [1, 2]) {
+        const { despachante } = montarCenario({ registro: ESTORNO, gateway });
+        await expect(
+          despachante.despachar('estorno-integral_pix_char_1'),
+        ).resolves.toBe('entregue');
+      }
+
+      expect(gateway.estornos).toHaveLength(2);
+      expect(
+        [...gateway.cobrancas.values()].filter((c) => c.estornada),
+      ).toHaveLength(1);
+    });
+
+    it('falha do gateway vira falha do registro, para a fila reentregar', async () => {
+      const gateway = await comCobranca();
+      gateway.falharProximas(1);
+      const { despachante, concluidos } = montarCenario({
+        registro: ESTORNO,
+        gateway,
+      });
+
+      await expect(
+        despachante.despachar('estorno-integral_pix_char_1'),
+      ).resolves.toBe('falhou');
+      expect(concluidos[0]).toMatchObject({
+        estado: 'falhou',
+        motivo: 'falha simulada',
+      });
+    });
+
+    it('registro sem a cobranca falha com motivo', async () => {
+      const { estorno: _sem, ...semCobranca } = ESTORNO;
+      const { despachante, concluidos } = montarCenario({
+        registro: semCobranca,
+      });
+
+      await despachante.despachar('estorno-integral_x');
+
+      expect(concluidos[0]?.motivo).toBe('registro de estorno sem cobranca');
+    });
   });
 
   /**
@@ -317,23 +485,28 @@ describe('DespachanteOutbox', () => {
     ['abandonado'],
     ['em-andamento'],
     ['inexistente'],
-  ] as const)('nao envia nada quando a reivindicacao devolve %s', async (situacao) => {
-    const { despachante, transporte, concluidos } = montarCenario({
-      reivindicacao: { situacao },
-    });
+  ] as const)(
+    'nao envia nada quando a reivindicacao devolve %s',
+    async (situacao) => {
+      const { despachante, transporte, concluidos } = montarCenario({
+        reivindicacao: { situacao },
+      });
 
-    await expect(despachante.despachar('id-1')).resolves.toBe(situacao);
+      await expect(despachante.despachar('id-1')).resolves.toBe(situacao);
 
-    expect(transporte.enviadas).toEqual([]);
-    expect(concluidos).toEqual([]);
-  });
+      expect(transporte.enviadas).toEqual([]);
+      expect(concluidos).toEqual([]);
+    },
+  );
 
   it('conclui como falha quando o transporte recusa', async () => {
     const recusando: EmailTransport = {
       enviar: () =>
         Promise.resolve({ sucesso: false, motivo: 'Rate limit exceeded' }),
     };
-    const { despachante, concluidos } = montarCenario({ transporte: recusando });
+    const { despachante, concluidos } = montarCenario({
+      transporte: recusando,
+    });
 
     await expect(despachante.despachar('id-1')).resolves.toBe('falhou');
 

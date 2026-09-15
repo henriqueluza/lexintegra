@@ -1,6 +1,11 @@
 import { isPlatformBrowser } from '@angular/common';
-import { inject, PLATFORM_ID } from '@angular/core';
-import { Router, type CanMatchFn, type UrlTree } from '@angular/router';
+import { inject, Injector, PLATFORM_ID } from '@angular/core';
+import {
+  Router,
+  type CanActivateFn,
+  type CanMatchFn,
+  type UrlTree,
+} from '@angular/router';
 import type { Perfil } from 'shared/perfil';
 import { SessaoService } from './sessao.service';
 
@@ -75,3 +80,39 @@ export function rotaInicialDe(perfil: Perfil | null): string {
   if (perfil === 'cliente') return '/painel';
   return '/';
 }
+
+/**
+ * A ficha inicial e obrigatoria antes dos pedidos (item 2.2.5). ⚠️ A ficha ainda e
+ * o STUB provisorio da Etapa 8 — ver `shared/anamnese-provisoria`.
+ *
+ * `canActivate` e nao `canMatch`: a arvore do cliente ja casou pelo perfil, e
+ * este guard so decide PARA ONDE dentro dela a pessoa vai.
+ *
+ * FALHA DE REDE DEIXA PASSAR. Uma consulta que falha nao pode trancar o cliente
+ * fora dos pedidos que ele pagou; a ficha volta a ser pedida na proxima entrada.
+ * A regra de negocio que importa — o advogado precisar da ficha — nao depende de
+ * a tela barrar: a ficha e lida pela API.
+ */
+export const exigirAnamnese: CanActivateFn = async (): Promise<
+  boolean | UrlTree
+> => {
+  if (!isPlatformBrowser(inject(PLATFORM_ID))) return true;
+
+  const injetor = inject(Injector);
+  const router = inject(Router);
+
+  try {
+    /*
+     * `import()` e nao import estatico: este arquivo e alcancado pelo
+     * `app.config.ts`, e o import estatico poria o cliente HTTP da area do
+     * cliente no pacote inicial da home. O injetor e capturado ANTES do `await`,
+     * porque o contexto de injecao nao sobrevive a ele.
+     */
+    const { ApiClienteService } = await import('./api-cliente.service');
+    const api = injetor.get(ApiClienteService);
+    const { preenchida } = await api.situacaoDaAnamnese();
+    return preenchida ? true : router.createUrlTree(['/painel/anamnese']);
+  } catch {
+    return true;
+  }
+};

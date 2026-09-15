@@ -7,6 +7,8 @@ import {
 import { Reflector } from '@nestjs/core';
 import type { Perfil } from 'shared';
 import { AdvogadosController } from './advogados/advogados.controller.js';
+import { AnamneseProvisoriaController } from './anamnese-provisoria/anamnese-provisoria.controller.js';
+import type { AnamneseProvisoriaService } from './anamnese-provisoria/anamnese-provisoria.service.js';
 import type { AdvogadosService } from './advogados/advogados.service.js';
 import {
   CHAVE_PERFIS,
@@ -32,6 +34,11 @@ import { AnexosService } from './anexos/anexos.service.js';
 import type { PortaoDeArquivos } from './arquivos/portao.js';
 import type { UploadDeEntregavelService } from './entregaveis/upload.service.js';
 import type { TermosService } from './termos/termos.service.js';
+import { AlertaFalso } from './alertas/alerta.js';
+import { EstornosAdminController } from './estornos/estornos.admin.controller.js';
+import type { EstornosService } from './estornos/estornos.service.js';
+import { CheckoutController } from './checkout/checkout.controller.js';
+import type { CheckoutService } from './checkout/checkout.service.js';
 import { ClientesAdminController } from './clientes/clientes.admin.controller.js';
 import type { ClientesService } from './clientes/clientes.service.js';
 import { DisponibilidadesController } from './disponibilidades/disponibilidades.controller.js';
@@ -42,6 +49,7 @@ import type { ConsultaPedidosService } from './pedidos/consulta.service.js';
 import type { DistribuicaoService } from './pedidos/distribuicao.service.js';
 import { PedidosAdminController } from './pedidos/pedidos.admin.controller.js';
 import { PedidosAdvogadoController } from './pedidos/pedidos.advogado.controller.js';
+import type { CancelamentoService } from './pedidos/cancelamento.service.js';
 import { PedidosClienteController } from './pedidos/pedidos.cliente.controller.js';
 import { PreCadastrosAdminController } from './pre-cadastros/pre-cadastros.admin.controller.js';
 import { RetencaoController } from './retencao/retencao.controller.js';
@@ -51,6 +59,9 @@ import { PreCadastrosController } from './pre-cadastros/pre-cadastros.controller
 import type { PreCadastrosService } from './pre-cadastros/pre-cadastros.service.js';
 import { ProdutosController } from './produtos/produtos.controller.js';
 import type { ProdutosService } from './produtos/produtos.service.js';
+import { AssinaturaWebhookGuard } from './pagamentos/webhook/assinatura.guard.js';
+import type { ProcessadorDeEventos } from './pagamentos/webhook/processador.service.js';
+import { WebhookController } from './pagamentos/webhook/webhook.controller.js';
 import { PreCadastroGuard } from './vitrine/pre-cadastro.guard.js';
 import { VitrineController } from './vitrine/vitrine.controller.js';
 import type { VitrineService } from './vitrine/vitrine.service.js';
@@ -95,6 +106,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['distribuicao de pedidos', PedidosAdminController],
     ['clientes', ClientesAdminController],
     ['entregas do outbox', OutboxAdminController],
+    ['estornos (Etapa 8)', EstornosAdminController],
   ])(
     'a superficie administrativa de %s exige admin, na classe',
     (_nome, classe) => {
@@ -154,6 +166,9 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['redefinicao de senha', AutenticacaoController.prototype.redefinirSenha],
     ['pre-cadastro', PreCadastrosController.prototype.registrar],
     ['vitrine', VitrineController.prototype.listar],
+    ['checkout (Etapa 8)', CheckoutController.prototype.iniciar],
+    ['situacao do checkout (Etapa 8)', CheckoutController.prototype.situacao],
+    ['webhook do gateway (Etapa 8)', WebhookController.prototype.receber],
     ['varredura (interna)', VarreduraController.prototype.processar],
     ['retencao (interna)', RetencaoController.prototype.executar],
     ['entrega do outbox (interna)', OutboxController.prototype.entregar],
@@ -191,6 +206,8 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['health', HealthController.prototype.obter],
     ['pre-cadastro', PreCadastrosController.prototype.registrar],
     ['vitrine', VitrineController.prototype.listar],
+    ['checkout', CheckoutController.prototype.iniciar],
+    ['webhook do gateway', WebhookController.prototype.receber],
     ['cliente.listar', PedidosClienteController.prototype.listar],
     ['outbox.reenviar (painel)', OutboxAdminController.prototype.reenviar],
   ])('%s NAO e tarefa interna', (_nome, metodo) => {
@@ -236,6 +253,9 @@ describe('limite de requisicoes das rotas publicas', () => {
     ['pre-cadastro', PreCadastrosController.prototype.registrar],
     ['redefinicao de senha', AutenticacaoController.prototype.redefinirSenha],
     ['vitrine', VitrineController.prototype.listar],
+    ['checkout', CheckoutController.prototype.iniciar],
+    ['situacao do checkout', CheckoutController.prototype.situacao],
+    ['webhook do gateway', WebhookController.prototype.receber],
   ])('%s declara limite proprio', (_nome, metodo) => {
     const limite = reflector.get<ConfiguracaoDeLimite | undefined>(
       CHAVE_LIMITE,
@@ -268,6 +288,22 @@ describe('limite de requisicoes das rotas publicas', () => {
   });
 
   /**
+   * Cada chamada ao checkout pode criar uma cobranca no gateway. O limite dele
+   * tem que ser mais apertado que o do polling, que e leitura repetida de
+   * proposito.
+   */
+  it('o checkout e mais apertado que o polling da situacao', () => {
+    const porMinuto = (metodo: object): number => {
+      const limite = reflector.get<ConfiguracaoDeLimite>(CHAVE_LIMITE, metodo);
+      return limite.maximo / (limite.janelaMs / 60_000);
+    };
+
+    expect(porMinuto(CheckoutController.prototype.iniciar)).toBeLessThan(
+      porMinuto(CheckoutController.prototype.situacao),
+    );
+  });
+
+  /**
    * E o health tem que ficar de fora. O startup probe do Cloud Run bate em
    * cadencia fixa e nao sabe reagir a 429: uma instancia que responde 429 ao
    * proprio probe nao entra em servico, e o deploy falha no smoke test sem dizer
@@ -295,6 +331,11 @@ describe('limite de requisicoes das rotas publicas', () => {
    */
   it.each([
     ['health', HealthController.prototype.obter],
+    /*
+     * O gateway nao e navegador e nao produz token de App Check. A contrapartida
+     * e a assinatura, que o teste da classe logo abaixo cobra.
+     */
+    ['webhook do gateway (Etapa 8)', WebhookController.prototype.receber],
     ['varredura (interna)', VarreduraController.prototype.processar],
     ['retencao (interna)', RetencaoController.prototype.executar],
     ['entrega do outbox (interna)', OutboxController.prototype.entregar],
@@ -307,6 +348,8 @@ describe('limite de requisicoes das rotas publicas', () => {
     ['pre-cadastro', PreCadastrosController.prototype.registrar],
     ['redefinicao de senha', AutenticacaoController.prototype.redefinirSenha],
     ['vitrine', VitrineController.prototype.listar],
+    ['checkout', CheckoutController.prototype.iniciar],
+    ['situacao do checkout', CheckoutController.prototype.situacao],
   ])('%s e verificado pelo App Check', (_nome, metodo) => {
     expect(reflector.get(CHAVE_SEM_APP_CHECK, metodo)).toBeUndefined();
   });
@@ -473,12 +516,216 @@ describe('ProdutosController', () => {
  * catalogo, em silencio. Este teste olha para a anotacao pela mesma razao que os
  * de `@Perfis` olham.
  */
-describe('a vitrine exige o token de pre-cadastro, na classe', () => {
-  it('declara o guard no controlador', () => {
-    const guards = Reflect.getMetadata(GUARDS_METADATA, VitrineController) as
+describe('a vitrine e o checkout exigem o token de pre-cadastro, na classe', () => {
+  it.each([
+    ['vitrine', VitrineController],
+    ['checkout (Etapa 8)', CheckoutController],
+  ])('%s declara o guard no controlador', (_nome, classe) => {
+    const guards = Reflect.getMetadata(GUARDS_METADATA, classe) as
       ReadonlyArray<Type<CanActivate>> | undefined;
 
     expect(guards).toContain(PreCadastroGuard);
+  });
+});
+
+/**
+ * O webhook e `@Publico()` e isento de App Check — as duas coisas que o deixariam
+ * aberto a qualquer um, se o guard da assinatura sumisse da classe. Apagar o
+ * `@UseGuards` nao quebraria teste de guard nenhum; quebraria este.
+ */
+describe('o webhook exige assinatura, na classe', () => {
+  it('declara o guard da assinatura no controlador', () => {
+    const guards = Reflect.getMetadata(GUARDS_METADATA, WebhookController) as
+      ReadonlyArray<Type<CanActivate>> | undefined;
+
+    expect(guards).toEqual([AssinaturaWebhookGuard]);
+  });
+});
+
+describe('WebhookController', () => {
+  const EVENTO = {
+    id: 'log_1',
+    event: 'transparent.completed',
+    devMode: true,
+    data: { id: 'pix_1', externalId: 'checkout-1', amount: 100 },
+  };
+
+  function montar(devModeEsperado = true): {
+    controlador: WebhookController;
+    processados: string[];
+    alertas: AlertaFalso;
+  } {
+    const processados: string[] = [];
+    const alertas = new AlertaFalso();
+    const controlador = new WebhookController(
+      {
+        modo: 'sandbox',
+        chaveApi: null,
+        segredoWebhook: 's',
+        chaveHmacWebhook: 'h',
+        devModeEsperado,
+      },
+      alertas,
+      {
+        processar: (evento: { eventoId: string }) => {
+          processados.push(evento.eventoId);
+          return Promise.resolve('recebido');
+        },
+      } as unknown as ProcessadorDeEventos,
+    );
+    return { controlador, processados, alertas };
+  }
+
+  it('entrega o evento lido ao processador', async () => {
+    const { controlador, processados } = montar();
+
+    await expect(controlador.receber(EVENTO)).resolves.toEqual({
+      recebido: true,
+      resultado: 'recebido',
+    });
+    expect(processados).toEqual(['log_1']);
+  });
+
+  /** Pagamento de teste nunca cria conta paga — nem chega ao processador. */
+  it('recusa devMode divergente sem processar', async () => {
+    const { controlador, processados } = montar(false);
+
+    await expect(controlador.receber(EVENTO)).rejects.toThrow(
+      'Assinatura invalida.',
+    );
+    expect(processados).toEqual([]);
+  });
+
+  it('evento assinado e ilegivel vira alerta critico e 422', async () => {
+    const { controlador, processados, alertas } = montar();
+
+    await expect(
+      controlador.receber({ ...EVENTO, data: { id: 'pix_1' } }),
+    ).rejects.toThrow('Evento fora do formato esperado.');
+    expect(processados).toEqual([]);
+    expect(alertas.emitidos).toMatchObject([
+      { nivel: 'critico', assunto: 'pagamento.webhook-ilegivel' },
+    ]);
+  });
+});
+
+/**
+ * A ficha inicial (stub da Etapa 8) e superficie do CLIENTE, e a anotacao fica na
+ * classe: uma rota nova ali nasce restrita sem ninguem lembrar de anotar.
+ */
+describe('AnamneseProvisoriaController', () => {
+  it('exige o perfil de cliente, na classe', () => {
+    expect(
+      reflector.get<readonly Perfil[]>(
+        CHAVE_PERFIS,
+        AnamneseProvisoriaController,
+      ),
+    ).toEqual(['cliente']);
+    expect(
+      reflector.get(
+        CHAVE_PUBLICO,
+        AnamneseProvisoriaController.prototype.registrar,
+      ),
+    ).toBeUndefined();
+  });
+
+  /** O uid sai do token: o servico nao tem por onde receber o de outra pessoa. */
+  it('usa o uid do token nas duas rotas', async () => {
+    const chamadas: string[] = [];
+    const controlador = new AnamneseProvisoriaController({
+      situacao: (uid: string) => {
+        chamadas.push(`situacao ${uid}`);
+        return Promise.resolve({ preenchida: false });
+      },
+      registrar: (uid: string) => {
+        chamadas.push(`registrar ${uid}`);
+        return Promise.resolve({ preenchida: true });
+      },
+    } as unknown as AnamneseProvisoriaService);
+
+    await controlador.situacao(CLIENTE);
+    await controlador.registrar({ respostas: {} }, CLIENTE);
+
+    expect(chamadas).toEqual(['situacao uid-clara', 'registrar uid-clara']);
+  });
+});
+
+/**
+ * O estorno e acao do administrador (ADR-12). Quem estorna e quem registra a
+ * devolucao saem do token, nunca do corpo.
+ */
+describe('EstornosAdminController', () => {
+  it('delega com o uid do token', async () => {
+    const chamadas: string[] = [];
+    const controlador = new EstornosAdminController({
+      estornar: (pedidoId: string, motivo: string, uid: string) => {
+        chamadas.push(`estornar ${pedidoId} ${motivo} ${uid}`);
+        return Promise.resolve({});
+      },
+      listarPendentes: () => {
+        chamadas.push('listar');
+        return Promise.resolve([]);
+      },
+      registrarExecucaoManual: (pedidoId: string, uid: string, obs: string) => {
+        chamadas.push(`manual ${pedidoId} ${uid} ${obs}`);
+        return Promise.resolve({});
+      },
+    } as unknown as EstornosService);
+
+    await controlador.estornar('p-1', { motivo: 'desistiu' }, ADMIN);
+    await controlador.listarPendentes();
+    await controlador.registrarExecucaoManual(
+      'p-1',
+      { observacao: 'pix' },
+      ADMIN,
+    );
+
+    expect(chamadas).toEqual([
+      'estornar p-1 desistiu uid-admin',
+      'listar',
+      'manual p-1 uid-admin pix',
+    ]);
+  });
+});
+
+describe('CheckoutController', () => {
+  function montar(): { controlador: CheckoutController; chamadas: string[] } {
+    const chamadas: string[] = [];
+    const controlador = new CheckoutController({
+      iniciar: (_dados: unknown, preCadastroId: string) => {
+        chamadas.push(`iniciar ${preCadastroId}`);
+        return Promise.resolve({});
+      },
+      situacao: (checkoutId: string, preCadastroId: string) => {
+        chamadas.push(`situacao ${checkoutId} ${preCadastroId}`);
+        return Promise.resolve({ estado: 'pago' });
+      },
+    } as unknown as CheckoutService);
+    return { controlador, chamadas };
+  }
+
+  /** O id sai do token que o guard ja validou — o segredo nunca chega ao servico. */
+  it('passa ao servico so o id do pre-cadastro', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.iniciar({} as never, 'id-do-lead.segredo');
+    await controlador.situacao('checkout-1', 'id-do-lead.segredo');
+
+    expect(chamadas).toEqual([
+      'iniciar id-do-lead',
+      'situacao checkout-1 id-do-lead',
+    ]);
+  });
+
+  it.each([
+    ['sem token', undefined],
+    ['token sem segredo', 'so-o-id'],
+  ])('recusa %s', (_caso, token) => {
+    const { controlador } = montar();
+
+    expect(() => controlador.iniciar({} as never, token)).toThrow(
+      'Conclua o pre-cadastro',
+    );
   });
 });
 
@@ -737,10 +984,25 @@ describe('PedidosClienteController', () => {
         {
           registrar: registrar('termos.registrar'),
         } as unknown as TermosService,
+        {
+          cancelar: registrar('cancelar'),
+        } as unknown as CancelamentoService,
       ),
       chamadas,
     };
   }
+
+  /**
+   * O cancelamento (Etapa 8, ADR-12) tambem usa o uid do token: nenhum cliente
+   * cancela o pedido de outro passando o id dele.
+   */
+  it('cancela usando o uid do token', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.cancelar('pedido-1', CLIENTE);
+
+    expect(chamadas).toEqual(['cancelar pedido-1 uid-clara']);
+  });
 
   /**
    * O `clienteId` sai do TOKEN em toda rota — nenhuma delas o aceita no caminho

@@ -26,7 +26,7 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 - Terraform: bucket de state criado e versionado em `gs://lexintegra-tfstate-36bda`. Backend do Terraform aponta para ele, prefixo `etapa-2`. (O registro anterior dizia que `lexintegra-tfstate` sem sufixo estava tomado por terceiros; **não estava** — ele existe neste mesmo projeto, vazio. Ver o item de bucket sobrando abaixo.)
 - Service account do CI: `terraform-ci@plataforma-juridica-36bda.iam.gserviceaccount.com`, com papéis `storage.admin`, `datastore.owner`, `run.admin`, `secretmanager.admin`, `cloudkms.admin`, `artifactregistry.admin`, `iam.serviceAccountUser` (bootstrap) mais `iam.serviceAccountAdmin`, `resourcemanager.projectIamAdmin`, `serviceusage.serviceUsageAdmin`, `firebasehosting.admin` e `iam.workloadIdentityPoolAdmin` (acrescentados na Etapa 2), mais `cloudtasks.admin` e `cloudscheduler.admin` (acrescentados na Etapa 7). **Autenticação via Workload Identity Federation, sem chave JSON**: pool `github-pool`, provider `github-provider`, condição de atributo restrita ao repositório `henriqueluza/lexintegra`. Nome completo do provider para uso no workflow do GitHub Actions: `projects/616781378293/locations/global/workloadIdentityPools/github-pool/providers/github-provider`.
 - Secret Manager: secrets `resend-api-key` e `abacatepay-api-key-dev` já criados, com acesso de leitura concedido à service account padrão do Compute (`616781378293-compute@developer.gserviceaccount.com`), usada pelo Cloud Run até a Etapa 2. **Resolvido:** a service account de runtime dedicada `api-lexintegra-run@…` foi criada e recebeu a mesma concessão.
-- Hooks de bloqueio: `.claude/settings.json` + `.claude/hooks/block-dangerous.sh` já commitados, bloqueando `terraform apply`/`destroy`, `firebase deploy`/`gcloud run deploy` diretos, `delete` de recurso de nuvem, e leitura de `.env`/chave de service account. `terraform plan` permanece livre.
+- Hooks de bloqueio: `.claude/settings.json` + `.claude/hooks/block-dangerous.sh` já commitados, bloqueando `terraform apply`/`destroy`, `firebase deploy`/`gcloud run deploy` diretos, `delete` de recurso de nuvem, e leitura de `.env`/chave de service account. `terraform plan` permanece livre. **Errata da Etapa 8: até ela, o hook não funcionava** (sem bit de execução) — ver "Sobre os limites deste arquivo", no fim.
 - **Terraform escrito na Etapa 2**, em `infra/terraform/` — ver o `README.md` de lá antes de mexer. Os recursos do bootstrap são **importados** por blocos `import` em `imports.tf`, não recriados; um `apply` que tentasse criá-los falharia por conflito. `imports.tf` é temporário e deve ser removido depois do primeiro apply verde.
 - **Firestore não existia** no bootstrap (verificado: `NOT_FOUND`). É criado pelo Terraform, não importado.
 - **Service account de runtime dedicada criada**: `api-lexintegra-run@plataforma-juridica-36bda.iam.gserviceaccount.com`, com acesso de leitura aos dois secrets. Substitui a service account padrão do Compute, que tinha `roles/editor` no projeto inteiro. A concessão antiga foi mantida nesta rodada de propósito e sai num commit seguinte, depois de a nova identidade estar provada em produção.
@@ -37,7 +37,7 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 
 **Aguardando resposta externa, não bloqueiam Etapas 1 e 2:**
 
-- Aprovação final da AbacatePay para modo de produção (chave `abc_prod_...`) — bloqueia a Etapa 8, não antes.
+- Aprovação final da AbacatePay para modo de produção (chave `abc_prod_...`) — bloqueia o **fechamento** da Etapa 8; a parte que não depende dela está no PR de `feat/checkout-sandbox-abacatepay`.
 - Verificação completa de domínio no Resend — confirmar status atual; bloqueia a Etapa 7, não antes.
 
 **Ainda faltam, do lado da CONTRATANTE:** ficha de anamnese, tipografia oficial (se houver manual além do PDF), confirmação de licenciamento Microsoft Teams dos advogados, aditivo da cláusula 7ª assinado.
@@ -142,7 +142,25 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 - **`EntregaResumo` é `type` e não `interface`** — `app-tabela` recebe `Record<string, unknown>`, e só alias de tipo ganha assinatura de índice implícita. Com `interface`, compila no teste e quebra no `ng build`.
 - **Cobertura:** `apps/api` 93/83/92/94, `apps/web` 96/89/92/97, `packages/shared` 99/100/100/99.
 
-**Próximo trabalho recomendado:** revisar e abrir o PR da Etapa 7, e seguir para a **Etapa 8** (checkout), que era o que a Etapa 7 destravava — o e-mail de liberação de acesso agora tem garantia de entrega. As Etapas 10 e 12 seguem dependendo de confirmação externa. O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde. Do lado da CONTRATANTE seguem pendentes: catálogo real da B&C, domínio verificado no Resend, chave de produção e os destinatários dos alertas.
+**Etapa 8 — checkout, pagamento e estorno, PARCIAL (branch `feat/checkout-sandbox-abacatepay`):**
+
+- **Não fecha a etapa.** Faltam a chave de produção, o webhook no painel do escritório, a ficha de anamnese definitiva, os textos jurídicos e a **rodada real no sandbox**, que é passo humano (`docs/runbooks/checkout-sandbox.md`). Toda a prova automatizada roda contra o **gateway falso**.
+- **ADR-19**: o transparente do AbacatePay é só PIX; **cartão vai pelo checkout hospedado, com redirecionamento** — desvio da arquitetura 7.1 a comunicar à CONTRATANTE. Estorno no gateway é só integral, e sandbox e produção usam a mesma URL.
+- **O snapshot passou para o checkout.** O `preparar` antigo lia o produto vivo na transação do webhook — congelava na confirmação. Agora `congelar` lê no checkout, `checkouts/{id}` guarda os snapshots, e a confirmação só reidrata.
+- **`checkoutId = hash(carrinhoId + hashItens + metodo)`.** Mesmo carrinho reaproveita a cobrança; carrinho alterado marca o anterior `substituido` (e se o QR antigo for pago, honra o snapshot dele, com alerta). `apagarApos` alimenta a **TTL nativa do Firestore** — o emulador não executa TTL.
+- **O ID do pagamento é o da cobrança** (errata do ADR-04). Webhook 3× → 1 pagamento e 2 pedidos, provado contra o emulador com entregas concorrentes. Valor divergente, conta de outro perfil e checkout inexistente viram pagamento `divergente`/`conflito_de_conta`/`orfao`, com alerta crítico e sem pedido.
+- **A conta do cliente é criada ANTES da transação** (efeito externo), idempotente, por `ContasClienteService` — o segundo escritor de claim da **regra 17 emendada**. O e-mail sai pelo evento `acesso-cliente` do outbox.
+- **Estorno e cancelamento (errata do ADR-12).** O administrador estorna; o cliente cancela, e cancelar não devolve dinheiro. Os dois só sem trabalho iniciado, validados na transação. Estorno isolado é registrado e devolvido à mão; quando todos os pedidos da cobrança são estornados, sai o integral pelo gateway **via outbox** (`estorno-integral`, regra 20). `pedidos.situacao` é eixo separado do estado dos entregáveis, e `iniciar-trabalho` recusa pedido não `ativo`.
+- **Trava contra produção no código (regra 20):** `PAGAMENTOS_MODO` (`desligado | sandbox`; `producao` derruba o boot), prefixo `abc_dev_`, `devMode` conferido em tudo. Terraform com `desligado`, sem secret novo.
+- **Placeholders com teste que cai ao substituir:** `{{TODO-TEXTO-REGRA-ESTORNO-ADR-12}}` (versão `checkout-v0-pendente-adr-12`), `{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}`, `{{TODO-FICHA-ANAMNESE-DA-CONTRATANTE}}`. A anamnese é **stub** (`provisoria-v0`, três perguntas).
+- **Evento assinado que não é pagamento nem estorno não some em silêncio.** Nome desconhecido e chargeback (`*.disputed`) respondem 200 `alertado` com alerta crítico; só `subscription.*`, `transfer.*` e `payout.*` são `ignorado`. A documentação não confirma que o cartão pago emite `checkout.completed` — é o item 1 do roteiro do sandbox. **Não devolva "evento desconhecido" para 200 silencioso.**
+- **O `webhookSecret` na URL entra no log de requisição do Cloud Run, e isso está NÃO mitigado** (checado na revisão do PR #21, ADR-19): decisão pendente antes de cadastrar o webhook de produção.
+- **Corpo cru do webhook:** `rawBody: true` vive em `OPCOES_DA_APLICACAO` (`configurar.ts`), usada por `main.ts` **e por todo arnês HTTP de teste**. Arnês novo que crie a aplicação sem ela valida HMAC sobre um corpo que produção nunca veria.
+- **O hook de bloqueio não funcionava até aqui** — ver "Sobre os limites deste arquivo".
+- **Desenvolvimento:** sem chave, a API usa o gateway falso; `node scripts/simular-webhook.mjs <checkoutId>` faz o papel do AbacatePay (só loopback e emulador).
+- **Cobertura:** `apps/api` 93/85/93/95, `apps/web` 96/91/92/97, `packages/shared` 99/100/100/99.
+
+**Próximo trabalho recomendado:** revisão humana do PR da Etapa 8 parcial, e a rodada no sandbox pelo roteiro — o que ela desmentir (formato do evento, assinatura do CLI, validade do checkout hospedado, resposta ao segundo estorno) se corrige antes de a etapa fechar. As Etapas 10 e 12 seguem dependendo de confirmação externa. O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde. Do lado da CONTRATANTE seguem pendentes: catálogo real da B&C, ficha de anamnese, textos jurídicos do estorno e do cancelamento, domínio verificado no Resend, chave de produção e os destinatários dos alertas.
 
 ## Stack
 
@@ -160,9 +178,12 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 apps/web/          Angular 22, pré-renderização estática das rotas públicas
   src/styles/      tokens em três camadas + base global; ÚNICO lugar com valor literal
   src/app/ui/      componentes base do sistema de design
-  src/app/publico/ estado do pre-cadastro no navegador (localStorage)
+  src/app/publico/ pre-cadastro e carrinho no navegador (localStorage)
   src/app/paginas/landing/ home publica; TODO o texto em textos.ts
-  src/app/paginas/cliente-pedidos/ um cartao por pedido; a reuniao vive dentro dele
+  src/app/paginas/checkout/ rota publica: QR do PIX, redirecionamento do cartao, polling
+  src/app/paginas/cliente-pedidos/ um cartao por pedido; a reuniao e o cancelamento vivem dentro dele
+  src/app/paginas/cliente-anamnese/ ficha inicial PROVISORIA (stub da Etapa 8)
+  src/app/paginas/admin-estornos/ estornos pendentes de devolucao manual
   src/app/paginas/advogado-demandas/ so o que foi distribuido
   src/app/paginas/advogado-disponibilidade/ grade semanal (ADR-06)
   src/app/paginas/admin-distribuicao/ caixa de entrada e atribuicao
@@ -179,7 +200,12 @@ apps/api/          NestJS 12 (ESM-only), prefixo global /api
   src/autenticacao/ guards globais, decoradores e redefinição de senha
   src/advogados/    provisionamento e suspensão (só admin)
   src/produtos/     catálogo: CRUD administrativo, sem exclusão
-  src/pedidos/      snapshot imutável; `preparar` lê, `gravar` escreve
+  src/pedidos/      snapshot imutável; `congelar` lê no checkout, `gravar` escreve; cancelamento
+  src/checkout/     intenção de compra com snapshot, cobrança e produtos no gateway
+  src/pagamentos/   porta do gateway, `modo.ts` (regra 20), webhook e confirmação
+  src/contas-cliente/ segundo e último escritor de claim (regra 17)
+  src/estornos/     estorno do admin, manual ou integral via outbox
+  src/anamnese-provisoria/ STUB da ficha inicial
   src/entregaveis/  máquina de estados do ADR-11 e a trilha de transições
   src/tarefas/      guard de tarefa interna, porta de fila e adaptador do Cloud Tasks
   src/outbox/       escrita na transação, arrendamento, despachante e varredor
@@ -192,9 +218,11 @@ infra/terraform/   ver o README de lá antes de mexer
 scripts/visual.sh  roda o Playwright na imagem oficial (precisa de Docker)
 scripts/emuladores.sh  envolve um comando nos emuladores de Auth e Firestore
 scripts/semear-emulador.mjs  usuários e catálogo de desenvolvimento; só fala com o emulador
+scripts/simular-webhook.mjs  faz o papel do AbacatePay em `pnpm dev`; só loopback e emulador
 scripts/dados-ficticios/  DADOS FICTÍCIOS — substituir pelo catálogo real da B&C
 .github/workflows/ ci.yml e deploy.yml
 docs/
+  runbooks/         passos humanos com roteiro (rodada no sandbox do AbacatePay)
 .stylelintrc.mjs   critério de aceite da Etapa 3
 .claude/
   settings.json     registro dos hooks de PreToolUse
@@ -314,7 +342,7 @@ Estas vêm de decisões registradas nos ADRs. Violá-las é bug, não preferênc
 
 3. **Toda notificação nasce no outbox**, escrita na mesma transação que produz o fato de negócio. Nunca envie e-mail direto de um handler. E **nada decide sozinho se vale entregar**: `OutboxService.reivindicar` é a única trava, e os três caminhos de entrada — fila, varredor e reenvio manual — passam por ela. Um quarto caminho que envie por fora é entrega duplicada esperando acontecer.
 
-4. **Idempotência por ID determinístico de documento.** Webhook usa o ID do evento; slot de reunião usa `{advogadoId}_{inícioISO}`. `create` que falha por documento existente é duplicata esperada, não erro.
+4. **Idempotência por ID determinístico de documento.** Webhook usa o ID da **cobrança** — não o do evento, que é id de log (errata do ADR-04, Etapa 8) —, e o pedido, `{cobrançaId}_{nnn}`; slot de reunião usa `{advogadoId}_{inícioISO}`. `create` que falha por documento existente é duplicata esperada, não erro.
 
 5. **O pedido carrega snapshot imutável do produto**, tirado no momento do checkout. Nunca referencie o produto vivo a partir de um pedido. Alterar produto não pode afetar pedido existente.
 
@@ -336,15 +364,17 @@ Estas vêm de decisões registradas nos ADRs. Violá-las é bug, não preferênc
 
 14. **Status de entregável é máquina de estados fixa, sem transição manual.** Os quatro estados (`solicitado`, `em_elaboracao`, `em_revisao`, `entregue`) e as transições entre eles são código, não dado configurável. `entregue` só é alcançado por confirmação do cliente após upload — nunca por escrita direta de campo, nem por admin, nem por advogado. O número de revisões permitidas é o único parâmetro por produto; validar no servidor sempre, mesmo que a interface já esconda o botão quando o saldo acabar.
 
-15. **Estorno só é permitido com o pedido em `solicitado`.** A partir de `em_elaboracao`, o endpoint de estorno recusa a operação — validação no servidor, não apenas mensagem de interface.
+15. **Estorno só é permitido com o pedido em `solicitado`.** A partir de `em_elaboracao`, o endpoint de estorno recusa a operação — validação no servidor, não apenas mensagem de interface. O cancelamento pelo cliente segue a mesma regra, e as duas elegibilidades vivem num lugar só (`packages/shared/src/situacao-pedido.ts`), lidas dentro da transação.
 
 16. **Upload tem dois fluxos distintos, não um.** Advogado envia entregável (dispara transição de estado). Cliente envia até 3 arquivos de apoio (jpg/pdf, 5 MB cada) associados ao pedido, sem afetar o estado do entregável. Não misture os dois num único endpoint ou numa única validação.
 
-17. **Custom claim só é escrita em um lugar.** `AdvogadosService.criar` escreve `role: advogado`, e nada mais na aplicação escreve claim nenhuma. `admin` nunca é escrito por código: o administrador global é provisionado fora da aplicação (item 2.4.2), por script manual em `scripts/manual-only/`. Suspensão **não** mexe na claim — quem foi suspenso continua sendo advogado, o que muda é o acesso.
+17. **Custom claim só é escrita em dois lugares, e cada um escreve um perfil só** (emendada na Etapa 8). `AdvogadosService.criar` escreve `role: advogado`. `ContasClienteService.obterOuCriar` escreve `role: cliente`, e **só em conta sem perfil nenhum** — e-mail que já é advogado ou administrador vira pagamento `conflito_de_conta`, nunca troca de claim. Nada mais na aplicação chama `setCustomUserClaims`, e isso é lint: um `no-restricted-syntax` no `eslint.config.mjs` recusa a chamada fora dos dois serviços. `admin` nunca é escrito por código: o administrador global é provisionado fora da aplicação (item 2.4.2), por script manual em `scripts/manual-only/`. Suspensão **não** mexe na claim — quem foi suspenso continua sendo advogado, o que muda é o acesso.
 
-18. **Rota nova na API nasce fechada.** Os guards são globais; abrir exige `@Publico()` explícito, e a superfície administrativa declara `@Perfis('admin')` na classe do controlador, não em cada método. Hoje há exatamente **três** rotas públicas — health, redefinição de senha e pré-cadastro — e há teste que as lista nominalmente. A vitrine é `@Publico()` no sentido de "sem identidade" e mesmo assim exige o token de pré-cadastro, por um guard de controlador.
+18. **Rota nova na API nasce fechada.** Os guards são globais; abrir exige `@Publico()` explícito, e a superfície administrativa declara `@Perfis('admin')` na classe do controlador, não em cada método. As rotas públicas de usuário são **sete** — health, redefinição de senha, pré-cadastro, vitrine, checkout, situação do checkout e webhook do gateway — mais as quatro internas (varredura, retenção, entrega e varredura do outbox), que são `@Publico()` só no sentido de "sem usuário" e exigem credencial de tarefa. `controladores.spec.ts` lista todas **nominalmente**: abrir uma rota exige editar o teste. A vitrine e o checkout são `@Publico()` no sentido de "sem identidade" e mesmo assim exigem o token de pré-cadastro, por um guard de controlador. O webhook é o único público sem App Check, e se autentica por assinatura antes de qualquer leitura.
 
 19. **A API é acessada via `/api/**` no mesmo domínio do frontend, não por subdomínio.** Rewrite do Firebase Hosting para o Cloud Run (ver ADR-15). Não criar mapeamento de domínio próprio (`api.lexintegra.com.br`) sem antes verificar se a região do serviço já suporta essa funcionalidade do Cloud Run — na região `southamerica-east1`, não suporta.
+
+20. **Pagamento real está travado no código, e o estorno real só sai pelo outbox** (Etapa 8, ADR-19). `PAGAMENTOS_MODO=producao` **recusa subir**, independentemente do que estiver no Secret Manager — destravar é ato humano e explícito de uma etapa futura, com a chave de produção aprovada e a primeira transação real feita à mão, nunca uma troca de variável. Em `sandbox`, a chave precisa ter o prefixo `abc_dev_` e todo evento e toda resposta do gateway precisam trazer `devMode: true`. E **nenhum endpoint síncrono chama `GatewayPagamento.estornar`**: o estorno integral nasce como evento `estorno-integral` no outbox, na transação que decide o estorno, e quem chama o gateway é o despachante. Só `pagamentos/gateway/criar-gateway.ts` importa o adaptador real — regra de dependency-cruiser.
 
 ## Fronteiras de autorização
 
@@ -385,4 +415,6 @@ para o desenvolvedor rodar o script correspondente ele mesmo.
 
 ## Sobre os limites deste arquivo
 
-Este documento é contexto, não configuração imposta. As proibições que realmente importam — `terraform apply`, `deploy`, `delete` em recurso de nuvem, leitura de credencial, escrita de custom claim, chamada à API de produção do gateway — são barradas por hook de `PreToolUse` em `.claude/hooks/` (já implementado e commitado, ver `.claude/settings.json`). Se um comando for bloqueado, isso é o sistema funcionando: peça ao humano para executar.
+Este documento é contexto, não configuração imposta. As proibições que realmente importam — `terraform apply`, `deploy`, `delete` em recurso de nuvem, leitura de credencial, chave de produção do gateway (`abc_prod_`) — são barradas por hook de `PreToolUse` em `.claude/hooks/` (ver `.claude/settings.json`). Se um comando for bloqueado, isso é o sistema funcionando: peça ao humano para executar.
+
+**O hook só passou a funcionar na Etapa 8.** Até ali, `block-dangerous.sh` estava commitado sem bit de execução e não bloqueava nada; o `grep` que extraía o comando também era contornável com aspas. Agora ele casa os padrões contra a entrada inteira de cada chamada ao shell (o `matcher` é só `Bash`) — e o custo conhecido são **falsos positivos**: `.env` casa com `process.env`, `this.enviando`, `transporte.enviar`. Para escrever conteúdo com essas substrings, use as ferramentas de edição de arquivo em vez do shell, e mensagem de commit por arquivo (`git commit -F`). Não afrouxe o padrão para contornar. **Se aparecer bloqueio inesperado no dia a dia, a causa é essa comparação ampla, e a correção é um padrão mais específico** (casar `.env` como nome de arquivo, e não como substring) — **nunca voltar à extração do comando por `grep`**, que era o que deixava o hook contornável (decisão da revisão do PR #21). A escrita de custom claim não é barrada pelo hook: é barrada pelo lint (regra 17).

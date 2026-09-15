@@ -1,0 +1,35 @@
+<section class="estorno" aria-labelledby="estorno-titulo">
+  <h2 id="estorno-titulo" class="estorno__titulo">
+    Estornar {{ pedido().produto }} — {{ pedido().cliente.nome }}
+  </h2>
+  <p class="estorno__nota">
+    O estorno so e aceito com o pedido em solicitado, antes de qualquer trabalho
+    (ADR-12). Se for o ultimo pedido da cobranca, o estorno sai inteiro pelo
+    gateway; senao, o escritorio devolve o valor por fora e registra em
+    Estornos.
+  </p>
+
+  <app-campo
+    rotulo="Motivo do estorno"
+    [multilinha]="true"
+    [linhas]="3"
+    [formControl]="motivo"
+    [obrigatorio]="true"
+    [erro]="erroDoMotivo()"
+  />
+
+  @if (falha(); as mensagem) {
+  <app-mensagem-erro variante="bloco">{{ mensagem }}</app-mensagem-erro>
+  }
+
+  <div class="estorno__acoes">
+    <app-botao variante="texto" (click)="desistiu.emit()">Voltar</app-botao>
+    <app-botao
+      variante="primario"
+      [carregando]="enviando()"
+      (click)="confirmar()"
+    >
+      Confirmar estorno
+    </app-botao>
+  </div>
+</section>

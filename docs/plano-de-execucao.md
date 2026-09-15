@@ -493,6 +493,73 @@ prova que ele está na cadeia.
 
 **Risco.** O snapshot precisa ser tirado no checkout e não na confirmação, sob pena de o cliente pagar um preço e receber outro produto se o admin alterar o catálogo nesse intervalo.
 
+### Registro de execução — Etapa 8 (parcial)
+
+**Parcial, e de propósito.** A branch `feat/checkout-sandbox-abacatepay` adiantou o
+que não depende de nada externo. Ficaram de fora, por dependerem de alguém: a
+chave de produção, o webhook no painel do escritório, a ficha de anamnese
+definitiva, os textos jurídicos e a rodada real no sandbox. A etapa **não fecha**
+com este PR — ver "Só você" abaixo.
+
+**O risco que este plano apontava tinha acontecido.** `PedidosService.preparar`
+lia o produto vivo dentro da transação; chamado pelo webhook, congelaria o produto
+na confirmação. O snapshot passou para o checkout, e o teste migrou para o
+intervalo que importa (errata na arquitetura, 5.3).
+
+**O gateway não é o que o escopo supunha**, e isso virou o ADR-19. O transparente
+do AbacatePay é só PIX; cartão existe só no checkout hospedado, com
+redirecionamento. O estorno é só integral, por cobrança — o que mudou a forma do
+ADR-12 (errata lá). E dev e produção usam a mesma URL: a trava contra cobrança
+real teve de ir para o código, com `PAGAMENTOS_MODO`, a conferência de `devMode` e
+a **regra inviolável 20**.
+
+**Três erratas de documento, cada uma encontrada ao implementar:**
+
+- **ADR-04** — o id do pagamento é o da cobrança, não o do evento (o do evento é
+  id de log, e duas entregas sobre a mesma cobrança duplicariam o pagamento).
+- **ADR-12** — estorno de pedido isolado é registrado e executado à mão; o
+  integral sai pelo gateway, via outbox, quando todos os pedidos da cobrança são
+  estornados. O administrador estorna; o cliente cancela, e cancelar não devolve.
+- **Regra inviolável 17** — ganhou um segundo escritor de claim,
+  `ContasClienteService`, que só grava `cliente` e só em conta sem perfil. Um
+  `no-restricted-syntax` do ESLint impede um terceiro.
+
+**A escolha que não foi óbvia: a conta nasce antes da transação.** Criar usuário no
+Auth é efeito externo (regra 2). Ele é idempotente por e-mail — três webhooks
+concorrentes produzem uma conta, provado contra o emulador —, e o conflito com
+conta de advogado ou administrador vira pagamento `conflito_de_conta` com alerta,
+sem pedido.
+
+**Critérios de aceite → onde estão provados:**
+
+| Critério | Teste |
+|---|---|
+| Mesmo webhook 3× → 1 pagamento e 2 pedidos | `pagamentos/webhook/confirmacao.integration-spec.ts` (sequencial e `Promise.all`) |
+| Assinatura inválida rejeitada | `pagamentos/webhook/webhook.integration-spec.ts` e o unitário do guard — 401 e zero documentos |
+| Estorno em `em_elaboracao` recusado no servidor | `estornos/estornos.integration-spec.ts` — 409, estado inalterado |
+| Compra de ponta a ponta | `compra.integration-spec.ts` — da vitrine à ficha preenchida e aos dois cartões |
+| Cancelar não afeta a conta nem os outros pedidos | `pedidos/cancelamento.integration-spec.ts` — retrato antes e depois, campo a campo |
+
+**O entregável formal diz "no ambiente de teste do gateway", e isso não foi
+feito.** A prova automatizada roda contra o gateway falso, sobre a pilha HTTP real e
+os emuladores. A chave de desenvolvimento está no Secret Manager, e a sessão do
+agente não a lê (regra 9). A rodada no sandbox é passo humano, com roteiro em
+`docs/runbooks/checkout-sandbox.md`.
+
+**O hook de bloqueio nunca tinha funcionado.** `.claude/hooks/block-dangerous.sh`
+estava commitado sem bit de execução (`100644`), e o `grep` que extraía o comando
+do JSON era contornável com aspas. Nada do que o `CLAUDE.md` dizia estar barrado
+por ele estava. Corrigido no primeiro commit da branch, com o padrão novo
+`abc_prod_`. Efeito colateral conhecido: o padrão `.env` agora casa com qualquer
+comando que contenha a substring (`process.env`, `this.enviando`).
+
+**Custo recorrente novo: nenhum.** TTL do Firestore não é cobrada à parte; a
+exclusão conta como escrita, no volume de carrinhos abandonados.
+
+**Cobertura:** `apps/api` 93/85/93/95, `apps/web` 96/91/92/97,
+`packages/shared` 99/100/100/99. Integração: 384 asserções de regras, 145 testes
+da API.
+
 ### Só você — Etapa 8
 
 **Impossível delegar**
@@ -502,6 +569,18 @@ prova que ele está na cadeia.
 - Executar a **primeira transação real** em produção, com valor baixo, antes de liberar para o cliente. Teste em sandbox não prova que a chave de produção está correta.
 - Conferir que o dinheiro caiu na conta do escritório. É verificação financeira, não técnica.
 - Redigir e obter aprovação do trecho dos termos de serviço sobre a regra de estorno (ADR-12) — texto jurídico, não copy técnico.
+
+**Acrescentado pela execução parcial (ver o registro acima)**
+
+- Executar a rodada no sandbox, pelo roteiro `docs/runbooks/checkout-sandbox.md`, e corrigir o que ela desmentir antes de fechar a etapa.
+- Criar no Secret Manager o `ABACATEPAY_WEBHOOK_SECRET` (definido por nós ao cadastrar o webhook) e referenciá-lo no Terraform, junto com `ABACATEPAY_WEBHOOK_CHAVE_HMAC`. Pela documentação de segurança de webhooks, a chave do HMAC é **pública e fixa**, publicada pelo AbacatePay — se a rodada no sandbox confirmar, ela pode ser variável comum em vez de secret. Com a chave de API configurada e sem os dois, a API recusa subir — de propósito.
+- Ao cadastrar o webhook no painel, **assinar os seis eventos** que a API trata: `transparent.completed`, `checkout.completed`, `transparent.refunded`, `checkout.refunded`, `transparent.disputed` e `checkout.disputed`. Evento não assinado não chega, e o sintoma é pagamento sem pedido.
+- **Antes de cadastrar o webhook de produção, decidir o que fazer com o `webhookSecret` no log de requisição do Cloud Run** — checado na revisão do PR #21 e **não mitigado**: sem exclusão, retido 30 dias, e legível pela SA padrão do Compute, que não lê o Secret Manager. As três saídas (exclusão só da rota, limpeza do IAM, ou aceite consciente) estão no ADR-19.
+- Comunicar à CONTRATANTE o desvio do cartão: o pagamento com cartão sai da plataforma e volta (ADR-19).
+- Obter os outros dois textos jurídicos: o do cancelamento (`{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}`) e o do e-mail de acesso do cliente.
+- Definir o processo operacional de quem devolve o dinheiro no estorno manual, e de quem resolve um pagamento `orfao`, `divergente` ou `conflito_de_conta` — nos três houve dinheiro e não há pedido.
+- Decidir se `produtosContratados` do cliente deve perder o produto cancelado ou estornado (hoje não perde, e a busca do administrador continua achando).
+- **Destravar a regra inviolável 20** é ato explícito de uma etapa futura, com a chave de produção aprovada: `PAGAMENTOS_MODO=producao` hoje derruba o boot, independentemente do que estiver no Secret Manager.
 
 **Bloquear ativamente**
 

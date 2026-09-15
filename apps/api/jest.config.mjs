@@ -36,6 +36,9 @@ export default {
     // Mesma razao: `firestore-falso.ts` e o dublê em memoria que as suites de
     // unidade importam. E arnes, nao codigo de producao.
     '!firestore-falso.ts',
+    // `arnes-pedidos.ts` congela o produto na hora para as suites que precisam de
+    // um pedido pronto sem passar por checkout. Tambem e arnes.
+    '!arnes-pedidos.ts',
   ],
   coverageDirectory: '../coverage',
   coverageReporters: ['text-summary', 'lcov', 'json-summary'],
