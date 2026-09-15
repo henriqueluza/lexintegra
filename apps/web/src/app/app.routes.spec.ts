@@ -28,6 +28,7 @@ describe('rotas', () => {
     'entrar',
     'recuperar-senha',
     'definir-senha',
+    'checkout',
     'painel',
     'advogado',
     'admin',
@@ -165,17 +166,14 @@ describe('rotas', () => {
    * autenticado, e o que ela mostra e a lista de tudo que o sistema tentou
    * entregar.
    */
-  it.each([
-    'advogados',
-    'produtos',
-    'distribuicao',
-    'clientes',
-    'entregas',
-  ])('registra a tela administrativa %s sob admin', (caminho) => {
-    const admin = routes.find((r) => r.path === 'admin');
+  it.each(['advogados', 'produtos', 'distribuicao', 'clientes', 'entregas'])(
+    'registra a tela administrativa %s sob admin',
+    (caminho) => {
+      const admin = routes.find((r) => r.path === 'admin');
 
-    expect(admin?.children?.some((f) => f.path === caminho)).toBe(true);
-  });
+      expect(admin?.children?.some((f) => f.path === caminho)).toBe(true);
+    },
+  );
 
   it('define titulo em todas as rotas, para aba e leitor de tela', () => {
     for (const rota of routes) {

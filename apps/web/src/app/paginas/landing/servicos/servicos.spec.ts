@@ -280,6 +280,19 @@ describe('Servicos', () => {
       expect(pedidos).toBe(1);
     });
 
+    it('leva ao checkout', async () => {
+      const fixture = montar();
+      await liberar(fixture);
+
+      await clicarAdicionar(fixture);
+
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector(
+          '.carrinho a[href="/checkout"]',
+        ),
+      ).not.toBeNull();
+    });
+
     it('remove o item escolhido', async () => {
       const fixture = montar();
       await liberar(fixture);

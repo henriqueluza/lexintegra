@@ -114,6 +114,7 @@ export const TEXTOS = {
       aviso:
         'O valor final é confirmado no checkout. Cada serviço vira um pedido separado, com reuniões e prazos próprios.',
       remover: 'Remover',
+      pagar: 'Ir para o pagamento',
       cheio: 'O carrinho aceita até 10 serviços por compra.',
     },
   },

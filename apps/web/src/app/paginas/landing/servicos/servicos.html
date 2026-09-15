@@ -93,6 +93,12 @@
   </p>
   <p class="carrinho__aviso">{{ textos.servicos.carrinho.aviso }}</p>
 
+  <div class="carrinho__acao">
+    <app-link-acao destino="/checkout" variante="primario">
+      {{ textos.servicos.carrinho.pagar }}
+    </app-link-acao>
+  </div>
+
   @if (carrinho.cheio()) {
   <p class="carrinho__aviso" role="status">
     {{ textos.servicos.carrinho.cheio }}

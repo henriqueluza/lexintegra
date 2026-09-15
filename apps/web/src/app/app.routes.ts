@@ -17,6 +17,7 @@ export const ROTAS_PUBLICAS = [
   'entrar',
   'recuperar-senha',
   'definir-senha',
+  'checkout',
 ];
 
 export const routes: Routes = [
@@ -45,6 +46,16 @@ export const routes: Routes = [
         (m) => m.RecuperarSenha,
       ),
     title: 'Redefinir senha — LexIntegra',
+  },
+  /*
+   * Etapa 8. Publica e sem guard: a pagina decide o que mostrar pelo estado do
+   * navegador (liberacao e carrinho), e nao chama a API ate a pessoa pagar.
+   */
+  {
+    path: 'checkout',
+    loadComponent: () =>
+      import('./paginas/checkout/checkout').then((m) => m.Checkout),
+    title: 'Finalizar compra — LexIntegra',
   },
   {
     path: 'definir-senha',

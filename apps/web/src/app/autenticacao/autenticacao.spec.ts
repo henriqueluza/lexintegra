@@ -322,6 +322,8 @@ describe('ehCaminhoPublico', () => {
     '/api/vitrine',
     '/api/pre-cadastros',
     '/api/auth/redefinicao-senha',
+    '/api/checkout',
+    '/api/checkout/abc123',
   ])('reconhece %s', (url) => {
     expect(ehCaminhoPublico(url)).toBe(true);
   });
@@ -342,6 +344,15 @@ describe('ehCaminhoPublico', () => {
   it('nao casa por prefixo', () => {
     expect(ehCaminhoPublico('/api/vitrine-secreta')).toBe(false);
     expect(ehCaminhoPublico('/api/pre-cadastros/todos')).toBe(false);
+  });
+
+  /**
+   * O checkout e a unica excecao que casa por subcaminho, e so abaixo da barra:
+   * `/api/checkout-admin` nao e o checkout.
+   */
+  it('o prefixo do checkout exige a barra', () => {
+    expect(ehCaminhoPublico('/api/checkout-admin')).toBe(false);
+    expect(ehCaminhoPublico('/api/checkoutx/1')).toBe(false);
   });
 });
 
