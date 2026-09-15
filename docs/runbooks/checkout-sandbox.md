@@ -13,53 +13,111 @@ da seção "O que conferir" é uma suposição que só a rodada desmente.
 
 ## Antes de começar
 
-- `pnpm dev` funcionando (Java para os emuladores) e `pnpm semear` rodado uma vez.
-- O CLI do AbacatePay instalado. Confira na documentação atual a sintaxe de
-  `listen` e da simulação de pagamento: os comandos abaixo seguem o que a
-  documentação mostrava na Etapa 8, e podem ter mudado.
-- Um shell **só para esta rodada**. As variáveis abaixo morrem com ele.
+- `pnpm dev` funcionando (Java para os emuladores) e `pnpm semear` rodado uma vez,
+  com os emuladores **desligados** antes de começar (a rodada sobe os seus).
+- Acesso à conta do escritório no AbacatePay, **em modo de desenvolvimento**. O
+  login do CLI é por OAuth no navegador, com essa conta.
+- `gcloud` autenticado com uma conta que leia o secret `abacatepay-api-key-dev`.
+- O CLI do AbacatePay instalado (documentação consultada em 15/09/2026 — confira se
+  a sintaxe mudou):
 
-## 1. Credenciais no shell, sem imprimir
+```bash
+brew install --build-from-source github.com/AbacatePay/abacatepay-cli
+```
 
-A chave vem do secret `abacatepay-api-key-dev`, direto para a variável — sem `echo`,
-sem arquivo, sem colar em lugar nenhum:
+```bash
+abacatepay --version
+```
+
+- **Um terminal só para as credenciais**, o "terminal A". As variáveis morrem com
+  ele, e nenhum outro terminal precisa delas: a aplicação roda em segundo plano a
+  partir dele, com o log num arquivo que qualquer terminal lê.
+
+## 1. Credenciais no terminal A, sem imprimir
+
+Entre no CLI (abre o navegador; use a conta do escritório, em modo dev):
+
+```bash
+abacatepay login
+```
+
+**Chave de API** — do secret `abacatepay-api-key-dev`, direto para a variável, sem
+`echo` e sem arquivo. A segunda linha recusa na hora qualquer coisa que não seja
+chave de desenvolvimento:
 
 ```bash
 export ABACATEPAY_API_KEY="$(gcloud secrets versions access latest --secret=abacatepay-api-key-dev --project=plataforma-juridica-36bda)"
 ```
 
-Os dois segredos do webhook de desenvolvimento — o `webhookSecret` da URL e a chave
-do HMAC de `X-Webhook-Signature` — vêm do painel do AbacatePay em modo dev, ou do
-que o `abacatepay listen` informar ao subir. **Registre de onde cada um veio**: é a
-mesma pergunta que a configuração de produção vai ter de responder.
+```bash
+case "$ABACATEPAY_API_KEY" in abc_dev_*) echo "chave de desenvolvimento: ok" ;; *) unset ABACATEPAY_API_KEY; echo "PARE: nao e chave abc_dev_" ;; esac
+```
+
+**`webhookSecret`** — é **nosso**, e não do gateway: a documentação diz que ele é
+definido quando o webhook é criado, e o AbacatePay só o repete na URL. Para esta
+rodada local, gere um descartável:
 
 ```bash
-export ABACATEPAY_WEBHOOK_SECRET="<do painel ou do CLI — não commitar>"
+export ABACATEPAY_WEBHOOK_SECRET="$(openssl rand -hex 24)"
+```
+
+**Chave do HMAC** — **não** vem do painel nem do CLI. Pela documentação de segurança
+de webhooks (`docs.abacatepay.com/pages/webhooks/security`), a `X-Webhook-Signature`
+é assinada com uma **chave pública fixa**, a mesma para todos os webhooks, publicada
+na própria página. Copie de lá e cole no comando abaixo — ele não ecoa o que você
+cola:
+
+```bash
+read -rs ABACATEPAY_WEBHOOK_CHAVE_HMAC && export ABACATEPAY_WEBHOOK_CHAVE_HMAC && echo "chave HMAC: ${#ABACATEPAY_WEBHOOK_CHAVE_HMAC} caracteres"
+```
+
+Sem os dois do webhook, a API recusa subir com a chave configurada. É de propósito: o
+webhook recusaria todo evento, e o pagamento seria feito sem o pedido nascer.
+
+> **Consequência para produção:** se a chave do HMAC é pública e fixa, ela não
+> precisa de Secret Manager — pode ser variável comum no Terraform. Só o
+> `webhookSecret` é segredo. Registre se a rodada confirmar isso.
+
+## 2. Subir a aplicação e encaminhar o webhook
+
+Ainda no terminal A — a aplicação em segundo plano, com o log num diretório
+temporário:
+
+```bash
+export LOGS_RODADA="$(mktemp -d)" && echo "log em: $LOGS_RODADA/dev.log"
 ```
 
 ```bash
-export ABACATEPAY_WEBHOOK_CHAVE_HMAC="<do painel ou do CLI — não commitar>"
+PAGAMENTOS_MODO=sandbox pnpm dev > "$LOGS_RODADA/dev.log" 2>&1 &
 ```
 
-Sem os dois, a API recusa subir com a chave configurada. É de propósito: o webhook
-recusaria todo evento, e o pagamento seria feito sem o pedido nascer.
-
-## 2. Subir e encaminhar o webhook
-
-No mesmo shell:
+Encaminhe os eventos para a API local, também em segundo plano, para o terminal A
+continuar livre para os comandos com a chave:
 
 ```bash
-PAGAMENTOS_MODO=sandbox pnpm dev
+abacatepay listen --forward-to "http://localhost:8080/api/pagamentos/webhook?webhookSecret=$ABACATEPAY_WEBHOOK_SECRET" > "$LOGS_RODADA/listen.log" 2>&1 &
 ```
 
-O log da API **não** deve mostrar "usando o gateway falso". Se mostrar, a chave não
-chegou ao processo.
-
-Em outro terminal do mesmo shell, encaminhe os eventos para a API local:
+Num **terminal B** (sem credencial nenhuma), acompanhe os dois logs com o caminho
+que o terminal A mostrou. O do `listen` mostra o nome de cada evento; o da API, o
+que foi feito com ele:
 
 ```bash
-abacatepay listen --forward-to "http://localhost:8080/api/pagamentos/webhook?webhookSecret=$ABACATEPAY_WEBHOOK_SECRET"
+tail -f <caminho>/listen.log <caminho>/dev.log | grep --line-buffered -E "event|checkout|transparent|Pagamentos|Webhook|Confirmacao|Estornos|alerta|ERROR|==>"
 ```
+
+Quando a API subir, o log **não** pode mostrar "usando o gateway falso". Se mostrar,
+a chave não chegou ao processo — pare e confira o passo 1. Se o `listen` pedir
+interação e não rodar em segundo plano, rode-o num terminal C, com a URL completa. O
+`webhookSecret` precisa ser **o mesmo** do terminal A: só neste caso, mostre-o no A
+com `echo "$ABACATEPAY_WEBHOOK_SECRET"` e use-o no C. Ele é descartável e só vale
+para esta API local; a chave de API e a do HMAC nunca saem do terminal A.
+
+**Se todo evento encaminhado responder 401**, o CLI não está assinando com a chave
+pública, ou não preserva o `?webhookSecret=` — é o item 5 da tabela. Registre, e a
+alternativa é um webhook de dev criado no painel apontando para um túnel HTTPS até a
+`localhost:8080`, com o mesmo `webhookSecret`. Túnel expõe a máquina: use só durante
+a rodada, e derrube em seguida.
 
 **Os eventos que precisam chegar.** Na API v2, cada webhook assina uma lista de
 eventos. Se o `listen` (ou o webhook de dev criado no painel) pedir a lista, assine
@@ -82,11 +140,25 @@ cada evento, anote o **nome exato** e o `resultado` da resposta:
 1. Abra `http://localhost:4200`, faça o pré-cadastro com um e-mail que ainda não
    tenha conta, e ponha **dois** produtos no carrinho.
 2. Vá ao pagamento, escolha PIX, aceite os termos. O QR aparece na própria página.
-3. Simule o pagamento da cobrança no sandbox (`simulate-payment` do transparente,
-   pelo CLI ou pela API com a chave dev). O id da cobrança está em
-   `checkouts/{id}.cobranca.id` no emulador do Firestore; o `{id}` é o `?id=` da tela.
-4. A tela deve passar para "pago" sozinha, pelo polling.
-5. No emulador: 1 documento em `pagamentos` com `situacao: confirmado`, 2 em
+3. Pegue o id da cobrança. Ele está em `checkouts/{id}.cobranca.id` no emulador do
+   Firestore, e o `{id}` é o `?id=` da URL da tela de pagamento. Num terminal
+   qualquer:
+
+   ```bash
+   node -e 'fetch(`http://127.0.0.1:8081/v1/projects/demo-lexintegra/databases/(default)/documents/checkouts/${process.argv[1]}`,{headers:{authorization:"Bearer owner"}}).then(r=>r.json()).then(d=>console.log(d.fields.cobranca.mapValue.fields.id.stringValue))' <checkoutId>
+   ```
+
+4. Simule o pagamento **no terminal A** (é onde está a chave). O endpoint só funciona
+   em modo dev — em produção ele responde erro:
+
+   ```bash
+   curl -s -X POST "https://api.abacatepay.com/v2/transparents/simulate-payment?id=<cobrancaId>" -H "Authorization: Bearer $ABACATEPAY_API_KEY"
+   ```
+
+   A resposta deve trazer `"status":"PAID"` e `"devMode":true`. Em seguida o `listen`
+   mostra o evento chegando: anote o nome (esperado: `transparent.completed`).
+5. A tela deve passar para "pago" sozinha, pelo polling.
+6. No emulador: 1 documento em `pagamentos` com `situacao: confirmado`, 2 em
    `pedidos`, 1 em `clientes`, e a conta no emulador de Auth com a claim `cliente`.
 
 **O link de definição de senha.** Sem chave do Resend, o e-mail sai pelo transporte
@@ -100,10 +172,18 @@ guarda os códigos: pegue o `oobCode` mais recente de
 
 1. Novo pré-cadastro (outro e-mail), dois produtos, cartão. A tela redireciona para
    a página do checkout hospedado do AbacatePay.
-2. **Confirme na página de dev mode da documentação do AbacatePay qual é o cartão de
-   teste.** Na Etapa 8 ela listava `4242 4242 4242 4242`; não assuma equivalência com
-   os cartões de teste da Stripe — confira na hora.
+   - Se em vez disso a tela mostrar falha (e o log da API, erro do gateway ao criar o
+     checkout), o gateway pode estar recusando as URLs de retorno em
+     `http://localhost:4200`. Registre a mensagem: é o item 7 da tabela.
+2. **Cartão de teste.** A página de dev mode (`docs.abacatepay.com/pages/devmode`,
+   consultada em 15/09/2026) lista `4242 4242 4242 4242`, com qualquer validade futura
+   e qualquer CVV de 3 ou 4 dígitos, como aprovado. Confira na hora se continua o
+   mesmo — não assuma equivalência com os cartões da Stripe.
 3. Pague. O retorno deve cair em `/checkout?id=…`, e o polling, em "pago".
+   - **Opcional, e útil:** numa terceira compra, pague com um dos cartões que a mesma
+     página lista como recusados (`4000 0000 0000 0002`, por exemplo). Nenhum
+     `checkout.completed` deve chegar, nenhum pedido deve nascer, e a tela deve
+     continuar aguardando. Anote o nome de qualquer evento que chegar.
 4. **O NOME DO EVENTO DE CONCLUSÃO DO CARTÃO — o item que mais importa desta seção.**
    A documentação v2 lista `checkout.completed` como o evento do checkout
    hospedado, mas não diz se o hospedado **pago com cartão** emite esse mesmo nome.
@@ -116,7 +196,7 @@ guarda os códigos: pegue o `oobCode` mais recente de
    - Se não chegou evento nenhum, confira a assinatura de eventos do webhook (seção 2)
      antes de concluir qualquer coisa sobre o nome.
 5. No emulador: `produtos-gateway` com um documento por produto, e o mesmo resultado
-   do passo 3.5.
+   do passo 3.6.
 
 ## 5. Estorno
 
@@ -131,19 +211,38 @@ Entre como `admin@exemplo.test` (senha do seed) em `/admin/distribuicao`.
 3. **Integral.** Estorne o **segundo** pedido da mesma cobrança: sai o evento
    `estorno-integral` no outbox, o despachante chama o estorno do gateway, e o
    webhook `*.refunded` deve chegar e deixar os dois estornos em `gateway_confirmado`.
+   Em desenvolvimento o outbox entrega no próprio processo, então a chamada ao
+   gateway sai logo depois do clique — acompanhe no terminal B.
 4. **Segundo estorno da mesma cobrança.** O painel de entregas não reenvia registro
-   já entregue (só o que falhou ou foi abandonado), então este passo é à mão: peça
-   o estorno da mesma cobrança de novo, direto ao sandbox (`/transparents/refund`
-   com a chave dev, pelo CLI ou por HTTP). Registre a resposta crua — o adaptador
-   supõe que o gateway recusa, e então consulta a cobrança e trata `REFUNDED` como
-   "já estornado". É esse o caminho de uma reentrega do outbox cuja baixa se perdeu
-   depois de o gateway já ter estornado.
+   já entregue (só o que falhou ou foi abandonado), então este passo é à mão, **no
+   terminal A**, com o id da cobrança já estornada no passo 3 (use
+   `/checkouts/refund` se a compra foi com cartão):
+
+   ```bash
+   curl -s -X POST "https://api.abacatepay.com/v2/transparents/refund" -H "Authorization: Bearer $ABACATEPAY_API_KEY" -H "Content-Type: application/json" -d '{"id":"<cobrancaId>","reason":"conferencia do segundo estorno"}'
+   ```
+
+   Registre a resposta crua (item 10). O adaptador supõe que o gateway recusa, e
+   então consulta a cobrança e trata `REFUNDED` como "já estornado". É esse o
+   caminho de uma reentrega do outbox cuja baixa se perdeu depois de o gateway já
+   ter estornado.
 
 ## 6. Assinatura
 
-Com um evento real capturado do `listen`, reenvie-o à API alterando um byte do
-corpo, e depois com o `webhookSecret` errado. As duas respostas devem ser 401, sem
-nenhum documento novo.
+A metade que importa já foi provada nas seções anteriores: se os eventos do `listen`
+responderam 200, a assinatura real do AbacatePay confere com a nossa (item 5). Falta
+a recusa, e ela não precisa de evento capturado. No terminal A:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X POST "http://localhost:8080/api/pagamentos/webhook?webhookSecret=errado" -H "Content-Type: application/json" -H "X-Webhook-Signature: invalida" -d '{"id":"log_x","event":"transparent.completed","devMode":true,"data":{}}'
+```
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X POST "http://localhost:8080/api/pagamentos/webhook?webhookSecret=$ABACATEPAY_WEBHOOK_SECRET" -H "Content-Type: application/json" -H "X-Webhook-Signature: invalida" -d '{"id":"log_x","event":"transparent.completed","devMode":true,"data":{}}'
+```
+
+As duas devem imprimir `401` — a primeira pelo segredo, a segunda pela assinatura —,
+sem nenhum documento novo no emulador.
 
 ## O que conferir, e onde o código muda se estiver errado
 
@@ -171,8 +270,17 @@ nenhum segredo.
 
 ## Ao terminar
 
+No terminal A: pare o `listen` e a aplicação (os emuladores descem junto), apague os
+logs — eles têm o `webhookSecret` da rodada na URL e os payloads — e limpe as
+variáveis:
+
 ```bash
-unset ABACATEPAY_API_KEY ABACATEPAY_WEBHOOK_SECRET ABACATEPAY_WEBHOOK_CHAVE_HMAC
+kill %2 %1
 ```
 
-Feche o shell. Nada desta rodada vai para commit, `.env` ou histórico compartilhado.
+```bash
+rm -rf "$LOGS_RODADA" && unset ABACATEPAY_API_KEY ABACATEPAY_WEBHOOK_SECRET ABACATEPAY_WEBHOOK_CHAVE_HMAC LOGS_RODADA
+```
+
+Confira que não sobrou emulador no ar (`lsof -i :8081 -i :9099` sem saída) e feche os
+terminais. Nada desta rodada vai para commit, `.env` ou histórico compartilhado.

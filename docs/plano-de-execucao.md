@@ -573,7 +573,7 @@ da API.
 **Acrescentado pela execução parcial (ver o registro acima)**
 
 - Executar a rodada no sandbox, pelo roteiro `docs/runbooks/checkout-sandbox.md`, e corrigir o que ela desmentir antes de fechar a etapa.
-- Criar no Secret Manager os segredos do webhook (`ABACATEPAY_WEBHOOK_SECRET` e `ABACATEPAY_WEBHOOK_CHAVE_HMAC`) e referenciá-los no Terraform. Com a chave de API configurada e sem eles, a API recusa subir — de propósito.
+- Criar no Secret Manager o `ABACATEPAY_WEBHOOK_SECRET` (definido por nós ao cadastrar o webhook) e referenciá-lo no Terraform, junto com `ABACATEPAY_WEBHOOK_CHAVE_HMAC`. Pela documentação de segurança de webhooks, a chave do HMAC é **pública e fixa**, publicada pelo AbacatePay — se a rodada no sandbox confirmar, ela pode ser variável comum em vez de secret. Com a chave de API configurada e sem os dois, a API recusa subir — de propósito.
 - Ao cadastrar o webhook no painel, **assinar os seis eventos** que a API trata: `transparent.completed`, `checkout.completed`, `transparent.refunded`, `checkout.refunded`, `transparent.disputed` e `checkout.disputed`. Evento não assinado não chega, e o sintoma é pagamento sem pedido.
 - **Antes de cadastrar o webhook de produção, decidir o que fazer com o `webhookSecret` no log de requisição do Cloud Run** — checado na revisão do PR #21 e **não mitigado**: sem exclusão, retido 30 dias, e legível pela SA padrão do Compute, que não lê o Secret Manager. As três saídas (exclusão só da rota, limpeza do IAM, ou aceite consciente) estão no ADR-19.
 - Comunicar à CONTRATANTE o desvio do cartão: o pagamento com cartão sai da plataforma e volta (ADR-19).
