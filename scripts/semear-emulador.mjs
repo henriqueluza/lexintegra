@@ -256,6 +256,8 @@ async function semearClientesEPedidos(idsDeProduto, uidPorEmail) {
       criadoEm: agora,
       advogadoId,
       distribuido: advogadoId !== null,
+      // Etapa 8: sempre escrito, como o `PedidosService.gravar` escreve.
+      situacao: 'ativo',
     });
 
     for (const [indice, nome] of snapshot.entregaveis.entries()) {

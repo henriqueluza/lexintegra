@@ -253,3 +253,28 @@ resource "google_firestore_field" "checkouts_ttl" {
 
   index_config {}
 }
+
+# `GET /api/admin/estornos` (Etapa 8) — EstornosService.listarPendentes monta
+# `where('execucao', '==', 'manual_pendente').orderBy('solicitadoEm', 'desc')`: o
+# que o escritorio ainda precisa devolver a mao. `estornos` e colecao RAIZ de
+# proposito — em subcolecao do pagamento, a mesma consulta exigiria indice de
+# grupo de colecoes.
+#
+# As outras consultas novas da etapa (`pedidos` e `estornos` por `pagamentoId`,
+# `checkouts` por `carrinhoId`) sao igualdade num campo so, e usam o indice de
+# campo unico que o Firestore mantem sozinho.
+resource "google_firestore_index" "estornos_pendentes" {
+  project    = var.project_id
+  database   = google_firestore_database.default.name
+  collection = "estornos"
+
+  fields {
+    field_path = "execucao"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "solicitadoEm"
+    order      = "DESCENDING"
+  }
+}

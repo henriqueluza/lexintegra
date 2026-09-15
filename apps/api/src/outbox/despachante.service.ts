@@ -9,6 +9,10 @@ import {
 } from '../email/email-transport.js';
 import { descreverErro } from '../email/redigir.js';
 import { ALERTAS, type CanalDeAlerta } from '../alertas/alerta.js';
+import {
+  GATEWAY_PAGAMENTO,
+  type GatewayPagamento,
+} from '../pagamentos/gateway/gateway.js';
 import type { RegistroOutbox } from './evento.js';
 import { montarLinkDeSenha, urlDaAplicacao } from './link-de-senha.js';
 import {
@@ -60,6 +64,7 @@ export class DespachanteOutbox {
     @Inject(AUTH_FIREBASE) private readonly auth: Auth,
     @Inject(EMAIL_TRANSPORT) private readonly transporte: EmailTransport,
     @Inject(ALERTAS) private readonly alertas: CanalDeAlerta,
+    @Inject(GATEWAY_PAGAMENTO) private readonly gateway: GatewayPagamento,
   ) {}
 
   async despachar(id: string): Promise<ResultadoDoDespacho> {
@@ -76,9 +81,12 @@ export class DespachanteOutbox {
 
     let entrega: EmailResultado;
     try {
-      entrega = await this.transporte.enviar(
-        await this.montarComChave(id, registro),
-      );
+      entrega =
+        registro.tipo === 'estorno-integral'
+          ? await this.estornarNoGateway(registro)
+          : await this.transporte.enviar(
+              await this.montarComChave(id, registro),
+            );
     } catch (erro) {
       // Falha ao MONTAR (usuario sumiu, Auth fora do ar). O transporte nunca
       // lanca; se lancou, foi antes dele.
@@ -130,6 +138,38 @@ export class DespachanteOutbox {
   }
 
   /**
+   * O ESTORNO INTEGRAL (Etapa 8, ADR-12). Nao e e-mail, e passa pela mesma trava:
+   * so chega aqui depois de `reivindicar` conceder o arrendamento.
+   *
+   * O gateway e idempotente POR CONTRATO (`GatewayPagamento.estornar`): se o
+   * processo morrer depois de o gateway devolver o dinheiro e antes de `concluir`,
+   * a reentrega recebe "ja estornado" como sucesso — e nao faz estorno duplo. E a
+   * mesma lacuna que a chave de idempotencia fecha no e-mail, fechada pelo lado
+   * de la.
+   */
+  private async estornarNoGateway(
+    registro: RegistroOutbox,
+  ): Promise<EmailResultado> {
+    if (registro.estorno === undefined) {
+      return { sucesso: false, motivo: 'registro de estorno sem cobranca' };
+    }
+    const resultado = await this.gateway.estornar({
+      cobrancaId: registro.estorno.cobrancaId,
+      origem: registro.estorno.origem,
+      motivo: 'Estorno integral solicitado pelo escritorio (ADR-12).',
+    });
+    if (!resultado.sucesso) {
+      return { sucesso: false, motivo: resultado.motivo };
+    }
+    if (resultado.jaEstornado) {
+      this.log.warn(
+        `cobranca ${registro.estorno.cobrancaId} ja estava estornada no gateway`,
+      );
+    }
+    return { sucesso: true, idProvedor: registro.estorno.cobrancaId };
+  }
+
+  /**
    * A CHAVE DE IDEMPOTENCIA E DECIDIDA AQUI, e nao dentro do adaptador.
    *
    * O ADR-07.1 diz que nenhuma decisao de reentrega pode vazar para o transporte.
@@ -146,7 +186,10 @@ export class DespachanteOutbox {
     registro: RegistroOutbox,
   ): Promise<EmailMensagem> {
     const mensagem = await this.montar(registro);
-    return { ...mensagem, chaveIdempotencia: `${id}-c${String(registro.ciclo)}` };
+    return {
+      ...mensagem,
+      chaveIdempotencia: `${id}-c${String(registro.ciclo)}`,
+    };
   }
 
   /**

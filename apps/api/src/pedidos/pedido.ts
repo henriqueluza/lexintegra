@@ -5,6 +5,7 @@ import type {
   EntregavelResumo,
   PedidoParaDistribuir,
   Perfil,
+  SituacaoPedido,
   SnapshotProduto,
 } from 'shared';
 
@@ -63,6 +64,17 @@ export interface DocumentoPedido {
   atribuidoPor?: string;
 
   /**
+   * Etapa 8 (ADR-12). SEMPRE ESCRITO na criacao — `ativo` — pela armadilha de
+   * sempre: consulta por igualdade ignora documento sem o campo. A leitura trata
+   * o ausente como `ativo`, que e o que todo pedido anterior a este campo e.
+   */
+  situacao?: SituacaoPedido;
+  canceladoEm?: Timestamp | FieldValue;
+  canceladoPor?: string;
+  estornadoEm?: Timestamp | FieldValue;
+  estornadoPor?: string;
+
+  /**
    * Quando TODOS os entregaveis do pedido chegaram a `entregue` — o gatilho da
    * retencao de 30 dias (arquitetura 7.3 e secao 13, decidido na reuniao).
    *
@@ -103,8 +115,16 @@ export function paraCartao(
     snapshot: pedido.snapshot,
     entregaveis,
     distribuido: pedido.distribuido,
+    situacao: situacaoDe(pedido),
     criadoEm: paraIso(pedido.criadoEm),
   };
+}
+
+/** O pedido anterior a Etapa 8 nao tem o campo, e e ativo. */
+export function situacaoDe(
+  pedido: Pick<DocumentoPedido, 'situacao'>,
+): SituacaoPedido {
+  return pedido.situacao ?? 'ativo';
 }
 
 /** A demanda do advogado. Carrega o cliente porque o item 2.6.2 pede. */
@@ -139,6 +159,7 @@ export function paraDistribuir(
     cliente,
     advogadoId: pedido.advogadoId,
     distribuido: pedido.distribuido,
+    situacao: situacaoDe(pedido),
     criadoEm: paraIso(pedido.criadoEm),
   };
 }

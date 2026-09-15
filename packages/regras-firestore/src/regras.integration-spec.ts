@@ -74,6 +74,11 @@ const CAMINHOS = [
    * pelo navegador, apontaria um snapshot para um produto de outro preco.
    */
   ['produtos-gateway', 'lex_produto-1_0123456789abcdef'],
+  /*
+   * O registro de estorno (Etapa 8, ADR-12). E a trilha de dinheiro devolvido:
+   * escrito pelo navegador, um cliente marcaria o proprio estorno como executado.
+   */
+  ['estornos', 'pedido-1'],
   ['pedidos', 'pedido-1'],
   ['pedidos/pedido-1/entregaveis', 'entregavel-1'],
   ['pedidos/pedido-1/entregaveis/entregavel-1/transicoes', 'transicao-1'],

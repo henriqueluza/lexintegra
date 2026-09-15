@@ -35,6 +35,8 @@ import type { PortaoDeArquivos } from './arquivos/portao.js';
 import type { UploadDeEntregavelService } from './entregaveis/upload.service.js';
 import type { TermosService } from './termos/termos.service.js';
 import { AlertaFalso } from './alertas/alerta.js';
+import { EstornosAdminController } from './estornos/estornos.admin.controller.js';
+import type { EstornosService } from './estornos/estornos.service.js';
 import { CheckoutController } from './checkout/checkout.controller.js';
 import type { CheckoutService } from './checkout/checkout.service.js';
 import { ClientesAdminController } from './clientes/clientes.admin.controller.js';
@@ -103,6 +105,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['distribuicao de pedidos', PedidosAdminController],
     ['clientes', ClientesAdminController],
     ['entregas do outbox', OutboxAdminController],
+    ['estornos (Etapa 8)', EstornosAdminController],
   ])(
     'a superficie administrativa de %s exige admin, na classe',
     (_nome, classe) => {
@@ -643,6 +646,44 @@ describe('AnamneseProvisoriaController', () => {
     await controlador.registrar({ respostas: {} }, CLIENTE);
 
     expect(chamadas).toEqual(['situacao uid-clara', 'registrar uid-clara']);
+  });
+});
+
+/**
+ * O estorno e acao do administrador (ADR-12). Quem estorna e quem registra a
+ * devolucao saem do token, nunca do corpo.
+ */
+describe('EstornosAdminController', () => {
+  it('delega com o uid do token', async () => {
+    const chamadas: string[] = [];
+    const controlador = new EstornosAdminController({
+      estornar: (pedidoId: string, motivo: string, uid: string) => {
+        chamadas.push(`estornar ${pedidoId} ${motivo} ${uid}`);
+        return Promise.resolve({});
+      },
+      listarPendentes: () => {
+        chamadas.push('listar');
+        return Promise.resolve([]);
+      },
+      registrarExecucaoManual: (pedidoId: string, uid: string, obs: string) => {
+        chamadas.push(`manual ${pedidoId} ${uid} ${obs}`);
+        return Promise.resolve({});
+      },
+    } as unknown as EstornosService);
+
+    await controlador.estornar('p-1', { motivo: 'desistiu' }, ADMIN);
+    await controlador.listarPendentes();
+    await controlador.registrarExecucaoManual(
+      'p-1',
+      { observacao: 'pix' },
+      ADMIN,
+    );
+
+    expect(chamadas).toEqual([
+      'estornar p-1 desistiu uid-admin',
+      'listar',
+      'manual p-1 uid-admin pix',
+    ]);
   });
 });
 

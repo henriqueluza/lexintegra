@@ -45,6 +45,11 @@ export const POLITICA: Readonly<Record<TipoEvento, PoliticaDeEvento>> = {
    * pagou, e sem este e-mail nao entra na plataforma para ver o que comprou.
    */
   'acesso-cliente': { criticidade: 'critico', maxTentativas: 10 },
+  /*
+   * Dinheiro do cliente que o escritorio decidiu devolver. Abandonado, vira
+   * alerta e registro no painel — e o administrador reenvia ou devolve a mao.
+   */
+  'estorno-integral': { criticidade: 'critico', maxTentativas: 10 },
 };
 
 export interface ConfiguracaoDoOutbox {

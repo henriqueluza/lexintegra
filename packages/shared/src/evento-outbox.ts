@@ -33,6 +33,7 @@ export const TIPOS_EVENTO = [
   'redefinir-senha',
   'aviso-exclusao-arquivos',
   'acesso-cliente',
+  'estorno-integral',
 ] as const;
 
 export type TipoEvento = (typeof TIPOS_EVENTO)[number];
@@ -43,6 +44,15 @@ export type TipoEvento = (typeof TIPOS_EVENTO)[number];
  * razao que separa `definir-senha` de `redefinir-senha`: "o administrador criou
  * um acesso de advogado" e "um cliente pagou e ganhou conta" sao fatos distintos,
  * com trilhas e textos proprios.
+ */
+
+/*
+ * `estorno-integral` (Etapa 8, ADR-12) NAO E E-MAIL: e o pedido de estorno da
+ * cobranca inteira ao gateway, quando todos os pedidos dela foram estornados. Ele
+ * passa pelo outbox porque tem o mesmo problema que o e-mail — efeito colateral
+ * externo que nao pode sair de dentro de transacao, nao pode se perder e nao pode
+ * acontecer duas vezes — e o outbox ja resolve os tres: arrendamento, reentrega,
+ * painel de reenvio e alerta.
  */
 
 /**

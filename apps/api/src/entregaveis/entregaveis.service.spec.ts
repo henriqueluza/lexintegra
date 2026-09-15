@@ -3,7 +3,11 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import type { Firestore, Transaction } from 'firebase-admin/firestore';
+import {
+  FieldValue,
+  type Firestore,
+  type Transaction,
+} from 'firebase-admin/firestore';
 import type { EstadoEntregavel, NovoProduto } from 'shared';
 import { FirestoreFalso } from '../firestore-falso.js';
 import { PedidosService } from '../pedidos/pedidos.service.js';
@@ -135,6 +139,38 @@ describe('EntregaveisService', () => {
   /* ------------------------------------------------------------------------ */
   /* Criterio de aceite: entregue forcado e rejeitado no servidor              */
   /* ------------------------------------------------------------------------ */
+
+  /**
+   * A outra ponta do ADR-12 (Etapa 8): pedido cancelado ou estornado nao comeca a
+   * ser trabalhado. Sem esta trava, o advogado poderia iniciar um pedido cujo
+   * dinheiro ja foi devolvido.
+   */
+  describe('pedido cancelado ou estornado', () => {
+    it.each(['cancelado', 'estornado'])(
+      'recusa iniciar o trabalho num pedido %s',
+      async (situacao) => {
+        const { banco, entregaveis } = await montar();
+        await banco.collection('pedidos').doc('pedido-1').update({ situacao });
+
+        await expect(
+          entregaveis.iniciarTrabalho(ALVO, ADVOGADO),
+        ).rejects.toThrow('cancelado ou estornado');
+        expect(estado(banco)).toBe('solicitado');
+      },
+    );
+
+    it('pedido anterior ao campo de situacao continua podendo ser iniciado', async () => {
+      const { banco, entregaveis } = await montar();
+      await banco
+        .collection('pedidos')
+        .doc('pedido-1')
+        .update({ situacao: FieldValue.delete() });
+
+      await expect(
+        entregaveis.iniciarTrabalho(ALVO, ADVOGADO),
+      ).resolves.toMatchObject({ estado: 'em_elaboracao' });
+    });
+  });
 
   describe('trava do entregue (ADR-11)', () => {
     /**

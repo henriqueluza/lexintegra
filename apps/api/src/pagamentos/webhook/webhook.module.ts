@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ContasClienteModule } from '../../contas-cliente/contas-cliente.module.js';
+import { EstornosModule } from '../../estornos/estornos.module.js';
 import { PedidosModule } from '../../pedidos/pedidos.module.js';
 import { AssinaturaWebhookGuard } from './assinatura.guard.js';
 import { ConfirmacaoService } from './confirmacao.service.js';
@@ -11,7 +12,7 @@ import { WebhookController } from './webhook.controller.js';
  * Gateway, configuracao, alertas e outbox vem de modulos globais.
  */
 @Module({
-  imports: [PedidosModule, ContasClienteModule],
+  imports: [PedidosModule, ContasClienteModule, EstornosModule],
   controllers: [WebhookController],
   providers: [ProcessadorDeEventos, ConfirmacaoService, AssinaturaWebhookGuard],
 })

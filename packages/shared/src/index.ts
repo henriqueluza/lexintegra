@@ -26,6 +26,7 @@ export * from './magic-bytes.js';
 export * from './perfil.js';
 export * from './retencao.js';
 export * from './semana.js';
+export * from './situacao-pedido.js';
 export * from './telefone.js';
 export * from './termos-checkout.js';
 export * from './texto.js';

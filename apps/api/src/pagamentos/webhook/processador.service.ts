@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfirmacaoDeEstornoService } from '../../estornos/confirmacao-estorno.service.js';
 import { ConfirmacaoService } from './confirmacao.service.js';
 import type { EventoDoGateway } from './evento.js';
 
@@ -13,7 +14,10 @@ import type { EventoDoGateway } from './evento.js';
 export class ProcessadorDeEventos {
   private readonly log = new Logger('Webhook');
 
-  constructor(private readonly confirmacao: ConfirmacaoService) {}
+  constructor(
+    private readonly confirmacao: ConfirmacaoService,
+    private readonly estornos: ConfirmacaoDeEstornoService,
+  ) {}
 
   async processar(evento: EventoDoGateway): Promise<string> {
     if (evento.tipo === 'pagamento') {
@@ -24,7 +28,11 @@ export class ProcessadorDeEventos {
       });
     }
 
-    this.log.log(`evento ${evento.eventoId} (${evento.nome}) recebido`);
-    return evento.tipo === 'ignorado' ? 'ignorado' : 'recebido';
+    if (evento.tipo === 'estorno') {
+      return this.estornos.confirmar(evento.cobranca.id);
+    }
+
+    this.log.log(`evento ${evento.eventoId} (${evento.nome}) ignorado`);
+    return 'ignorado';
   }
 }

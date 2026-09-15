@@ -174,6 +174,8 @@ export class PedidosService {
          */
         advogadoId: null,
         distribuido: false,
+        /* Etapa 8 (ADR-12): sempre escrito, pela mesma razao de `distribuido`. */
+        situacao: 'ativo',
       } satisfies DocumentoPedido);
 
       snapshot.entregaveis.forEach((nome, indice) => {

@@ -23,6 +23,7 @@ import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import type { TarefaDeEvento } from '../outbox/fila.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import { AdvogadosService } from './advogados.service.js';
+import { GatewayPagamentoFalso } from '../pagamentos/gateway/gateway-falso.js';
 
 /**
  * O caminho inteiro contra os emuladores de Auth e Firestore de verdade.
@@ -64,6 +65,7 @@ beforeEach(async () => {
     auth,
     transporte,
     new AlertaFalso(),
+    new GatewayPagamentoFalso(),
   );
   servico = new AdvogadosService(
     auth,

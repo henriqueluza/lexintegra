@@ -11,6 +11,7 @@ import { ClientesModule } from './clientes/clientes.module.js';
 import { DisponibilidadesModule } from './disponibilidades/disponibilidades.module.js';
 import { SenhaModule } from './autenticacao/senha/senha.module.js';
 import { EntregaveisModule } from './entregaveis/entregaveis.module.js';
+import { EstornosModule } from './estornos/estornos.module.js';
 import { FirebaseModule } from './firebase/firebase.module.js';
 import { GatewayPagamentoModule } from './pagamentos/gateway/gateway.module.js';
 import { WebhookModule } from './pagamentos/webhook/webhook.module.js';
@@ -73,6 +74,7 @@ import { VitrineModule } from './vitrine/vitrine.module.js';
     CheckoutModule,
     WebhookModule,
     AnamneseProvisoriaModule,
+    EstornosModule,
     ClientesModule,
     PedidosModule,
     EntregaveisModule,
