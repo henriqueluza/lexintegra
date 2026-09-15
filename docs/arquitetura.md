@@ -517,11 +517,38 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 | checkout inexistente (apagado pela TTL, ou desconhecido) | `orfao` | não cria | crítico |
 | checkout `substituido` pago | `confirmado`, com `checkoutSubstituido` | cria, com o snapshot dele | aviso |
 
+**Evento assinado que não vira pagamento nem estorno também não é silencioso** (acrescentado na revisão do PR #21). A tabela de eventos da documentação v2 (consultada em 15/09/2026) lista `checkout.completed` como o evento do checkout hospedado — mas **não mostra payload de evento nenhum, nem diz se o hospedado pago com cartão emite o mesmo nome** que o pago com PIX. Se o nome real for outro, responder "200, ignorado" seria cliente pago sem pedido e sem conta, sem nada falhar. Então o evento que não é pagamento nem estorno cai em três casos:
+
+| Evento | Resposta | Alerta |
+|---|---|---|
+| documentado e alheio a este sistema (`subscription.*`, `transfer.*`, `payout.*`) | 200, `ignorado` | nenhum |
+| chargeback (`checkout.disputed`, `transparent.disputed`) | 200, `alertado` — nenhum estado muda | crítico, `pagamento.contestacao`, com o id da cobrança |
+| qualquer outro nome | 200, `alertado` | crítico, `pagamento.webhook-evento-desconhecido`, com nome, id do log e da cobrança |
+
+200 e não 5xx: reentregar não faria o código entender o evento, e um webhook que recusa em série pode ser desativado pelo gateway. O nome do evento de conclusão do cartão é o **item 1** do roteiro do sandbox; se ele desmentir a documentação, a correção é uma linha em `EVENTOS` (`pagamentos/webhook/evento.ts`).
+
 **Não há coleção de eventos recebidos ("inbox").** A idempotência do pagamento é o próprio `pagamentos/{cobrancaId}` (errata do ADR-04), e a do estorno é o estado de `estornos` e `pagamentos.estornoGateway` — um `*.refunded` reentregue encontra `gateway_confirmado` e responde 200 sem escrita.
+
+**O `webhookSecret` na URL e o log de requisição — checado, NÃO mitigado.** É assim que o AbacatePay autentica ("cada webhook tem um secret único, que vai na query string"), e não há como mudar do lado de cá. A trava de verdade é o HMAC; o segredo da URL é a segunda fechadura. A checagem, feita em 15/09/2026 com leitura na configuração do projeto `plataforma-juridica-36bda`:
+
+- **O log de requisição do Cloud Run guarda a query string.** Confirmado em entradas reais de `run.googleapis.com/requests` do serviço `api-lexintegra`: o `httpRequest.requestUrl` vem com a parte depois do `?`. O Firebase Hosting não grava log no Cloud Logging (nenhuma entrada `firebase_domain` em 30 dias), então o Cloud Run é o único lugar.
+- **Não há exclusão.** O sink `_Default` só tem o filtro padrão (tira os logs de auditoria que vão para `_Required`), sem exclusão nenhuma; o bucket `_Default` não tem campo restrito (`restrictedFields` vazio) e retém **30 dias**. Não existe recurso `google_logging_*` no Terraform.
+- **Quem lê esse log, pelo IAM do projeto** (sem organização acima dele, então sem herança):
+  - a conta humana com `roles/owner` — que já lê o Secret Manager, então o log não amplia nada para ela;
+  - a **SA padrão do Compute** (`616781378293-compute@…`), com `roles/editor` — a concessão legada que o `CLAUDE.md` já marca para sair. **Aqui o log amplia o acesso:** `roles/editor` tem `logging.logEntries.list` e **não** tem `secretmanager.versions.access`. Hoje essa SA não lê o segredo; com ele na URL, leria.
+  - indiretamente, quem consegue emitir token para essa SA: `api-lexintegra-run` e `firebase-adminsdk-fbsvc`, que têm `roles/iam.serviceAccountTokenCreator` **no projeto inteiro**. Esse alcance é um problema em si, anterior a esta etapa, e está registrado à parte — ele já dá caminho até SAs com acesso ao Secret Manager, então o log não é a pior porta aberta.
+- **Hoje a exposição é zero**, porque não há webhook configurado nem segredo de webhook em produção (`PAGAMENTOS_MODO=desligado`). O risco nasce no dia em que o webhook for cadastrado no painel.
+
+**Decisão pendente, e é de uma pessoa — antes de cadastrar o webhook de produção.** Três saídas, que se somam:
+
+1. **Exclusão só desta rota:** `google_logging_project_exclusion` para `log_id("run.googleapis.com/requests")` com `httpRequest.requestUrl:"/api/pagamentos/webhook"`. Tira o segredo do log e perde só o log de requisição dessa rota (status e latência); os logs da aplicação — webhook recusado, alerta — continuam. **Exige conceder `roles/logging.configWriter` a `terraform-ci` à mão antes do apply**, pela mesma razão da Etapa 7.
+2. **Remover `roles/editor` da SA padrão do Compute**, que já estava planejado, e reduzir o `serviceAccountTokenCreator` da SA da API ao escopo dela mesma.
+3. **Aceitar conscientemente**, com o acesso ao Cloud Logging tratado como acesso a credencial e o segredo rotacionado se o log vazar.
+
+Campo restrito no bucket (`httpRequest.requestUrl`) foi descartado: esconderia a URL de todas as rotas, e não só desta.
 
 **Riscos aceitos.**
 
-- **O `webhookSecret` vai na URL, e URL entra no log de requisição do Cloud Run.** É assim que o AbacatePay autentica, e não há como mudar do lado de cá. A trava de verdade é o HMAC; o segredo da URL é a segunda fechadura. Quem lê o log de requisição lê o segredo — o acesso ao Cloud Logging precisa ser tratado como acesso a credencial, e o segredo, rotacionado se o log vazar.
 - **O formato dos eventos e das respostas veio da documentação, não de um evento real.** A leitura aceita a cobrança em `data` ou aninhada (`data.checkout`, `data.transparent`) e exige os campos de que precisa; toda resposta do gateway é validada por schema. A conferência é o roteiro `docs/runbooks/checkout-sandbox.md`, **ainda não executado**.
 - **A validade do link do checkout hospedado não está documentada.** Vinte e quatro horas foi o valor conservador (`VALIDADE_CHECKOUT_HOSPEDADO_MS`); ele só decide quando a tela para de oferecer o link e quando a TTL apaga o documento.
 - **A resposta a um segundo estorno da mesma cobrança não está documentada.** Quando o gateway recusa, o adaptador consulta a cobrança e trata `REFUNDED` como "já estornado".
