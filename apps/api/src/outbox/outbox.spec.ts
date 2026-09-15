@@ -62,6 +62,25 @@ describe('idDoEvento', () => {
     );
   });
 
+  /**
+   * O acesso do cliente sai UMA vez por conta, na primeira compra (Etapa 8). A
+   * segunda compra cai no mesmo documento e nao manda outro link.
+   */
+  it('da um id so por conta para o acesso do cliente, a qualquer hora', () => {
+    expect(idDoEvento('acesso-cliente', 'uid-1', 0)).toBe(
+      'acesso-cliente_uid-1',
+    );
+    expect(idDoEvento('acesso-cliente', 'uid-1', 10 ** 12)).toBe(
+      'acesso-cliente_uid-1',
+    );
+  });
+
+  it('nao confunde o acesso do cliente com o do advogado', () => {
+    expect(idDoEvento('acesso-cliente', 'uid-1')).not.toBe(
+      idDoEvento('definir-senha', 'uid-1'),
+    );
+  });
+
   it('nao mistura os dois tipos de evento', () => {
     expect(idDoEvento('definir-senha', 'uid-1')).not.toBe(
       idDoEvento('redefinir-senha', 'uid-1'),
@@ -279,6 +298,30 @@ describe('DespachanteOutbox', () => {
   });
 
   /**
+   * O acesso do cliente (Etapa 8) sai pelo mesmo caminho do link de senha: o link
+   * nasce no envio e nao volta ao banco. Um tipo sem montador seria um registro
+   * que nunca sai — este teste e o que prova que ele tem.
+   */
+  it('entrega o acesso do cliente com o link de definicao de senha', async () => {
+    const { despachante, transporte } = montarCenario({
+      registro: { ...REGISTRO, tipo: 'acesso-cliente' },
+    });
+
+    await expect(despachante.despachar('acesso-cliente_uid-1')).resolves.toBe(
+      'entregue',
+    );
+
+    expect(transporte.enviadas[0]).toMatchObject({
+      modelo: {
+        alias: 'password-reset',
+        variaveis: {
+          LINK: 'http://localhost:4200/definir-senha?oobCode=CODIGO',
+        },
+      },
+    });
+  });
+
+  /**
    * A CHAVE CARREGA O CICLO, E NAO A TENTATIVA.
    *
    * A intencao e "este e-mail": uma reentrega depois de falha real nao pode
@@ -317,23 +360,28 @@ describe('DespachanteOutbox', () => {
     ['abandonado'],
     ['em-andamento'],
     ['inexistente'],
-  ] as const)('nao envia nada quando a reivindicacao devolve %s', async (situacao) => {
-    const { despachante, transporte, concluidos } = montarCenario({
-      reivindicacao: { situacao },
-    });
+  ] as const)(
+    'nao envia nada quando a reivindicacao devolve %s',
+    async (situacao) => {
+      const { despachante, transporte, concluidos } = montarCenario({
+        reivindicacao: { situacao },
+      });
 
-    await expect(despachante.despachar('id-1')).resolves.toBe(situacao);
+      await expect(despachante.despachar('id-1')).resolves.toBe(situacao);
 
-    expect(transporte.enviadas).toEqual([]);
-    expect(concluidos).toEqual([]);
-  });
+      expect(transporte.enviadas).toEqual([]);
+      expect(concluidos).toEqual([]);
+    },
+  );
 
   it('conclui como falha quando o transporte recusa', async () => {
     const recusando: EmailTransport = {
       enviar: () =>
         Promise.resolve({ sucesso: false, motivo: 'Rate limit exceeded' }),
     };
-    const { despachante, concluidos } = montarCenario({ transporte: recusando });
+    const { despachante, concluidos } = montarCenario({
+      transporte: recusando,
+    });
 
     await expect(despachante.despachar('id-1')).resolves.toBe('falhou');
 

@@ -98,6 +98,14 @@ export function idDoEvento(
   if (tipo === 'definir-senha') return `definir-senha_${uid}`;
 
   /*
+   * O acesso do cliente acontece UMA vez por conta: a primeira compra. Quem compra
+   * de novo ja tem senha, e o id deterministico faz a segunda compra cair no
+   * mesmo documento em vez de mandar outro link — quem perdeu o primeiro usa
+   * "esqueci a senha".
+   */
+  if (tipo === 'acesso-cliente') return `acesso-cliente_${uid}`;
+
+  /*
    * O aviso de exclusao acontece UMA vez por pedido fechado, e o pedido ja e
    * marcado como avisado na mesma transacao. O uid basta — e se o job repetir a
    * passagem no mesmo dia, o `create` estoura como duplicata esperada em vez de

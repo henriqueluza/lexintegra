@@ -32,9 +32,18 @@ export const TIPOS_EVENTO = [
   'definir-senha',
   'redefinir-senha',
   'aviso-exclusao-arquivos',
+  'acesso-cliente',
 ] as const;
 
 export type TipoEvento = (typeof TIPOS_EVENTO)[number];
+
+/*
+ * `acesso-cliente` (Etapa 8) e o link de definicao de senha de quem acabou de
+ * pagar. Parecido com `definir-senha` no e-mail, e evento DIFERENTE pela mesma
+ * razao que separa `definir-senha` de `redefinir-senha`: "o administrador criou
+ * um acesso de advogado" e "um cliente pagou e ganhou conta" sao fatos distintos,
+ * com trilhas e textos proprios.
+ */
 
 /**
  * O ciclo de vida de uma entrega.
