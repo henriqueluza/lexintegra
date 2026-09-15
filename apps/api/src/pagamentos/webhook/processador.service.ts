@@ -29,6 +29,13 @@ export class ProcessadorDeEventos {
   ) {}
 
   async processar(evento: EventoDoGateway): Promise<string> {
+    /*
+     * `ignorado` PRIMEIRO, e nao por estilo: a outra variante tem
+     * `tipo: 'pagamento' | 'estorno'`, e o TypeScript nao a descarta depois de
+     * dois `if` que retornam — so o teste do discriminante unico estreita a uniao.
+     */
+    if (evento.tipo === 'ignorado') return this.naoTratado(evento);
+
     if (evento.tipo === 'pagamento') {
       return this.confirmacao.confirmar({
         cobranca: evento.cobranca,
@@ -37,10 +44,12 @@ export class ProcessadorDeEventos {
       });
     }
 
-    if (evento.tipo === 'estorno') {
-      return this.estornos.confirmar(evento.cobranca.id);
-    }
+    return this.estornos.confirmar(evento.cobranca.id);
+  }
 
+  private naoTratado(
+    evento: Extract<EventoDoGateway, { tipo: 'ignorado' }>,
+  ): string {
     if (evento.motivo === 'irrelevante') {
       this.log.log(`evento ${evento.eventoId} (${evento.nome}) ignorado`);
       return 'ignorado';
