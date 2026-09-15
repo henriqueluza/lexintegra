@@ -2,10 +2,11 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module.js';
-import { configurar } from './configurar.js';
+import { configurar, OPCOES_DA_APLICACAO } from './configurar.js';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    ...OPCOES_DA_APLICACAO,
     // Log estruturado em JSON vai para o Cloud Logging (arquitetura, secao 9).
     // O formatador entra na Etapa 12; aqui fica o logger padrao.
     logger: ['error', 'warn', 'log'],

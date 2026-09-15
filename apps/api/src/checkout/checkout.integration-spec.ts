@@ -4,7 +4,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { VERSAO_TERMOS_CHECKOUT, type NovoProduto } from 'shared';
 import { AppModule } from '../app.module.js';
-import { configurar } from '../configurar.js';
+import { configurar, OPCOES_DA_APLICACAO } from '../configurar.js';
 import { firestoreDeTeste, limparEmuladores } from '../emulador.js';
 import { ProdutosService } from '../produtos/produtos.service.js';
 import { COLECAO_CHECKOUTS } from './checkout.js';
@@ -44,6 +44,7 @@ beforeEach(async () => {
   await limparEmuladores();
   produtos = new ProdutosService(firestoreDeTeste());
   app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    ...OPCOES_DA_APLICACAO,
     logger: false,
   });
   configurar(app as NestExpressApplication);

@@ -32,6 +32,7 @@ import { AnexosService } from './anexos/anexos.service.js';
 import type { PortaoDeArquivos } from './arquivos/portao.js';
 import type { UploadDeEntregavelService } from './entregaveis/upload.service.js';
 import type { TermosService } from './termos/termos.service.js';
+import { AlertaFalso } from './alertas/alerta.js';
 import { CheckoutController } from './checkout/checkout.controller.js';
 import type { CheckoutService } from './checkout/checkout.service.js';
 import { ClientesAdminController } from './clientes/clientes.admin.controller.js';
@@ -53,6 +54,9 @@ import { PreCadastrosController } from './pre-cadastros/pre-cadastros.controller
 import type { PreCadastrosService } from './pre-cadastros/pre-cadastros.service.js';
 import { ProdutosController } from './produtos/produtos.controller.js';
 import type { ProdutosService } from './produtos/produtos.service.js';
+import { AssinaturaWebhookGuard } from './pagamentos/webhook/assinatura.guard.js';
+import type { ProcessadorDeEventos } from './pagamentos/webhook/processador.service.js';
+import { WebhookController } from './pagamentos/webhook/webhook.controller.js';
 import { PreCadastroGuard } from './vitrine/pre-cadastro.guard.js';
 import { VitrineController } from './vitrine/vitrine.controller.js';
 import type { VitrineService } from './vitrine/vitrine.service.js';
@@ -158,6 +162,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['vitrine', VitrineController.prototype.listar],
     ['checkout (Etapa 8)', CheckoutController.prototype.iniciar],
     ['situacao do checkout (Etapa 8)', CheckoutController.prototype.situacao],
+    ['webhook do gateway (Etapa 8)', WebhookController.prototype.receber],
     ['varredura (interna)', VarreduraController.prototype.processar],
     ['retencao (interna)', RetencaoController.prototype.executar],
     ['entrega do outbox (interna)', OutboxController.prototype.entregar],
@@ -196,6 +201,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['pre-cadastro', PreCadastrosController.prototype.registrar],
     ['vitrine', VitrineController.prototype.listar],
     ['checkout', CheckoutController.prototype.iniciar],
+    ['webhook do gateway', WebhookController.prototype.receber],
     ['cliente.listar', PedidosClienteController.prototype.listar],
     ['outbox.reenviar (painel)', OutboxAdminController.prototype.reenviar],
   ])('%s NAO e tarefa interna', (_nome, metodo) => {
@@ -243,6 +249,7 @@ describe('limite de requisicoes das rotas publicas', () => {
     ['vitrine', VitrineController.prototype.listar],
     ['checkout', CheckoutController.prototype.iniciar],
     ['situacao do checkout', CheckoutController.prototype.situacao],
+    ['webhook do gateway', WebhookController.prototype.receber],
   ])('%s declara limite proprio', (_nome, metodo) => {
     const limite = reflector.get<ConfiguracaoDeLimite | undefined>(
       CHAVE_LIMITE,
@@ -318,6 +325,11 @@ describe('limite de requisicoes das rotas publicas', () => {
    */
   it.each([
     ['health', HealthController.prototype.obter],
+    /*
+     * O gateway nao e navegador e nao produz token de App Check. A contrapartida
+     * e a assinatura, que o teste da classe logo abaixo cobra.
+     */
+    ['webhook do gateway (Etapa 8)', WebhookController.prototype.receber],
     ['varredura (interna)', VarreduraController.prototype.processar],
     ['retencao (interna)', RetencaoController.prototype.executar],
     ['entrega do outbox (interna)', OutboxController.prototype.entregar],
@@ -507,6 +519,87 @@ describe('a vitrine e o checkout exigem o token de pre-cadastro, na classe', () 
       ReadonlyArray<Type<CanActivate>> | undefined;
 
     expect(guards).toContain(PreCadastroGuard);
+  });
+});
+
+/**
+ * O webhook e `@Publico()` e isento de App Check — as duas coisas que o deixariam
+ * aberto a qualquer um, se o guard da assinatura sumisse da classe. Apagar o
+ * `@UseGuards` nao quebraria teste de guard nenhum; quebraria este.
+ */
+describe('o webhook exige assinatura, na classe', () => {
+  it('declara o guard da assinatura no controlador', () => {
+    const guards = Reflect.getMetadata(GUARDS_METADATA, WebhookController) as
+      ReadonlyArray<Type<CanActivate>> | undefined;
+
+    expect(guards).toEqual([AssinaturaWebhookGuard]);
+  });
+});
+
+describe('WebhookController', () => {
+  const EVENTO = {
+    id: 'log_1',
+    event: 'transparent.completed',
+    devMode: true,
+    data: { id: 'pix_1', externalId: 'checkout-1', amount: 100 },
+  };
+
+  function montar(devModeEsperado = true): {
+    controlador: WebhookController;
+    processados: string[];
+    alertas: AlertaFalso;
+  } {
+    const processados: string[] = [];
+    const alertas = new AlertaFalso();
+    const controlador = new WebhookController(
+      {
+        modo: 'sandbox',
+        chaveApi: null,
+        segredoWebhook: 's',
+        chaveHmacWebhook: 'h',
+        devModeEsperado,
+      },
+      alertas,
+      {
+        processar: (evento: { eventoId: string }) => {
+          processados.push(evento.eventoId);
+          return Promise.resolve('recebido');
+        },
+      } as unknown as ProcessadorDeEventos,
+    );
+    return { controlador, processados, alertas };
+  }
+
+  it('entrega o evento lido ao processador', async () => {
+    const { controlador, processados } = montar();
+
+    await expect(controlador.receber(EVENTO)).resolves.toEqual({
+      recebido: true,
+      resultado: 'recebido',
+    });
+    expect(processados).toEqual(['log_1']);
+  });
+
+  /** Pagamento de teste nunca cria conta paga — nem chega ao processador. */
+  it('recusa devMode divergente sem processar', async () => {
+    const { controlador, processados } = montar(false);
+
+    await expect(controlador.receber(EVENTO)).rejects.toThrow(
+      'Assinatura invalida.',
+    );
+    expect(processados).toEqual([]);
+  });
+
+  it('evento assinado e ilegivel vira alerta critico e 422', async () => {
+    const { controlador, processados, alertas } = montar();
+
+    await expect(
+      controlador.receber({ ...EVENTO, data: { id: 'pix_1' } }),
+    ).rejects.toThrow('Evento fora do formato esperado.');
+    expect(processados).toEqual([]);
+    expect(alertas.emitidos).toMatchObject([
+      { nivel: 'critico', assunto: 'pagamento.webhook-ilegivel' },
+    ]);
   });
 });
 

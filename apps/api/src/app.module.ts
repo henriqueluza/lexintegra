@@ -12,6 +12,7 @@ import { SenhaModule } from './autenticacao/senha/senha.module.js';
 import { EntregaveisModule } from './entregaveis/entregaveis.module.js';
 import { FirebaseModule } from './firebase/firebase.module.js';
 import { GatewayPagamentoModule } from './pagamentos/gateway/gateway.module.js';
+import { WebhookModule } from './pagamentos/webhook/webhook.module.js';
 import { HealthModule } from './health/health.module.js';
 import { LimiteModule } from './limite/limite.module.js';
 import { OutboxModule } from './outbox/outbox.module.js';
@@ -69,6 +70,7 @@ import { VitrineModule } from './vitrine/vitrine.module.js';
     PreCadastrosModule,
     VitrineModule,
     CheckoutModule,
+    WebhookModule,
     ClientesModule,
     PedidosModule,
     EntregaveisModule,
