@@ -49,6 +49,7 @@ import type { ConsultaPedidosService } from './pedidos/consulta.service.js';
 import type { DistribuicaoService } from './pedidos/distribuicao.service.js';
 import { PedidosAdminController } from './pedidos/pedidos.admin.controller.js';
 import { PedidosAdvogadoController } from './pedidos/pedidos.advogado.controller.js';
+import type { CancelamentoService } from './pedidos/cancelamento.service.js';
 import { PedidosClienteController } from './pedidos/pedidos.cliente.controller.js';
 import { PreCadastrosAdminController } from './pre-cadastros/pre-cadastros.admin.controller.js';
 import { RetencaoController } from './retencao/retencao.controller.js';
@@ -983,10 +984,25 @@ describe('PedidosClienteController', () => {
         {
           registrar: registrar('termos.registrar'),
         } as unknown as TermosService,
+        {
+          cancelar: registrar('cancelar'),
+        } as unknown as CancelamentoService,
       ),
       chamadas,
     };
   }
+
+  /**
+   * O cancelamento (Etapa 8, ADR-12) tambem usa o uid do token: nenhum cliente
+   * cancela o pedido de outro passando o id dele.
+   */
+  it('cancela usando o uid do token', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.cancelar('pedido-1', CLIENTE);
+
+    expect(chamadas).toEqual(['cancelar pedido-1 uid-clara']);
+  });
 
   /**
    * O `clienteId` sai do TOKEN em toda rota — nenhuma delas o aceita no caminho

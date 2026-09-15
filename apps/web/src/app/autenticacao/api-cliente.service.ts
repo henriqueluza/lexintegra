@@ -12,6 +12,7 @@ import type {
   ObservacaoResumo,
 } from 'shared/esquemas/observacao';
 import type { CartaoPedido, EntregavelResumo } from 'shared/esquemas/pedido';
+import type { SituacaoPedido } from 'shared/situacao-pedido';
 
 /**
  * A area do cliente (itens 2.3.2 a 2.3.4).
@@ -50,6 +51,19 @@ export class ApiClienteService {
   obterMeuPedido(id: string): Promise<CartaoPedido> {
     return firstValueFrom(
       this.http.get<CartaoPedido>(`/api/pedidos/${encodeURIComponent(id)}`),
+    );
+  }
+
+  /**
+   * O cancelamento (Etapa 8, ADR-12). Nao devolve dinheiro — isso e o estorno, do
+   * administrador — e o servidor recusa com 409 depois de o trabalho comecar.
+   */
+  cancelarPedido(pedidoId: string): Promise<{ situacao: SituacaoPedido }> {
+    return firstValueFrom(
+      this.http.post<{ situacao: SituacaoPedido }>(
+        `/api/pedidos/${encodeURIComponent(pedidoId)}/cancelamento`,
+        {},
+      ),
     );
   }
 

@@ -9,6 +9,7 @@ import {
   type EntregavelResumo,
   type NovaObservacao,
   type ObservacaoResumo,
+  type SituacaoPedido,
 } from 'shared';
 import { AnexosService } from '../anexos/anexos.service.js';
 import { PortaoDeArquivos } from '../arquivos/portao.js';
@@ -18,6 +19,7 @@ import type { UsuarioAutenticado } from '../autenticacao/usuario.js';
 import { EntregaveisService } from '../entregaveis/entregaveis.service.js';
 import { ObservacoesService } from '../observacoes/observacoes.service.js';
 import { ZodPipe } from '../validacao/zod.pipe.js';
+import { CancelamentoService } from './cancelamento.service.js';
 import { ConsultaPedidosService } from './consulta.service.js';
 
 /**
@@ -67,6 +69,7 @@ export class PedidosClienteController {
     private readonly anexos: AnexosService,
     private readonly portao: PortaoDeArquivos,
     private readonly termos: TermosService,
+    private readonly cancelamento: CancelamentoService,
   ) {}
 
   /** Um cartao por pedido (item 2.3.2), cada um com seus proprios entregaveis. */
@@ -81,6 +84,19 @@ export class PedidosClienteController {
     @UsuarioAtual() cliente: UsuarioAutenticado,
   ): Promise<CartaoPedido> {
     return this.consulta.obterCartao(pedidoId, cliente.uid);
+  }
+
+  /**
+   * O cancelamento (ADR-12): so aquele pedido, so sem trabalho iniciado, sem
+   * devolver dinheiro. O uid sai do token, e pedido de outro cliente e 404.
+   */
+  @Post(':pedidoId/cancelamento')
+  @HttpCode(200)
+  cancelar(
+    @Param('pedidoId') pedidoId: string,
+    @UsuarioAtual() cliente: UsuarioAutenticado,
+  ): Promise<{ situacao: SituacaoPedido }> {
+    return this.cancelamento.cancelar(pedidoId, cliente.uid);
   }
 
   /* ---------------------------------------------------------------------- */
