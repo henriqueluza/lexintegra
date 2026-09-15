@@ -7,6 +7,8 @@ import {
 import { Reflector } from '@nestjs/core';
 import type { Perfil } from 'shared';
 import { AdvogadosController } from './advogados/advogados.controller.js';
+import { AnamneseProvisoriaController } from './anamnese-provisoria/anamnese-provisoria.controller.js';
+import type { AnamneseProvisoriaService } from './anamnese-provisoria/anamnese-provisoria.service.js';
 import type { AdvogadosService } from './advogados/advogados.service.js';
 import {
   CHAVE_PERFIS,
@@ -600,6 +602,47 @@ describe('WebhookController', () => {
     expect(alertas.emitidos).toMatchObject([
       { nivel: 'critico', assunto: 'pagamento.webhook-ilegivel' },
     ]);
+  });
+});
+
+/**
+ * A ficha inicial (stub da Etapa 8) e superficie do CLIENTE, e a anotacao fica na
+ * classe: uma rota nova ali nasce restrita sem ninguem lembrar de anotar.
+ */
+describe('AnamneseProvisoriaController', () => {
+  it('exige o perfil de cliente, na classe', () => {
+    expect(
+      reflector.get<readonly Perfil[]>(
+        CHAVE_PERFIS,
+        AnamneseProvisoriaController,
+      ),
+    ).toEqual(['cliente']);
+    expect(
+      reflector.get(
+        CHAVE_PUBLICO,
+        AnamneseProvisoriaController.prototype.registrar,
+      ),
+    ).toBeUndefined();
+  });
+
+  /** O uid sai do token: o servico nao tem por onde receber o de outra pessoa. */
+  it('usa o uid do token nas duas rotas', async () => {
+    const chamadas: string[] = [];
+    const controlador = new AnamneseProvisoriaController({
+      situacao: (uid: string) => {
+        chamadas.push(`situacao ${uid}`);
+        return Promise.resolve({ preenchida: false });
+      },
+      registrar: (uid: string) => {
+        chamadas.push(`registrar ${uid}`);
+        return Promise.resolve({ preenchida: true });
+      },
+    } as unknown as AnamneseProvisoriaService);
+
+    await controlador.situacao(CLIENTE);
+    await controlador.registrar({ respostas: {} }, CLIENTE);
+
+    expect(chamadas).toEqual(['situacao uid-clara', 'registrar uid-clara']);
   });
 });
 

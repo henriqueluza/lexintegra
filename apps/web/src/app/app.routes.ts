@@ -1,6 +1,10 @@
 import { Routes } from '@angular/router';
 import { catalogoRoutes } from './catalogo/catalogo.routes';
-import { exigirAutenticacao, exigirPerfil } from './autenticacao/guardas';
+import {
+  exigirAnamnese,
+  exigirAutenticacao,
+  exigirPerfil,
+} from './autenticacao/guardas';
 
 /**
  * Regra inviolavel 10: rota publica nao chama a API antes do pre-cadastro. E a
@@ -93,11 +97,25 @@ export const routes: Routes = [
     children: [
       {
         path: '',
+        canActivate: [exigirAnamnese],
         loadComponent: () =>
           import('./paginas/cliente-pedidos/cliente-pedidos').then(
             (m) => m.ClientePedidos,
           ),
         title: 'Meus pedidos — LexIntegra',
+      },
+      /*
+       * Etapa 8. A ficha inicial, obrigatoria depois da compra (item 2.2.5). E a
+       * unica tela da area do cliente fora de um cartao de pedido, e de proposito:
+       * a ficha e do CLIENTE, e nao de um pedido — e nada de reuniao passa por aqui.
+       */
+      {
+        path: 'anamnese',
+        loadComponent: () =>
+          import('./paginas/cliente-anamnese/cliente-anamnese').then(
+            (m) => m.ClienteAnamnese,
+          ),
+        title: 'Ficha inicial — LexIntegra',
       },
     ],
   },

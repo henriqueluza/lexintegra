@@ -1,6 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import type {
+  AnamneseProvisoria,
+  SituacaoAnamnese,
+} from 'shared/esquemas/anamnese-provisoria';
 import type { AnexoResumo } from 'shared/esquemas/anexo';
 import type { PedidoDeUpload } from 'shared/esquemas/upload';
 import type {
@@ -25,6 +29,19 @@ import type { CartaoPedido, EntregavelResumo } from 'shared/esquemas/pedido';
 @Injectable({ providedIn: 'root' })
 export class ApiClienteService {
   private readonly http = inject(HttpClient);
+
+  /** ⚠️ Ficha inicial PROVISORIA (Etapa 8) — ver `shared/anamnese-provisoria`. */
+  situacaoDaAnamnese(): Promise<SituacaoAnamnese> {
+    return firstValueFrom(
+      this.http.get<SituacaoAnamnese>('/api/anamnese/situacao'),
+    );
+  }
+
+  enviarAnamnese(ficha: AnamneseProvisoria): Promise<SituacaoAnamnese> {
+    return firstValueFrom(
+      this.http.post<SituacaoAnamnese>('/api/anamnese', ficha),
+    );
+  }
 
   listarMeusPedidos(): Promise<CartaoPedido[]> {
     return firstValueFrom(this.http.get<CartaoPedido[]>('/api/pedidos'));
