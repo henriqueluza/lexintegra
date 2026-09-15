@@ -81,17 +81,56 @@ describe('lerEvento', () => {
     ).toMatchObject({ tipo: 'estorno', nome, cobranca: { origem } });
   });
 
-  /** Evento que nao nos interessa nao e erro: 200, e o gateway para de mandar. */
+  /** Evento documentado que nao e deste sistema nao e erro: 200, e ruido. */
   it.each([
     'subscription.completed',
+    'subscription.renewed',
     'transfer.completed',
-    'checkout.disputed',
-  ])('ignora %s', (nome) => {
+    'payout.failed',
+  ])('ignora %s como irrelevante', (nome) => {
     expect(lerEvento({ ...TRANSPARENTE, event: nome, data: {} })).toEqual({
       tipo: 'ignorado',
+      motivo: 'irrelevante',
       eventoId: 'log_abc123xyz',
       nome,
       devMode: true,
+      cobrancaId: null,
+    });
+  });
+
+  /**
+   * Chargeback nao muda estado, mas nao e ruido: sai como contestacao, com o id
+   * da cobranca quando ela vem legivel — mesmo sem `externalId` nem `amount`.
+   */
+  it.each(['checkout.disputed', 'transparent.disputed'])(
+    'separa %s como contestacao, com o id da cobranca',
+    (nome) => {
+      expect(
+        lerEvento({
+          ...TRANSPARENTE,
+          event: nome,
+          data: { checkout: { id: 'bill_9' } },
+        }),
+      ).toMatchObject({
+        tipo: 'ignorado',
+        motivo: 'contestacao',
+        cobrancaId: 'bill_9',
+      });
+    },
+  );
+
+  /**
+   * O CASO QUE NAO PODE SER SILENCIOSO: um nome fora das listas pode ser o cartao
+   * pago chegando com um nome que a documentacao nao mostrou.
+   */
+  it('marca nome desconhecido como desconhecido, e nao como ruido', () => {
+    expect(
+      lerEvento({ ...TRANSPARENTE, event: 'checkout.paid' }),
+    ).toMatchObject({
+      tipo: 'ignorado',
+      motivo: 'desconhecido',
+      nome: 'checkout.paid',
+      cobrancaId: 'pix_char_1',
     });
   });
 

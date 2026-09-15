@@ -61,6 +61,22 @@ Em outro terminal do mesmo shell, encaminhe os eventos para a API local:
 abacatepay listen --forward-to "http://localhost:8080/api/pagamentos/webhook?webhookSecret=$ABACATEPAY_WEBHOOK_SECRET"
 ```
 
+**Os eventos que precisam chegar.** Na API v2, cada webhook assina uma lista de
+eventos. Se o `listen` (ou o webhook de dev criado no painel) pedir a lista, assine
+os seis: `transparent.completed`, `checkout.completed`, `transparent.refunded`,
+`checkout.refunded`, `transparent.disputed` e `checkout.disputed`. Um evento não
+assinado simplesmente não chega — e o sintoma seria o mesmo de um nome errado.
+
+**Durante toda a rodada, deixe à vista a saída do `listen` e o log da API.** Para
+cada evento, anote o **nome exato** e o `resultado` da resposta:
+
+- `confirmado` / `duplicata` → pagamento tratado;
+- `ignorado` → evento alheio (assinatura, transferência, saque);
+- **`alertado`** → o evento chegou e **não foi tratado**. O log da API mostra o alerta
+  `pagamento.webhook-evento-desconhecido` (ou `pagamento.contestacao`, se for
+  chargeback). Se isso acontecer numa compra, o nome real diverge da documentação:
+  é o item 1 da tabela no fim deste roteiro.
+
 ## 3. Compra com PIX
 
 1. Abra `http://localhost:4200`, faça o pré-cadastro com um e-mail que ainda não
@@ -88,7 +104,18 @@ guarda os códigos: pegue o `oobCode` mais recente de
    teste.** Na Etapa 8 ela listava `4242 4242 4242 4242`; não assuma equivalência com
    os cartões de teste da Stripe — confira na hora.
 3. Pague. O retorno deve cair em `/checkout?id=…`, e o polling, em "pago".
-4. No emulador: `produtos-gateway` com um documento por produto, e o mesmo resultado
+4. **O NOME DO EVENTO DE CONCLUSÃO DO CARTÃO — o item que mais importa desta seção.**
+   A documentação v2 lista `checkout.completed` como o evento do checkout
+   hospedado, mas não diz se o hospedado **pago com cartão** emite esse mesmo nome.
+   Anote o nome exato que o `listen` mostrou e o `resultado` da resposta da API.
+   - Esperado: `checkout.completed` e `confirmado`.
+   - Se veio `alertado`, **pare**: o pagamento com cartão não criou pedido nem conta.
+     Anote o nome e o payload (sem dado do comprador) e não use esta compra nos
+     passos de estorno. A correção é acrescentar o nome em `EVENTOS`, em
+     `apps/api/src/pagamentos/webhook/evento.ts`, com teste — e repetir esta seção.
+   - Se não chegou evento nenhum, confira a assinatura de eventos do webhook (seção 2)
+     antes de concluir qualquer coisa sobre o nome.
+5. No emulador: `produtos-gateway` com um documento por produto, e o mesmo resultado
    do passo 3.5.
 
 ## 5. Estorno
@@ -122,16 +149,21 @@ nenhum documento novo.
 
 | # | Suposição da Etapa 8 | Se estiver errada |
 |---|---|---|
-| 1 | O evento traz a cobrança com `id`, `externalId` e `amount`, em `data` ou em `data.transparent`/`data.checkout` | `apps/api/src/pagamentos/webhook/evento.ts` |
-| 2 | O `id` do envelope é id de log, e o da cobrança é `data…id` (errata do ADR-04) | `evento.ts` e `confirmacao.service.ts` |
-| 3 | O CLI encaminha `X-Webhook-Signature` como HMAC-SHA256 base64 do corpo cru, e mantém o `?webhookSecret=` | `pagamentos/webhook/assinatura.ts` |
-| 4 | Toda resposta e todo evento do sandbox trazem `devMode: true` | `abacatepay.gateway.ts` e `webhook.controller.ts` |
-| 5 | O formato das respostas de `/transparents/create`, `/checkouts/create`, `/products/create` e `/products/list` | os schemas de `abacatepay.gateway.ts` |
-| 6 | `externalId` de produto é único, e repetir dá conflito recuperável | `garantirProduto` em `abacatepay.gateway.ts` |
-| 7 | O cartão de teste é o que a página de dev mode lista | só este roteiro |
-| 8 | A resposta a um segundo estorno da mesma cobrança | `estornar` em `abacatepay.gateway.ts` |
-| 9 | O link do checkout hospedado vale 24 horas | `VALIDADE_CHECKOUT_HOSPEDADO_MS` em `apps/api/src/checkout/checkout.ts` (e com ela o `apagarApos`) |
-| 10 | O evento de estorno se chama `transparent.refunded` / `checkout.refunded` | `EVENTOS` em `evento.ts` |
+| 1 | **O checkout hospedado pago com cartão emite `checkout.completed`** — o mesmo nome da tabela de eventos da documentação, e não um nome próprio do fluxo com redirecionamento (seção 4, passo 4) | `EVENTOS` em `apps/api/src/pagamentos/webhook/evento.ts`, com teste em `evento.spec.ts` |
+| 2 | O PIX transparente emite `transparent.completed` (seção 3) | idem |
+| 3 | O evento traz a cobrança com `id`, `externalId` e `amount`, em `data` ou em `data.transparent`/`data.checkout` | `apps/api/src/pagamentos/webhook/evento.ts` |
+| 4 | O `id` do envelope é id de log, e o da cobrança é `data…id` (errata do ADR-04) | `evento.ts` e `confirmacao.service.ts` |
+| 5 | O CLI encaminha `X-Webhook-Signature` como HMAC-SHA256 base64 do corpo cru, e mantém o `?webhookSecret=` | `pagamentos/webhook/assinatura.ts` |
+| 6 | Toda resposta e todo evento do sandbox trazem `devMode: true` | `abacatepay.gateway.ts` e `webhook.controller.ts` |
+| 7 | O formato das respostas de `/transparents/create`, `/checkouts/create`, `/products/create` e `/products/list` | os schemas de `abacatepay.gateway.ts` |
+| 8 | `externalId` de produto é único, e repetir dá conflito recuperável | `garantirProduto` em `abacatepay.gateway.ts` |
+| 9 | O cartão de teste é o que a página de dev mode lista | só este roteiro |
+| 10 | A resposta a um segundo estorno da mesma cobrança | `estornar` em `abacatepay.gateway.ts` |
+| 11 | O link do checkout hospedado vale 24 horas | `VALIDADE_CHECKOUT_HOSPEDADO_MS` em `apps/api/src/checkout/checkout.ts` (e com ela o `apagarApos`) |
+| 12 | O evento de estorno se chama `transparent.refunded` / `checkout.refunded` | `EVENTOS` em `evento.ts` |
+
+**Nenhum evento da rodada pode ter terminado em `alertado` sem explicação.** Se algum
+terminou, o nome dele entra no registro junto com a linha correspondente.
 
 Registre o resultado de cada linha — confirmado, ou o que veio no lugar — no PR que
 fechar a Etapa 8. Um payload de exemplo ajuda, **sem** dado do comprador e sem

@@ -139,6 +139,20 @@ describe('webhook do gateway sobre HTTP', () => {
     expect(await documentosGravados()).toBe(0);
   });
 
+  /**
+   * Nome de evento fora das listas — o cartao pago chegando com um nome que a
+   * documentacao nao mostrou, por exemplo. 200 para o gateway nao insistir, mas
+   * `alertado`, e nao `ignorado`: o alerta critico e o que impede o silencio.
+   */
+  it('evento assinado com nome desconhecido responde alertado, sem gravar', async () => {
+    const resposta = await enviar(
+      JSON.stringify({ ...EVENTO, event: 'checkout.paid' }),
+    ).expect(200);
+
+    expect(resposta.body).toEqual({ recebido: true, resultado: 'alertado' });
+    expect(await documentosGravados()).toBe(0);
+  });
+
   it('e publico: nao exige sessao nem App Check', async () => {
     await enviar(
       JSON.stringify({ ...EVENTO, event: 'transfer.completed', data: {} }),
