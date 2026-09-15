@@ -1,11 +1,12 @@
-// ⚠️ DADOS FICTÍCIOS — PENDENTES DE REVALIDAÇÃO CONTRA A ETAPA 8 ⚠️
-// Ver: docs/plano-de-execucao.md, Etapa 9, e o LEIA-ME deste diretório.
+// ⚠️ DADOS FICTÍCIOS — PONTOS 1 A 3 REVALIDADOS NA ETAPA 8; O 4 SEGUE PENDENTE ⚠️
+// Ver: docs/plano-de-execucao.md, Etapa 9, e o LEIA-ME deste diretório, que traz
+// o resultado da revalidação.
 //
 // Estes clientes e pedidos existem porque a Etapa 9 constrói as telas que LEEM o
-// agregado pagamento→pedidos, e quem o ESCREVE é o checkout da Etapa 8, que
-// ainda não existe. A forma abaixo segue a arquitetura 5.2, 5.3 e 5.5.
+// agregado pagamento→pedidos, e quem o ESCREVE é o checkout da Etapa 8. A forma
+// abaixo segue a arquitetura 5.2, 5.3 e 5.5.
 //
-// O QUE PRECISA SER CONFERIDO QUANDO A ETAPA 8 EXISTIR:
+// O QUE ERA PRECISO CONFERIR QUANDO A ETAPA 8 EXISTISSE:
 //   1. Se `produtosContratados` é mesmo mantido pelo checkout, e com o nome do
 //      produto congelado no snapshot (e não com o id do produto vivo).
 //   2. Se `pagamentoId` agrupa pedidos como assumido aqui — um pagamento, N
