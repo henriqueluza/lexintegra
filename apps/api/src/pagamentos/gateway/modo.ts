@@ -1,4 +1,8 @@
 import { Logger } from '@nestjs/common';
+import {
+  CHAVE_HMAC_DESENVOLVIMENTO,
+  SEGREDO_WEBHOOK_DESENVOLVIMENTO,
+} from './segredos-desenvolvimento.js';
 
 export const CONFIGURACAO_PAGAMENTOS = Symbol('CONFIGURACAO_PAGAMENTOS');
 
@@ -28,14 +32,10 @@ export interface ConfiguracaoPagamentos {
   readonly devModeEsperado: boolean;
 }
 
-/**
- * Segredos de desenvolvimento, para o gateway falso. NAO SAO CREDENCIAIS: so
- * existem onde nao ha chave de API nenhuma, e servem para o arnes de teste e o
- * `scripts/simular-webhook.mjs` assinarem eventos que o processo local aceita.
- */
-export const SEGREDO_WEBHOOK_DESENVOLVIMENTO =
-  'segredo-webhook-desenvolvimento';
-export const CHAVE_HMAC_DESENVOLVIMENTO = 'chave-hmac-desenvolvimento';
+export {
+  CHAVE_HMAC_DESENVOLVIMENTO,
+  SEGREDO_WEBHOOK_DESENVOLVIMENTO,
+} from './segredos-desenvolvimento.js';
 
 /** Prefixo da chave de desenvolvimento do AbacatePay. */
 const PREFIXO_CHAVE_SANDBOX = 'abc_dev_';
