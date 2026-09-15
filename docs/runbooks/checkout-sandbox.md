@@ -15,9 +15,12 @@ da seção "O que conferir" é uma suposição que só a rodada desmente.
 
 - `pnpm dev` funcionando (Java para os emuladores) e `pnpm semear` rodado uma vez,
   com os emuladores **desligados** antes de começar (a rodada sobe os seus).
-- Acesso à conta do escritório no AbacatePay, **em modo de desenvolvimento**. O
-  login do CLI é por OAuth no navegador, com essa conta.
-- `gcloud` autenticado com uma conta que leia o secret `abacatepay-api-key-dev`.
+- **Uma conta no AbacatePay em modo de desenvolvimento** — a do escritório, ou uma
+  conta própria de quem executa (ver "Qual conta usar", abaixo). O login do CLI e a
+  chave de API precisam ser **da mesma conta**: o `listen` só recebe eventos das
+  cobranças da conta em que entrou.
+- Se for a conta do escritório: `gcloud` autenticado com uma conta que leia o secret
+  `abacatepay-api-key-dev`.
 - O CLI do AbacatePay instalado (documentação consultada em 15/09/2026 — confira se
   a sintaxe mudou):
 
@@ -33,21 +36,57 @@ abacatepay --version
   ele, e nenhum outro terminal precisa delas: a aplicação roda em segundo plano a
   partir dele, com o log num arquivo que qualquer terminal lê.
 
+### Qual conta usar
+
+**Conta própria em modo dev serve para esta rodada.** O que o roteiro confere é o
+comportamento da API v2 — nomes e formato dos eventos, assinatura, `devMode`,
+respostas, cartão de teste, segundo estorno —, e isso não muda de conta para conta:
+a URL é a mesma, os produtos são criados pela própria aplicação, o `webhookSecret` é
+nosso e a chave do HMAC é pública e fixa.
+
+O que ela **não** prova, e fica pendente para a conta do escritório:
+
+- que a chave guardada em `abacatepay-api-key-dev` funciona;
+- que a conta do escritório tem **cartão habilitado** no checkout hospedado (pode
+  depender de verificação ou de configuração da conta);
+- o webhook cadastrado no painel do escritório e, depois, produção.
+
+Com conta própria, quatro cuidados:
+
+- **só modo de desenvolvimento.** Não gere chave de produção nem receba pagamento
+  real nela para este projeto;
+- a chave dela **não entra** no Secret Manager deste projeto — muito menos no lugar
+  de `abacatepay-api-key-dev` —, nem em arquivo, commit ou Terraform. Só vive na
+  variável do terminal A;
+- dados de comprador fictícios em tudo (pré-cadastro, página do cartão);
+- **ao terminar, revogue a chave dev** no painel da sua conta.
+
+E registre no PR que a rodada foi numa conta de desenvolvimento própria.
+
 ## 1. Credenciais no terminal A, sem imprimir
 
-Entre no CLI (abre o navegador; use a conta do escritório, em modo dev):
+Entre no CLI (abre o navegador; use a conta escolhida, em modo dev):
 
 ```bash
 abacatepay login
 ```
 
-**Chave de API** — do secret `abacatepay-api-key-dev`, direto para a variável, sem
-`echo` e sem arquivo. A segunda linha recusa na hora qualquer coisa que não seja
-chave de desenvolvimento:
+**Chave de API.** Da conta do escritório, ela vem do secret
+`abacatepay-api-key-dev`, direto para a variável, sem `echo` e sem arquivo:
 
 ```bash
 export ABACATEPAY_API_KEY="$(gcloud secrets versions access latest --secret=abacatepay-api-key-dev --project=plataforma-juridica-36bda)"
 ```
+
+Da **conta própria**, copie a chave de desenvolvimento do painel e cole neste
+comando, que não ecoa o que você cola:
+
+```bash
+read -rs ABACATEPAY_API_KEY && export ABACATEPAY_API_KEY
+```
+
+Nos dois casos, a linha seguinte recusa na hora qualquer coisa que não seja chave de
+desenvolvimento:
 
 ```bash
 case "$ABACATEPAY_API_KEY" in abc_dev_*) echo "chave de desenvolvimento: ok" ;; *) unset ABACATEPAY_API_KEY; echo "PARE: nao e chave abc_dev_" ;; esac
@@ -284,3 +323,8 @@ rm -rf "$LOGS_RODADA" && unset ABACATEPAY_API_KEY ABACATEPAY_WEBHOOK_SECRET ABAC
 
 Confira que não sobrou emulador no ar (`lsof -i :8081 -i :9099` sem saída) e feche os
 terminais. Nada desta rodada vai para commit, `.env` ou histórico compartilhado.
+
+**Se a rodada foi numa conta própria**, revogue a chave de desenvolvimento no painel
+dela e saia do CLI (`abacatepay logout`, se o comando existir na versão instalada).
+No registro do PR, anote que foi conta própria e deixe como pendentes os três itens
+que só a conta do escritório prova (seção "Qual conta usar").
