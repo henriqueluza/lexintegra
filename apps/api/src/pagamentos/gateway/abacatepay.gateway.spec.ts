@@ -88,10 +88,15 @@ const PIX_DA_DOC = {
   metadata: { checkoutId: 'checkout-1' },
 };
 
+/*
+ * A descricao sai daqui do jeito que chegou: QUEM LIMPA E O CHAMADOR
+ * (`texto-do-gateway.ts`), e nao o adaptador. O hifen e o que o gateway aceita —
+ * com travessao, ele responde 400, e foi assim na rodada do sandbox de 16/09/2026.
+ */
 const NOVA_PIX = {
   valorCentavos: 370_000,
   externalId: 'checkout-1',
-  descricao: 'LexIntegra — 2 servicos',
+  descricao: 'LexIntegra - 2 servicos',
   expiraEmSegundos: 1800,
 };
 
@@ -111,7 +116,7 @@ describe('AbacatePayGateway', () => {
         method: 'PIX',
         data: {
           amount: 370_000,
-          description: 'LexIntegra — 2 servicos',
+          description: 'LexIntegra - 2 servicos',
           expiresIn: 1800,
           externalId: 'checkout-1',
           metadata: { checkoutId: 'checkout-1' },

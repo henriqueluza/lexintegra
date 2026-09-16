@@ -6,10 +6,11 @@ import {
   GatewayPagamentoFalso,
 } from './gateway-falso.js';
 
+/* Hifen, e nao travessao: e o que o gateway aceita (ver `texto-do-gateway.ts`). */
 const PIX = {
   valorCentavos: 370_000,
   externalId: 'checkout-1',
-  descricao: 'LexIntegra — 2 servicos',
+  descricao: 'LexIntegra - 2 servicos',
   expiraEmSegundos: 1800,
 };
 
@@ -102,6 +103,46 @@ describe('GatewayPagamentoFalso', () => {
     gateway.forcarValor(1);
 
     expect((await gateway.criarCobrancaPix(PIX)).valorCentavos).toBe(1);
+  });
+
+  /**
+   * O FALSO PRECISA RECUSAR O QUE O REAL RECUSA, e este e o caso que provou por
+   * que: na rodada do sandbox de 16/09/2026, `LexIntegra — 2 servico(s)` voltou
+   * com HTTP 400, "Disallowed character in description". Aqui passava, e por isso
+   * a suite inteira passava.
+   */
+  describe('texto recusado pelo gateway', () => {
+    it('recusa a descricao da cobranca com travessao', async () => {
+      const gateway = new GatewayPagamentoFalso();
+
+      await expect(
+        gateway.criarCobrancaPix({ ...PIX, descricao: 'LexIntegra — 2' }),
+      ).rejects.toThrow(/Disallowed character in description: —/);
+      expect(gateway.cobrancas.size).toBe(0);
+    });
+
+    it.each([
+      ['nome', { ...PRODUTO, nome: 'Parecer — completo' }],
+      ['descricao', { ...PRODUTO, descricao: 'Analise…' }],
+    ])('recusa o produto com %s fora do permitido', async (_caso, produto) => {
+      const gateway = new GatewayPagamentoFalso();
+
+      await expect(gateway.garantirProduto(produto)).rejects.toThrow(
+        ErroDoGateway,
+      );
+      expect(gateway.produtos.size).toBe(0);
+    });
+
+    it('aceita acento, que o sandbox nao reprovou', async () => {
+      const gateway = new GatewayPagamentoFalso();
+
+      await expect(
+        gateway.garantirProduto({
+          ...PRODUTO,
+          nome: 'Elaboração de Contrato Social',
+        }),
+      ).resolves.toMatch(/^prod_falso_/);
+    });
   });
 
   describe('estorno', () => {

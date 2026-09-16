@@ -724,6 +724,38 @@ describe('CheckoutService', () => {
       ).toEqual([250_000, 300_000]);
     });
 
+    /**
+     * O CATALOGO E ESCRITO POR GENTE, e o gateway recusa parte do que gente
+     * escreve: na rodada do sandbox de 16/09/2026, o travessao voltou como HTTP
+     * 400. O nome e a descricao saem limpos (`texto-do-gateway.ts`), e o teste vale
+     * porque o gateway falso agora recusa igual — sem a limpeza, ele estoura aqui.
+     */
+    it('manda nome e descricao do produto sem caractere que o gateway recusa', async () => {
+      const arranjo = await montar();
+      const { id } = await arranjo.produtos.criar(
+        {
+          ...PARECER,
+          nome: 'Parecer — risco “alto”',
+          descricao: 'Diagnóstico das rotinas atuais… com ressalvas',
+        },
+        ADMIN,
+      );
+
+      await arranjo.servico.iniciar(
+        pedido(arranjo, { ...CARTAO, itens: [{ produtoId: id }] }),
+        LEAD,
+        AGORA,
+      );
+
+      const noGateway = [...arranjo.gateway.produtos.values()].find(
+        (produto) => produto.precoCentavos === 250_000,
+      );
+      expect(noGateway?.nome).toBe('Parecer - risco "alto"');
+      expect(noGateway?.descricao).toBe(
+        'Diagnóstico das rotinas atuais... com ressalvas',
+      );
+    });
+
     it('guarda o mapeamento e nao consulta o gateway de novo', async () => {
       const arranjo = await montar();
       const chamadas: string[] = [];

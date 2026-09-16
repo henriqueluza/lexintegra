@@ -296,6 +296,7 @@ sem nenhum documento novo no emulador.
 | 7 | O formato das respostas de `/transparents/create`, `/checkouts/create`, `/products/create` e `/products/list` | os schemas de `abacatepay.gateway.ts` |
 | 8 | `externalId` de produto é único, e repetir dá conflito recuperável | `garantirProduto` em `abacatepay.gateway.ts` |
 | 9 | O cartão de teste é o que a página de dev mode lista | só este roteiro |
+| 9.1 | **Quais caracteres o gateway aceita em `description` e `name`.** Já se sabe que o travessão é recusado (400, "Disallowed character in description", achado em 16/09/2026) e que hífen passa. Falta saber de **acento**, cedilha e do resto da pontuação — o filtro atual deixa acento passar | `texto-do-gateway.ts` (`RECUSADOS` e `EQUIVALENTES`), com teste em `texto-do-gateway.spec.ts` e a recusa espelhada em `gateway-falso.ts` |
 | 10 | A resposta a um segundo estorno da mesma cobrança | `estornar` em `abacatepay.gateway.ts` |
 | 11 | O link do checkout hospedado vale 24 horas | `VALIDADE_CHECKOUT_HOSPEDADO_MS` em `apps/api/src/checkout/checkout.ts` (e com ela o `apagarApos`) |
 | 12 | O evento de estorno se chama `transparent.refunded` / `checkout.refunded` | `EVENTOS` em `evento.ts` |

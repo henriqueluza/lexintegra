@@ -10,6 +10,7 @@ import {
   type ProdutoNoGateway,
   type ResultadoDoEstorno,
 } from './gateway.js';
+import { caracteresRecusados } from './texto-do-gateway.js';
 
 /** Um PNG de 1x1 transparente: a tela de PIX precisa de uma imagem valida. */
 const QR_FALSO =
@@ -34,6 +35,9 @@ export interface CobrancaRegistrada {
  *   AbacatePay — e o que a retentativa do mesmo carrinho espera.
  * - `garantirProduto` e idempotente por `externalId`.
  * - `estornar` a segunda vez e sucesso com `jaEstornado`, que e o contrato da porta.
+ * - descricao e nome com caractere que o gateway recusa dao erro aqui tambem
+ *   (`texto-do-gateway.ts`) — foi assim que o travessao passou por toda a suite e
+ *   so apareceu no sandbox.
  *
  * Os campos publicos existem para o teste inspecionar o que foi pedido.
  */
@@ -57,6 +61,7 @@ export class GatewayPagamentoFalso implements GatewayPagamento {
 
   async criarCobrancaPix(cobranca: NovaCobrancaPix): Promise<CobrancaPix> {
     this.consumirFalha('cobranca PIX');
+    this.conferirTexto('description', cobranca.descricao);
     const registrada = this.registrar(
       'transparente',
       cobranca.externalId,
@@ -75,6 +80,8 @@ export class GatewayPagamentoFalso implements GatewayPagamento {
 
   async garantirProduto(produto: ProdutoNoGateway): Promise<string> {
     this.consumirFalha('produto');
+    this.conferirTexto('name', produto.nome);
+    this.conferirTexto('description', produto.descricao);
     const existente = this.produtos.get(produto.externalId);
     if (existente !== undefined) return existente.id;
 
@@ -112,6 +119,19 @@ export class GatewayPagamentoFalso implements GatewayPagamento {
 
   estornar(pedido: PedidoDeEstorno): Promise<ResultadoDoEstorno> {
     this.estornos.push(pedido);
+    /*
+     * O `reason` tambem vai no corpo, e hoje e um literal nosso. Se algum dia
+     * carregar o motivo digitado pelo administrador, aparece aqui antes de virar
+     * 400 numa reentrega do outbox. FALHA REPORTADA, e nao excecao: e o contrato
+     * da porta, e e o que o adaptador real faz com o erro do gateway.
+     */
+    const recusados = caracteresRecusados(pedido.motivo);
+    if (recusados.length > 0) {
+      return Promise.resolve({
+        sucesso: false,
+        motivo: `Disallowed character in reason: ${recusados.join(' ')}`,
+      });
+    }
     if (this.falhasPendentes > 0) {
       this.falhasPendentes -= 1;
       return Promise.resolve({ sucesso: false, motivo: 'falha simulada' });
@@ -157,6 +177,21 @@ export class GatewayPagamentoFalso implements GatewayPagamento {
     if (this.falhasPendentes === 0) return;
     this.falhasPendentes -= 1;
     throw new ErroDoGateway(`${oQue}: falha simulada`);
+  }
+
+  /**
+   * A RECUSA QUE FALTAVA AQUI, e que custou uma rodada de sandbox: o AbacatePay
+   * responde 400 "Disallowed character in description" a um travessao, e este
+   * dublê aceitava — entao a suite inteira passava com um texto que o gateway de
+   * verdade nunca aceitou. Quem monta texto para o gateway usa
+   * `textoParaGateway`; este metodo e o que faz esquecer disso falhar no teste.
+   */
+  private conferirTexto(campo: string, valor: string): void {
+    const recusados = caracteresRecusados(valor);
+    if (recusados.length === 0) return;
+    throw new ErroDoGateway(
+      `Disallowed character in ${campo}: ${recusados.join(' ')}`,
+    );
   }
 }
 

@@ -540,6 +540,12 @@ sem pedido.
 | Compra de ponta a ponta | `compra.integration-spec.ts` — da vitrine à ficha preenchida e aos dois cartões |
 | Cancelar não afeta a conta nem os outros pedidos | `pedidos/cancelamento.integration-spec.ts` — retrato antes e depois, campo a campo |
 
+**A rodada no sandbox começou em 16/09 e já achou um desvio**, que é exatamente o
+que ela existe para achar: o AbacatePay recusa a descrição da cobrança com
+travessão (HTTP 400, "Disallowed character in description"). O texto que sai para o
+gateway passou a ser filtrado num lugar só, e — a correção que importa — o gateway
+falso passou a recusar o que o real recusa. Ver o ADR-19.
+
 **O entregável formal diz "no ambiente de teste do gateway", e isso não foi
 feito.** A prova automatizada roda contra o gateway falso, sobre a pilha HTTP real e
 os emuladores. A chave de desenvolvimento está no Secret Manager, e a sessão do

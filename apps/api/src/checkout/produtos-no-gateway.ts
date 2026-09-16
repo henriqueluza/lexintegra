@@ -7,6 +7,7 @@ import {
   GATEWAY_PAGAMENTO,
   type GatewayPagamento,
 } from '../pagamentos/gateway/gateway.js';
+import { textoParaGateway } from '../pagamentos/gateway/texto-do-gateway.js';
 import type { ItemCongelado } from '../pedidos/pedidos.service.js';
 
 export const COLECAO_PRODUTOS_GATEWAY = 'produtos-gateway';
@@ -89,10 +90,17 @@ export class ProdutosNoGateway {
       { gatewayId?: unknown } | undefined;
     if (typeof guardado?.gatewayId === 'string') return guardado.gatewayId;
 
+    /*
+     * O TEXTO VAI LIMPO, E O ID NAO MUDA. O catalogo e escrito por gente, e texto
+     * juridico traz travessao, reticencias e aspas curvas — que o gateway recusa
+     * com 400 (ver `texto-do-gateway.ts`, achado na rodada do sandbox). A limpeza
+     * e so do que SAI: o `externalId` continua sendo o hash do snapshot cru, senao
+     * o mesmo produto trocaria de identidade no gateway ao mudar a pontuacao.
+     */
     const gatewayId = await this.gateway.garantirProduto({
       externalId,
-      nome: snapshot.nome,
-      descricao: snapshot.descricao,
+      nome: textoParaGateway(snapshot.nome),
+      descricao: textoParaGateway(snapshot.descricao),
       precoCentavos: snapshot.precoCentavos,
     });
     await referencia.set({ gatewayId, criadoEm: FieldValue.serverTimestamp() });

@@ -547,6 +547,21 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 
 Campo restrito no bucket (`httpRequest.requestUrl`) foi descartado: esconderia a URL de todas as rotas, e não só desta.
 
+**O texto que sai para o gateway passa por um filtro, e isso veio da rodada no
+sandbox (16/09/2026).** A descrição da cobrança PIX ia como `LexIntegra — 2
+servico(s)`, e o AbacatePay respondeu **HTTP 400, "Disallowed character in
+description"**: ele recusa o travessão. A suíte inteira passava porque o gateway
+falso aceitava qualquer texto — o falso agora recusa igual, que é a correção que
+importa. O literal era o menor dos problemas: o **nome e a descrição do produto**
+no checkout hospedado vêm do catálogo, escrito por gente, e texto jurídico usa
+travessão, reticências e aspas curvas o tempo todo; o catálogo real da B&C levaria
+a compra por cartão ao mesmo 400 em produção. `pagamentos/gateway/texto-do-gateway.ts`
+é o único lugar que prepara esse texto: troca a pontuação tipográfica pelo
+equivalente ASCII, descarta o que sobra e corta num teto conservador. **Acento
+fica** — nada na rodada disse que incomoda, e é nome de produto e de gente. O
+conjunto exato de caracteres aceitos continua não documentado, e é uma linha do
+roteiro.
+
 **Riscos aceitos.**
 
 - **O formato dos eventos e das respostas veio da documentação, não de um evento real.** A leitura aceita a cobrança em `data` ou aninhada (`data.checkout`, `data.transparent`) e exige os campos de que precisa; toda resposta do gateway é validada por schema. A conferência é o roteiro `docs/runbooks/checkout-sandbox.md`, **ainda não executado**.

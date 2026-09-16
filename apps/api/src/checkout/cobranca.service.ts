@@ -88,7 +88,9 @@ export class CobrancaDoCheckout {
     const cobranca = await this.gateway.criarCobrancaPix({
       valorCentavos: intencao.documento.totalCentavos,
       externalId: intencao.id,
-      descricao: `LexIntegra — ${String(intencao.documento.itens.length)} servico(s)`,
+      /* Hifen, e nao travessao: o gateway recusa o travessao com 400 (ver
+       * `texto-do-gateway.ts`). O falso recusa igual, entao isto nao volta. */
+      descricao: `LexIntegra - ${String(intencao.documento.itens.length)} servico(s)`,
       expiraEmSegundos: VALIDADE_PIX_SEGUNDOS,
     });
     conferirValor(cobranca.valorCentavos, intencao.documento.totalCentavos);
