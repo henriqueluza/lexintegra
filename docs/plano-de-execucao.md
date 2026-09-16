@@ -556,18 +556,40 @@ E um defeito que **não é nosso**: o `abacatepay listen` alterou o corpo ao
 encaminhar o evento (o primeiro alerta da rodada acusou `id` e `devMode` ausentes).
 A conferência seguiu enviando o payload real, assinado, direto à API local.
 
-**Resultado da rodada: o PIX foi validado de ponta a ponta** — checkout, cobrança no
-sandbox, webhook no formato real, pagamento, pedidos, conta e ficha provisória. **O
-cartão não pôde ser testado:** o AbacatePay recusou o checkout hospedado com `CARD is
-not available for this store`, que é homologação da conta, e não código. Com isso o
-nome do evento de conclusão do cartão — o item de maior risco antes do merge — segue
-sem confirmação. A pendência está no "Só você" abaixo, como dependência de terceiro.
+**Resultado da rodada (encerrada em 16/09):**
 
-**O entregável formal diz "no ambiente de teste do gateway", e isso não foi
-feito.** A prova automatizada roda contra o gateway falso, sobre a pilha HTTP real e
-os emuladores. A chave de desenvolvimento está no Secret Manager, e a sessão do
-agente não a lê (regra 9). A rodada no sandbox é passo humano, com roteiro em
-`docs/runbooks/checkout-sandbox.md`.
+- **PIX validado de ponta a ponta, duas vezes** (carrinhos com 2 e com 3 produtos):
+  checkout, snapshot, cobrança, webhook, pagamento, pedidos, conta, senha pelo link,
+  login e ficha provisória.
+- **Nomes de evento confirmados** no painel de Webhook Logs: `transparent.completed` e
+  `transparent.refunded`.
+- **Estorno validado contra o gateway real:** o manual isolado deixa o pedido em
+  `manual_pendente` sem tocar os irmãos; o integral só dispara pelo outbox quando
+  todos os pedidos da cobrança estão estornados, chama o gateway de verdade, e o
+  `transparent.refunded` fecha o ciclo com `gateway_confirmado` nos três registros.
+  Reenviar o mesmo evento responde `duplicata`.
+- **Assinatura inválida** (segredo errado e HMAC errado): 401, sem gravar nada.
+- **O `abacatepay listen` mutila o corpo** ao encaminhar — defeito do CLI. Os eventos
+  foram conferidos pelo painel de Webhook Logs, enviados à API com o HMAC calculado à
+  parte; por isso a assinatura entregue pelo próprio gateway segue não observada.
+
+**Ficou para a próxima rodada**, detalhado no registro do roteiro:
+
+- **Cartão — bloqueado por homologação de conta.** O AbacatePay recusou o checkout
+  hospedado com `CARD is not available for this store`; não é código. O nome do
+  evento de conclusão do cartão — o item de maior risco antes do merge — segue sem
+  confirmação. A pendência está no "Só você" abaixo, como dependência de terceiro.
+- **409 com trabalho iniciado (estorno e cancelamento)** — não exercitado por
+  sequenciamento dos testes, e não por bloqueio. A regra é coberta pela integração
+  contra o emulador; falta vê-la pela interface.
+- Sem bloqueio: o segundo estorno da mesma cobrança direto ao gateway, e acento na
+  descrição.
+
+**O entregável formal diz "no ambiente de teste do gateway", e a parte de PIX dele foi
+feita** — com a chave de desenvolvimento de uma conta própria, fora da sessão do agente
+(regra 9). A de cartão depende da homologação. A prova automatizada continua rodando
+contra o gateway falso, sobre a pilha HTTP real e os emuladores, agora com o payload
+real como fixture.
 
 **O hook de bloqueio nunca tinha funcionado.** `.claude/hooks/block-dangerous.sh`
 estava commitado sem bit de execução (`100644`), e o `grep` que extraía o comando

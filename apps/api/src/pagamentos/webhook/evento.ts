@@ -15,9 +15,11 @@ import type { OrigemDaCobranca } from '../gateway/gateway.js';
  *
  * A COBRANCA VEM ANINHADA SOB A CHAVE DO PREFIXO DO EVENTO: `transparent.*` em
  * `data.transparent`, com `id`, `externalId` e `amount`. E ai que se procura
- * primeiro. Para `checkout.*` (cartao) e os `*.refunded`, o par `data.checkout` e
- * `data.transparent` e analogia, ainda nao observada — por isso os outros lugares
- * continuam como alternativa, e a leitura EXIGE os campos de que precisa: um campo
+ * primeiro. `transparent.refunded` tambem foi observado e processado no fim da
+ * rodada. Para `checkout.*` (cartao), `data.checkout` e analogia ainda nao
+ * observada — o cartao esta bloqueado por homologacao da conta no AbacatePay. Por
+ * isso os outros lugares continuam como alternativa, e a leitura EXIGE os campos de
+ * que precisa: um campo
  * renomeado falha aqui, com alerta, e nao vira `undefined` num pagamento. A
  * conferencia do resto esta no roteiro (`docs/runbooks/checkout-sandbox.md`).
  */

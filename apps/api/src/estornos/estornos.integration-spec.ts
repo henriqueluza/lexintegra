@@ -113,7 +113,7 @@ function estornar(pedidoId: string, token = tokenAdmin): request.Test {
 }
 
 function webhookDeEstorno(): request.Test {
-  /* No formato do evento real do sandbox; para o estorno, por analogia ao PIX pago. */
+  /* No formato do evento real do sandbox — `transparent.refunded` foi observado nele. */
   const corpo = JSON.stringify(
     eventoNoFormatoReal({
       evento: 'transparent.refunded',

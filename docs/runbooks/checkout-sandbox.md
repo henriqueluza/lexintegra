@@ -130,8 +130,15 @@ export LOGS_RODADA="$(mktemp -d)" && echo "log em: $LOGS_RODADA/dev.log"
 PAGAMENTOS_MODO=sandbox pnpm dev > "$LOGS_RODADA/dev.log" 2>&1 &
 ```
 
-Encaminhe os eventos para a API local, também em segundo plano, para o terminal A
-continuar livre para os comandos com a chave:
+> ⚠️ **Achado da rodada de 16/09/2026: o `abacatepay listen` mutila o corpo do
+> evento** ao encaminhar — ele chega à API como array vazio ou incompleto. É defeito do
+> CLI, não do projeto. **Não use o `listen` para validar formato nem processamento.**
+> Use o evento real do painel de **Webhook Logs**, enviado à API com a assinatura
+> calculada à parte — o método está no registro da rodada, no fim deste roteiro. O
+> `listen` continua útil só para ver **que** um evento saiu e **com que nome**.
+
+Se ainda quiser o `listen` como sinal, encaminhe os eventos para a API local, também
+em segundo plano, para o terminal A continuar livre para os comandos com a chave:
 
 ```bash
 abacatepay listen --forward-to "http://localhost:8080/api/pagamentos/webhook?webhookSecret=$ABACATEPAY_WEBHOOK_SECRET" > "$LOGS_RODADA/listen.log" 2>&1 &
@@ -164,7 +171,7 @@ os seis: `transparent.completed`, `checkout.completed`, `transparent.refunded`,
 `checkout.refunded`, `transparent.disputed` e `checkout.disputed`. Um evento não
 assinado simplesmente não chega — e o sintoma seria o mesmo de um nome errado.
 
-**Durante toda a rodada, deixe à vista a saída do `listen` e o log da API.** Para
+**Durante toda a rodada, deixe à vista o painel de Webhook Logs e o log da API.** Para
 cada evento, anote o **nome exato** e o `resultado` da resposta:
 
 - `confirmado` / `duplicata` → pagamento tratado;
@@ -194,8 +201,11 @@ cada evento, anote o **nome exato** e o `resultado` da resposta:
    curl -s -X POST "https://api.abacatepay.com/v2/transparents/simulate-payment?id=<cobrancaId>" -H "Authorization: Bearer $ABACATEPAY_API_KEY"
    ```
 
-   A resposta deve trazer `"status":"PAID"` e `"devMode":true`. Em seguida o `listen`
-   mostra o evento chegando: anote o nome (esperado: `transparent.completed`).
+   A resposta deve trazer `"status":"PAID"` e `"devMode":true`. Em seguida, abra o
+   evento no painel de **Webhook Logs** do AbacatePay, anote o nome (esperado e
+   confirmado em 16/09: `transparent.completed`), salve o corpo em
+   `$LOGS_RODADA/evento.json` e envie-o à API com a assinatura calculada à parte
+   (método no registro da rodada) — o `listen` entrega o corpo mutilado.
 5. A tela deve passar para "pago" sozinha, pelo polling.
 6. No emulador: 1 documento em `pagamentos` com `situacao: confirmado`, 2 em
    `pedidos`, 1 em `clientes`, e a conta no emulador de Auth com a claim `cliente`.
@@ -250,7 +260,9 @@ guarda os códigos: pegue o `oobCode` mais recente de
 4. **O NOME DO EVENTO DE CONCLUSÃO DO CARTÃO — o item que mais importa desta seção.**
    A documentação v2 lista `checkout.completed` como o evento do checkout
    hospedado, mas não diz se o hospedado **pago com cartão** emite esse mesmo nome.
-   Anote o nome exato que o `listen` mostrou e o `resultado` da resposta da API.
+   Anote o nome exato que o painel de **Webhook Logs** mostrou, envie o evento à API
+   pelo método do registro da rodada (não pelo `listen`, que mutila o corpo) e anote o
+   `resultado` da resposta.
    - Esperado: `checkout.completed` e `confirmado`.
    - Se veio `alertado`, **pare**: o pagamento com cartão não criou pedido nem conta.
      Anote o nome e o payload (sem dado do comprador) e não use esta compra nos
@@ -265,9 +277,18 @@ guarda os códigos: pegue o `oobCode` mais recente de
 
 Entre como `admin@exemplo.test` (senha do seed) em `/admin/distribuicao`.
 
-1. **Recusa em `em_elaboracao`.** Distribua um pedido a um advogado, entre como ele e
-   inicie o trabalho de um entregável. Tente estornar: o painel deve mostrar a
-   recusa do servidor (409), e nada deve mudar no emulador.
+1. **Recusa com trabalho iniciado — estorno E cancelamento.** Distribua um pedido a um
+   advogado, entre como ele e **inicie o trabalho** de um entregável (o entregável vai
+   para `em_elaboracao`). Então:
+   - como administrador, tente **estornar** esse pedido: o painel deve mostrar a recusa
+     do servidor (**409**);
+   - como o cliente dono do pedido, tente **cancelar** esse mesmo pedido pelo cartão:
+     a tela deve mostrar a recusa do servidor (**409**).
+
+   Nos dois casos, **nada muda no emulador**: `situacao` do pedido continua `ativo`,
+   o entregável continua `em_elaboracao`, e não nasce documento em `estornos`.
+   (⏳ Não exercitado na rodada de 16/09/2026, por sequenciamento — é o item 2 de "Para
+   a próxima rodada".)
 2. **Manual.** Numa compra de dois pedidos sem trabalho iniciado, estorne **um**:
    aparece em `/admin/estornos` como pendente de devolução manual. Nenhuma chamada
    ao gateway.
@@ -292,9 +313,10 @@ Entre como `admin@exemplo.test` (senha do seed) em `/admin/distribuicao`.
 
 ## 6. Assinatura
 
-A metade que importa já foi provada nas seções anteriores: se os eventos do `listen`
-responderam 200, a assinatura real do AbacatePay confere com a nossa (item 5). Falta
-a recusa, e ela não precisa de evento capturado. No terminal A:
+A assinatura que o **próprio** gateway manda só se vê com o evento chegando intacto —
+e o `listen` mutila o corpo, então ela depende de um webhook de dev no painel
+apontando para um túnel (item 5). A recusa, que é o critério de aceite, não precisa
+de evento capturado. No terminal A:
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" -X POST "http://localhost:8080/api/pagamentos/webhook?webhookSecret=errado" -H "Content-Type: application/json" -H "X-Webhook-Signature: invalida" -d '{"id":"log_x","event":"transparent.completed","devMode":true,"data":{}}'
@@ -332,35 +354,87 @@ Registre o resultado de cada linha — confirmado, ou o que veio no lugar — no
 fechar a Etapa 8. Um payload de exemplo ajuda, **sem** dado do comprador e sem
 nenhum segredo.
 
-### Registro da rodada de 16/09/2026 (conta de desenvolvimento própria)
+### Registro da rodada de 16/09/2026 — encerrada (conta de desenvolvimento própria)
 
-**PIX transparente: validado de ponta a ponta** — checkout, cobrança no sandbox,
-webhook com o formato real do evento, pagamento, dois pedidos, conta do cliente e
-ficha de anamnese provisória. Duas correções saíram da rodada: o filtro de texto para
-o gateway e a leitura do evento sem `id` na raiz.
+Legenda: ✅ confirmado · 🔧 desmentido e corrigido neste PR · ⛔ bloqueado por
+homologação de conta, não testado · ⏳ não exercitado nesta rodada, sem bloqueio
 
-**Cartão pelo checkout hospedado: ⛔ bloqueado por homologação de conta, não testado
-nesta rodada** (ver a seção 4). Não é item esquecido nem defeito de código.
+**PIX transparente: ✅ validado de ponta a ponta, duas vezes** — com 2 e com 3
+produtos no carrinho: checkout, snapshot, cobrança no sandbox, webhook, pagamento,
+pedidos, conta do cliente, senha pelo link, login e ficha de anamnese provisória.
+
+**Estorno: ✅ validado contra o gateway real** — manual isolado, integral automático
+pelo outbox com a chamada ao gateway de verdade, confirmação pelo webhook e
+idempotência da confirmação (detalhe na tabela dos passos, abaixo).
+
+**Cartão pelo checkout hospedado: ⛔ bloqueado por homologação de conta, não testado**
+(ver a seção 4). Não é item esquecido nem defeito de código.
+
+**Como os eventos foram conferidos — e por que não pelo `listen`.** O `abacatepay
+listen` **mutila o corpo** ao encaminhar para a API local: o evento chega como array
+vazio ou incompleto, em vez do payload real. É defeito do CLI, não do projeto. **Não
+use o `listen` para validar formato nem processamento.** O método que funcionou: o
+evento real copiado do painel de **Webhook Logs** do AbacatePay, salvo num arquivo no
+diretório temporário da rodada, e enviado à API local com a assinatura HMAC calculada
+à parte, no terminal A:
+
+```bash
+ASSINATURA="$(openssl dgst -sha256 -hmac "$ABACATEPAY_WEBHOOK_CHAVE_HMAC" -binary < "$LOGS_RODADA/evento.json" | base64)"
+```
+
+```bash
+curl -s -X POST "http://localhost:8080/api/pagamentos/webhook?webhookSecret=$ABACATEPAY_WEBHOOK_SECRET" -H "Content-Type: application/json" -H "X-Webhook-Signature: $ASSINATURA" --data-binary @"$LOGS_RODADA/evento.json"
+```
+
+`--data-binary` e não `-d`: a assinatura é sobre os bytes, e `-d` altera quebras de
+linha. Esse método prova a **nossa** leitura do evento real; a assinatura entregue
+pelo **próprio** gateway continua não observada (linha 5).
+
+#### Suposições
 
 | # | Resultado |
 |---|---|
-| 1 | ⛔ **Bloqueado por homologação de conta, não testado nesta rodada.** O checkout hospedado com cartão foi recusado antes de existir cobrança (`CARD is not available for this store`), então nenhum evento de cartão chegou. **O nome do evento de conclusão do cartão continua sem confirmação.** |
-| 2 | **Confirmado.** O PIX transparente emitiu `transparent.completed`. |
-| 3 | **Confirmado para o PIX.** A cobrança veio em `data.transparent`, com `id`, `externalId` e `amount` (inteiro, em centavos). `paidAmount` veio `null` — a leitura usa `amount`, então não afeta. |
-| 4 | **Desmentido, e corrigido.** O envelope real **não tem `id`** na raiz — só `event`, `apiVersion`, `devMode` e `data`. O parser exigia o `id` e respondia 422 "envelope fora do formato (id)" a todo pagamento real. Agora o `id` é opcional; o payload capturado virou a fixture `apps/api/src/arnes-webhook.ts`. |
-| 5 | **Não conferido, e com um defeito do CLI.** O `abacatepay listen` alterou o corpo ao encaminhar (o alerta acusou `id` e `devMode` ausentes), então a assinatura do gateway ainda não foi vista chegando intacta. A conferência seguiu enviando o payload real, assinado com a chave pública, direto à API local — o que prova o parser, e não a assinatura do AbacatePay. |
-| 6 | **Confirmado no evento.** `devMode: true` na raiz, e também dentro de `data.transparent`. |
-| 7 | **Parcial.** `/transparents/create` respondeu no formato esperado (a cobrança PIX foi criada e paga). `/checkouts/create` foi **recusado por homologação** — ⛔ não testado. |
-| 8 | ⛔ **Bloqueado por homologação de conta, não testado nesta rodada.** O produto no gateway só existe no fluxo do cartão. Se a tentativa deixou documento em `produtos-gateway` no emulador, `/products/create` respondeu antes da recusa — anote, mas a unicidade do `externalId` segue sem conferência. |
-| 9 | ⛔ **Bloqueado por homologação de conta, não testado nesta rodada.** O cartão `4242 4242 4242 4242` nem chegou a ser digitado: a página de pagamento não foi criada. |
-| 9.1 | **Parcial.** Travessão recusado com 400 na descrição; hífen aceito. Acento ainda não testado. |
-| 11 | ⛔ **Bloqueado por homologação de conta, não testado nesta rodada.** Sem link de checkout hospedado, a validade de 24 horas continua suposição. |
-| 12 | A parte de cartão (`checkout.refunded`) está ⛔ **bloqueada por homologação de conta, não testada nesta rodada**. A do PIX (`transparent.refunded`) não foi registrada nesta rodada. |
+| 1 | ⛔ **Bloqueado por homologação de conta, não testado.** O checkout hospedado com cartão foi recusado antes de existir cobrança (`HTTP 400: CARD is not available for this store`), então nenhum evento de cartão chegou. **O nome do evento de conclusão do cartão continua sem confirmação** — `checkout.completed` ou outro. Enquanto isso, um nome desconhecido vira alerta crítico, e não silêncio. |
+| 2 | ✅ **Confirmado.** O PIX transparente emitiu `transparent.completed`, visto no painel de Webhook Logs. |
+| 3 | ✅ **Confirmado para o PIX.** A cobrança vem em `data.transparent`, com `id`, `externalId` e `amount` (inteiro, em centavos). `paidAmount` veio `null` — a leitura usa `amount`, então não afeta. |
+| 4 | 🔧 **Desmentido, e corrigido.** O envelope real **não tem `id`** na raiz — só `event`, `apiVersion`, `devMode` e `data`; o id é o da cobrança, em `data.transparent.id`. O parser exigia o `id` na raiz e respondia 422 "envelope fora do formato (id)" a todo pagamento real. Corrigido (`a7647c7`); o payload capturado virou a fixture `apps/api/src/arnes-webhook.ts`. |
+| 5 | ⏳ **Não observado, por defeito do CLI.** O `listen` entrega corpo vazio ou incompleto, então a assinatura que o gateway manda nunca chegou intacta à API. Os eventos foram enviados à mão, com o HMAC calculado com a chave pública (método acima). **Assinatura inválida confirmada** do nosso lado: segredo errado e HMAC errado, os dois 401 sem gravar nada (seção 6). Para ver a assinatura do próprio gateway: um webhook de dev no painel apontando para um túnel HTTPS até a `localhost:8080`. |
+| 6 | ✅ **Confirmado no evento.** `devMode: true` na raiz, e também dentro de `data.transparent`. |
+| 7 | **Parcial.** ✅ `/transparents/create` e `/transparents/refund` aceitaram o corpo que a aplicação manda e responderam no formato esperado — a cobrança PIX foi criada e paga, e o estorno integral foi executado. ⛔ `/checkouts/create` foi recusado por homologação, e `/products/create` e `/products/list` não chegaram a ser exercitados de forma conclusiva. |
+| 8 | ⛔ **Bloqueado por homologação de conta, não testado.** O produto no gateway só existe no fluxo do cartão. |
+| 9 | ⛔ **Bloqueado por homologação de conta, não testado.** A página de pagamento não foi criada; o cartão `4242 4242 4242 4242` nem chegou a ser digitado. |
+| 9.1 | **Parcial.** 🔧 Travessão recusado com `HTTP 400: Disallowed character in description`, corrigido (`d5822e5`); hífen aceito. Acento ainda não testado. |
+| 10 | ⏳ **Não exercitado nesta rodada.** O segundo estorno da mesma cobrança, pedido direto ao gateway (seção 5, passo 4), não foi feito — a resposta que o adaptador trata como "já estornado" continua suposição. Não confundir com a idempotência da **confirmação**, que foi conferida (seção 5, passo 3). |
+| 11 | ⛔ **Bloqueado por homologação de conta, não testado.** Sem link de checkout hospedado, a validade de 24 horas continua suposição. |
+| 12 | **Parcial.** ✅ `transparent.refunded` confirmado, visto no painel de Webhook Logs. ⛔ `checkout.refunded` bloqueado por homologação, não testado. |
 
-**Para as linhas 5 e 12 sem o CLI:** um webhook de dev cadastrado no painel, apontando
-para um túnel HTTPS até a `localhost:8080` (ver a seção 2), recebe o corpo e a
-assinatura como o gateway manda. Enviar à mão prova a nossa leitura; só a entrega do
-próprio gateway prova a assinatura dele.
+#### Passos do roteiro
+
+| Passo | Resultado |
+|---|---|
+| 3 — compra com PIX | ✅ Duas vezes, com 2 e com 3 produtos, até a ficha provisória preenchida. |
+| 4 — compra com cartão | ⛔ Bloqueado por homologação de conta, não testado. |
+| 5.1 — estorno **e cancelamento** recusados com trabalho iniciado | ⏳ **Não exercitado nesta rodada, por sequenciamento dos testes — não por bloqueio.** Fica para a próxima rodada (ver abaixo). A regra já é coberta por testes de integração contra o emulador; o que falta é vê-la pela interface, com a conta de sandbox. |
+| 5.2 — estorno manual isolado | ✅ O pedido ficou em `manual_pendente`, e os pedidos irmãos não foram tocados. |
+| 5.3 — estorno integral | ✅ Disparou pelo outbox só quando **todos** os pedidos da cobrança estavam estornados, chamou o gateway de verdade, e o `transparent.refunded` fechou o ciclo: `gateway_confirmado` nos três registros de estorno. Reenviar o mesmo `transparent.refunded` respondeu `duplicata`, sem reprocessar. |
+| 5.4 — segundo estorno direto ao gateway | ⏳ Não exercitado nesta rodada (linha 10). |
+| 6 — assinatura | ✅ Segredo errado e HMAC errado: 401 nos dois casos, sem gravar nada. |
+
+#### Para a próxima rodada
+
+1. **Cartão — ⛔ depende da homologação de conta pelo AbacatePay.** Não há o que
+   executar antes dela. Ação fora do código: contatar o suporte. **Crítico antes de
+   produção:** confirmar a homologação **na conta real do escritório** — sem ela, o
+   cartão não funciona em ambiente nenhum. Quando sair, refazer a seção 4 inteira; é
+   ela que confirma o nome do evento de conclusão do cartão (linha 1) e fecha as
+   linhas 8, 9, 11 e a parte de cartão das 7 e 12.
+2. **409 com trabalho iniciado — ⏳ sem bloqueio, só não foi feito.** Distribuir um
+   pedido a um advogado, **iniciar o trabalho** de um entregável pela tela do
+   advogado, e então tentar **estornar** esse pedido pelo painel do administrador e
+   **cancelar** pelo cartão do cliente. Esperado: **409 nos dois**, e nenhuma mudança
+   de estado no emulador (situação do pedido, entregáveis, estornos).
+3. **Sem bloqueio, se houver tempo:** o segundo estorno da mesma cobrança (linha 10) e
+   acento na descrição (linha 9.1).
 
 ## Ao terminar
 

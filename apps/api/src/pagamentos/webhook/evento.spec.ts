@@ -61,9 +61,9 @@ describe('lerEvento com o payload real do sandbox', () => {
   });
 
   /**
-   * Por analogia ao observado, `checkout.completed` (cartao) em `data.checkout`, e
-   * os estornos sob a chave do proprio prefixo. Nao observados ainda — os testes
-   * fixam a leitura, e o roteiro do sandbox confere o formato.
+   * `transparent.refunded` foi observado no sandbox, no mesmo formato do pago. Os
+   * de cartao (`checkout.*`, em `data.checkout`) sao analogia ainda nao observada —
+   * o cartao esta bloqueado por homologacao de conta. Os testes fixam a leitura.
    */
   it.each([
     ['checkout.completed', 'pagamento', 'hospedado'],
