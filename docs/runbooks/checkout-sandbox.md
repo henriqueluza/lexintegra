@@ -209,11 +209,35 @@ guarda os códigos: pegue o `oobCode` mais recente de
 
 ## 4. Compra com cartão
 
+> ⛔ **BLOQUEADA POR HOMOLOGAÇÃO DE CONTA — não testada na rodada de 16/09/2026.**
+>
+> Ao criar o checkout hospedado com cartão, o AbacatePay respondeu
+> **`HTTP 400: CARD is not available for this store`**. Não é defeito do nosso código
+> nem da conta de testes em particular: é **homologação da conta pelo AbacatePay**
+> para aceitar cartão. Não há endpoint de API para consultar o status nem pedir a
+> habilitação, e nenhuma configuração visível no painel (Integração, Webhooks)
+> resolve. Uma investigação externa sobre o mesmo erro, em outro projeto que integra
+> com o AbacatePay, chegou à mesma conclusão.
+>
+> Os passos abaixo continuam valendo, **para quando a conta tiver cartão
+> habilitado**. Como saber: repita o passo 1 — se a tela redirecionar para a página
+> do gateway em vez de falhar, a conta foi homologada. Até lá, ficam **sem
+> confirmação** as linhas 1, 9 e 11 da tabela, a parte de cartão das linhas 7, 8 e
+> 12 — e, entre elas, **o nome do evento de conclusão do cartão, que era o item de
+> maior risco antes do merge**. A rede de segurança enquanto isso é a do ADR-19:
+> evento com nome desconhecido não some, vira alerta crítico
+> `pagamento.webhook-evento-desconhecido`.
+>
+> A pendência está registrada como dependência de terceiro no "Só você" da Etapa 8,
+> em `docs/plano-de-execucao.md`.
+
 1. Novo pré-cadastro (outro e-mail), dois produtos, cartão. A tela redireciona para
    a página do checkout hospedado do AbacatePay.
-   - Se em vez disso a tela mostrar falha (e o log da API, erro do gateway ao criar o
-     checkout), o gateway pode estar recusando as URLs de retorno em
-     `http://localhost:4200`. Registre a mensagem: é o item 7 da tabela.
+   - Se a tela mostrar falha e o log da API trouxer **`CARD is not available for
+     this store`**, é a homologação acima — pare esta seção.
+   - Se a falha for outra (erro do gateway ao criar o checkout), o gateway pode estar
+     recusando as URLs de retorno em `http://localhost:4200`. Registre a mensagem: é
+     o item 7 da tabela.
 2. **Cartão de teste.** A página de dev mode (`docs.abacatepay.com/pages/devmode`,
    consultada em 15/09/2026) lista `4242 4242 4242 4242`, com qualquer validade futura
    e qualquer CVV de 3 ou 4 dígitos, como aprovado. Confira na hora se continua o
@@ -308,16 +332,30 @@ Registre o resultado de cada linha — confirmado, ou o que veio no lugar — no
 fechar a Etapa 8. Um payload de exemplo ajuda, **sem** dado do comprador e sem
 nenhum segredo.
 
-### Registro da rodada de 16/09/2026 (em andamento, conta de desenvolvimento própria)
+### Registro da rodada de 16/09/2026 (conta de desenvolvimento própria)
+
+**PIX transparente: validado de ponta a ponta** — checkout, cobrança no sandbox,
+webhook com o formato real do evento, pagamento, dois pedidos, conta do cliente e
+ficha de anamnese provisória. Duas correções saíram da rodada: o filtro de texto para
+o gateway e a leitura do evento sem `id` na raiz.
+
+**Cartão pelo checkout hospedado: ⛔ bloqueado por homologação de conta, não testado
+nesta rodada** (ver a seção 4). Não é item esquecido nem defeito de código.
 
 | # | Resultado |
 |---|---|
+| 1 | ⛔ **Bloqueado por homologação de conta, não testado nesta rodada.** O checkout hospedado com cartão foi recusado antes de existir cobrança (`CARD is not available for this store`), então nenhum evento de cartão chegou. **O nome do evento de conclusão do cartão continua sem confirmação.** |
 | 2 | **Confirmado.** O PIX transparente emitiu `transparent.completed`. |
 | 3 | **Confirmado para o PIX.** A cobrança veio em `data.transparent`, com `id`, `externalId` e `amount` (inteiro, em centavos). `paidAmount` veio `null` — a leitura usa `amount`, então não afeta. |
 | 4 | **Desmentido, e corrigido.** O envelope real **não tem `id`** na raiz — só `event`, `apiVersion`, `devMode` e `data`. O parser exigia o `id` e respondia 422 "envelope fora do formato (id)" a todo pagamento real. Agora o `id` é opcional; o payload capturado virou a fixture `apps/api/src/arnes-webhook.ts`. |
 | 5 | **Não conferido, e com um defeito do CLI.** O `abacatepay listen` alterou o corpo ao encaminhar (o alerta acusou `id` e `devMode` ausentes), então a assinatura do gateway ainda não foi vista chegando intacta. A conferência seguiu enviando o payload real, assinado com a chave pública, direto à API local — o que prova o parser, e não a assinatura do AbacatePay. |
 | 6 | **Confirmado no evento.** `devMode: true` na raiz, e também dentro de `data.transparent`. |
+| 7 | **Parcial.** `/transparents/create` respondeu no formato esperado (a cobrança PIX foi criada e paga). `/checkouts/create` foi **recusado por homologação** — ⛔ não testado. |
+| 8 | ⛔ **Bloqueado por homologação de conta, não testado nesta rodada.** O produto no gateway só existe no fluxo do cartão. Se a tentativa deixou documento em `produtos-gateway` no emulador, `/products/create` respondeu antes da recusa — anote, mas a unicidade do `externalId` segue sem conferência. |
+| 9 | ⛔ **Bloqueado por homologação de conta, não testado nesta rodada.** O cartão `4242 4242 4242 4242` nem chegou a ser digitado: a página de pagamento não foi criada. |
 | 9.1 | **Parcial.** Travessão recusado com 400 na descrição; hífen aceito. Acento ainda não testado. |
+| 11 | ⛔ **Bloqueado por homologação de conta, não testado nesta rodada.** Sem link de checkout hospedado, a validade de 24 horas continua suposição. |
+| 12 | A parte de cartão (`checkout.refunded`) está ⛔ **bloqueada por homologação de conta, não testada nesta rodada**. A do PIX (`transparent.refunded`) não foi registrada nesta rodada. |
 
 **Para as linhas 5 e 12 sem o CLI:** um webhook de dev cadastrado no painel, apontando
 para um túnel HTTPS até a `localhost:8080` (ver a seção 2), recebe o corpo e a

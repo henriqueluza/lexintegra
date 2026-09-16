@@ -570,6 +570,7 @@ roteiro.
 - **A validade do link do checkout hospedado não está documentada.** Vinte e quatro horas foi o valor conservador (`VALIDADE_CHECKOUT_HOSPEDADO_MS`); ele só decide quando a tela para de oferecer o link e quando a TTL apaga o documento.
 - **A resposta a um segundo estorno da mesma cobrança não está documentada.** Quando o gateway recusa, o adaptador consulta a cobrança e trata `REFUNDED` como "já estornado".
 - **O cartão redireciona**, e a experiência deixa a plataforma no momento mais sensível da compra.
+- **O cartão depende de homologação da conta pelo AbacatePay, e isso não está no nosso controle.** Na rodada do sandbox (16/09/2026), o checkout hospedado com cartão foi recusado com `HTTP 400: CARD is not available for this store`. Não há endpoint para consultar ou pedir a habilitação, e nenhuma configuração visível no painel resolve — é processo da conta, com prazo de terceiro. Sem ela, **o cartão não funciona em ambiente nenhum, nem em produção**; o PIX não é afetado, e foi validado de ponta a ponta. Consequência para esta decisão: o caminho do cartão segue **não testado** contra o gateway, e com ele o nome do evento de conclusão (`checkout.completed` ou outro). A proteção enquanto isso é o alerta crítico de evento desconhecido, acima. O que fazer — quem pede a homologação, se ela vale por conta ou por ambiente, e o que a tela mostra se o lançamento chegar antes dela — está no "Só você" da Etapa 8, em `docs/plano-de-execucao.md`.
 
 ---
 

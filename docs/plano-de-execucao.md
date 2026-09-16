@@ -556,6 +556,13 @@ E um defeito que **não é nosso**: o `abacatepay listen` alterou o corpo ao
 encaminhar o evento (o primeiro alerta da rodada acusou `id` e `devMode` ausentes).
 A conferência seguiu enviando o payload real, assinado, direto à API local.
 
+**Resultado da rodada: o PIX foi validado de ponta a ponta** — checkout, cobrança no
+sandbox, webhook no formato real, pagamento, pedidos, conta e ficha provisória. **O
+cartão não pôde ser testado:** o AbacatePay recusou o checkout hospedado com `CARD is
+not available for this store`, que é homologação da conta, e não código. Com isso o
+nome do evento de conclusão do cartão — o item de maior risco antes do merge — segue
+sem confirmação. A pendência está no "Só você" abaixo, como dependência de terceiro.
+
 **O entregável formal diz "no ambiente de teste do gateway", e isso não foi
 feito.** A prova automatizada roda contra o gateway falso, sobre a pilha HTTP real e
 os emuladores. A chave de desenvolvimento está no Secret Manager, e a sessão do
@@ -585,6 +592,35 @@ da API.
 - Executar a **primeira transação real** em produção, com valor baixo, antes de liberar para o cliente. Teste em sandbox não prova que a chave de produção está correta.
 - Conferir que o dinheiro caiu na conta do escritório. É verificação financeira, não técnica.
 - Redigir e obter aprovação do trecho dos termos de serviço sobre a regra de estorno (ADR-12) — texto jurídico, não copy técnico.
+
+**Dependência de terceiro — homologação de cartão no AbacatePay**
+
+Na rodada do sandbox de 16/09/2026, o checkout hospedado com cartão foi recusado com
+**`HTTP 400: CARD is not available for this store`**. É **homologação da conta pelo
+AbacatePay**, e não defeito de código: não há endpoint de API para consultar o status
+ou pedir a habilitação, e nenhuma configuração visível no painel resolve. **Sem ela, o
+pagamento com cartão não funciona em ambiente nenhum — nem em produção.** O PIX não é
+afetado e foi validado de ponta a ponta.
+
+- **Contatar o suporte do AbacatePay** (ou a documentação de onboarding e KYC) para
+  entender o processo de homologação de cartão: o que pedem, quanto demora, quem da
+  conta precisa solicitar.
+- **Confirmar se a homologação é por conta ou por chave/ambiente** — se ela precisa ser
+  refeita ao passar da conta de testes para a conta do escritório, ou do modo dev para
+  produção.
+- **Crítico para o lançamento:** confirmar com antecedência se a **conta do escritório**
+  já tem cartão homologado, ou iniciar o processo cedo. É prazo de terceiro, fora do
+  controle do projeto.
+- **Decidir o que a tela faz se o cartão não estiver homologado no lançamento.** Hoje a
+  opção "cartão" aparece no checkout e, sem homologação, a cobrança não é criada: a API
+  responde 503 e a tela diz "O pagamento está indisponível no momento. Tente novamente
+  mais tarde." — um convite a tentar de novo algo que nunca vai funcionar. É decisão de
+  produto, e não foi tomada: esconder a opção até a homologação, ou lançar só com PIX.
+  Nada foi mudado no código por isso.
+- **Depois da homologação, refazer a seção 4 do roteiro do sandbox.** Ela fecha o item
+  de maior risco que ficou aberto: o **nome do evento de conclusão do cartão**
+  (`checkout.completed` ou outro). Até lá, a proteção é o alerta crítico de evento
+  desconhecido (ADR-19).
 
 **Acrescentado pela execução parcial (ver o registro acima)**
 
