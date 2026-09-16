@@ -290,7 +290,7 @@ sem nenhum documento novo no emulador.
 | 1 | **O checkout hospedado pago com cartão emite `checkout.completed`** — o mesmo nome da tabela de eventos da documentação, e não um nome próprio do fluxo com redirecionamento (seção 4, passo 4) | `EVENTOS` em `apps/api/src/pagamentos/webhook/evento.ts`, com teste em `evento.spec.ts` |
 | 2 | O PIX transparente emite `transparent.completed` (seção 3) | idem |
 | 3 | O evento traz a cobrança com `id`, `externalId` e `amount`, em `data` ou em `data.transparent`/`data.checkout` | `apps/api/src/pagamentos/webhook/evento.ts` |
-| 4 | O `id` do envelope é id de log, e o da cobrança é `data…id` (errata do ADR-04) | `evento.ts` e `confirmacao.service.ts` |
+| 4 | O `id` do envelope é id de log, e o da cobrança é `data…id` (errata do ADR-04). **Desmentido em 16/09 — ver o registro abaixo** | `evento.ts` e `confirmacao.service.ts` |
 | 5 | O CLI encaminha `X-Webhook-Signature` como HMAC-SHA256 base64 do corpo cru, e mantém o `?webhookSecret=` | `pagamentos/webhook/assinatura.ts` |
 | 6 | Toda resposta e todo evento do sandbox trazem `devMode: true` | `abacatepay.gateway.ts` e `webhook.controller.ts` |
 | 7 | O formato das respostas de `/transparents/create`, `/checkouts/create`, `/products/create` e `/products/list` | os schemas de `abacatepay.gateway.ts` |
@@ -307,6 +307,22 @@ terminou, o nome dele entra no registro junto com a linha correspondente.
 Registre o resultado de cada linha — confirmado, ou o que veio no lugar — no PR que
 fechar a Etapa 8. Um payload de exemplo ajuda, **sem** dado do comprador e sem
 nenhum segredo.
+
+### Registro da rodada de 16/09/2026 (em andamento, conta de desenvolvimento própria)
+
+| # | Resultado |
+|---|---|
+| 2 | **Confirmado.** O PIX transparente emitiu `transparent.completed`. |
+| 3 | **Confirmado para o PIX.** A cobrança veio em `data.transparent`, com `id`, `externalId` e `amount` (inteiro, em centavos). `paidAmount` veio `null` — a leitura usa `amount`, então não afeta. |
+| 4 | **Desmentido, e corrigido.** O envelope real **não tem `id`** na raiz — só `event`, `apiVersion`, `devMode` e `data`. O parser exigia o `id` e respondia 422 "envelope fora do formato (id)" a todo pagamento real. Agora o `id` é opcional; o payload capturado virou a fixture `apps/api/src/arnes-webhook.ts`. |
+| 5 | **Não conferido, e com um defeito do CLI.** O `abacatepay listen` alterou o corpo ao encaminhar (o alerta acusou `id` e `devMode` ausentes), então a assinatura do gateway ainda não foi vista chegando intacta. A conferência seguiu enviando o payload real, assinado com a chave pública, direto à API local — o que prova o parser, e não a assinatura do AbacatePay. |
+| 6 | **Confirmado no evento.** `devMode: true` na raiz, e também dentro de `data.transparent`. |
+| 9.1 | **Parcial.** Travessão recusado com 400 na descrição; hífen aceito. Acento ainda não testado. |
+
+**Para as linhas 5 e 12 sem o CLI:** um webhook de dev cadastrado no painel, apontando
+para um túnel HTTPS até a `localhost:8080` (ver a seção 2), recebe o corpo e a
+assinatura como o gateway manda. Enviar à mão prova a nossa leitura; só a entrega do
+próprio gateway prova a assinatura dele.
 
 ## Ao terminar
 

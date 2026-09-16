@@ -4,13 +4,22 @@ import type { OrigemDaCobranca } from '../gateway/gateway.js';
 /**
  * O evento do webhook do AbacatePay, lido e reduzido ao que o dominio usa.
  *
- * ⚠️ O FORMATO VEIO DA DOCUMENTACAO DA API v2, e nao de um evento real. A
- * documentacao mostra o envelope (`id`, `event`, `devMode`, `data`) com clareza,
- * mas nao deixa claro se a cobranca vem em `data` direto ou aninhada
- * (`data.checkout`, `data.transparent`). A leitura aceita os dois lugares e EXIGE
- * os campos de que precisa — um campo renomeado falha aqui, com alerta, e nao
- * vira `undefined` num pagamento. A conferencia contra o sandbox esta no roteiro
- * (`docs/runbooks/checkout-sandbox.md`).
+ * O PAYLOAD REAL DESMENTIU A DOCUMENTACAO NUM PONTO (rodada do sandbox,
+ * 16/09/2026, `transparent.completed` de um PIX, capturado no painel de Webhook
+ * Logs). A documentacao mostra o envelope com `id` de log na raiz; o evento real
+ * NAO TEM `id` na raiz — so `event`, `apiVersion`, `devMode` e `data`. Com o `id`
+ * obrigatorio, todo pagamento real voltava 422 "envelope fora do formato (id)", e
+ * nenhum pedido nascia. O `id` passou a ser opcional: se vier, e a trilha; se nao
+ * vier, a trilha e `evento:cobranca` (ver `idDoEvento`). Nada depende dele para
+ * idempotencia — o pagamento usa o id da COBRANCA (errata do ADR-04).
+ *
+ * A COBRANCA VEM ANINHADA SOB A CHAVE DO PREFIXO DO EVENTO: `transparent.*` em
+ * `data.transparent`, com `id`, `externalId` e `amount`. E ai que se procura
+ * primeiro. Para `checkout.*` (cartao) e os `*.refunded`, o par `data.checkout` e
+ * `data.transparent` e analogia, ainda nao observada — por isso os outros lugares
+ * continuam como alternativa, e a leitura EXIGE os campos de que precisa: um campo
+ * renomeado falha aqui, com alerta, e nao vira `undefined` num pagamento. A
+ * conferencia do resto esta no roteiro (`docs/runbooks/checkout-sandbox.md`).
  */
 
 /*
@@ -62,7 +71,8 @@ const IRRELEVANTES = new Set([
 export type MotivoIgnorado = 'irrelevante' | 'contestacao' | 'desconhecido';
 
 const envelope = z.object({
-  id: z.string().min(1),
+  /* Opcional: a documentacao mostra, o evento real do sandbox nao trouxe. */
+  id: z.string().min(1).optional(),
   event: z.string().min(1),
   devMode: z.boolean(),
   data: z.unknown(),
@@ -124,17 +134,18 @@ export function lerEvento(corpo: unknown): EventoDoGateway {
   const { id, event, devMode, data } = lido.data;
   const conhecido = EVENTOS[event];
   if (conhecido === undefined) {
+    const cobrancaId = idDaCobranca(data, event);
     return {
       tipo: 'ignorado',
       motivo: motivoDoIgnorado(event),
-      eventoId: id,
+      eventoId: idDoEvento(id, event, cobrancaId),
       nome: event,
       devMode,
-      cobrancaId: idDaCobranca(data),
+      cobrancaId,
     };
   }
 
-  const dados = localizarCobranca(data);
+  const dados = localizarCobranca(data, event);
   if (dados === null) {
     throw new EventoIlegivel(
       `${event} sem cobranca com id, externalId e amount`,
@@ -143,7 +154,7 @@ export function lerEvento(corpo: unknown): EventoDoGateway {
 
   return {
     tipo: conhecido.tipo,
-    eventoId: id,
+    eventoId: idDoEvento(id, event, dados.id),
     nome: event,
     devMode,
     cobranca: {
@@ -161,29 +172,64 @@ function motivoDoIgnorado(nome: string): MotivoIgnorado {
   return 'desconhecido';
 }
 
+/**
+ * A trilha do evento. O `id` do envelope, quando o gateway manda; senao,
+ * `evento:cobranca` — o evento real do sandbox veio sem `id`. So vai para log,
+ * alerta e `pagamentos.eventoId`: nenhuma decisao depende dele.
+ */
+function idDoEvento(
+  id: string | undefined,
+  evento: string,
+  cobrancaId: string | null,
+): string {
+  return id ?? `${evento}:${cobrancaId ?? 'sem-cobranca'}`;
+}
+
+/**
+ * As chaves sob `data` em que a cobranca pode estar. Um prefixo fora daqui
+ * (`subscription`, `payout`) nao e cobranca, e nao vira candidato.
+ */
+const CHAVES_DA_COBRANCA = new Set(['transparent', 'checkout', 'billing']);
+
 const soId = z.object({ id: z.string().min(1) });
 
 /**
  * So o id, e sem exigir o resto: um evento que nao vira pedido nao precisa de
  * `externalId` nem de `amount` para o alerta apontar a cobranca.
  */
-function idDaCobranca(data: unknown): string | null {
-  return primeiroQueCasa(data, soId)?.id ?? null;
+function idDaCobranca(data: unknown, evento: string): string | null {
+  return primeiroQueCasa(data, soId, evento)?.id ?? null;
 }
 
 /** O primeiro lugar em que a cobranca aparece inteira. */
-function localizarCobranca(data: unknown): z.infer<typeof cobranca> | null {
-  return primeiroQueCasa(data, cobranca);
+function localizarCobranca(
+  data: unknown,
+  evento: string,
+): z.infer<typeof cobranca> | null {
+  return primeiroQueCasa(data, cobranca, evento);
 }
 
-/** Os lugares onde a cobranca pode estar, na ordem: aninhada, ou em `data` direto. */
-function primeiroQueCasa<T>(data: unknown, esquema: z.ZodType<T>): T | null {
+/**
+ * Os lugares onde a cobranca pode estar, na ordem. PRIMEIRO a chave do prefixo do
+ * evento (`transparent.completed` → `data.transparent`), que e o observado no
+ * payload real; depois as outras chaves conhecidas, e por ultimo `data` direto.
+ *
+ * `data.customer` NUNCA e candidato, de proposito: ele tambem tem `id`, e um
+ * evento ignorado apontaria o alerta para o cliente em vez da cobranca.
+ */
+function primeiroQueCasa<T>(
+  data: unknown,
+  esquema: z.ZodType<T>,
+  evento: string,
+): T | null {
   const objeto = (
     typeof data === 'object' && data !== null ? data : {}
   ) as Record<string, unknown>;
+  const prefixo = evento.split('.')[0] ?? '';
   const candidatos = [
-    objeto['checkout'],
+    CHAVES_DA_COBRANCA.has(prefixo) ? objeto[prefixo] : undefined,
     objeto['transparent'],
+    objeto['checkout'],
     objeto['billing'],
     data,
   ];

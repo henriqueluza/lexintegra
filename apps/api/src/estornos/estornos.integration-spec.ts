@@ -5,6 +5,7 @@ import request from 'supertest';
 import { NOME_CLAIM_PERFIL, type NovoProduto } from 'shared';
 import { AppModule } from '../app.module.js';
 import { comSnapshot } from '../arnes-pedidos.js';
+import { eventoNoFormatoReal } from '../arnes-webhook.js';
 import { configurar, OPCOES_DA_APLICACAO } from '../configurar.js';
 import {
   authDeTeste,
@@ -112,12 +113,15 @@ function estornar(pedidoId: string, token = tokenAdmin): request.Test {
 }
 
 function webhookDeEstorno(): request.Test {
-  const corpo = JSON.stringify({
-    id: `log_refund_${cobrancaId}`,
-    event: 'transparent.refunded',
-    devMode: true,
-    data: { id: cobrancaId, externalId: 'checkout-1', amount: 500_000 },
-  });
+  /* No formato do evento real do sandbox; para o estorno, por analogia ao PIX pago. */
+  const corpo = JSON.stringify(
+    eventoNoFormatoReal({
+      evento: 'transparent.refunded',
+      cobrancaId,
+      checkoutId: 'checkout-1',
+      valorCentavos: 500_000,
+    }),
+  );
   return request(app.getHttpServer())
     .post(
       `/api/pagamentos/webhook?webhookSecret=${SEGREDO_WEBHOOK_DESENVOLVIMENTO}`,

@@ -4,6 +4,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { VERSAO_TERMOS_CHECKOUT, type NovoProduto } from 'shared';
 import { AppModule } from '../../app.module.js';
+import { eventoNoFormatoReal } from '../../arnes-webhook.js';
 import { COLECAO_CHECKOUTS } from '../../checkout/checkout.js';
 import { configurar, OPCOES_DA_APLICACAO } from '../../configurar.js';
 import {
@@ -127,19 +128,14 @@ function webhook(
   compra: Pick<Compra, 'checkoutId' | 'cobrancaId'>,
   valorCentavos = 370_000,
 ): request.Test {
-  const corpo = JSON.stringify({
-    id: `log_${compra.cobrancaId}`,
-    event: 'transparent.completed',
-    apiVersion: 2,
-    devMode: true,
-    data: {
-      id: compra.cobrancaId,
-      amount: valorCentavos,
-      paidAmount: valorCentavos,
-      status: 'PAID',
-      externalId: compra.checkoutId,
-    },
-  });
+  /* No formato do evento REAL do sandbox: sem `id` na raiz, cobranca em `data.transparent`. */
+  const corpo = JSON.stringify(
+    eventoNoFormatoReal({
+      cobrancaId: compra.cobrancaId,
+      checkoutId: compra.checkoutId,
+      valorCentavos,
+    }),
+  );
   return http()
     .post(
       `/api/pagamentos/webhook?webhookSecret=${SEGREDO_WEBHOOK_DESENVOLVIMENTO}`,

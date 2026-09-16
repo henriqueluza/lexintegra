@@ -170,6 +170,8 @@ São **três camadas**, com propósitos diferentes e nenhuma substituindo a outr
 
 Provado contra o emulador, por HTTP, com três entregas sequenciais **e** três concorrentes: um pagamento, dois pedidos, um cliente, uma conta no Auth, um evento de acesso no outbox (`pagamentos/webhook/confirmacao.integration-spec.ts`).
 
+**Segunda errata, da rodada no sandbox (16/09/2026): o evento real nem traz `id` na raiz.** A documentação mostra o envelope com `id` de log; o `transparent.completed` real de um PIX chegou só com `event`, `apiVersion`, `devMode` e `data`, com a cobrança em `data.transparent`. O parser exigia o `id`, e todo pagamento real voltava 422 — nenhum pedido nascia. A decisão desta errata saiu **reforçada**: a idempotência nunca dependeu do id do evento. O `id` passou a ser opcional, e quando ele não vem a trilha em `eventoId` é `evento:cobrança` (`transparent.completed:pix_char_…`). O payload real está verbatim em `apps/api/src/arnes-webhook.ts`, e os testes de integração e o simulador de desenvolvimento passaram a mandar esse formato.
+
 ### ADR-05 — Microsoft Teams via Graph API para o link de reunião, iCalendar para o convite
 
 **Contexto.** O item 2.7.3 pede geração do link por integração com a API do Google Meet, e o 3.3 prevê que a CONTRATANTE forneça essa credencial. A API REST do Meet exige Google Workspace e não funciona com service account comum. Versões anteriores desta arquitetura avaliaram o Google Calendar API e depois um link fixo por advogado como saídas para esse impasse.
@@ -564,7 +566,7 @@ roteiro.
 
 **Riscos aceitos.**
 
-- **O formato dos eventos e das respostas veio da documentação, não de um evento real.** A leitura aceita a cobrança em `data` ou aninhada (`data.checkout`, `data.transparent`) e exige os campos de que precisa; toda resposta do gateway é validada por schema. A conferência é o roteiro `docs/runbooks/checkout-sandbox.md`, **ainda não executado**.
+- **O formato dos eventos veio da documentação, e o sandbox já desmentiu uma parte.** Observado em 16/09/2026, no `transparent.completed` de um PIX: **sem `id` na raiz** (corrigido — ver a segunda errata do ADR-04), `devMode` na raiz, e a cobrança em `data.transparent`, com `id`, `externalId` e `amount`. A leitura procura primeiro na chave do prefixo do evento; para `checkout.*` (cartão) e `*.refunded`, `data.checkout`/`data.transparent` é **analogia ainda não observada**, e as outras chaves conhecidas seguem como alternativa. Toda resposta do gateway continua validada por schema. O resto da conferência está no roteiro `docs/runbooks/checkout-sandbox.md`, em andamento.
 - **A validade do link do checkout hospedado não está documentada.** Vinte e quatro horas foi o valor conservador (`VALIDADE_CHECKOUT_HOSPEDADO_MS`); ele só decide quando a tela para de oferecer o link e quando a TTL apaga o documento.
 - **A resposta a um segundo estorno da mesma cobrança não está documentada.** Quando o gateway recusa, o adaptador consulta a cobrança e trata `REFUNDED` como "já estornado".
 - **O cartão redireciona**, e a experiência deixa a plataforma no momento mais sensível da compra.

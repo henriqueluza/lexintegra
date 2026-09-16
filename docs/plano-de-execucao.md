@@ -540,11 +540,21 @@ sem pedido.
 | Compra de ponta a ponta | `compra.integration-spec.ts` — da vitrine à ficha preenchida e aos dois cartões |
 | Cancelar não afeta a conta nem os outros pedidos | `pedidos/cancelamento.integration-spec.ts` — retrato antes e depois, campo a campo |
 
-**A rodada no sandbox começou em 16/09 e já achou um desvio**, que é exatamente o
-que ela existe para achar: o AbacatePay recusa a descrição da cobrança com
-travessão (HTTP 400, "Disallowed character in description"). O texto que sai para o
-gateway passou a ser filtrado num lugar só, e — a correção que importa — o gateway
-falso passou a recusar o que o real recusa. Ver o ADR-19.
+**A rodada no sandbox começou em 16/09 e já achou dois desvios**, que é exatamente o
+que ela existe para achar:
+
+- o AbacatePay recusa a descrição da cobrança com travessão (HTTP 400, "Disallowed
+  character in description"). O texto que sai para o gateway passou a ser filtrado
+  num lugar só, e — a correção que importa — o gateway falso passou a recusar o que
+  o real recusa. Ver o ADR-19;
+- o evento real do webhook **não tem `id` na raiz**, ao contrário da documentação, e
+  o parser o exigia: todo pagamento real voltava 422, sem pedido. O `id` virou
+  opcional, e o payload real capturado passou a ser a fixture dos testes e o formato
+  do simulador. Ver a segunda errata do ADR-04.
+
+E um defeito que **não é nosso**: o `abacatepay listen` alterou o corpo ao
+encaminhar o evento (o primeiro alerta da rodada acusou `id` e `devMode` ausentes).
+A conferência seguiu enviando o payload real, assinado, direto à API local.
 
 **O entregável formal diz "no ambiente de teste do gateway", e isso não foi
 feito.** A prova automatizada roda contra o gateway falso, sobre a pilha HTTP real e

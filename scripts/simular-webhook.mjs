@@ -25,11 +25,12 @@
  *   node scripts/simular-webhook.mjs <checkoutId>             pagamento confirmado
  *   node scripts/simular-webhook.mjs <checkoutId> estornado   estorno integral
  *
- * O `checkoutId` e o `?id=` da tela de checkout. O id do evento e deterministico:
- * rodar duas vezes e a REENTREGA do mesmo evento, e a API responde `duplicata`.
+ * O `checkoutId` e o `?id=` da tela de checkout. O evento sai igual a cada
+ * execucao: rodar duas vezes e a REENTREGA dele, e a API responde `duplicata`.
  */
 
 import { createHmac } from 'node:crypto';
+import { eventoNoFormatoReal } from '../apps/api/src/arnes-webhook.ts';
 import {
   CHAVE_HMAC_DESENVOLVIMENTO,
   SEGREDO_WEBHOOK_DESENVOLVIMENTO,
@@ -45,8 +46,8 @@ const HOST_FIRESTORE = process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8081';
 const PROJETO = process.env.GCLOUD_PROJECT ?? 'demo-lexintegra';
 
 const ACOES = {
-  pago: { sufixo: 'completed', status: 'PAID' },
-  estornado: { sufixo: 'refunded', status: 'REFUNDED' },
+  pago: { sufixo: 'completed' },
+  estornado: { sufixo: 'refunded' },
 };
 
 function conferirGuardas() {
@@ -106,21 +107,21 @@ async function principal() {
   await confirmarEmuladorFirestore(HOST_FIRESTORE, PROJETO);
   const checkout = await lerCheckout(checkoutId);
 
-  const { sufixo, status } = ACOES[acao];
+  const { sufixo } = ACOES[acao];
   const origem = checkout.metodo === 'cartao' ? 'checkout' : 'transparent';
-  const corpo = JSON.stringify({
-    id: `log_simulado_${checkout.cobrancaId}_${acao}`,
-    event: `${origem}.${sufixo}`,
-    apiVersion: 2,
-    devMode: true,
-    data: {
-      id: checkout.cobrancaId,
-      externalId: checkoutId,
-      amount: checkout.totalCentavos,
-      paidAmount: checkout.totalCentavos,
-      status,
-    },
-  });
+  /*
+   * No formato do evento REAL do sandbox (`arnes-webhook.ts`): sem `id` na raiz, e
+   * a cobranca sob a chave do prefixo do evento. Simular com o formato da
+   * documentacao esconderia justamente o que o sandbox desmentiu.
+   */
+  const corpo = JSON.stringify(
+    eventoNoFormatoReal({
+      evento: `${origem}.${sufixo}`,
+      cobrancaId: checkout.cobrancaId,
+      checkoutId,
+      valorCentavos: checkout.totalCentavos,
+    }),
+  );
 
   const destino = new URL('/api/pagamentos/webhook', API);
   destino.searchParams.set('webhookSecret', SEGREDO_WEBHOOK_DESENVOLVIMENTO);

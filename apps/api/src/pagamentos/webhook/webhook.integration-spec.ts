@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { AppModule } from '../../app.module.js';
+import { TRANSPARENTE_COMPLETED_REAL } from '../../arnes-webhook.js';
 import { configurar, OPCOES_DA_APLICACAO } from '../../configurar.js';
 import { firestoreDeTeste, limparEmuladores } from '../../emulador.js';
 import {
@@ -97,6 +98,20 @@ describe('webhook do gateway sobre HTTP', () => {
     const resposta = await enviar(corpo).expect(200);
 
     expect(resposta.body).toEqual({ recebido: true, resultado: 'ignorado' });
+  });
+
+  /**
+   * O PAYLOAD REAL DO SANDBOX, verbatim (`arnes-webhook.ts`). Antes da correcao,
+   * este corpo voltava 422 "envelope fora do formato (id)": o evento real nao tem
+   * `id` na raiz. Nao ha checkout com aquele `externalId` aqui, entao o pagamento e
+   * registrado como `orfao` — o que importa e que ele foi LIDO, e nao recusado.
+   */
+  it('le o payload real do sandbox, sem id na raiz', async () => {
+    const resposta = await enviar(
+      JSON.stringify(TRANSPARENTE_COMPLETED_REAL),
+    ).expect(200);
+
+    expect(resposta.body).toEqual({ recebido: true, resultado: 'orfao' });
   });
 
   /** CRITERIO DE ACEITE DA ETAPA 8: webhook com assinatura invalida e rejeitado. */

@@ -1,8 +1,125 @@
+import {
+  eventoNoFormatoReal,
+  TRANSPARENTE_COMPLETED_REAL,
+} from '../../arnes-webhook.js';
 import { EventoIlegivel, lerEvento } from './evento.js';
 
 /*
+ * O EVENTO REAL, capturado na rodada do sandbox de 16/09/2026 (ver
+ * `arnes-webhook.ts`). Ele vem primeiro porque foi ele que derrubou o parser: sem
+ * `id` na raiz, e com a cobranca em `data.transparent`. O parser antigo exigia o
+ * `id` e respondia 422 a todo pagamento real.
+ */
+describe('lerEvento com o payload real do sandbox', () => {
+  it('le o transparent.completed real, sem id na raiz', () => {
+    expect(lerEvento(TRANSPARENTE_COMPLETED_REAL)).toEqual({
+      tipo: 'pagamento',
+      eventoId: 'transparent.completed:pix_char_czxa1U3t5ZpHDY6p65fWCFnW',
+      nome: 'transparent.completed',
+      devMode: true,
+      cobranca: {
+        id: 'pix_char_czxa1U3t5ZpHDY6p65fWCFnW',
+        externalId: 'b104a4d7fe57637ab90266f713496966449a8947',
+        valorCentavos: 1_160_000,
+        origem: 'transparente',
+      },
+    });
+  });
+
+  /**
+   * O `id` na raiz continua valendo quando vier — a documentacao o mostra, e nao
+   * ha motivo para recusar um envelope que o traga.
+   */
+  it('usa o id da raiz como trilha, quando ele vier', () => {
+    expect(
+      lerEvento({ ...TRANSPARENTE_COMPLETED_REAL, id: 'log_1' }),
+    ).toMatchObject({ tipo: 'pagamento', eventoId: 'log_1' });
+  });
+
+  /**
+   * A cobranca e procurada PRIMEIRO sob a chave do prefixo do evento. Um
+   * `data.checkout` que tambem casasse nao pode ganhar de `data.transparent` num
+   * `transparent.*`.
+   */
+  it('procura a cobranca primeiro na chave do prefixo do evento', () => {
+    const evento = eventoNoFormatoReal({
+      cobrancaId: 'pix_certo',
+      checkoutId: 'checkout-certo',
+      valorCentavos: 100,
+    });
+    const data = evento['data'] as Record<string, unknown>;
+
+    expect(
+      lerEvento({
+        ...evento,
+        data: {
+          checkout: { id: 'bill_errado', externalId: 'outro', amount: 999 },
+          ...data,
+        },
+      }),
+    ).toMatchObject({ cobranca: { id: 'pix_certo', valorCentavos: 100 } });
+  });
+
+  /**
+   * Por analogia ao observado, `checkout.completed` (cartao) em `data.checkout`, e
+   * os estornos sob a chave do proprio prefixo. Nao observados ainda — os testes
+   * fixam a leitura, e o roteiro do sandbox confere o formato.
+   */
+  it.each([
+    ['checkout.completed', 'pagamento', 'hospedado'],
+    ['transparent.refunded', 'estorno', 'transparente'],
+    ['checkout.refunded', 'estorno', 'hospedado'],
+  ])('le %s no mesmo formato', (nome, tipo, origem) => {
+    expect(
+      lerEvento(
+        eventoNoFormatoReal({
+          evento: nome,
+          cobrancaId: 'cobranca-1',
+          checkoutId: 'checkout-1',
+          valorCentavos: 500_000,
+        }),
+      ),
+    ).toMatchObject({
+      tipo,
+      eventoId: `${nome}:cobranca-1`,
+      cobranca: { id: 'cobranca-1', externalId: 'checkout-1', origem },
+    });
+  });
+
+  /**
+   * `data.customer` tem `id` e NAO e a cobranca. Num evento ignorado sem cobranca
+   * legivel, o alerta nao pode apontar para o cliente.
+   */
+  it('nunca toma o id do customer pelo da cobranca', () => {
+    expect(
+      lerEvento({
+        event: 'checkout.disputed',
+        devMode: true,
+        data: { customer: { id: 'cust_123', name: null } },
+      }),
+    ).toMatchObject({
+      motivo: 'contestacao',
+      cobrancaId: null,
+      eventoId: 'checkout.disputed:sem-cobranca',
+    });
+  });
+
+  /**
+   * O primeiro alerta da rodada foi "envelope fora do formato (id, devMode)": o
+   * corpo que o `abacatepay listen` encaminhou tinha perdido o `devMode`. Sem ele,
+   * continua ilegivel — e a trava de ambiente, e nao pode ter valor presumido.
+   */
+  it('continua recusando o envelope sem devMode', () => {
+    const { devMode: _devMode, ...semDevMode } = TRANSPARENTE_COMPLETED_REAL;
+
+    expect(() => lerEvento(semDevMode)).toThrow(/devMode/);
+  });
+});
+
+/*
  * Payloads a partir da documentacao da API v2 (docs.abacatepay.com, consultada em
- * 14/09/2026). Ainda nao conferidos contra um evento real do sandbox.
+ * 14/09/2026), com `id` na raiz. O evento real veio sem ele (bloco acima); estes
+ * continuam como prova de que o envelope documentado tambem e aceito.
  */
 const TRANSPARENTE = {
   id: 'log_abc123xyz',
@@ -134,8 +251,12 @@ describe('lerEvento', () => {
     });
   });
 
+  /*
+   * "Sem id" SAIU desta lista: recusar envelope sem `id` era exatamente o defeito
+   * que o evento real do sandbox expos (ver o bloco do payload real, acima).
+   */
   it.each([
-    ['sem id', { ...TRANSPARENTE, id: undefined }],
+    ['sem event', { ...TRANSPARENTE, event: undefined }],
     ['sem devMode', { ...TRANSPARENTE, devMode: undefined }],
     ['devMode que nao e booleano', { ...TRANSPARENTE, devMode: 'true' }],
     ['corpo nulo', null],

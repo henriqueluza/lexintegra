@@ -4,6 +4,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { VERSAO_TERMOS_CHECKOUT, type NovoProduto } from 'shared';
 import { AppModule } from './app.module.js';
+import { eventoNoFormatoReal } from './arnes-webhook.js';
 import { COLECAO_CHECKOUTS } from './checkout/checkout.js';
 import { configurar, OPCOES_DA_APLICACAO } from './configurar.js';
 import { EmailFalsoTransport } from './email/email-falso.transport.js';
@@ -125,17 +126,14 @@ describe('compra completa (criterio de aceite da Etapa 8)', () => {
           .get()
       ).data() as { cobranca: { id: string } }
     ).cobranca.id;
-    const evento = JSON.stringify({
-      id: 'log_compra_1',
-      event: 'transparent.completed',
-      devMode: true,
-      data: {
-        id: cobrancaId,
-        externalId: (checkout as { checkoutId: string }).checkoutId,
-        amount: 370_000,
-        status: 'PAID',
-      },
-    });
+    /* No formato do evento REAL do sandbox: sem `id` na raiz, cobranca em `data.transparent`. */
+    const evento = JSON.stringify(
+      eventoNoFormatoReal({
+        cobrancaId,
+        checkoutId: (checkout as { checkoutId: string }).checkoutId,
+        valorCentavos: 370_000,
+      }),
+    );
     const { body: webhook } = await http()
       .post(
         `/api/pagamentos/webhook?webhookSecret=${SEGREDO_WEBHOOK_DESENVOLVIMENTO}`,
