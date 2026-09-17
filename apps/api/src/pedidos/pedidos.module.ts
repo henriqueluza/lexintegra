@@ -6,6 +6,7 @@ import { EntregaveisModule } from '../entregaveis/entregaveis.module.js';
 import { TermosModule } from '../termos/termos.module.js';
 import { ObservacoesService } from '../observacoes/observacoes.service.js';
 import { AcessoPedidoModule } from './acesso.module.js';
+import { CancelamentoService } from './cancelamento.service.js';
 import { ConsultaPedidosService } from './consulta.service.js';
 import { DistribuicaoService } from './distribuicao.service.js';
 import { PedidosAdminController } from './pedidos.admin.controller.js';
@@ -46,6 +47,7 @@ import { PedidosService } from './pedidos.service.js';
   ],
   providers: [
     PedidosService,
+    CancelamentoService,
     ConsultaPedidosService,
     DistribuicaoService,
     ObservacoesService,

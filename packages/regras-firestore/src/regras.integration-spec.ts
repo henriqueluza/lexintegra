@@ -62,6 +62,23 @@ const CAMINHOS = [
   ['clientes', 'cliente-1'],
   ['clientes/cliente-1/anamnese', 'anamnese-1'],
   ['pagamentos', 'pagamento-1'],
+  /*
+   * A intencao de compra da Etapa 8. Guarda nome e e-mail de quem ainda nao e
+   * cliente, os itens congelados e o QR code da cobranca — lida ou escrita pelo
+   * navegador, seria a forma mais curta de trocar o preco de um pedido antes de
+   * ele existir.
+   */
+  ['checkouts', 'checkout-1'],
+  /*
+   * O mapeamento snapshot -> produto no gateway, para o cartao (Etapa 8). Escrito
+   * pelo navegador, apontaria um snapshot para um produto de outro preco.
+   */
+  ['produtos-gateway', 'lex_produto-1_0123456789abcdef'],
+  /*
+   * O registro de estorno (Etapa 8, ADR-12). E a trilha de dinheiro devolvido:
+   * escrito pelo navegador, um cliente marcaria o proprio estorno como executado.
+   */
+  ['estornos', 'pedido-1'],
   ['pedidos', 'pedido-1'],
   ['pedidos/pedido-1/entregaveis', 'entregavel-1'],
   ['pedidos/pedido-1/entregaveis/entregavel-1/transicoes', 'transicao-1'],

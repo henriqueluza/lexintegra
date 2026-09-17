@@ -28,6 +28,7 @@ describe('rotas', () => {
     'entrar',
     'recuperar-senha',
     'definir-senha',
+    'checkout',
     'painel',
     'advogado',
     'admin',
@@ -149,6 +150,19 @@ describe('rotas', () => {
    * pedido — uma tela que a API responde vazia para ele, porque
    * `ConsultaPedidosService.listarDoCliente` consulta por `clienteId`.
    */
+  /**
+   * A ficha inicial (Etapa 8, stub) vive sob `painel` e herda o guard de perfil
+   * da arvore; os pedidos exigem a ficha antes de abrir.
+   */
+  it('a ficha inicial fica sob o painel, e os pedidos a exigem', () => {
+    const cliente = routes.find((r) => r.path === 'painel');
+
+    expect(cliente?.children?.some((f) => f.path === 'anamnese')).toBe(true);
+    expect(
+      cliente?.children?.find((f) => f.path === '')?.canActivate,
+    ).toHaveLength(1);
+  });
+
   it('a area do cliente e a do advogado tem guards distintos', () => {
     const cliente = routes.find((r) => r.path === 'painel');
     const advogado = routes.find((r) => r.path === 'advogado');
@@ -170,6 +184,7 @@ describe('rotas', () => {
     'produtos',
     'distribuicao',
     'clientes',
+    'estornos',
     'entregas',
   ])('registra a tela administrativa %s sob admin', (caminho) => {
     const admin = routes.find((r) => r.path === 'admin');

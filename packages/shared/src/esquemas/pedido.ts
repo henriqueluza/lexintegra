@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { EstadoEntregavel } from '../estado-entregavel.js';
+import type { ExecucaoEstorno, SituacaoPedido } from '../situacao-pedido.js';
 import type { SnapshotProduto } from './produto.js';
 
 /**
@@ -61,6 +62,8 @@ export type CartaoPedido = {
   readonly snapshot: SnapshotProduto;
   readonly entregaveis: readonly EntregavelResumo[];
   readonly distribuido: boolean;
+  /** Etapa 8 (ADR-12): cancelado e estornado ficam na tela, com o selo. */
+  readonly situacao: SituacaoPedido;
   /** ISO 8601, ou `null` enquanto o carimbo do servidor nao materializou. */
   readonly criadoEm: string | null;
 };
@@ -91,6 +94,11 @@ export type PedidoParaDistribuir = {
   readonly cliente: { readonly uid: string; readonly nome: string };
   readonly advogadoId: string | null;
   readonly distribuido: boolean;
+  /**
+   * Etapa 8. A caixa de entrada mostra o pedido cancelado em vez de esconde-lo: e
+   * nela que o administrador decide o estorno (ADR-12).
+   */
+  readonly situacao: SituacaoPedido;
   readonly criadoEm: string | null;
 };
 
@@ -130,3 +138,44 @@ export const esquemaSituacaoDistribuicao = z
   .enum(SITUACOES_DISTRIBUICAO)
   .catch('nao_distribuidos')
   .default('nao_distribuidos');
+
+/**
+ * O estorno pedido pelo administrador (ADR-12). O motivo e obrigatorio: e a
+ * trilha de por que dinheiro saiu, e vai ao gateway no estorno integral.
+ */
+export const esquemaNovoEstorno = z.object({
+  motivo: z
+    .string()
+    .trim()
+    .min(3, 'Informe o motivo do estorno.')
+    .max(500, 'O motivo pode ter no maximo 500 caracteres.'),
+});
+
+export type NovoEstorno = z.infer<typeof esquemaNovoEstorno>;
+
+/** O registro de que o escritorio devolveu o valor por fora do gateway. */
+export const esquemaExecucaoManual = z.object({
+  observacao: z
+    .string()
+    .trim()
+    .max(500, 'A observacao pode ter no maximo 500 caracteres.')
+    .optional()
+    .default(''),
+});
+
+export type ExecucaoManual = z.infer<typeof esquemaExecucaoManual>;
+
+/**
+ * A linha do painel de estornos do administrador (ADR-12). `type` e nao
+ * `interface`, pela razao de sempre: `app-tabela` exige assinatura de indice.
+ */
+export type EstornoResumo = {
+  readonly pedidoId: string;
+  readonly pagamentoId: string;
+  readonly produto: string;
+  readonly valorCentavos: number;
+  readonly motivo: string;
+  readonly execucao: ExecucaoEstorno;
+  /** ISO 8601, ou `null` enquanto o carimbo do servidor nao materializou. */
+  readonly solicitadoEm: string | null;
+};

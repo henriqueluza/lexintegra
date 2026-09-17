@@ -1,5 +1,6 @@
 import type { Timestamp } from 'firebase-admin/firestore';
 import type { EstadoEntrega, TipoEvento } from 'shared';
+import type { OrigemDaCobranca } from '../pagamentos/gateway/gateway.js';
 
 /*
  * O VOCABULARIO MORA EM `packages/shared`, e nao aqui.
@@ -32,9 +33,27 @@ export {
  *   memoria do processo. Persistido, seria credencial viva em repouso: quem
  *   lesse o documento poderia trocar a senha da conta.
  */
+/**
+ * O que o estorno integral precisa para ser executado, gravado no proprio registro
+ * (Etapa 8). Nao ha dado pessoal: ids e a origem da cobranca.
+ */
+export interface EstornoDoEvento {
+  readonly pagamentoId: string;
+  readonly cobrancaId: string;
+  readonly origem: OrigemDaCobranca;
+}
+
+export interface NovoEvento {
+  readonly tipo: TipoEvento;
+  readonly destinatarioUid: string;
+  /** So em `estorno-integral`. E o pagamento, e nao o destinatario, que da o id. */
+  readonly estorno?: EstornoDoEvento;
+}
+
 export interface RegistroOutbox {
   readonly tipo: TipoEvento;
   readonly destinatarioUid: string;
+  readonly estorno?: EstornoDoEvento;
   readonly estado: EstadoEntrega;
   readonly criadoEm: Timestamp;
   /** Quantas vezes o registro foi REIVINDICADO. Ver `OutboxService.reivindicar`. */
@@ -98,6 +117,21 @@ export function idDoEvento(
   if (tipo === 'definir-senha') return `definir-senha_${uid}`;
 
   /*
+   * O acesso do cliente acontece UMA vez por conta: a primeira compra. Quem compra
+   * de novo ja tem senha, e o id deterministico faz a segunda compra cair no
+   * mesmo documento em vez de mandar outro link — quem perdeu o primeiro usa
+   * "esqueci a senha".
+   */
+  if (tipo === 'acesso-cliente') return `acesso-cliente_${uid}`;
+
+  /*
+   * Um estorno integral por PAGAMENTO: quem chama passa o id do pagamento no
+   * lugar do uid (ver `chaveDoEvento`). Um segundo pedido de estorno da mesma
+   * cobranca cai no mesmo documento — o gateway nao recebe dois.
+   */
+  if (tipo === 'estorno-integral') return `estorno-integral_${uid}`;
+
+  /*
    * O aviso de exclusao acontece UMA vez por pedido fechado, e o pedido ja e
    * marcado como avisado na mesma transacao. O uid basta — e se o job repetir a
    * passagem no mesmo dia, o `create` estoura como duplicata esperada em vez de
@@ -124,4 +158,9 @@ export function ehDuplicata(erro: unknown): boolean {
   return String((erro as { message?: unknown }).message ?? '').includes(
     'ALREADY_EXISTS',
   );
+}
+
+/** A chave do id: o pagamento, no estorno integral; o destinatario, no resto. */
+export function chaveDoEvento(evento: NovoEvento): string {
+  return evento.estorno?.pagamentoId ?? evento.destinatarioUid;
 }

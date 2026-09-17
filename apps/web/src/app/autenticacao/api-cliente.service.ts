@@ -1,6 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import type {
+  AnamneseProvisoria,
+  SituacaoAnamnese,
+} from 'shared/esquemas/anamnese-provisoria';
 import type { AnexoResumo } from 'shared/esquemas/anexo';
 import type { PedidoDeUpload } from 'shared/esquemas/upload';
 import type {
@@ -8,6 +12,7 @@ import type {
   ObservacaoResumo,
 } from 'shared/esquemas/observacao';
 import type { CartaoPedido, EntregavelResumo } from 'shared/esquemas/pedido';
+import type { SituacaoPedido } from 'shared/situacao-pedido';
 
 /**
  * A area do cliente (itens 2.3.2 a 2.3.4).
@@ -26,6 +31,19 @@ import type { CartaoPedido, EntregavelResumo } from 'shared/esquemas/pedido';
 export class ApiClienteService {
   private readonly http = inject(HttpClient);
 
+  /** ⚠️ Ficha inicial PROVISORIA (Etapa 8) — ver `shared/anamnese-provisoria`. */
+  situacaoDaAnamnese(): Promise<SituacaoAnamnese> {
+    return firstValueFrom(
+      this.http.get<SituacaoAnamnese>('/api/anamnese/situacao'),
+    );
+  }
+
+  enviarAnamnese(ficha: AnamneseProvisoria): Promise<SituacaoAnamnese> {
+    return firstValueFrom(
+      this.http.post<SituacaoAnamnese>('/api/anamnese', ficha),
+    );
+  }
+
   listarMeusPedidos(): Promise<CartaoPedido[]> {
     return firstValueFrom(this.http.get<CartaoPedido[]>('/api/pedidos'));
   }
@@ -33,6 +51,19 @@ export class ApiClienteService {
   obterMeuPedido(id: string): Promise<CartaoPedido> {
     return firstValueFrom(
       this.http.get<CartaoPedido>(`/api/pedidos/${encodeURIComponent(id)}`),
+    );
+  }
+
+  /**
+   * O cancelamento (Etapa 8, ADR-12). Nao devolve dinheiro — isso e o estorno, do
+   * administrador — e o servidor recusa com 409 depois de o trabalho comecar.
+   */
+  cancelarPedido(pedidoId: string): Promise<{ situacao: SituacaoPedido }> {
+    return firstValueFrom(
+      this.http.post<{ situacao: SituacaoPedido }>(
+        `/api/pedidos/${encodeURIComponent(pedidoId)}/cancelamento`,
+        {},
+      ),
     );
   }
 

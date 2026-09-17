@@ -15,6 +15,7 @@ import { AcessoPedidoService } from './acesso.service.js';
 import { ConsultaPedidosService } from './consulta.service.js';
 import { DistribuicaoService } from './distribuicao.service.js';
 import { PedidosService, type NovoPedido } from './pedidos.service.js';
+import { comSnapshot } from '../arnes-pedidos.js';
 
 const ADMIN = 'uid-admin';
 const CLARA = 'uid-clara';
@@ -50,12 +51,19 @@ beforeEach(async () => {
 
   const acesso = new AcessoPedidoService(banco);
   observacoes = new ObservacoesService(acesso);
-  anexos = new AnexosService(acesso, new ArmazenamentoFalso(), new FilaFalsa<TarefaDeVarredura>());
+  anexos = new AnexosService(
+    acesso,
+    new ArmazenamentoFalso(),
+    new FilaFalsa<TarefaDeVarredura>(),
+  );
 });
 
 async function comprar(itens: NovoPedido[]): Promise<void> {
   await banco.runTransaction(async (transacao) => {
-    pedidos.gravar(transacao, await pedidos.preparar(transacao, itens));
+    pedidos.gravar(
+      transacao,
+      pedidos.preparar(await comSnapshot(pedidos, itens)),
+    );
   });
 }
 

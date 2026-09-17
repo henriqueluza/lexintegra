@@ -8,10 +8,11 @@ import {
 } from 'firebase-admin/firestore';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import {
+  chaveDoEvento,
   idDoEvento,
   type EstadoEntrega,
+  type NovoEvento,
   type RegistroOutbox,
-  type TipoEvento,
 } from './evento.js';
 import {
   CONFIGURACAO_OUTBOX,
@@ -81,14 +82,15 @@ export class OutboxService {
    */
   registrar(
     transacao: Transaction,
-    evento: { tipo: TipoEvento; destinatarioUid: string },
+    evento: NovoEvento,
     agora: number = Date.now(),
   ): string {
-    const id = idDoEvento(evento.tipo, evento.destinatarioUid, agora);
+    const id = idDoEvento(evento.tipo, chaveDoEvento(evento), agora);
 
     transacao.create(this.referencia(id), {
       tipo: evento.tipo,
       destinatarioUid: evento.destinatarioUid,
+      ...(evento.estorno === undefined ? {} : { estorno: evento.estorno }),
       estado: 'pendente',
       criadoEm: FieldValue.serverTimestamp(),
       tentativas: 0,
@@ -123,10 +125,10 @@ export class OutboxService {
    */
   async registrarSeAusente(
     transacao: Transaction,
-    evento: { tipo: TipoEvento; destinatarioUid: string },
+    evento: NovoEvento,
     agora?: number,
   ): Promise<string> {
-    const id = idDoEvento(evento.tipo, evento.destinatarioUid, agora);
+    const id = idDoEvento(evento.tipo, chaveDoEvento(evento), agora);
     const existente = await transacao.get(this.referencia(id));
     if (existente.exists) return id;
 

@@ -52,5 +52,12 @@ export interface DocumentoCliente {
  */
 export interface DocumentoAnamnese {
   campos: { rotulo: string; valor: string }[];
+  /**
+   * Qual ficha gerou os campos. A Etapa 8 grava a ficha PROVISORIA
+   * (`provisoria-v0`, ver `anamnese-provisoria/`); a definitiva ganha outro
+   * modelo, e as fichas antigas continuam legiveis porque a tela so conhece
+   * rotulo e valor.
+   */
+  modelo?: string;
   criadoEm: Timestamp | FieldValue;
 }

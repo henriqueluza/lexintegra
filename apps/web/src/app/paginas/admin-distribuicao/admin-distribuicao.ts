@@ -9,6 +9,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import type { AdvogadoResumo } from 'shared/esquemas/advogado';
 import type {
+  EstornoResumo,
   PedidoParaDistribuir,
   SituacaoDistribuicao,
 } from 'shared/esquemas/pedido';
@@ -23,6 +24,13 @@ import {
   type ColunaTabela,
 } from '../../ui/tabela/tabela';
 import { mensagemDoErro } from '../erros';
+import { EstornoPedido } from './estorno-pedido';
+
+const ROTULO_DA_SITUACAO: Readonly<Record<string, string>> = {
+  ativo: 'Ativo',
+  cancelado: 'Cancelado pelo cliente',
+  estornado: 'Estornado',
+};
 
 /**
  * Recebimento e distribuicao das solicitacoes (itens 2.5.5 a 2.5.7).
@@ -40,6 +48,7 @@ import { mensagemDoErro } from '../erros';
     ReactiveFormsModule,
     Botao,
     CelulaTabela,
+    EstornoPedido,
     MensagemErro,
     Selecao,
     Tabela,
@@ -57,7 +66,9 @@ export class AdminDistribuicao implements OnInit {
     { chave: 'produto', rotulo: 'Produto' },
     { chave: 'cliente', rotulo: 'Cliente' },
     { chave: 'situacao', rotulo: 'Situacao' },
+    { chave: 'pedido', rotulo: 'Pedido' },
     { chave: 'acoes', rotulo: 'Distribuir', alinhamento: 'fim' },
+    { chave: 'estorno', rotulo: 'Estorno', alinhamento: 'fim' },
   ];
 
   protected readonly opcoesDeSituacao: readonly OpcaoSelecao[] = [
@@ -74,6 +85,9 @@ export class AdminDistribuicao implements OnInit {
   protected readonly falha = signal<string | null>(null);
   /** Escolha por linha: um `<select>` por pedido, sem estado global. */
   protected readonly escolhido = signal<Readonly<Record<string, string>>>({});
+  /** Etapa 8: o pedido cujo estorno esta sendo confirmado. */
+  protected readonly aEstornar = signal<PedidoParaDistribuir | null>(null);
+  protected readonly aviso = signal<string | null>(null);
 
   protected readonly situacao = new FormControl<SituacaoDistribuicao>(
     'nao_distribuidos',
@@ -108,6 +122,25 @@ export class AdminDistribuicao implements OnInit {
       this.advogados().find((advogado) => advogado.uid === uid)?.nome ??
       'Advogado removido'
     );
+  }
+
+  protected rotuloDaSituacao(pedido: PedidoParaDistribuir): string {
+    return ROTULO_DA_SITUACAO[pedido.situacao] ?? pedido.situacao;
+  }
+
+  protected abrirEstorno(pedido: PedidoParaDistribuir): void {
+    this.aviso.set(null);
+    this.aEstornar.set(pedido);
+  }
+
+  protected async estornado(estorno: EstornoResumo): Promise<void> {
+    this.aEstornar.set(null);
+    this.aviso.set(
+      estorno.execucao === 'gateway_pendente'
+        ? 'Estorno registrado. A cobranca inteira sera estornada pelo gateway.'
+        : 'Estorno registrado. Devolva o valor ao cliente e registre em Estornos.',
+    );
+    await this.recarregar();
   }
 
   protected escolher(pedidoId: string, evento: Event): void {

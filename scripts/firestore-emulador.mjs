@@ -92,3 +92,22 @@ export async function gravarDocumento(host, projeto, caminho, dados) {
     throw new Error(`PATCH ${caminho} respondeu ${resposta.status}: ${corpo}`);
   }
 }
+
+/**
+ * Le um documento pelo id. Devolve `null` se ele nao existe, e os campos no
+ * formato tipado da REST (`{ campo: { stringValue: ... } }`) se existe — quem le
+ * sabe quais campos quer, e decodifica so esses.
+ */
+export async function lerDocumento(host, projeto, caminho) {
+  const url = `http://${host}/v1/projects/${projeto}/databases/(default)/documents/${caminho}`;
+  const resposta = await fetch(url, {
+    headers: { authorization: 'Bearer owner' },
+  });
+
+  if (resposta.status === 404) return null;
+  if (!resposta.ok) {
+    const corpo = await resposta.text();
+    throw new Error(`GET ${caminho} respondeu ${resposta.status}: ${corpo}`);
+  }
+  return (await resposta.json()).fields ?? {};
+}

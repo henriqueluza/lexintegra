@@ -1,4 +1,8 @@
-import { NotFoundException } from '@nestjs/common';
+import {
+  InternalServerErrorException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 import type { NovoProduto } from 'shared';
 import { FirestoreFalso } from '../firestore-falso.js';
@@ -8,6 +12,7 @@ import {
   PedidosService,
   type NovoPedido,
 } from './pedidos.service.js';
+import { comSnapshot } from '../arnes-pedidos.js';
 
 const ADMIN = 'uid-admin';
 const CLIENTE = 'uid-cliente';
@@ -66,7 +71,10 @@ async function comprarCom(
 ): Promise<void> {
   await arranjo.banco.runTransaction(async (transacao) => {
     const t = transacao as unknown as Transaction;
-    arranjo.pedidos.gravar(t, await arranjo.pedidos.preparar(t, itens));
+    arranjo.pedidos.gravar(
+      t,
+      arranjo.pedidos.preparar(await comSnapshot(arranjo.pedidos, itens)),
+    );
   });
 }
 
@@ -157,27 +165,35 @@ describe('PedidosService', () => {
     });
 
     /**
-     * Le o produto ANTES de qualquer escrita. O Firestore recusa leitura depois de
-     * escrita dentro da transacao, e o sintoma seria falha so sob contencao — o
-     * pior tipo, porque passa em teste e falha em producao.
+     * A GRAVACAO NAO LE NADA (Etapa 8). O snapshot foi congelado no checkout e
+     * chega pronto; a transacao da confirmacao so escreve. Um `get produtos/...`
+     * dentro dela seria o snapshot sendo tirado de novo, na hora da confirmacao
+     * — exatamente o risco que a etapa existe para fechar.
      */
-    it('le o produto antes de escrever qualquer coisa', async () => {
+    it('grava sem ler o produto dentro da transacao', async () => {
       const arranjo = montar();
       const { id: produtoId } = await arranjo.produtos.criar(
         DUE_DILIGENCE,
         ADMIN,
       );
+      const itens = await comSnapshot(arranjo.pedidos, [
+        {
+          pedidoId: 'pedido-1',
+          clienteId: CLIENTE,
+          pagamentoId: 'pagamento-1',
+          produtoOrigemId: produtoId,
+        },
+      ]);
       arranjo.banco.ordemDeEscrita.length = 0;
 
-      await comprarCom(arranjo, {
-        pedidoId: 'pedido-1',
-        clienteId: CLIENTE,
-        pagamentoId: 'pagamento-1',
-        produtoOrigemId: produtoId,
+      await arranjo.banco.runTransaction(async (transacao) => {
+        arranjo.pedidos.gravar(
+          transacao as unknown as Transaction,
+          arranjo.pedidos.preparar(itens),
+        );
       });
 
       expect(arranjo.banco.ordemDeEscrita).toEqual([
-        `get produtos/${produtoId}`,
         'create pedidos/pedido-1',
         'create pedidos/pedido-1/entregaveis/001',
         'create pedidos/pedido-1/entregaveis/001/transicoes/0001',
@@ -199,18 +215,101 @@ describe('PedidosService', () => {
         'ALREADY_EXISTS',
       );
     });
+  });
 
+  /* ------------------------------------------------------------------------ */
+  /* Congelamento no checkout — Etapa 8                                         */
+  /* ------------------------------------------------------------------------ */
+
+  describe('congelamento', () => {
     it('recusa produto inexistente', async () => {
       const arranjo = montar();
 
-      await expect(
-        comprarCom(arranjo, {
-          pedidoId: 'pedido-1',
-          clienteId: CLIENTE,
-          pagamentoId: 'pagamento-1',
-          produtoOrigemId: 'nao-existe',
-        }),
-      ).rejects.toThrow(NotFoundException);
+      await expect(arranjo.pedidos.congelar(['nao-existe'])).rejects.toThrow(
+        UnprocessableEntityException,
+      );
+    });
+
+    /** Saiu da vitrine, nao entra num carrinho. */
+    it('recusa produto inativo', async () => {
+      const arranjo = montar();
+      const { id } = await arranjo.produtos.criar(DUE_DILIGENCE, ADMIN);
+      await arranjo.produtos.desativar(id, ADMIN);
+
+      await expect(arranjo.pedidos.congelar([id])).rejects.toThrow(
+        UnprocessableEntityException,
+      );
+    });
+
+    /**
+     * Dois itens iguais sao dois pedidos, com o MESMO snapshot — e o produto e
+     * lido uma vez so. Duas leituras poderiam pegar o produto antes e depois de
+     * uma edicao, e o mesmo carrinho sairia com dois precos.
+     */
+    it('le uma vez o produto repetido e mantem a ordem dos itens', async () => {
+      const arranjo = montar();
+      const { id: a } = await arranjo.produtos.criar(DUE_DILIGENCE, ADMIN);
+      const { id: b } = await arranjo.produtos.criar(
+        { ...DUE_DILIGENCE, nome: 'Outro produto', precoCentavos: 100 },
+        ADMIN,
+      );
+      arranjo.banco.ordemDeEscrita.length = 0;
+
+      const congelados = await arranjo.pedidos.congelar([a, b, a]);
+
+      expect(congelados.map((item) => item.produtoOrigemId)).toEqual([a, b, a]);
+      expect(congelados.map((item) => item.snapshot.precoCentavos)).toEqual([
+        480_000, 100, 480_000,
+      ]);
+      expect(
+        arranjo.banco.ordemDeEscrita.filter((op) => op === `get produtos/${a}`),
+      ).toHaveLength(1);
+    });
+
+    it('nao congela ativo nem carimbos', async () => {
+      const arranjo = montar();
+      const { id } = await arranjo.produtos.criar(DUE_DILIGENCE, ADMIN);
+
+      const [item] = await arranjo.pedidos.congelar([id]);
+
+      expect(item.snapshot).toEqual(DUE_DILIGENCE);
+    });
+  });
+
+  describe('preparacao', () => {
+    const DADOS = {
+      pedidoId: 'pedido-1',
+      clienteId: CLIENTE,
+      pagamentoId: 'pagamento-1',
+      produtoOrigemId: 'produto-1',
+    };
+
+    /**
+     * O snapshot atravessou um documento entre o checkout e o webhook. Um campo
+     * faltando estoura aqui, antes da transacao escrever qualquer coisa.
+     */
+    it.each([
+      ['sem preco', { ...DUE_DILIGENCE, precoCentavos: undefined }],
+      ['preco em reais', { ...DUE_DILIGENCE, precoCentavos: 4800.5 }],
+      ['sem entregaveis', { ...DUE_DILIGENCE, entregaveis: [] }],
+      ['nulo', null],
+    ])('recusa snapshot %s', (_caso, snapshot) => {
+      const arranjo = montar();
+
+      expect(() => arranjo.pedidos.preparar([{ ...DADOS, snapshot }])).toThrow(
+        InternalServerErrorException,
+      );
+    });
+
+    /** Campo a mais no documento nao entra no pedido: `congelarProduto` lista os nove. */
+    it('descarta campo que nao faz parte do snapshot', () => {
+      const arranjo = montar();
+
+      const [preparado] = arranjo.pedidos.preparar([
+        { ...DADOS, snapshot: { ...DUE_DILIGENCE, ativo: true, interno: 'x' } },
+      ]);
+
+      expect(preparado.snapshot).toEqual(DUE_DILIGENCE);
     });
   });
 

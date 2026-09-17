@@ -16,7 +16,7 @@ import { FIRESTORE } from '../firebase/firebase.module.js';
 
 export const COLECAO_PRODUTOS = 'produtos';
 
-interface DocumentoProduto {
+export interface DocumentoProduto {
   nome: string;
   descricao: string;
   precoCentavos: number;

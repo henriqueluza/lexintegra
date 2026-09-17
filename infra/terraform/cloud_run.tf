@@ -153,6 +153,23 @@ resource "google_cloud_run_v2_service" "api" {
         value = tostring(var.proxies_confiaveis)
       }
 
+      # Etapa 8. Obrigatoria em producao: ausente, a API RECUSA SUBIR (ver
+      # `pagamentos/gateway/modo.ts`). `desligado` e decisao, e nao esquecimento:
+      # checkout e webhook respondem 503 ate a chave de producao existir e a
+      # primeira transacao real ser feita a mao ("So voce — Etapa 8").
+      #
+      # NENHUM SECRET DO ABACATEPAY E REFERENCIADO AQUI AINDA, de proposito. Um
+      # `secret_key_ref` para um secret sem versao impede a revisao de subir (ver
+      # o `RESEND_API_KEY` abaixo), e os segredos do webhook so existem quando o
+      # endpoint for configurado no painel do escritorio.
+      #
+      # `producao` NAO e um valor aceito pelo codigo nesta etapa (regra
+      # inviolavel 20): trocar a string aqui derruba o deploy, nao liga cobranca.
+      env {
+        name  = "PAGAMENTOS_MODO"
+        value = "desligado"
+      }
+
       # A chave chega por referencia ao Secret Manager, nunca como valor no
       # Terraform: um `env { value = ... }` com a chave a colocaria no state, que
       # fica no bucket, e no plan comentado no PR (regra inviolavel 9).

@@ -113,6 +113,27 @@ module.exports = {
       to: { path: '^@google-cloud/storage' },
     },
     {
+      name: 'so-a-fabrica-conhece-o-abacatepay',
+      severity: 'error',
+      comment:
+        'Etapa 8, regra inviolavel 20. O adaptador do AbacatePay so pode ser ' +
+        'instanciado por `pagamentos/gateway/criar-gateway.ts`, que so o escolhe ' +
+        'depois de `modo.ts` validar o modo, o prefixo da chave e os segredos do ' +
+        'webhook. Um `new AbacatePayGateway(...)` em outro modulo passaria por ' +
+        'cima da trava contra producao inteira — e sandbox e producao usam a ' +
+        'mesma URL, entao nada falharia: so cobraria de verdade.',
+      from: {
+        path: '^apps/api',
+        pathNot: [
+          '^apps/api/src/pagamentos/gateway/(criar-gateway|abacatepay\\.gateway)\\.ts$',
+          'spec\\.ts$',
+        ],
+      },
+      to: {
+        path: '^apps/api/src/pagamentos/gateway/abacatepay\\.gateway\\.ts$',
+      },
+    },
+    {
       name: 'sem-dev-dep-em-producao',
       severity: 'error',
       comment: 'Modulo de producao dependendo de devDependency.',

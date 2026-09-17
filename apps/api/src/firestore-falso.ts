@@ -81,6 +81,21 @@ export class ReferenciaFalsa {
     return Promise.resolve();
   }
 
+  /**
+   * Fora de transacao, com a mesma recusa de documento existente do `create` de
+   * verdade. A Etapa 8 usa isso para registrar pagamento anomalo com id da
+   * cobranca — a reentrega do mesmo evento estoura como duplicata esperada.
+   */
+  create(dados: Dados): Promise<void> {
+    if (this.banco.documentos.has(this.caminho)) {
+      return Promise.reject(
+        Object.assign(new Error('ALREADY_EXISTS'), { code: 6 }),
+      );
+    }
+    this.banco.registrar('create', this.caminho, dados);
+    return Promise.resolve();
+  }
+
   update(dados: Dados): Promise<void> {
     if (!this.banco.documentos.has(this.caminho)) {
       return Promise.reject(new Error('NOT_FOUND'));
@@ -277,9 +292,7 @@ function aplicarSentinelas(anterior: Dados | undefined, dados: Dados): Dados {
 
   for (const [campo, valor] of Object.entries(dados)) {
     const nome =
-      typeof valor === 'object' && valor !== null
-        ? valor.constructor.name
-        : '';
+      typeof valor === 'object' && valor !== null ? valor.constructor.name : '';
 
     if (nome === 'DeleteTransform') {
       delete resultado[campo];

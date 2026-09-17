@@ -3,7 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { AppModule } from './app.module.js';
-import { configurar } from './configurar.js';
+import { configurar, OPCOES_DA_APLICACAO } from './configurar.js';
 import { limparEmuladores } from './emulador.js';
 
 const ANA = {
@@ -29,6 +29,7 @@ let app: INestApplication;
 beforeEach(async () => {
   await limparEmuladores();
   app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    ...OPCOES_DA_APLICACAO,
     logger: false,
   });
   configurar(app as NestExpressApplication);

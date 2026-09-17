@@ -1,0 +1,126 @@
+/*
+ * Direcao A (Catedra), como a home: quem chega ao checkout ainda nao tem conta.
+ * Uma coluna so, na medida de leitura — a pessoa confere a lista e o valor antes
+ * de pagar, e duas colunas espalhariam o que precisa ser lido junto.
+ */
+.checkout {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s7) var(--s4);
+}
+
+.checkout__marca {
+  font-family: var(--fonte-interface);
+  font-size: var(--t-mini);
+  letter-spacing: var(--letra-caixa-alta);
+  text-transform: uppercase;
+  color: var(--acento);
+  text-decoration: none;
+}
+
+.checkout__titulo {
+  margin: 0;
+  font-family: var(--fonte-display);
+  font-weight: var(--peso-titulo);
+  font-size: var(--t-t2);
+  color: var(--texto);
+}
+
+.checkout__caixa {
+  width: 100%;
+  max-width: var(--medida-texto);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+.checkout__caixa h2 {
+  margin: 0;
+  font-family: var(--fonte-display);
+  font-weight: var(--peso-titulo);
+  font-size: var(--t-t3);
+  color: var(--texto);
+}
+
+.checkout__caixa p {
+  margin: var(--s2) 0 0;
+  color: var(--texto-2);
+  line-height: var(--altura-solta);
+}
+
+.checkout__aviso,
+.checkout__resumo,
+.checkout__pix {
+  border: var(--borda-fina) solid var(--divisor);
+  padding: var(--s5);
+}
+
+.checkout__itens {
+  margin: var(--s4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.checkout__itens li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s2) 0;
+  border-bottom: var(--borda-fina) solid var(--divisor);
+  color: var(--texto-2);
+  font-size: var(--t-menor);
+}
+
+.checkout__total {
+  color: var(--texto);
+}
+
+.checkout__auxiliar {
+  font-size: var(--t-mini);
+  color: var(--texto-3);
+}
+
+.checkout__formulario,
+.checkout__pix {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.checkout__metodos {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.checkout__metodos legend {
+  margin-bottom: var(--s2);
+  font-size: var(--t-menor);
+  color: var(--texto);
+}
+
+.checkout__opcao {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  color: var(--texto);
+  font-size: var(--t-menor);
+}
+
+.checkout__qr {
+  align-self: center;
+  width: var(--tamanho-qr);
+  height: var(--tamanho-qr);
+}
+
+.checkout__link {
+  display: inline-block;
+  margin-top: var(--s4);
+  color: var(--acento-forte);
+}

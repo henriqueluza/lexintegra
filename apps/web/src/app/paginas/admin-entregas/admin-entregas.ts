@@ -33,6 +33,8 @@ const ROTULO_DO_TIPO: Readonly<Record<string, string>> = {
   'definir-senha': 'Acesso de advogado',
   'redefinir-senha': 'Redefinicao de senha',
   'aviso-exclusao-arquivos': 'Aviso de exclusao',
+  'acesso-cliente': 'Acesso de cliente',
+  'estorno-integral': 'Estorno integral no gateway',
 };
 
 /**

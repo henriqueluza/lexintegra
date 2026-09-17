@@ -1,4 +1,18 @@
+import type { NestApplicationOptions } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+
+/**
+ * Opcoes de CRIACAO da aplicacao, que producao e teste de integracao passam ao
+ * `NestFactory.create`. Separadas de `configurar` porque o Nest as recebe antes
+ * de a aplicacao existir.
+ *
+ * `rawBody: true` E A ASSINATURA DO WEBHOOK (Etapa 8). O HMAC do AbacatePay e
+ * calculado sobre os BYTES que chegaram, e o corpo que o Nest entrega ao
+ * controlador ja foi reinterpretado como JSON — reserializa-lo muda espacos e
+ * ordem de chave, e a assinatura de um evento legitimo deixaria de conferir. Um
+ * arnes de teste que esquecesse esta opcao validaria outra coisa que producao.
+ */
+export const OPCOES_DA_APLICACAO: NestApplicationOptions = { rawBody: true };
 
 /**
  * Configuracao que producao e teste de integracao compartilham.

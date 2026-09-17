@@ -220,3 +220,61 @@ resource "google_firestore_index" "outbox_por_estado" {
     order      = "DESCENDING"
   }
 }
+
+# --- Etapa 8: TTL da intencao de compra -------------------------------------
+#
+# `checkouts` guarda nome e e-mail de quem ainda nao pagou (e talvez nunca pague).
+# A TTL nativa do Firestore apaga o documento depois de `apagarApos` — que o
+# `CheckoutService` escreve SEMPRE, ja na criacao, porque documento sem o campo e
+# ignorado pela TTL e guardaria o dado pessoal para sempre.
+#
+# `apagarApos` e o vencimento da cobranca MAIS 48 horas, e nao o vencimento: um
+# pagamento feito no ultimo segundo precisa que o webhook ainda encontre o checkout.
+# Um webhook depois disso vira pagamento `orfao`, com alerta, e o aceite dos
+# termos ja foi copiado para o pagamento na confirmacao.
+#
+# A exclusao pela TTL NAO e imediata: o Firestore apaga "normalmente em ate 24
+# horas" depois do prazo. Nenhum codigo pode depender do documento ter sumido.
+#
+# `index_config {}` vazio desliga o indice de campo unico de `apagarApos`, como a
+# documentacao recomenda para campo de TTL: ele e escrito em todo documento e
+# nunca e consultado, entao o indice seria custo de escrita sem uso.
+#
+# NAO HA TESTE AUTOMATIZADO DA TTL: o emulador nao a executa. O que o codigo prova
+# e que o campo nunca fica ausente (`checkout.service.spec.ts`); o que este
+# recurso prova e visto no `terraform plan`.
+resource "google_firestore_field" "checkouts_ttl" {
+  project    = var.project_id
+  database   = google_firestore_database.default.name
+  collection = "checkouts"
+  field      = "apagarApos"
+
+  ttl_config {}
+
+  index_config {}
+}
+
+# `GET /api/admin/estornos` (Etapa 8) — EstornosService.listarPendentes monta
+# `where('execucao', '==', 'manual_pendente').orderBy('solicitadoEm', 'desc')`: o
+# que o escritorio ainda precisa devolver a mao. `estornos` e colecao RAIZ de
+# proposito — em subcolecao do pagamento, a mesma consulta exigiria indice de
+# grupo de colecoes.
+#
+# As outras consultas novas da etapa (`pedidos` e `estornos` por `pagamentoId`,
+# `checkouts` por `carrinhoId`) sao igualdade num campo so, e usam o indice de
+# campo unico que o Firestore mantem sozinho.
+resource "google_firestore_index" "estornos_pendentes" {
+  project    = var.project_id
+  database   = google_firestore_database.default.name
+  collection = "estornos"
+
+  fields {
+    field_path = "execucao"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "solicitadoEm"
+    order      = "DESCENDING"
+  }
+}

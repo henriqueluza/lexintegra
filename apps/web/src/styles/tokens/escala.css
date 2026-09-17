@@ -64,6 +64,13 @@
   --medida-auxiliar: 40ch;
 
   /*
+   * O QR code do PIX (Etapa 8). Em pixel, e nao em `ch`: o que importa e a camera
+   * do celular conseguir ler, e abaixo de ~200px a leitura falha em tela de baixa
+   * densidade.
+   */
+  --tamanho-qr: 240px;
+
+  /*
    * Duracoes. Toda transicao que as usa precisa ser cancelada sob
    * `prefers-reduced-motion` — ver `base.css`.
    */

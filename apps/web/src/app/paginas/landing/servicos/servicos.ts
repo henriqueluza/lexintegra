@@ -7,6 +7,7 @@ import {
 } from '@angular/core';
 import type { ProdutoVitrine } from 'shared/esquemas/vitrine';
 import { paraReais } from '../../../comum/moeda';
+import { CarrinhoService } from '../../../publico/carrinho.service';
 import { PreCadastroService } from '../../../publico/pre-cadastro.service';
 import { Botao } from '../../../ui/botao/botao';
 import { Carregando } from '../../../ui/carregando/carregando';
@@ -29,6 +30,9 @@ import { TEXTOS } from '../textos';
  * cadeado: mostram que existe um catalogo do outro lado, sem mostrar o catalogo.
  * Eles sao `aria-hidden` porque nao ha nada ali para ler — quem usa leitor de tela
  * recebe o aviso e o botao, que e a informacao inteira.
+ *
+ * O CARRINHO (Etapa 8) mora aqui porque so existe com a vitrine aberta, e nao
+ * chama a API: e estado do navegador ate o checkout.
  */
 @Component({
   selector: 'app-servicos',
@@ -39,6 +43,7 @@ import { TEXTOS } from '../textos';
 })
 export class Servicos {
   private readonly preCadastro = inject(PreCadastroService);
+  protected readonly carrinho = inject(CarrinhoService);
 
   protected readonly textos = TEXTOS;
   protected readonly liberado = this.preCadastro.liberado;
@@ -68,6 +73,14 @@ export class Servicos {
 
   protected preco(centavos: number): string {
     return paraReais(centavos);
+  }
+
+  protected adicionar(produto: ProdutoVitrine): void {
+    this.carrinho.adicionar(produto);
+  }
+
+  protected remover(indice: number): void {
+    this.carrinho.remover(indice);
   }
 
   protected async buscar(): Promise<void> {

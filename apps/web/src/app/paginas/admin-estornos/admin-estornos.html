@@ -1,0 +1,40 @@
+<section class="estornos">
+  <h1 class="estornos__titulo">Estornos</h1>
+
+  <p class="estornos__nota">
+    Pedidos estornados de um carrinho com outros pedidos ativos. O gateway so
+    estorna a cobranca inteira, entao o valor destes e devolvido pelo
+    escritorio, por fora — registre aqui depois de devolver.
+  </p>
+
+  @if (falha(); as mensagem) {
+  <app-mensagem-erro variante="bloco">{{ mensagem }}</app-mensagem-erro>
+  } @if (falhaDaLista()) {
+  <app-mensagem-erro variante="bloco">
+    Nao foi possivel carregar os estornos. Recarregue a pagina.
+  </app-mensagem-erro>
+  }
+
+  <app-tabela
+    legenda="Estornos pendentes de devolucao manual"
+    [colunas]="colunas"
+    [linhas]="linhas()"
+    [carregando]="carregando()"
+    mensagemVazia="Nenhuma devolucao pendente."
+  >
+    <ng-template appCelulaTabela let-linha let-coluna="coluna">
+      @switch (coluna.chave) { @case ('produto') { {{ comoEstorno(linha).produto
+      }} } @case ('valor') { {{ valor(comoEstorno(linha)) }} } @case ('motivo')
+      { {{ comoEstorno(linha).motivo }} } @case ('acoes') {
+      <app-botao
+        variante="primario"
+        tamanho="p"
+        [carregando]="emCurso() === comoEstorno(linha).pedidoId"
+        (click)="registrar(comoEstorno(linha))"
+      >
+        Registrar devolucao
+      </app-botao>
+      } }
+    </ng-template>
+  </app-tabela>
+</section>

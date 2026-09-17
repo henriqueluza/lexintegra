@@ -1,0 +1,152 @@
+<main class="checkout">
+  <a class="checkout__marca" routerLink="/">LexIntegra</a>
+  <h1 class="checkout__titulo">{{ textos.titulo }}</h1>
+
+  <div class="checkout__caixa">
+    @switch (etapa()) { @case ('preparando') {
+    <app-carregando variante="bloco" rotulo="Carregando o checkout" />
+    } @case ('sem-liberacao') {
+    <section class="checkout__aviso">
+      <h2>{{ textos.semLiberacao.titulo }}</h2>
+      <p>{{ textos.semLiberacao.texto }}</p>
+      <a class="checkout__link" routerLink="/" fragment="cadastro">
+        {{ textos.semLiberacao.acao }}
+      </a>
+    </section>
+    } @case ('vazio') {
+    <section class="checkout__aviso">
+      <h2>{{ textos.vazio.titulo }}</h2>
+      <p>{{ textos.vazio.texto }}</p>
+      <a class="checkout__link" routerLink="/" fragment="servicos">
+        {{ textos.vazio.acao }}
+      </a>
+    </section>
+    } @case ('formulario') {
+    <section class="checkout__resumo" [attr.aria-label]="textos.resumo.titulo">
+      <h2>{{ textos.resumo.titulo }}</h2>
+      <ul class="checkout__itens">
+        @for (item of carrinho.itens(); track $index) {
+        <li>
+          <span>{{ item.nome }}</span>
+          <span>{{ preco(item.precoCentavos) }}</span>
+        </li>
+        }
+      </ul>
+      <p class="checkout__total">
+        {{ textos.resumo.total }}:
+        <strong>{{ preco(carrinho.totalIndicativoCentavos()) }}</strong>
+      </p>
+      <p class="checkout__auxiliar">{{ textos.resumo.aviso }}</p>
+    </section>
+
+    <form
+      class="checkout__formulario"
+      [formGroup]="formulario"
+      (ngSubmit)="pagar()"
+      (focusin)="prepararVerificacao()"
+    >
+      <app-campo
+        [rotulo]="textos.formulario.nome"
+        formControlName="nome"
+        [obrigatorio]="true"
+        [erro]="erro('nome')"
+      />
+      <app-campo
+        [rotulo]="textos.formulario.email"
+        tipo="email"
+        formControlName="email"
+        [dica]="textos.formulario.dicaEmail"
+        [obrigatorio]="true"
+        [erro]="erro('email')"
+      />
+
+      <fieldset class="checkout__metodos">
+        <legend>{{ textos.formulario.metodo }}</legend>
+        <label class="checkout__opcao">
+          <input type="radio" formControlName="metodo" value="pix" />
+          {{ textos.formulario.pix }}
+        </label>
+        <label class="checkout__opcao">
+          <input type="radio" formControlName="metodo" value="cartao" />
+          {{ textos.formulario.cartao }}
+        </label>
+        @if (formulario.controls.metodo.value === 'cartao') {
+        <p class="checkout__auxiliar">{{ textos.formulario.dicaCartao }}</p>
+        }
+      </fieldset>
+
+      <app-aviso-privacidade
+        [resumo]="textos.termos.resumo"
+        [rotulo]="textos.termos.rotulo"
+      >
+        {{ textos.termos.juridico }}
+      </app-aviso-privacidade>
+
+      <label class="checkout__opcao">
+        <input type="checkbox" formControlName="aceite" />
+        {{ textos.formulario.aceite }}
+      </label>
+      @if (erro('aceite') !== null) {
+      <app-mensagem-erro variante="linha"
+        >{{ erro('aceite') }}</app-mensagem-erro
+      >
+      } @if (falha() !== null) {
+      <app-mensagem-erro variante="bloco">{{ falha() }}</app-mensagem-erro>
+      }
+
+      <app-botao variante="primario" tipo="submit" [carregando]="enviando()">
+        {{ textos.formulario.acao }}
+      </app-botao>
+    </form>
+    } @case ('pix') {
+    <section class="checkout__pix">
+      <h2>{{ textos.pix.titulo }}</h2>
+      <p>{{ textos.pix.instrucao }}</p>
+      <img
+        class="checkout__qr"
+        [src]="pix()?.brCodeBase64"
+        [alt]="textos.pix.alternativaQr"
+      />
+      <app-campo
+        [rotulo]="textos.pix.codigo"
+        [somenteLeitura]="true"
+        [multilinha]="true"
+        [linhas]="3"
+        [formControl]="codigoPix"
+      />
+      <app-botao variante="secundario" (click)="copiar()">
+        {{ textos.pix.copiar }}
+      </app-botao>
+      @if (copiado()) {
+      <p class="checkout__auxiliar" role="status">{{ textos.pix.copiado }}</p>
+      }
+      <p class="checkout__auxiliar">
+        {{ textos.pix.validade }} {{ horario(pix()?.expiraEm) }}
+      </p>
+      <app-carregando variante="linha" [rotulo]="textos.pix.aguardando" />
+    </section>
+    } @case ('redirecionando') {
+    <app-carregando variante="bloco" [rotulo]="textos.redirecionando" />
+    } @case ('aguardando') {
+    <section class="checkout__aviso" aria-live="polite">
+      <h2>{{ textos.aguardando.titulo }}</h2>
+      <p>{{ textos.aguardando.texto }}</p>
+      <app-carregando variante="linha" [rotulo]="textos.aguardando.titulo" />
+    </section>
+    } @case ('pago') {
+    <section class="checkout__aviso" role="status">
+      <h2>{{ textos.pago.titulo }}</h2>
+      <p>{{ textos.pago.texto }}</p>
+      <a class="checkout__link" routerLink="/entrar">{{ textos.pago.acao }}</a>
+    </section>
+    } @case ('vencido') {
+    <section class="checkout__aviso">
+      <h2>{{ textos.vencido.titulo }}</h2>
+      <p>{{ textos.vencido.texto }}</p>
+      <app-botao variante="primario" (click)="gerarNovo()">
+        {{ textos.vencido.acao }}
+      </app-botao>
+    </section>
+    } }
+  </div>
+</main>

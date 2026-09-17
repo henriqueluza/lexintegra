@@ -125,6 +125,40 @@ export default tseslint.config(
     rules: { 'no-console': 'off' },
   },
   {
+    /*
+     * Regra inviolavel 17, emendada na Etapa 8: custom claim so e escrita em DOIS
+     * lugares — `AdvogadosService.criar` (so `advogado`) e
+     * `ContasClienteService.obterOuCriar` (so `cliente`, e so sem perfil
+     * anterior). Escrita de claim e a operacao mais sensivel do sistema, e um
+     * terceiro escritor nao quebraria teste nenhum: so abriria mais uma porta de
+     * elevacao de privilegio.
+     *
+     * dependency-cruiser nao serve aqui — ele enxerga import, e `setCustomUserClaims`
+     * e metodo de um objeto que muitos modulos ja recebem por injecao.
+     *
+     * Testes ficam de fora: a suite de integracao da claim de administrador no
+     * emulador para exercitar a rota administrativa.
+     */
+    files: ['apps/api/src/**/*.ts'],
+    ignores: [
+      'apps/api/src/advogados/advogados.service.ts',
+      'apps/api/src/contas-cliente/contas-cliente.service.ts',
+      '**/*.spec.ts',
+      '**/*.integration-spec.ts',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'MemberExpression[property.name="setCustomUserClaims"]',
+          message:
+            'Regra inviolavel 17: so AdvogadosService.criar e ' +
+            'ContasClienteService.obterOuCriar escrevem custom claim.',
+        },
+      ],
+    },
+  },
+  {
     // Testes podem ser longos e repetitivos: o valor de um teste esta na clareza
     // do caso, nao na concisao.
     files: ['**/*.spec.ts', '**/*.integration-spec.ts'],

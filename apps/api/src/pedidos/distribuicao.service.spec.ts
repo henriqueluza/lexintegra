@@ -6,6 +6,7 @@ import { FirestoreFalso } from '../firestore-falso.js';
 import { DistribuicaoService } from './distribuicao.service.js';
 import { PedidosService } from './pedidos.service.js';
 import { ProdutosService } from '../produtos/produtos.service.js';
+import { comSnapshot } from '../arnes-pedidos.js';
 
 const ADMIN = 'uid-admin';
 const CLIENTE = 'uid-clara';
@@ -41,14 +42,16 @@ async function montar(): Promise<Arranjo> {
     const tr = transacao as unknown as Transaction;
     pedidos.gravar(
       tr,
-      await pedidos.preparar(tr, [
-        {
-          pedidoId: 'pedido-1',
-          clienteId: CLIENTE,
-          pagamentoId: 'pag-1',
-          produtoOrigemId,
-        },
-      ]),
+      pedidos.preparar(
+        await comSnapshot(pedidos, [
+          {
+            pedidoId: 'pedido-1',
+            clienteId: CLIENTE,
+            pagamentoId: 'pag-1',
+            produtoOrigemId,
+          },
+        ]),
+      ),
     );
   });
 

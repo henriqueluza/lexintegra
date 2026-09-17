@@ -41,6 +41,8 @@ interface Contexto {
   /** `null` enquanto o administrador nao distribuiu o pedido (Etapa 9). */
   readonly advogadoId: string | null;
   readonly revisoesPermitidas: number;
+  /** Etapa 8: pedido cancelado ou estornado nao comeca a ser trabalhado. */
+  readonly ativo: boolean;
 }
 
 /**
@@ -246,6 +248,19 @@ export class EntregaveisService {
   ): void {
     if (evento === 'iniciar-trabalho' || evento === 'retomar-trabalho') {
       this.exigirAdvogadoAtribuido(contexto, atorUid);
+      /*
+       * A OUTRA PONTA DA REGRA DE ESTORNO (ADR-12). O estorno so vale sem
+       * trabalho iniciado, e le os entregaveis na transacao dele; esta conferencia
+       * le a situacao do pedido na transacao DESTA. As duas leem o mesmo pedido,
+       * entao a corrida entre "estornar" e "comecar a trabalhar" termina com uma
+       * das duas reexecutando e vendo a outra — nunca com um pedido estornado em
+       * elaboracao.
+       */
+      if (evento === 'iniciar-trabalho' && !contexto.ativo) {
+        throw new ConflictException(
+          'Este pedido foi cancelado ou estornado e nao pode ser iniciado.',
+        );
+      }
       return;
     }
 
@@ -312,6 +327,7 @@ export class EntregaveisService {
     const dadosPedido = documentoPedido.data() as {
       clienteId: string;
       advogadoId?: string | null;
+      situacao?: string;
       snapshot: { numeroRevisoesPermitidas: number };
     };
 
@@ -332,6 +348,8 @@ export class EntregaveisService {
        * continua com duas mesmo que o administrador mude o catalogo para cinco.
        */
       revisoesPermitidas: dadosPedido.snapshot.numeroRevisoesPermitidas,
+      /* Ausente e ativo: todo pedido anterior a Etapa 8. */
+      ativo: (dadosPedido.situacao ?? 'ativo') === 'ativo',
     };
   }
 

@@ -2,13 +2,15 @@ import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, type CanMatchFn, type UrlTree } from '@angular/router';
 import type { Perfil } from 'shared/perfil';
-import { exigirAutenticacao, exigirPerfil } from './guardas';
+import { ApiClienteService } from './api-cliente.service';
+import { exigirAnamnese, exigirAutenticacao, exigirPerfil } from './guardas';
 import { SessaoService } from './sessao.service';
 
 function preparar(opcoes: {
   perfil?: Perfil | null;
   autenticado?: boolean;
   plataforma?: string;
+  anamnese?: () => Promise<{ preenchida: boolean }>;
 }): void {
   const sessao = {
     pronta: Promise.resolve(),
@@ -20,6 +22,13 @@ function preparar(opcoes: {
     providers: [
       { provide: SessaoService, useValue: sessao },
       { provide: PLATFORM_ID, useValue: opcoes.plataforma ?? 'browser' },
+      {
+        provide: ApiClienteService,
+        useValue: {
+          situacaoDaAnamnese: () =>
+            opcoes.anamnese?.() ?? Promise.resolve({ preenchida: true }),
+        },
+      },
       {
         provide: Router,
         useValue: {
@@ -119,5 +128,44 @@ describe('exigirPerfil', () => {
   it('deixa passar no servidor', async () => {
     preparar({ autenticado: false, perfil: null, plataforma: 'server' });
     await expect(executar(exigirPerfil('admin'))).resolves.toBe(true);
+  });
+});
+
+/** ⚠️ A ficha ainda e o stub provisorio da Etapa 8. */
+describe('exigirAnamnese', () => {
+  it('deixa entrar nos pedidos com a ficha preenchida', async () => {
+    preparar({
+      perfil: 'cliente',
+      anamnese: () => Promise.resolve({ preenchida: true }),
+    });
+    await expect(executar(exigirAnamnese as never)).resolves.toBe(true);
+  });
+
+  it('manda para a ficha quem ainda nao preencheu (item 2.2.5)', async () => {
+    preparar({
+      perfil: 'cliente',
+      anamnese: () => Promise.resolve({ preenchida: false }),
+    });
+    expect(destinoDe(await executar(exigirAnamnese as never))).toBe(
+      '/painel/anamnese',
+    );
+  });
+
+  /** Uma consulta que falha nao tranca o cliente fora dos pedidos que pagou. */
+  it('deixa passar se a consulta falhar', async () => {
+    preparar({
+      perfil: 'cliente',
+      anamnese: () => Promise.reject(new Error('rede')),
+    });
+    await expect(executar(exigirAnamnese as never)).resolves.toBe(true);
+  });
+
+  it('deixa passar no servidor, sem consultar', async () => {
+    preparar({
+      perfil: 'cliente',
+      plataforma: 'server',
+      anamnese: () => Promise.reject(new Error('nao deveria consultar')),
+    });
+    await expect(executar(exigirAnamnese as never)).resolves.toBe(true);
   });
 });
