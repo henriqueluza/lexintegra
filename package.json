@@ -13,7 +13,7 @@
     "test": "pnpm --filter \"./apps/*\" --filter \"./packages/*\" test",
     "test:integration": "scripts/emuladores.sh",
     "test:e2e": "pnpm --filter web test:e2e",
-    "test:jornadas": "pnpm --filter api build && scripts/emuladores.sh 'pnpm --filter web test:jornadas'",
+    "test:jornadas": "pnpm --filter shared build && pnpm --filter api build && scripts/emuladores.sh 'pnpm --filter web test:jornadas'",
     "lint": "pnpm run lint:eslint && pnpm run lint:styles && pnpm run lint:deps && pnpm run lint:terraform",
     "lint:eslint": "eslint .",
     "lint:styles": "stylelint \"apps/web/src/**/*.css\"",

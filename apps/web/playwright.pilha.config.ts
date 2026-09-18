@@ -9,6 +9,11 @@ import { defineConfig, devices } from '@playwright/test';
  * Firestore, API de verdade e navegador entrando com senha. Misturar as duas num
  * config so obrigaria toda execucao de regressao visual a subir a pilha inteira.
  *
+ * DOIS COMANDOS, UM CONFIG. `pnpm test:jornadas` roda o projeto `jornadas` no
+ * host (comportamento; nao depende de fonte). Os paineis rodam por
+ * `scripts/visual.sh paineis`, DENTRO do conteiner — imagem de referencia
+ * gravada no macOS nao bate com a do CI, e a diferenca nao e defeito nenhum.
+ *
  * PORTAS PROPRIAS (API 8090, web 4201, armazenamento falso 9299), e nao as de
  * `pnpm dev`. A suite nao pode disputar porta com quem esta trabalhando na
  * maquina — e reaproveitar o servidor do desenvolvedor seria pior: ele sobe com

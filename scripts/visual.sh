@@ -107,8 +107,14 @@ docker run --rm --init \
       apt-get update -qq
       apt-get install -y -qq --no-install-recommends default-jre-headless >/dev/null
       cd /trabalho
+      # O pacote shared ANTES da api: ele publica exports apontando para a pasta
+      # de build, e sem ele compilado o compilador da api nao acha o modulo.
+      # Localmente passa despercebido porque a pasta ja existe de outra execucao.
+      pnpm --filter shared build
       pnpm --filter api build
-      scripts/emuladores.sh 'pnpm --filter web exec playwright test --config playwright.pilha.config.ts $*'
+      # As tres larguras dos paineis. As jornadas rodam fora do conteiner, por
+      # pnpm test:jornadas: elas verificam comportamento e nao dependem de fonte.
+      scripts/emuladores.sh 'pnpm --filter web exec playwright test --config playwright.pilha.config.ts --project estreito --project medio --project largo $*'
     else
       cd /trabalho/apps/web
       pnpm exec playwright test $ALVO $*
