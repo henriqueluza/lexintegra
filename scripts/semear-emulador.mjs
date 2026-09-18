@@ -185,6 +185,35 @@ async function semearCatalogo() {
 }
 
 /**
+ * Os documentos `advogados/{uid}` (Etapa 12).
+ *
+ * FALTAVAM, e a falta so aparecia na tela: a lista de advogados do administrador
+ * le esta colecao, entao o seletor da caixa de distribuicao vinha VAZIO e
+ * `DistribuicaoService.atribuir` respondia 404 para um advogado que existe no
+ * Auth. Quem semeia conta precisa semear o documento que a conta representa.
+ *
+ * `status: 'ativo'` porque a tela de distribuicao filtra por ele (item 2.4.6): um
+ * advogado suspenso continua sendo advogado, mas nao recebe demanda nova.
+ */
+async function semearAdvogados(uidPorEmail) {
+  const agora = new Date();
+
+  for (const conta of CONTAS.filter((atual) => atual.perfil === 'advogado')) {
+    const uid = uidPorEmail.get(conta.email);
+
+    await gravarDocumento(HOST_FIRESTORE, PROJETO, `advogados/${uid}`, {
+      nome: conta.nome,
+      email: conta.email,
+      status: 'ativo',
+      criadoEm: agora,
+      criadoPor: 'seed-do-emulador',
+    });
+
+    console.log(`  advogado  ${conta.nome}`);
+  }
+}
+
+/**
  * Clientes, pedidos, entregaveis, trilha, observacoes e anamnese (Etapa 9).
  *
  * O SNAPSHOT SAI DE `congelarProduto`, a mesma funcao que o checkout usa — nunca
@@ -330,7 +359,8 @@ console.log('  Sao contas de EMULADOR. Nao existem em lugar nenhum alem dele.');
 console.log(`\nCatalogo ficticio em ${HOST_FIRESTORE}\n`);
 const idsDeProduto = await semearCatalogo();
 
-console.log('\nClientes e pedidos ficticios\n');
+console.log('\nAdvogados, clientes e pedidos ficticios\n');
+await semearAdvogados(uidPorEmail);
 await semearClientesEPedidos(idsDeProduto, uidPorEmail);
 
 console.log(

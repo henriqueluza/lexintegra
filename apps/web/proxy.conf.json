@@ -5,5 +5,12 @@
     "secure": false,
     "changeOrigin": false,
     "logLevel": "warn"
+  },
+  "//armazenamento": "Etapa 12. Em producao o navegador envia o arquivo para uma URL assinada do Cloud Storage; em desenvolvimento nao ha bucket, e o armazenamento falso ouve em 9199 (ARMAZENAMENTO_FALSO_PORTA, no `dev` de apps/api). O proxy existe para o PUT sair na MESMA ORIGEM do ng serve — sem ele seria requisicao cross-origin e o preflight morreria. Mudar o prefixo aqui exige mudar PREFIXO_LOCAL em armazenamento-falso.ts.",
+  "/armazenamento-falso": {
+    "target": "http://localhost:9199",
+    "secure": false,
+    "changeOrigin": false,
+    "logLevel": "warn"
   }
 }

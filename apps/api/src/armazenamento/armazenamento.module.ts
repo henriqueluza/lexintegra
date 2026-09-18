@@ -40,7 +40,7 @@ export function criarArmazenamento(
     new Logger('Armazenamento').warn(
       'Sem BUCKET_QUARENTENA/BUCKET_ARQUIVOS: usando o armazenamento falso, em memoria.',
     );
-    return new ArmazenamentoFalso();
+    return comOuvinteLocal(new ArmazenamentoFalso(), ambiente);
   }
 
   /*
@@ -54,7 +54,7 @@ export function criarArmazenamento(
     new Logger('Armazenamento').warn(
       'Sob emulador: usando o armazenamento falso, para nao tocar o bucket real.',
     );
-    return new ArmazenamentoFalso();
+    return comOuvinteLocal(new ArmazenamentoFalso(), ambiente);
   }
 
   /*
@@ -69,6 +69,24 @@ export function criarArmazenamento(
     quarentena: storage.bucket(quarentena),
     arquivos: storage.bucket(arquivos),
   });
+}
+
+/**
+ * Liga o ouvinte HTTP do armazenamento falso quando ha porta configurada.
+ *
+ * SO `pnpm dev` E O ARNES DE JORNADA DEFINEM A PORTA. Sem ela nada muda: a suite
+ * de unidade e a de integracao continuam com o falso mudo, e as URLs continuam
+ * sendo os textos reconheciveis de sempre. Com ela, o navegador consegue enviar
+ * o arquivo — que era o que faltava para a jornada de upload existir fora de
+ * producao.
+ */
+function comOuvinteLocal(
+  falso: ArmazenamentoFalso,
+  ambiente: NodeJS.ProcessEnv,
+): Armazenamento {
+  const porta = Number(ambiente['ARMAZENAMENTO_FALSO_PORTA'] ?? '');
+  if (Number.isInteger(porta) && porta > 0) falso.ouvirEm(porta);
+  return falso;
 }
 
 /**

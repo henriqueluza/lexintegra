@@ -1,5 +1,12 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { effect, ErrorHandler, inject, Injectable } from '@angular/core';
+import {
+  effect,
+  EnvironmentInjector,
+  ErrorHandler,
+  inject,
+  Injectable,
+  runInInjectionContext,
+} from '@angular/core';
 import type { ErroDoNavegador } from 'shared/esquemas/erro-do-navegador';
 import { PreCadastroService } from '../publico/pre-cadastro.service';
 import { ultimoRastreioComFalha } from './rastreio.interceptor';
@@ -41,17 +48,20 @@ const TETO_DA_ESPERA = 5;
  */
 @Injectable()
 export class RelatorDeErros implements ErrorHandler {
-  private readonly preCadastro = inject(PreCadastroService);
+  /**
+   * O INJETOR, E NAO O SERVICO. Injetar `PreCadastroService` aqui derruba a
+   * aplicacao inteira com NG0200 — dependencia circular no `ErrorHandler`: o
+   * servico puxa `ApiService`, que puxa `HttpClient`, e a maquinaria do
+   * `HttpClient` precisa do proprio `ErrorHandler` que ainda esta sendo
+   * construido. O sintoma nao e um erro de telemetria: e o login parando de
+   * funcionar. Quem pegou isso foi a jornada autenticada da Etapa 12 — os
+   * testes de unidade montam o handler com um dublê e nunca veem o ciclo.
+   */
+  private readonly injetor = inject(EnvironmentInjector);
   private readonly espera: ErroDoNavegador[] = [];
   private readonly jaRelatados = new Set<string>();
   private enviados = 0;
-
-  constructor() {
-    // Assim que a vitrine e liberada, a espera pode sair.
-    effect(() => {
-      if (this.preCadastro.liberado()) this.esvaziar();
-    });
-  }
+  private observando = false;
 
   handleError(erro: unknown): void {
     // O console continua sendo a ferramenta de quem esta com o dev tools aberto.
@@ -64,11 +74,35 @@ export class RelatorDeErros implements ErrorHandler {
     this.jaRelatados.add(assinatura);
 
     if (this.podeFalarComApi()) {
+      this.esvaziar();
       this.enviar(relato);
       return;
     }
 
     if (this.espera.length < TETO_DA_ESPERA) this.espera.push(relato);
+    this.observarLiberacao();
+  }
+
+  /**
+   * O efeito que solta a espera assim que a vitrine e liberada.
+   *
+   * Criado SO NO PRIMEIRO relato retido, e nao no construtor: criar efeito no
+   * construtor exigiria resolver `PreCadastroService` ali, que e exatamente o
+   * ciclo descrito acima. Aqui a aplicacao ja subiu, e resolver e seguro.
+   */
+  private observarLiberacao(): void {
+    if (this.observando) return;
+    this.observando = true;
+
+    runInInjectionContext(this.injetor, () => {
+      effect(() => {
+        if (this.preCadastro().liberado()) this.esvaziar();
+      });
+    });
+  }
+
+  private preCadastro(): PreCadastroService {
+    return this.injetor.get(PreCadastroService);
   }
 
   /**
@@ -80,7 +114,7 @@ export class RelatorDeErros implements ErrorHandler {
    */
   private podeFalarComApi(): boolean {
     if (typeof location === 'undefined') return false;
-    return location.pathname !== '/' || this.preCadastro.liberado();
+    return location.pathname !== '/' || this.preCadastro().liberado();
   }
 
   private esvaziar(): void {
