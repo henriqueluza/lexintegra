@@ -118,6 +118,32 @@ test.describe('area publica', () => {
     expect(chamadas).toEqual([]);
   });
 
+  /**
+   * A Etapa 12 poe um `ErrorHandler` global que relata erro de frontend para a
+   * API (ADR-08) — e ele NAO pode ser a porta dos fundos da regra inviolavel 10.
+   * Um erro na home antes do pre-cadastro fica em memoria; nada sai pela rede.
+   *
+   * O erro e disparado fora da zona do Angular, de proposito: e o caminho dos
+   * listeners globais de `error`, que e o mais facil de esquecer.
+   */
+  test('erro na home nao vira chamada a API antes do pre-cadastro', async ({
+    page,
+  }) => {
+    const chamadas = espiarApi(page);
+    await interceptar(page);
+
+    await page.goto('/');
+    await esperarHidratacao(page);
+    await page.evaluate(() => {
+      setTimeout(() => {
+        throw new Error('erro de teste na home');
+      }, 0);
+    });
+    await page.waitForTimeout(500);
+
+    expect(chamadas).toEqual([]);
+  });
+
   test('o catalogo nao aparece antes do cadastro', async ({ page }) => {
     await interceptar(page);
     await page.goto('/');

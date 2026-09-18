@@ -1,4 +1,5 @@
 import type { HttpInterceptorFn } from '@angular/common/http';
+import { tap } from 'rxjs';
 import { ehChamadaDaApi } from '../autenticacao/token.interceptor';
 
 /**
@@ -25,10 +26,38 @@ import { ehChamadaDaApi } from '../autenticacao/token.interceptor';
 export const anexarRastreio: HttpInterceptorFn = (requisicao, proxima) => {
   if (!ehChamadaDaApi(requisicao.url)) return proxima(requisicao);
 
-  return proxima(
-    requisicao.clone({ setHeaders: { traceparent: novoTraceparent() } }),
+  const traceparent = novoTraceparent();
+
+  return proxima(requisicao.clone({ setHeaders: { traceparent } })).pipe(
+    tap({
+      error: () => {
+        ultimaFalha = traceparent.split('-')[1];
+      },
+    }),
   );
 };
+
+let ultimaFalha: string | undefined;
+
+/**
+ * O trace da ultima chamada a API que falhou.
+ *
+ * E o que liga o relato de erro do navegador (ADR-08) ao que o servidor
+ * registrou do outro lado. Sem ele, investigar uma falha de rede exige adivinhar
+ * qual das requisicoes daquele minuto era a do cliente que reclamou.
+ *
+ * Variavel de modulo, e nao servico injetavel, de proposito: o relator roda
+ * dentro do `ErrorHandler`, que o Angular constroi antes de quase tudo, e
+ * injetar um servico ali e caminho conhecido de dependencia circular.
+ */
+export function ultimoRastreioComFalha(): string | undefined {
+  return ultimaFalha;
+}
+
+/** So para o teste voltar ao estado limpo. */
+export function esquecerRastreioComFalha(): void {
+  ultimaFalha = undefined;
+}
 
 /** `versao-traceId-spanId-flags`, do W3C Trace Context. */
 export function novoTraceparent(

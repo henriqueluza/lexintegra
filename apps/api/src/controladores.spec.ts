@@ -18,6 +18,7 @@ import {
 import { AutenticacaoController } from './autenticacao/senha/redefinicao.controller.js';
 import type { RedefinicaoSenhaService } from './autenticacao/senha/redefinicao.service.js';
 import type { UsuarioAutenticado } from './autenticacao/usuario.js';
+import { ErrosDoNavegadorController } from './erros-do-navegador/erros-do-navegador.controller.js';
 import { HealthController } from './health/health.controller.js';
 import { OutboxAdminController } from './outbox/outbox.admin.controller.js';
 import type { OutboxAdminService } from './outbox/outbox.admin.service.js';
@@ -169,6 +170,10 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['checkout (Etapa 8)', CheckoutController.prototype.iniciar],
     ['situacao do checkout (Etapa 8)', CheckoutController.prototype.situacao],
     ['webhook do gateway (Etapa 8)', WebhookController.prototype.receber],
+    [
+      'relato de erro do navegador (Etapa 12)',
+      ErrosDoNavegadorController.prototype.registrar,
+    ],
     ['varredura (interna)', VarreduraController.prototype.processar],
     ['retencao (interna)', RetencaoController.prototype.executar],
     ['entrega do outbox (interna)', OutboxController.prototype.entregar],
@@ -208,6 +213,10 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['vitrine', VitrineController.prototype.listar],
     ['checkout', CheckoutController.prototype.iniciar],
     ['webhook do gateway', WebhookController.prototype.receber],
+    [
+      'relato de erro do navegador',
+      ErrosDoNavegadorController.prototype.registrar,
+    ],
     ['cliente.listar', PedidosClienteController.prototype.listar],
     ['outbox.reenviar (painel)', OutboxAdminController.prototype.reenviar],
   ])('%s NAO e tarefa interna', (_nome, metodo) => {
@@ -256,6 +265,10 @@ describe('limite de requisicoes das rotas publicas', () => {
     ['checkout', CheckoutController.prototype.iniciar],
     ['situacao do checkout', CheckoutController.prototype.situacao],
     ['webhook do gateway', WebhookController.prototype.receber],
+    [
+      'relato de erro do navegador',
+      ErrosDoNavegadorController.prototype.registrar,
+    ],
   ])('%s declara limite proprio', (_nome, metodo) => {
     const limite = reflector.get<ConfiguracaoDeLimite | undefined>(
       CHAVE_LIMITE,
@@ -285,6 +298,28 @@ describe('limite de requisicoes das rotas publicas', () => {
       limite.maximo / (limite.janelaMs / 60_000);
 
     expect(porMinuto(formulario)).toBeLessThan(porMinuto(vitrine));
+  });
+
+  /**
+   * O relato de erro e o endpoint mais exposto do sistema: publico, sem App
+   * Check e alcancavel quando tudo o mais falhou. Ele precisa ser mais apertado
+   * que a leitura da vitrine — um laco de erro no navegador de um cliente so
+   * dispara relato a cada repintura, e isso nao pode custar o log de todo mundo.
+   */
+  it('o relato de erro e mais apertado que a vitrine', () => {
+    const porMinuto = (limite: ConfiguracaoDeLimite): number =>
+      limite.maximo / (limite.janelaMs / 60_000);
+
+    const relato = reflector.get<ConfiguracaoDeLimite>(
+      CHAVE_LIMITE,
+      ErrosDoNavegadorController.prototype.registrar,
+    );
+    const vitrine = reflector.get<ConfiguracaoDeLimite>(
+      CHAVE_LIMITE,
+      VitrineController.prototype.listar,
+    );
+
+    expect(porMinuto(relato)).toBeLessThan(porMinuto(vitrine));
   });
 
   /**
@@ -336,6 +371,17 @@ describe('limite de requisicoes das rotas publicas', () => {
      * e a assinatura, que o teste da classe logo abaixo cobra.
      */
     ['webhook do gateway (Etapa 8)', WebhookController.prototype.receber],
+    /*
+     * Etapa 12, e e excecao consciente. Exigir App Check aqui violaria a regra
+     * inviolavel 10 — obter o token e chamada de rede, e a home nao chama nada
+     * antes do pre-cadastro — e deixaria invisivel justamente o erro que mais
+     * interessa: o da propria inicializacao do App Check. Ver o comentario do
+     * controlador.
+     */
+    [
+      'relato de erro do navegador (Etapa 12)',
+      ErrosDoNavegadorController.prototype.registrar,
+    ],
     ['varredura (interna)', VarreduraController.prototype.processar],
     ['retencao (interna)', RetencaoController.prototype.executar],
     ['entrega do outbox (interna)', OutboxController.prototype.entregar],

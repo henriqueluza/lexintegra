@@ -193,8 +193,14 @@ jobs:
         run: terraform apply -input=false -auto-approve -lock-timeout=10m
         working-directory: infra/terraform
 
+      # `VERSAO_WEB` e o commit que gerou ESTE pacote. E o que permite achar o
+      # source map certo no bucket privado quando um erro de frontend e relatado
+      # (ADR-08). Nao da para usar o `commitSha` do `/api/health`: o Hosting serve
+      # o pacote com cache imutavel de um ano, entao o navegador pode estar
+      # rodando um pacote mais antigo que a API — e o SHA da API apontaria para o
+      # source map errado, que e pior do que nenhum.
       - name: Build do Angular
-        run: pnpm --filter web build
+        run: pnpm --filter web exec ng build --define VERSAO_WEB='"${{ github.sha }}"'
 
       # A site key do reCAPTCHA e PUBLICA por definicao — viaja no HTML que todo
       # visitante baixa, como a `apiKey` do Firebase. Por isso ela e uma VARIABLE

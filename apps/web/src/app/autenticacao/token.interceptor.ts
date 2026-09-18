@@ -38,6 +38,13 @@ const CAMINHOS_PUBLICOS = [
   '/api/pre-cadastros',
   '/api/auth/redefinicao-senha',
   '/api/checkout',
+  /*
+   * Etapa 12. O relato de erro do navegador (ADR-08) e publico e nunca leva
+   * credencial. Fora desta lista, um erro na home faria o interceptor injetar o
+   * `SessaoService` — e com ele o `import()` do SDK do Firebase, meio megabyte
+   * baixado na pagina que a regra inviolavel 10 existe para manter leve.
+   */
+  '/api/erros-do-navegador',
 ] as const;
 
 /**
