@@ -1,8 +1,10 @@
 import { execFile } from 'node:child_process';
-import { readdir } from 'node:fs/promises';
+import { open, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { Storage } from '@google-cloud/storage';
+import { geradaEmDoCabecalho, idadeEmHoras } from './idade-da-base.js';
+import { registrar } from './registrar.js';
 
 const executar = promisify(execFile);
 
@@ -45,7 +47,49 @@ async function principal(): Promise<void> {
 
   for (const nome of bases) {
     await balde.upload(join(PASTA, nome), { destination: nome });
-    console.log(`base publicada: ${nome}`);
+
+    /*
+     * A DATA DE GERACAO, e nao so o nome do arquivo.
+     *
+     * Este job pode terminar verde publicando a base de tres semanas atras: o
+     * `freshclam` sai com sucesso quando o mirror recusa por limite de taxa e
+     * nao ha nada novo a aplicar, e o bucket recebe de volta os mesmos bytes.
+     * "base publicada: daily.cvd" sozinho nao distingue os dois casos — e a
+     * politica de alerta da Etapa 12 casa justamente `idadeHoras`.
+     */
+    const geradaEm = await geracaoDe(join(PASTA, nome));
+
+    registrar('INFO', `base publicada: ${nome}`, {
+      sinal: 'clamav.base-publicada',
+      arquivo: nome,
+      ...(geradaEm === null
+        ? {}
+        : {
+            geradaEm: geradaEm.toISOString(),
+            idadeHoras: idadeEmHoras(geradaEm, new Date()),
+          }),
+    });
+  }
+}
+
+/** O cabecalho de um `.cvd`/`.cld` sao os primeiros 512 bytes do arquivo. */
+async function geracaoDe(caminho: string): Promise<Date | null> {
+  const arquivo = await open(caminho, 'r');
+
+  try {
+    const { buffer, bytesRead } = await arquivo.read(
+      Buffer.alloc(512),
+      0,
+      512,
+      0,
+    );
+    return geradaEmDoCabecalho(
+      buffer.subarray(0, bytesRead).toString('latin1'),
+    );
+  } catch {
+    return null;
+  } finally {
+    await arquivo.close();
   }
 }
 
