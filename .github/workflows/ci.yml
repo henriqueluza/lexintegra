@@ -266,6 +266,40 @@ jobs:
             apps/web/playwright-report/
           retention-days: 7
 
+  mutacao:
+    name: Analise de mutacao
+    # Depois do `qualidade`: nao vale gastar minutos mutando codigo cuja suite ja
+    # esta vermelha — o relatorio seria de um estado que ninguem quer manter.
+    needs: qualidade
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      # Os alvos sao os da arquitetura, secao 10: transicao de status,
+      # autorizacao e assinatura do webhook. O limiar de cada pacote foi MEDIDO e
+      # esta nos `stryker.config.mjs`; a corrida falha se o escore cair abaixo
+      # dele, que e o ponto de ter mutacao no pipeline.
+      - name: Mutacao nos alvos definidos
+        run: pnpm mutacao
+
+      - name: Guardar o relatorio
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-mutacao
+          path: reports/
+          retention-days: 7
+
   terraform:
     name: Terraform (validate e plan)
     runs-on: ubuntu-latest

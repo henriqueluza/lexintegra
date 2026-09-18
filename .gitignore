@@ -96,3 +96,7 @@ application_default_credentials.json
 /apps/web/playwright-report/
 /apps/web/test-results/
 /apps/web/blob-report/
+
+# Etapa 12: relatorios de qualidade e diretorio temporario da analise de mutacao.
+reports/
+.stryker-tmp/
