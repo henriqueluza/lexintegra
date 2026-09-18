@@ -127,3 +127,25 @@ variable "scanner_image" {
   type        = string
   default     = ""
 }
+
+# Etapa 12 -------------------------------------------------------------------
+
+variable "rastreio_amostragem" {
+  description = <<-EOT
+    Fracao das requisicoes que vira trace no Cloud Trace, de 0 a 1.
+
+    A arquitetura (secao 9) pede que isto seja variavel de ambiente: as cotas
+    gratuitas do Cloud Trace sao generosas, nao infinitas, e amostragem
+    agressiva em producao pode ultrapassa-las. Como e numero de AMBIENTE, e nao
+    de codigo, nao pode estar fixo na aplicacao.
+
+    Vazio ou "0" DESLIGA o rastreio — a aplicacao nem sobe o SDK. Valor
+    invalido, esse sim, derruba o boot (ver `observabilidade/amostragem.ts`):
+    "0,5" com virgula viraria NaN e desligaria o rastreio em silencio.
+
+    0.1 e o ponto de partida no volume previsto (centenas de clientes). Subir
+    para 1 durante uma investigacao e mudanca de variavel, nao de codigo.
+  EOT
+  type        = string
+  default     = "0.1"
+}

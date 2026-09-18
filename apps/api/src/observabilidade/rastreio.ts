@@ -1,4 +1,10 @@
-import { TraceFlags, isSpanContextValid, trace } from '@opentelemetry/api';
+import {
+  TraceFlags,
+  context,
+  isSpanContextValid,
+  propagation,
+  trace,
+} from '@opentelemetry/api';
 
 /**
  * Identificacao do trace ativo, do jeito que o Cloud Logging precisa dela.
@@ -36,3 +42,28 @@ export const rastreioAtivo: LeitorDeRastreio = () => {
       (contexto.traceFlags & TraceFlags.SAMPLED) === TraceFlags.SAMPLED,
   };
 };
+
+/**
+ * O `traceparent` do momento, em texto, para guardar junto de um fato que sera
+ * processado depois (o registro do outbox e o caso).
+ *
+ * Sem SDK carregado o propagador global e o vazio, e isto devolve `undefined` —
+ * que e o que acontece em teste e em desenvolvimento.
+ */
+export function traceparentAtual(): string | undefined {
+  const portador: Record<string, string> = {};
+  propagation.inject(context.active(), portador);
+  return portador['traceparent'];
+}
+
+/**
+ * O id do trace dentro de um `traceparent` (`versao-traceId-spanId-flags`).
+ *
+ * E ele que vai para o log da entrega: e assim que se acha, a partir do request
+ * que originou o evento, a linha da entrega que aconteceu horas depois —
+ * "traceId propagado do frontend ate a task", da secao 9 da arquitetura.
+ */
+export function traceIdDe(traceparent: string | undefined): string | undefined {
+  const partes = (traceparent ?? '').split('-');
+  return partes.length >= 3 && partes[1].length === 32 ? partes[1] : undefined;
+}

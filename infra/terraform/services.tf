@@ -35,6 +35,14 @@ locals {
     "secretmanager.googleapis.com",
     "serviceusage.googleapis.com",
     "storage.googleapis.com",
+    # Etapa 12: a API que recebe OTLP (Telemetry API). O destino final continua
+    # sendo o Cloud Trace — o que muda e a porta de entrada. O exportador
+    # especifico do Cloud Trace (`@google-cloud/opentelemetry-cloud-trace-exporter`)
+    # esta depreciado e sera arquivado depois de 30/10/2026, semanas depois desta
+    # etapa; entregar a plataforma a um terceiro (clausula 4.3) com um componente
+    # morto seria transferir o problema junto. `cloudtrace.googleapis.com` fica:
+    # e ele que serve a leitura dos traces no console.
+    "telemetry.googleapis.com",
   ]
 }
 

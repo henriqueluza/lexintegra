@@ -52,9 +52,10 @@ describe('a fila desiste depois da politica', () => {
 
   function maxAttemptsDaFila(): number {
     const arquivo = readFileSync(TERRAFORM, 'utf8');
-    const bloco = /resource "google_cloud_tasks_queue" "eventos" \{[\s\S]*?\n\}/.exec(
-      arquivo,
-    );
+    const bloco =
+      /resource "google_cloud_tasks_queue" "eventos" \{[\s\S]*?\n\}/.exec(
+        arquivo,
+      );
     if (bloco === null) {
       throw new Error(
         'Fila `eventos` nao encontrada em infra/terraform/outbox.tf. Se ela foi ' +

@@ -8,6 +8,7 @@ import {
   type EmailTransport,
 } from '../email/email-transport.js';
 import { descreverErro } from '../email/redigir.js';
+import { traceIdDe } from '../observabilidade/rastreio.js';
 import { ALERTAS, type CanalDeAlerta } from '../alertas/alerta.js';
 import {
   GATEWAY_PAGAMENTO,
@@ -95,7 +96,16 @@ export class DespachanteOutbox {
 
     if (entrega.sucesso) {
       await this.outbox.concluir(id, registro, { sucesso: true });
-      this.log.log(`registro ${id} entregue`);
+      /*
+       * `rastreioDeOrigem` liga esta linha ao request que criou o evento. A
+       * entrega roda quase sempre noutro trace — varredor, reentrega da fila,
+       * reenvio manual —, entao sem este campo nao ha como ir do "o cliente
+       * pagou" ate "o e-mail saiu" pelo log.
+       */
+      this.log.log(`registro ${id} entregue`, {
+        tipo: registro.tipo,
+        rastreioDeOrigem: traceIdDe(registro.rastreio),
+      });
       return 'entregue';
     }
 

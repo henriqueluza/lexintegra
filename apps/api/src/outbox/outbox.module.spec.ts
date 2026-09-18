@@ -53,9 +53,9 @@ describe('criarFilaDeEventos', () => {
    * desenvolvedor procurando o link no log do transporte falso.
    */
   it('em desenvolvimento, entrega no proprio processo', () => {
-    expect(criarFilaDeEventos(DESPACHANTE, {} as NodeJS.ProcessEnv)).toBeInstanceOf(
-      FilaEmProcesso,
-    );
+    expect(
+      criarFilaDeEventos(DESPACHANTE, {} as NodeJS.ProcessEnv),
+    ).toBeInstanceOf(FilaEmProcesso);
   });
 
   /** Nem mesmo com a configuracao toda presente: uma fila de verdade em

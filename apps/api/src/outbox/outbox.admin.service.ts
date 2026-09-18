@@ -1,6 +1,10 @@
 import { ConflictException, Injectable, Logger } from '@nestjs/common';
 import { NotFoundException } from '@nestjs/common';
-import { ehEstadoEntrega, permiteReenvioManual, type EstadoEntrega } from 'shared';
+import {
+  ehEstadoEntrega,
+  permiteReenvioManual,
+  type EstadoEntrega,
+} from 'shared';
 import { EnfileiradorDeEventos } from './enfileirador.service.js';
 import { OutboxService } from './outbox.service.js';
 

@@ -15,7 +15,10 @@ import {
   DespachanteOutbox,
   type ResultadoDoDespacho,
 } from './despachante.service.js';
-import { VarredorDoOutbox, type ResumoDaVarredura } from './varredor.service.js';
+import {
+  VarredorDoOutbox,
+  type ResumoDaVarredura,
+} from './varredor.service.js';
 
 const esquemaTarefa = z.object({ id: z.string().min(1).max(400) });
 

@@ -153,6 +153,23 @@ resource "google_cloud_run_v2_service" "api" {
         value = tostring(var.proxies_confiaveis)
       }
 
+      # Etapa 12. Amostragem do rastreio (arquitetura, secao 9). Sem ela a API
+      # sobe sem SDK de trace nenhum — o que e exatamente o que se quer em
+      # desenvolvimento, e nao o que se quer aqui.
+      env {
+        name  = "RASTREIO_AMOSTRAGEM"
+        value = var.rastreio_amostragem
+      }
+
+      # Log estruturado em JSON: e o formato que o Cloud Logging le como
+      # `jsonPayload`, e e dele que as politicas de alerta dependem. O codigo ja
+      # usaria JSON por NODE_ENV=production; declarado aqui para a escolha ficar
+      # visivel na infraestrutura, e nao so numa condicao dentro do codigo.
+      env {
+        name  = "LOG_FORMATO"
+        value = "json"
+      }
+
       # Etapa 8. Obrigatoria em producao: ausente, a API RECUSA SUBIR (ver
       # `pagamentos/gateway/modo.ts`). `desligado` e decisao, e nao esquecimento:
       # checkout e webhook respondem 503 ate a chave de producao existir e a

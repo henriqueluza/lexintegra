@@ -86,8 +86,17 @@ locals {
   api_runtime_roles = [
     "roles/datastore.user",    # leitura e escrita no Firestore, sem administrar a base
     "roles/logging.logWriter", # log estruturado (arquitetura, secao 9)
-    "roles/cloudtrace.agent",  # traces via OpenTelemetry
     "roles/monitoring.metricWriter",
+
+    # Etapa 12. O papel que a Telemetry API exige de quem ENVIA trace por OTLP.
+    # E ele que vale agora: a aplicacao exporta para `telemetry.googleapis.com`,
+    # nao mais pelo exportador especifico do Cloud Trace.
+    "roles/telemetry.tracesWriter",
+
+    # `cloudtrace.agent` era o papel do exportador antigo. Fica ate a primeira
+    # exportacao por OTLP ser confirmada em producao — remove-lo junto com a
+    # troca deixaria a etapa sem caminho de volta se o endpoint novo recusar.
+    "roles/cloudtrace.agent",
 
     # Etapa 4. Sem este papel o Admin SDK nao cria usuario, nao escreve custom
     # claim, nao gera link de definicao de senha e nao revoga token — ou seja, o

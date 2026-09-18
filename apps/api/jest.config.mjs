@@ -27,6 +27,14 @@ export default {
     '!**/*.integration-spec.ts',
     '!main.ts',
     /*
+     * `instrumentacao.ts` e carregado por `--import`, ANTES da aplicacao, e
+     * nunca e importado por modulo nenhum do Nest — e essa a razao de ele
+     * existir separado. A suite nao tem como exercita-lo sem subir um SDK de
+     * rastreio inteiro, e deixa-lo no denominador so afundaria o numero.
+     * O que nele e decidivel — a amostragem — mora em `amostragem.ts`, testado.
+     */
+    '!observabilidade/instrumentacao.ts',
+    /*
      * `emulador.ts` e arnes de teste de integracao — ele so roda sob
      * `scripts/emuladores.sh`, e essa suite nao alimenta este contador. Deixa-lo
      * no denominador infla o total com codigo que a suite de unidade nao tem

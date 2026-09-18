@@ -20,12 +20,16 @@ interface Pedido {
     httpRequest: {
       url: string;
       body: string;
+      headers: Record<string, string>;
       oidcToken: { serviceAccountEmail: string; audience: string };
     };
   };
 }
 
-function montar(aoCriar: () => Promise<unknown> = () => Promise.resolve({})): {
+function montar(
+  aoCriar: () => Promise<unknown> = () => Promise.resolve({}),
+  injetarRastreio: (cabecalhos: Record<string, string>) => void = () => {},
+): {
   fila: CloudTasksFila<{ id: string }>;
   pedidos: Pedido[];
 } {
@@ -39,7 +43,10 @@ function montar(aoCriar: () => Promise<unknown> = () => Promise.resolve({})): {
     },
   };
 
-  return { fila: new CloudTasksFila(CONFIG, cliente), pedidos };
+  return {
+    fila: new CloudTasksFila(CONFIG, cliente, injetarRastreio),
+    pedidos,
+  };
 }
 
 describe('CloudTasksFila', () => {
@@ -59,6 +66,36 @@ describe('CloudTasksFila', () => {
     expect(pedidos[0].task.httpRequest.oidcToken).toEqual({
       serviceAccountEmail: CONFIG.contaDeServico,
       audience: CONFIG.urlDoAlvo,
+    });
+  });
+
+  /**
+   * O SALTO QUE A ARQUITETURA (secao 9) CHAMA DE PONTO CEGO. Sem o cabecalho, a
+   * execucao da tarefa comeca um trace novo e a entrega aparece desligada do
+   * request que a originou — que e exatamente a visibilidade que o fluxo
+   * assincrono perde e que esta etapa existe para recuperar.
+   */
+  it('leva o contexto de rastreio nos cabecalhos da tarefa', async () => {
+    const { fila, pedidos } = montar(undefined, (cabecalhos) => {
+      cabecalhos['traceparent'] =
+        '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01';
+    });
+
+    await fila.enfileirar({ id: 'evento-1' });
+
+    expect(pedidos[0].task.httpRequest.headers).toEqual({
+      'Content-Type': 'application/json',
+      traceparent: '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01',
+    });
+  });
+
+  it('mantem o Content-Type quando nao ha rastreio ativo', async () => {
+    const { fila, pedidos } = montar();
+
+    await fila.enfileirar({ id: 'evento-1' });
+
+    expect(pedidos[0].task.httpRequest.headers).toEqual({
+      'Content-Type': 'application/json',
     });
   });
 
