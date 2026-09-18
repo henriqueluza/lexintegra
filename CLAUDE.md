@@ -252,6 +252,9 @@ docs/
   runbooks/         passos humanos com roteiro (sandbox do AbacatePay, alerta artificial)
   relatorio-qualidade.md  gerado por `pnpm relatorio:qualidade`
 .stylelintrc.mjs   critério de aceite da Etapa 3
+tsconfig.deps.json existe só para o dependency-cruiser resolver `shared` na fonte
+.env.example       nomes das variáveis (nunca valores); o destinatário dos alertas
+                   está marcado para substituição antes da Etapa 13
 .claude/
   settings.json     registro dos hooks de PreToolUse
   hooks/
