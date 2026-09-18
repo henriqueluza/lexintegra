@@ -812,12 +812,61 @@ Branch `feat/upload-varredura`, saída da branch da Etapa 9 porque o upload real
 
 **Critério de aceite.** Um alerta disparado artificialmente chega ao destinatário configurado.
 
+### Registro de execução — Etapa 12
+
+Branch `feat/observabilidade`, a partir de `main` **com a Etapa 8 já mesclada**
+(PR #21). O que foi construído, e as decisões que não são óbvias no código:
+
+**O log estruturado é um `LoggerService` próprio, e isso não era opcional.** O
+`json: true` do Nest escreve `level` e um `timestamp` numérico; o Cloud Logging
+lê `severity`. Até aqui o alerta crítico chegava como `textPayload` — uma
+política filtrando `jsonPayload.alerta` nunca dispararia. Havia um teste
+afirmando que o nível virava severidade, e ele só olhava o dublê; agora a suíte
+confere a linha que sai.
+
+**O trace cobre o salto que a arquitetura aponta como cego**, e o exportador **não**
+é o do Cloud Trace: ele está depreciado e será arquivado em 30/10/2026 (ADR-20).
+A amostragem não usa as variáveis padrão do OpenTelemetry, pelo motivo
+registrado no ADR.
+
+**A sonda de sinais existe porque o Monitoring não consulta o Firestore.** Ela só
+lê e loga; o limiar vive na política, não no código — mudar "N minutos" não deve
+exigir deploy da API.
+
+**Três defeitos que só a jornada autenticada acharia**, e os três estavam
+calados: dependência circular no `ErrorHandler` (NG0200) introduzida nesta mesma
+etapa, que derrubava o **login**; `ng serve` sem resolver `zod` nas rotas
+autenticadas; e o ouvinte do armazenamento falso recortando o caminho errado —
+PUT 200, confirmação 202, arquivo `pendente_scan` para sempre.
+
+**O dependency-cruiser estava cego em três pontos.** `dist` sem âncora casava com
+`distribuicao`; `shared` resolvia para `dist/`, então nenhuma aresta cruzava a
+fronteira; e `node_modules` excluído desligava toda regra sobre pacote externo —
+`so-o-armazenamento-conhece-o-sdk-do-storage` e `sem-dev-dep-em-producao` nunca
+dispararam. A regra que defende a inviolável 7 continua sem morder mesmo depois
+da correção, e por isso virou teste de fonte (`sem-firestore-no-navegador.spec.ts`).
+
+**Mutação medida, não chutada:** `shared` 98,46% e API 88,69%, com o limiar de
+quebra dois pontos abaixo do piso observado. O sobrevivente que valia matar era
+`PerfisGuard` com lista vazia de perfis — virou teste.
+
+**Cobertura:** `apps/api` 93/85/93/95, `apps/web` 96/90/92/97, `shared`
+99/100/100/99, `scanner` 100/90/100/100.
+
 ### Só você — Etapa 12
 
 **Impossível delegar**
 
-- Definir quais alertas acordam alguém e quais só registram. É decisão operacional que depende de quem vai atender.
-- Confirmar com a CONTRATANTE quem receberá os alertas depois da entrega, já que a operação passa a ser dela.
+- Definir quais alertas acordam alguém e quais só registram. É decisão operacional que depende de quem vai atender. A estrutura está pronta: `infra/terraform/alertas-roteamento.json`, hoje com os oito alertas em `pendente`.
+- Confirmar com a CONTRATANTE quem receberá os alertas depois da entrega, já que a operação passa a ser dela. Hoje o destinatário é provisório e vem da variável `ALERTAS_EMAIL_DESENVOLVIMENTO` do GitHub — sem ela, nenhum canal é criado.
+- **Disparar o alerta artificial e confirmar que ele chega** — é o critério de aceite da etapa, e não há como automatizá-lo. Roteiro em `docs/runbooks/alerta-artificial.md`.
+- Conferir em produção, depois do primeiro deploy: o `traceparent` sobrevivendo ao rewrite do Hosting e ao Cloud Tasks (nenhuma documentação promete isso), e a primeira exportação por OTLP chegando ao Cloud Trace — só depois disso o papel `roles/cloudtrace.agent` pode sair.
+- Medir o custo de `verifyIdToken(checkRevoked)` com o trace agora disponível (pendência aberta desde a Etapa 4).
+- Aprovar as imagens de referência da regressão visual antes de elas entrarem.
+
+**Bloquear ativamente**
+
+- Escrita em Cloud Logging, Monitoring ou qualquer serviço de alerta a partir de sessão de agente. O disparo de teste é humano, pelo runbook; o hook de `PreToolUse` barra o caminho.
 
 ---
 
