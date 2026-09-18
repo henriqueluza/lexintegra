@@ -1,0 +1,38 @@
+{
+  "_leia-me": [
+    "Que papel a conta terraform-ci precisa ter para criar cada TIPO de recurso.",
+    "",
+    "POR QUE ESTE ARQUIVO EXISTE. Os papeis de projeto da terraform-ci sao",
+    "concessao manual de bootstrap, fora do Terraform (ver o cabecalho de",
+    "iam.tf). A consequencia e que um tipo de recurso novo exige conceder o papel",
+    "A MAO antes do apply — e nada avisava: o `plan` do PR passa verde porque nao",
+    "cria nada, e a falha so aparece no deploy, depois do merge.",
+    "",
+    "Aconteceu duas vezes. Na Etapa 7 faltavam cloudtasks.admin e",
+    "cloudscheduler.admin; na Etapa 12, logging.configWriter e monitoring.editor —",
+    "sete recursos recusados com 403 num deploy ja mesclado.",
+    "",
+    "`scripts/conferir-papeis-de-bootstrap.mjs` compara os tipos de recurso usados",
+    "em infra/terraform/*.tf com as chaves daqui e FALHA no `pnpm lint` quando",
+    "aparece um tipo sem papel declarado. Ele nao confere o IAM de verdade — nao",
+    "ha credencial no lint —, ele obriga a DECISAO a ser tomada antes do merge.",
+    "",
+    "Ao acrescentar um tipo novo: declare o papel aqui, conceda a mao, e so entao",
+    "faca o merge. `gcloud projects add-iam-policy-binding` e operacao humana."
+  ],
+
+  "google_artifact_registry": "roles/artifactregistry.admin",
+  "google_cloud_run": "roles/run.admin",
+  "google_cloud_scheduler": "roles/cloudscheduler.admin",
+  "google_cloud_tasks": "roles/cloudtasks.admin",
+  "google_firestore": "roles/datastore.owner",
+  "google_iam": "roles/iam.workloadIdentityPoolAdmin",
+  "google_kms": "roles/cloudkms.admin",
+  "google_logging": "roles/logging.configWriter",
+  "google_monitoring": "roles/monitoring.editor",
+  "google_project_iam": "roles/resourcemanager.projectIamAdmin",
+  "google_project_service": "roles/serviceusage.serviceUsageAdmin",
+  "google_secret_manager": "roles/secretmanager.admin",
+  "google_service_account": "roles/iam.serviceAccountAdmin",
+  "google_storage": "roles/storage.admin"
+}
