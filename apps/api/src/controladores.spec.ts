@@ -54,6 +54,7 @@ import type { CancelamentoService } from './pedidos/cancelamento.service.js';
 import { PedidosClienteController } from './pedidos/pedidos.cliente.controller.js';
 import { PreCadastrosAdminController } from './pre-cadastros/pre-cadastros.admin.controller.js';
 import { RetencaoController } from './retencao/retencao.controller.js';
+import { SinaisController } from './sinais/sinais.controller.js';
 import { CHAVE_TAREFA_INTERNA } from './tarefas/tarefa.guard.js';
 import { VarreduraController } from './varredura/varredura.controller.js';
 import { PreCadastrosController } from './pre-cadastros/pre-cadastros.controller.js';
@@ -178,6 +179,10 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['retencao (interna)', RetencaoController.prototype.executar],
     ['entrega do outbox (interna)', OutboxController.prototype.entregar],
     ['varredura do outbox (interna)', OutboxController.prototype.varrer],
+    [
+      'sinais operacionais (interna, Etapa 12)',
+      SinaisController.prototype.medir,
+    ],
   ])('%s e publico', (_nome, metodo) => {
     expect(reflector.get(CHAVE_PUBLICO, metodo)).toBe(true);
   });
@@ -197,6 +202,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['retencao', RetencaoController.prototype.executar],
     ['entrega do outbox', OutboxController.prototype.entregar],
     ['varredura do outbox', OutboxController.prototype.varrer],
+    ['sinais operacionais', SinaisController.prototype.medir],
   ])('a rota interna de %s exige credencial de tarefa', (_nome, metodo) => {
     expect(reflector.get(CHAVE_TAREFA_INTERNA, metodo)).toBe(true);
   });
@@ -386,6 +392,10 @@ describe('limite de requisicoes das rotas publicas', () => {
     ['retencao (interna)', RetencaoController.prototype.executar],
     ['entrega do outbox (interna)', OutboxController.prototype.entregar],
     ['varredura do outbox (interna)', OutboxController.prototype.varrer],
+    [
+      'sinais operacionais (interna, Etapa 12)',
+      SinaisController.prototype.medir,
+    ],
   ])('%s e isento de App Check', (_nome, metodo) => {
     expect(reflector.get(CHAVE_SEM_APP_CHECK, metodo)).toBe(true);
   });

@@ -20,6 +20,7 @@ import { LimiteModule } from './limite/limite.module.js';
 import { OutboxModule } from './outbox/outbox.module.js';
 import { PedidosModule } from './pedidos/pedidos.module.js';
 import { ErrosDoNavegadorModule } from './erros-do-navegador/erros-do-navegador.module.js';
+import { SinaisModule } from './sinais/sinais.module.js';
 import { PreCadastrosModule } from './pre-cadastros/pre-cadastros.module.js';
 import { RetencaoModule } from './retencao/retencao.module.js';
 import { TarefasModule } from './tarefas/tarefas.module.js';
@@ -73,6 +74,8 @@ import { VitrineModule } from './vitrine/vitrine.module.js';
     PreCadastrosModule,
     // Etapa 12. Endpoint publico do ADR-08: erro de frontend vira log estruturado.
     ErrosDoNavegadorModule,
+    // Etapa 12. Sonda dos sinais que so existem dentro do Firestore.
+    SinaisModule,
     VitrineModule,
     CheckoutModule,
     WebhookModule,
