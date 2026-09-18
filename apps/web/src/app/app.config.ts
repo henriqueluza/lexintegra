@@ -11,6 +11,7 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideClientHydration } from '@angular/platform-browser';
 import { anexarToken } from './autenticacao/token.interceptor';
+import { anexarRastreio } from './observabilidade/rastreio.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -25,6 +26,9 @@ export const appConfig: ApplicationConfig = {
      * em `token.interceptor.ts`: um interceptor sem esse recorte mandaria
      * credencial completa do usuario para todo host que a aplicacao chamasse.
      */
-    provideHttpClient(withFetch(), withInterceptors([anexarToken])),
+    provideHttpClient(
+      withFetch(),
+      withInterceptors([anexarRastreio, anexarToken]),
+    ),
   ],
 };
