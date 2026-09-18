@@ -39,8 +39,8 @@ export const ALERTAS = Symbol('ALERTAS');
  * `autenticacao.spec.ts`).
  */
 export interface RegistradorDeAlerta {
-  error(linha: string): void;
-  warn(linha: string): void;
+  error(mensagem: string, campos: Record<string, unknown>): void;
+  warn(mensagem: string, campos: Record<string, unknown>): void;
 }
 
 @Injectable()
@@ -51,21 +51,20 @@ export class AlertaEmLog implements CanalDeAlerta {
 
   emitir(alerta: Alerta): void {
     /*
-     * JSON numa linha: o Cloud Logging le `jsonPayload` e a politica filtra por
-     * campo. Texto corrido obrigaria a politica a casar expressao regular, que
-     * quebra na primeira vez que alguem melhora a mensagem.
+     * Os campos vao como OBJETO, nao como texto: o `LoggerEstruturado` os
+     * espalha no `jsonPayload`, e e por `jsonPayload.alerta` que a politica do
+     * Monitoring casa. Ate a Etapa 12 isto era um `JSON.stringify` dentro da
+     * mensagem, o que no Cloud Logging virava `textPayload` — a politica teria de
+     * casar expressao regular sobre a linha, e quebraria na primeira vez que
+     * alguem melhorasse a mensagem.
      */
-    const linha = JSON.stringify({
-      alerta: alerta.assunto,
-      nivel: alerta.nivel,
-      detalhe: alerta.detalhe,
-    });
+    const campos = { alerta: alerta.assunto, nivel: alerta.nivel };
 
     if (alerta.nivel === 'critico') {
-      this.log.error(linha);
+      this.log.error(alerta.detalhe, campos);
       return;
     }
-    this.log.warn(linha);
+    this.log.warn(alerta.detalhe, campos);
   }
 }
 

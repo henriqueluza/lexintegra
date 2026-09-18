@@ -3,14 +3,21 @@ import { Logger } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module.js';
 import { configurar, OPCOES_DA_APLICACAO } from './configurar.js';
+import { criarLogger } from './observabilidade/criar-logger.js';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     ...OPCOES_DA_APLICACAO,
-    // Log estruturado em JSON vai para o Cloud Logging (arquitetura, secao 9).
-    // O formatador entra na Etapa 12; aqui fica o logger padrao.
-    logger: ['error', 'warn', 'log'],
+    /*
+     * `bufferLogs` segura as linhas do boot ate `useLogger`. Sem ele, tudo que o
+     * Nest escreve enquanto resolve os modulos sai no formato antigo — e sao
+     * justamente as linhas de uma partida que deu errado.
+     */
+    bufferLogs: true,
   });
+
+  // Log estruturado em JSON para o Cloud Logging (arquitetura, secao 9).
+  app.useLogger(criarLogger());
 
   // Prefixo global e `trust proxy`. Ver `configurar.ts`.
   configurar(app);
