@@ -1,12 +1,21 @@
 import { Global, Logger, Module } from '@nestjs/common';
+import { ARMAZENAMENTO } from '../armazenamento/armazenamento.js';
 import { criarFila } from '../tarefas/criar-fila.js';
+import type { Fila } from '../tarefas/fila.js';
+import { FilaFalsa } from '../tarefas/fila.js';
 import {
   CAMINHO_DA_VARREDURA,
   FILA_DE_VARREDURA,
   type TarefaDeVarredura,
 } from './fila.js';
+import { VarreduraEmProcesso } from './fila-em-processo.js';
 import { HttpScanner } from './http.scanner.js';
-import { SCANNER, ScannerFalso, type Scanner } from './scanner.js';
+import {
+  SCANNER,
+  ScannerFalso,
+  type LeitorDeObjeto,
+  type Scanner,
+} from './scanner.js';
 import { VarreduraController } from './varredura.controller.js';
 import { VarreduraService } from './varredura.service.js';
 
@@ -25,6 +34,7 @@ export const PEDIDO_DA_FILA = {
 
 export function criarScanner(
   ambiente: NodeJS.ProcessEnv = process.env,
+  armazenamento?: LeitorDeObjeto,
 ): Scanner {
   const url = ambiente['URL_SCANNER'];
   const producao = ambiente['NODE_ENV'] === 'production';
@@ -37,12 +47,36 @@ export function criarScanner(
       );
     }
     new Logger('Varredura').warn(
-      'Sem URL_SCANNER: usando o scanner falso, que responde `limpo`.',
+      'Sem URL_SCANNER: usando o scanner falso, que responde `limpo` — salvo ' +
+        'para arquivo com o marcador de reprovacao (ver `scanner.ts`).',
     );
-    return new ScannerFalso();
+    return new ScannerFalso(armazenamento);
   }
 
   return new HttpScanner(url);
+}
+
+/**
+ * Qual fila a varredura usa, pelo mesmo criterio do outbox (Etapa 7).
+ *
+ * Producao: Cloud Tasks. Teste: a falsa, que SEGURA as tarefas para a suite
+ * disparar na mao. Desenvolvimento: em processo — sem isso, `pnpm dev` aceita o
+ * upload e nunca varre, e o arquivo fica `pendente_scan` sem nada explicando.
+ */
+export function criarFilaDeVarredura(
+  varredura: VarreduraService,
+  ambiente: NodeJS.ProcessEnv = process.env,
+): Fila<TarefaDeVarredura> {
+  if (ambiente['NODE_ENV'] === 'production') {
+    return criarFila<TarefaDeVarredura>(PEDIDO_DA_FILA, ambiente);
+  }
+  if (ambiente['NODE_ENV'] === 'test')
+    return new FilaFalsa<TarefaDeVarredura>();
+
+  new Logger('Varredura').warn(
+    'Sem Cloud Tasks: varrendo no proprio processo, logo apos a confirmacao.',
+  );
+  return new VarreduraEmProcesso(varredura);
 }
 
 /*
@@ -58,9 +92,16 @@ export function criarScanner(
     VarreduraService,
     {
       provide: FILA_DE_VARREDURA,
-      useFactory: () => criarFila<TarefaDeVarredura>(PEDIDO_DA_FILA),
+      useFactory: (varredura: VarreduraService) =>
+        criarFilaDeVarredura(varredura),
+      inject: [VarreduraService],
     },
-    { provide: SCANNER, useFactory: () => criarScanner() },
+    {
+      provide: SCANNER,
+      useFactory: (armazenamento: LeitorDeObjeto) =>
+        criarScanner(process.env, armazenamento),
+      inject: [ARMAZENAMENTO],
+    },
   ],
   exports: [FILA_DE_VARREDURA, SCANNER, VarreduraService],
 })

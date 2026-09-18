@@ -164,6 +164,24 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 - **Desenvolvimento:** sem chave, a API usa o gateway falso; `node scripts/simular-webhook.mjs <checkoutId>` faz o papel do AbacatePay (só loopback e emulador).
 - **Cobertura:** `apps/api` 93/85/93/95, `apps/web` 96/91/92/97, `packages/shared` 99/100/100/99.
 
+**Etapa 12 — observabilidade, qualidade e endurecimento (branch `feat/observabilidade`):**
+
+- **O log estruturado e um `LoggerService` proprio** (`observabilidade/logger-estruturado.ts`). O `json: true` do Nest escreve `level` e `timestamp` numerico; o Cloud Logging le `severity`. Ate aqui o alerta critico chegava como `textPayload` e **nenhuma politica casaria com ele**.
+- **Trace por OTLP para a Telemetry API, nao pelo exportador do Cloud Trace** (ADR-20): aquele sera arquivado em 30/10/2026. Exige `telemetry.googleapis.com` habilitada e `roles/telemetry.tracesWriter`; `cloudtrace.agent` fica ate a primeira exportacao ser confirmada em producao.
+- **Sem gancho de ESM**, e nao por acaso: o Express 5 e CommonJS, entao o gancho de `require` da conta. Ele fica atras de `RASTREIO_HOOK_ESM`, desligado. `instrumentation-nestjs-core` nao entra — declara `>=4 <12`.
+- **A amostragem NAO usa as variaveis padrao do OpenTelemetry**: `parentbased_traceidratio` deixa `remoteParentNotSampled` em `AlwaysOff`, que e o caso comum no Cloud Run — nenhum trace nosso existiria.
+- **O registro do outbox guarda `rastreio`**, o traceparent de origem, e a entrega loga o trace id dele. A entrega quase sempre roda noutro trace.
+- **Relato de erro do navegador**: `POST /api/erros-do-navegador`, publico, **sem App Check** (exigi-lo violaria a regra 10, e o erro que mais interessa e o da propria inicializacao do App Check). **A regra 10 ganha da observabilidade**: na home, antes do pre-cadastro, o relato espera em memoria.
+- **Os listeners globais de erro sao do Angular** (`provideBrowserGlobalErrorListeners`), nao nossos — acrescentar os proprios duplicaria cada relato.
+- **A sonda `POST /api/interno/sinais`** (5º job do Scheduler, US$ 0,10/mes) existe porque o Monitoring nao consulta o Firestore. So le e loga; o limiar vive na politica.
+- **Roteamento de alerta e ARQUIVO** (`infra/terraform/alertas-roteamento.json`), hoje tudo em `pendente`. `pnpm lint` confere os dois lados. O destinatario vem da variavel `ALERTAS_EMAIL_DESENVOLVIMENTO` do GitHub — **nao do repositorio, que e publico**.
+- **Jornadas autenticadas** (`pnpm test:jornadas`, portas 8090/4201/9299 para nao disputar com o `pnpm dev`). Elas acharam tres defeitos silenciosos: dependencia circular no `ErrorHandler` que derrubava o **login**, `ng serve` sem resolver `zod` nas rotas autenticadas, e o ouvinte do armazenamento falso recortando o caminho errado.
+- **Upload passou a funcionar em desenvolvimento**: o armazenamento falso ouve HTTP (`ARMAZENAMENTO_FALSO_PORTA`, proxy em `proxy.conf.json`) e a varredura ganhou fila em processo. A semente passou a gravar `advogados/{uid}` — sem eles o seletor do administrador vinha vazio.
+- **EICAR continua fora do repositorio** (decisao da Etapa 11): quem reprova o arquivo na jornada e um marcador do projeto que so o duble conhece.
+- **O dependency-cruiser estava cego em tres pontos** — `dist` sem ancora casando com `distribuicao`, `shared` resolvendo para `dist/`, e `node_modules` excluido desligando toda regra sobre pacote externo. `so-o-armazenamento-conhece-o-sdk-do-storage` e `sem-dev-dep-em-producao` **nunca dispararam** ate aqui. A regra que defende a inviolavel 7 continua sem morder e virou teste de fonte (`sem-firestore-no-navegador.spec.ts`).
+- **Mutacao medida** (`pnpm mutacao`): `shared` 98,46% e API 88,69%, limiar dois pontos abaixo do piso.
+- **Cobertura:** `apps/api` 93/85/93/95, `apps/web` 96/90/92/97, `shared` 99/100/100/99, `scanner` 100/90/100/100.
+
 **Próximo trabalho recomendado:** revisão humana do PR da Etapa 8 parcial. Do lado de fora do código, **iniciar já a homologação de cartão com o AbacatePay** (prazo de terceiro, e sem ela o cartão não funciona nem em produção) e, quando ela sair, fazer a parte de cartão da rodada no sandbox — o nome do evento de conclusão do cartão é o item de maior risco ainda aberto. O que a rodada desmentir se corrige antes de a etapa fechar. As Etapas 10 e 12 seguem dependendo de confirmação externa. O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde. Do lado da CONTRATANTE seguem pendentes: catálogo real da B&C, ficha de anamnese, textos jurídicos do estorno e do cancelamento, domínio verificado no Resend, chave de produção e os destinatários dos alertas.
 
 ## Stack
@@ -175,6 +193,7 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 - **Assíncrono:** Cloud Tasks e Cloud Scheduler. Padrão outbox.
 - **Externos:** AbacatePay (pagamento, conta do escritório cliente), Resend (e-mail) e Microsoft Graph API (link de reunião do Teams, app-only). O calendário do advogado é **interno** à plataforma; convites ao cliente saem como iCalendar montado no backend.
 - **Infra:** Terraform (backend GCS: `gs://lexintegra-tfstate-36bda`). CI no GitHub Actions com Workload Identity Federation (sem chave JSON de service account).
+- **Observabilidade:** log estruturado próprio em JSON, trace por OTLP para a Telemetry API (ADR-20), métricas por log, oito políticas de alerta, uptime check e painel — tudo em `infra/terraform/observabilidade.tf`.
 
 ## Estrutura
 
@@ -196,6 +215,8 @@ apps/web/          Angular 22, pré-renderização estática das rotas públicas
   src/app/catalogo/ catálogo navegável, removido do build de produção
   e2e/             Playwright: regressão visual, axe e aninhamento de direção
   e2e/referencia/  imagens de referência da regressão visual
+  e2e/jornadas/    jornadas autenticadas sobre a pilha (config playwright.pilha)
+  e2e/paineis/     regressão visual dos painéis, sobre a mesma pilha
 apps/api/          NestJS 12 (ESM-only), prefixo global /api
   src/app-check/    guard da fronteira publica; APP_CHECK_ENFORCE obrigatoria em producao
   src/limite/       janela fixa em memoria, primeiro guard da cadeia
@@ -220,14 +241,20 @@ packages/shared/   tipos e schemas compartilhados (importe por subcaminho: `shar
 packages/regras-firestore/  suíte das regras no emulador — ver o README de lá
 infra/terraform/   ver o README de lá antes de mexer
 scripts/visual.sh  roda o Playwright na imagem oficial (precisa de Docker)
+scripts/mutacao.sh  Stryker nos dois pacotes; exige e confere arvore limpa
+scripts/relatorio-qualidade.mjs  junta cobertura, mutacao, complexidade e ciclos
 scripts/emuladores.sh  envolve um comando nos emuladores de Auth e Firestore
 scripts/semear-emulador.mjs  usuários e catálogo de desenvolvimento; só fala com o emulador
 scripts/simular-webhook.mjs  faz o papel do AbacatePay em `pnpm dev`; só loopback e emulador
 scripts/dados-ficticios/  DADOS FICTÍCIOS — substituir pelo catálogo real da B&C
 .github/workflows/ ci.yml e deploy.yml
 docs/
-  runbooks/         passos humanos com roteiro (rodada no sandbox do AbacatePay)
+  runbooks/         passos humanos com roteiro (sandbox do AbacatePay, alerta artificial)
+  relatorio-qualidade.md  gerado por `pnpm relatorio:qualidade`
 .stylelintrc.mjs   critério de aceite da Etapa 3
+tsconfig.deps.json existe só para o dependency-cruiser resolver `shared` na fonte
+.env.example       nomes das variáveis (nunca valores); o destinatário dos alertas
+                   está marcado para substituição antes da Etapa 13
 .claude/
   settings.json     registro dos hooks de PreToolUse
   hooks/
@@ -244,6 +271,14 @@ docs/
   Hosting encaminha o caminho completo, então `lexintegra.com.br/api/health`
   chega ao Cloud Run como `/api/health`. Removê-lo quebra produção enquanto
   continua funcionando em localhost.
+- **A API sobe com `--import`, e o caminho tem `./`.** A instrumentação do
+  OpenTelemetry precisa embrulhar `node:http` antes de o Express o carregar, e o
+  `Dockerfile` e o script `start` passam
+  `--import ./dist/observabilidade/instrumentacao.js`. Sem o `./` o Node trata o
+  caminho como nome de pacote e sai com `ERR_MODULE_NOT_FOUND`. `pnpm dev` não
+  passa a flag de propósito: sem projeto e sem amostragem o SDK não sobe de todo
+  jeito, e o caminho aponta para `dist/`, que não existe antes da primeira
+  compilação.
 - **Source maps do Angular são `hidden`** e vão para `gs://lexintegra-sourcemaps-36bda`
   no deploy, nunca publicados com o bundle (ADR-08).
 - **Código do frontend carregado cedo importa `packages/shared` por SUBCAMINHO**
@@ -321,7 +356,11 @@ pnpm test:e2e         # Playwright
 pnpm lint             # ESLint + stylelint + dependency-cruiser
 pnpm quality          # cobertura, complexidade, dependências
 pnpm test:visual      # regressão visual no contêiner (precisa de Docker)
+pnpm test:visual paineis  # regressão visual dos painéis: pilha real dentro do contêiner
 pnpm test:a11y        # axe sobre o catálogo, três larguras
+pnpm test:jornadas    # jornadas autenticadas sobre emuladores + API + web (precisa de Java)
+pnpm mutacao          # Stryker nos alvos da arquitetura (exige árvore limpa)
+pnpm relatorio:qualidade  # docs/relatorio-qualidade.md a partir do que já foi medido
 ```
 
 Os emuladores rodam sobre a JVM: `pnpm dev` e `pnpm test:integration` precisam
@@ -374,7 +413,7 @@ Estas vêm de decisões registradas nos ADRs. Violá-las é bug, não preferênc
 
 17. **Custom claim só é escrita em dois lugares, e cada um escreve um perfil só** (emendada na Etapa 8). `AdvogadosService.criar` escreve `role: advogado`. `ContasClienteService.obterOuCriar` escreve `role: cliente`, e **só em conta sem perfil nenhum** — e-mail que já é advogado ou administrador vira pagamento `conflito_de_conta`, nunca troca de claim. Nada mais na aplicação chama `setCustomUserClaims`, e isso é lint: um `no-restricted-syntax` no `eslint.config.mjs` recusa a chamada fora dos dois serviços. `admin` nunca é escrito por código: o administrador global é provisionado fora da aplicação (item 2.4.2), por script manual em `scripts/manual-only/`. Suspensão **não** mexe na claim — quem foi suspenso continua sendo advogado, o que muda é o acesso.
 
-18. **Rota nova na API nasce fechada.** Os guards são globais; abrir exige `@Publico()` explícito, e a superfície administrativa declara `@Perfis('admin')` na classe do controlador, não em cada método. As rotas públicas de usuário são **sete** — health, redefinição de senha, pré-cadastro, vitrine, checkout, situação do checkout e webhook do gateway — mais as quatro internas (varredura, retenção, entrega e varredura do outbox), que são `@Publico()` só no sentido de "sem usuário" e exigem credencial de tarefa. `controladores.spec.ts` lista todas **nominalmente**: abrir uma rota exige editar o teste. A vitrine e o checkout são `@Publico()` no sentido de "sem identidade" e mesmo assim exigem o token de pré-cadastro, por um guard de controlador. O webhook é o único público sem App Check, e se autentica por assinatura antes de qualquer leitura.
+18. **Rota nova na API nasce fechada.** Os guards são globais; abrir exige `@Publico()` explícito, e a superfície administrativa declara `@Perfis('admin')` na classe do controlador, não em cada método. As rotas públicas de usuário são **oito** — health, redefinição de senha, pré-cadastro, vitrine, checkout, situação do checkout, webhook do gateway e relato de erro do navegador (Etapa 12) — mais as **cinco** internas (varredura, retenção, entrega e varredura do outbox, e sinais operacionais), que são `@Publico()` só no sentido de "sem usuário" e exigem credencial de tarefa. `controladores.spec.ts` lista todas **nominalmente**: abrir uma rota exige editar o teste. A vitrine e o checkout são `@Publico()` no sentido de "sem identidade" e mesmo assim exigem o token de pré-cadastro, por um guard de controlador. O webhook e o relato de erro do navegador são os únicos públicos de usuário sem App Check. O webhook se autentica por assinatura antes de qualquer leitura; o relato de erro não pode exigir App Check por duas razões — obter o token é chamada de rede, e a regra 10 proíbe isso na home, e o erro que mais interessa é justamente o da inicialização do App Check. No lugar, ele tem esquema estreito, limite por endereço e teto por instância.
 
 19. **A API é acessada via `/api/**` no mesmo domínio do frontend, não por subdomínio.** Rewrite do Firebase Hosting para o Cloud Run (ver ADR-15). Não criar mapeamento de domínio próprio (`api.lexintegra.com.br`) sem antes verificar se a região do serviço já suporta essa funcionalidade do Cloud Run — na região `southamerica-east1`, não suporta.
 

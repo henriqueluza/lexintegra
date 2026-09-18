@@ -184,13 +184,32 @@ cd infra/terraform && terraform init && terraform plan
   sobra do bootstrap. Não é gerido por este Terraform. Convém remover à mão para
   não haver dois buckets de state parecidos convidando a erro.
 
+## Observabilidade (Etapa 12)
+
+`observabilidade.tf` tem as métricas por log, as oito políticas de alerta, o
+uptime check e o painel; `sinais.tf` tem a sonda que os alimenta com o que só
+existe dentro do Firestore.
+
+**Quem recebe alerta não está aqui, e é de propósito.** O destinatário vem da
+variável `ALERTAS_EMAIL_DESENVOLVIMENTO` do GitHub Actions — o repositório é
+público. Sem ela, nenhum canal é criado e o incidente fica no console, que é o
+comportamento certo para um `plan` rodado por quem não configurou a variável.
+
+**O roteamento é arquivo**, `alertas-roteamento.json`: cada alerta vale
+`acordar`, `pendente` ou `registrar`, e hoje os oito estão em `pendente` porque a
+decisão é operacional e pertence à CONTRATANTE. `pnpm lint` confere que política
+e arquivo não se separam.
+
+**Custo que aparece depois:** o Cloud Monitoring passa a cobrar alertas a partir
+de 1º/09/2027 (US$ 0,35/mês por referência de métrica em política). Está na
+tabela da arquitetura, seção 12.
+
 ## O que ainda não está aqui
 
 Entra junto com o código que o usa, não antes:
 
 - Filas do Cloud Tasks e jobs do Cloud Scheduler — Etapas 7 e 9.
 - Serviço do scanner ClamAV — Etapa 11.
-- Políticas de alerta e uptime check — Etapa 12.
 - Mais índices compostos do Firestore — conforme as consultas existirem. O
   primeiro (`produtos` por `ativo` + `nome`) entrou na Etapa 5, junto da consulta
   que o exige; os próximos devem entrar do mesmo jeito, nunca antes.

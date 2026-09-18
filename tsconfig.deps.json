@@ -1,0 +1,11 @@
+{
+  "//": "Existe SO para o dependency-cruiser, e nao entra em build nenhum. O pacote `shared` publica `exports` apontando para `dist/`, que e excluido do grafo (e em CI nem existe quando o lint roda): sem estes `paths`, NENHUMA aresta de `apps/*` para `packages/shared` aparecia, e as regras de fronteira sobre ele nunca eram exercitadas. Os caminhos apontam para a FONTE, que e o que o compilador e o Jest tambem enxergam.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "shared": ["packages/shared/src/index.ts"],
+      "shared/*": ["packages/shared/src/*"]
+    }
+  }
+}

@@ -26,6 +26,17 @@ export const PERFIS = ['cliente', 'advogado', 'admin'] as const;
 export type Perfil = (typeof PERFIS)[number];
 
 export function ehPerfil(valor: unknown): valor is Perfil {
+  /*
+   * O `typeof` e para o COMPILADOR, nao para o tempo de execucao: `includes`
+   * sobre um valor que nao e string ja devolve `false`.
+   *
+   * A analise de mutacao (Etapa 12) acusa isso como MUTANTE EQUIVALENTE, e ele
+   * fica no relatorio de proposito. Silencia-lo com `Stryker disable` custaria
+   * caro: a diretiva cobre a expressao inteira e apagaria tambem os oito
+   * mutantes de `includes` que os testes matam — esconder um sobrevivente as
+   * custas de deixar de verificar oito e o tipo de negocio que faz um escore de
+   * mutacao deixar de significar alguma coisa.
+   */
   return (
     typeof valor === 'string' && (PERFIS as readonly string[]).includes(valor)
   );

@@ -7,6 +7,7 @@ import {
   type Transaction,
 } from 'firebase-admin/firestore';
 import { FIRESTORE } from '../firebase/firebase.module.js';
+import { traceparentAtual } from '../observabilidade/rastreio.js';
 import {
   chaveDoEvento,
   idDoEvento,
@@ -87,10 +88,19 @@ export class OutboxService {
   ): string {
     const id = idDoEvento(evento.tipo, chaveDoEvento(evento), agora);
 
+    /*
+     * O rastreio de ORIGEM, para a entrega — que acontece noutro trace, e as
+     * vezes horas depois — continuar alcancavel a partir do request que criou o
+     * evento. Ausente quando nao ha rastreio ativo, e o campo entao nem e
+     * escrito: `undefined` faz o Firestore recusar a escrita inteira.
+     */
+    const rastreio = traceparentAtual();
+
     transacao.create(this.referencia(id), {
       tipo: evento.tipo,
       destinatarioUid: evento.destinatarioUid,
       ...(evento.estorno === undefined ? {} : { estorno: evento.estorno }),
+      ...(rastreio === undefined ? {} : { rastreio }),
       estado: 'pendente',
       criadoEm: FieldValue.serverTimestamp(),
       tentativas: 0,

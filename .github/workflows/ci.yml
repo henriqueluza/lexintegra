@@ -220,6 +220,86 @@ jobs:
             apps/web/playwright-report/
           retention-days: 7
 
+  jornadas:
+    name: Jornadas autenticadas (Etapa 12)
+    needs: versao-playwright
+    runs-on: ubuntu-latest
+    # A mesma imagem do job visual: ela ja traz os navegadores e as bibliotecas
+    # de sistema deles. O que falta e a JVM — os emuladores do Firebase rodam
+    # sobre ela, e sem emulador nao ha login nem Firestore para a jornada.
+    container:
+      image: ${{ needs.versao-playwright.outputs.imagem }}
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      # Sobe emuladores, API e `ng serve`, semeia o banco e roda as jornadas.
+      # Elas exercitam o que nenhuma outra suite alcanca: token do Firebase,
+      # interceptor, guard, upload pelo navegador e veredito da varredura, na
+      # mesma execucao. Foi este job que pegou a dependencia circular no
+      # `ErrorHandler`, que derrubava o login sem quebrar teste de unidade.
+      - name: Jornadas sobre a pilha real
+        run: pnpm test:jornadas
+
+      - name: Guardar o rastro quando falhar
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jornadas-diferencas
+          path: |
+            apps/web/test-results/
+            apps/web/playwright-report/
+          retention-days: 7
+
+  mutacao:
+    name: Analise de mutacao
+    # Depois do `qualidade`: nao vale gastar minutos mutando codigo cuja suite ja
+    # esta vermelha — o relatorio seria de um estado que ninguem quer manter.
+    needs: qualidade
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      # Os alvos sao os da arquitetura, secao 10: transicao de status,
+      # autorizacao e assinatura do webhook. O limiar de cada pacote foi MEDIDO e
+      # esta nos `stryker.config.mjs`; a corrida falha se o escore cair abaixo
+      # dele, que e o ponto de ter mutacao no pipeline.
+      - name: Mutacao nos alvos definidos
+        run: pnpm mutacao
+
+      - name: Guardar o relatorio
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-mutacao
+          path: reports/
+          retention-days: 7
+
   terraform:
     name: Terraform (validate e plan)
     runs-on: ubuntu-latest

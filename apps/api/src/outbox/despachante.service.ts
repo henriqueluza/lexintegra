@@ -8,6 +8,7 @@ import {
   type EmailTransport,
 } from '../email/email-transport.js';
 import { descreverErro } from '../email/redigir.js';
+import { traceIdDe } from '../observabilidade/rastreio.js';
 import { ALERTAS, type CanalDeAlerta } from '../alertas/alerta.js';
 import {
   GATEWAY_PAGAMENTO,
@@ -95,7 +96,18 @@ export class DespachanteOutbox {
 
     if (entrega.sucesso) {
       await this.outbox.concluir(id, registro, { sucesso: true });
-      this.log.log(`registro ${id} entregue`);
+      /*
+       * `rastreioDeOrigem` liga esta linha ao request que criou o evento. A
+       * entrega roda quase sempre noutro trace — varredor, reentrega da fila,
+       * reenvio manual —, entao sem este campo nao ha como ir do "o cliente
+       * pagou" ate "o e-mail saiu" pelo log.
+       */
+      this.log.log(`registro ${id} entregue`, {
+        sinal: 'outbox.entrega',
+        resultado: 'entregue',
+        tipo: registro.tipo,
+        rastreioDeOrigem: traceIdDe(registro.rastreio),
+      });
       return 'entregue';
     }
 
@@ -114,8 +126,20 @@ export class DespachanteOutbox {
       motivo,
     });
 
+    /*
+     * `sinal` e `resultado` sao o que a metrica por log conta (Etapa 12). A taxa
+     * de falha de entrega e razao entre este campo e o `entregue` acima — sem os
+     * dois com o mesmo nome de sinal, a politica teria de casar a MENSAGEM, e
+     * quebraria na primeira vez que alguem melhorasse o texto.
+     */
     this.log.error(
       `registro ${id} falhou na tentativa ${String(registro.tentativas)}: ${motivo}`,
+      {
+        sinal: 'outbox.entrega',
+        resultado: 'falhou',
+        tipo: registro.tipo,
+        tentativas: registro.tentativas,
+      },
     );
 
     if (estado !== 'abandonado') return 'falhou';

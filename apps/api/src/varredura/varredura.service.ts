@@ -68,6 +68,7 @@ export class VarreduraService {
     }
 
     const resultado = await this.scanner.varrer(emQuarentena);
+    this.registrarIdadeDaBase(resultado.baseAtualizadaEm);
 
     if (resultado.veredito === 'indisponivel') {
       /*
@@ -88,6 +89,30 @@ export class VarreduraService {
     }
 
     return this.conferirConteudo(tarefa, emQuarentena);
+  }
+
+  /**
+   * A idade da base que decidiu ESTE veredito.
+   *
+   * O sinal existe porque o job diario pode terminar verde com base velha: o
+   * `freshclam` sai com sucesso quando o mirror recusa por limite de taxa. Um
+   * scanner que responde "limpo" com assinaturas de tres semanas parece estar
+   * funcionando, e e esse o pior desfecho possivel (arquitetura, secao 9).
+   *
+   * Ausencia do campo nao e erro: scanner falso em desenvolvimento e versao
+   * antiga do contentor nao o preenchem, e a varredura vale do mesmo jeito.
+   */
+  private registrarIdadeDaBase(geradaEm: string | undefined): void {
+    if (geradaEm === undefined) return;
+
+    const instante = Date.parse(geradaEm);
+    if (Number.isNaN(instante)) return;
+
+    this.log.log('base do ClamAV usada na varredura', {
+      sinal: 'clamav.base-usada',
+      geradaEm,
+      idadeHoras: Math.max(0, Math.round((Date.now() - instante) / 3_600_000)),
+    });
   }
 
   /**

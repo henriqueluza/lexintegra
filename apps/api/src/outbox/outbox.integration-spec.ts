@@ -50,9 +50,7 @@ function http(): request.Agent {
 
 /** Uma chamada com a credencial que o Cloud Tasks anexaria. */
 function comoTarefa(caminho: string): request.Test {
-  return http()
-    .post(caminho)
-    .set('authorization', `Bearer ${TOKEN_DE_TAREFA}`);
+  return http().post(caminho).set('authorization', `Bearer ${TOKEN_DE_TAREFA}`);
 }
 
 /**
@@ -121,7 +119,9 @@ async function linhasDoPainel(situacao?: string): Promise<
   }[]
 > {
   const resposta = await http()
-    .get(`/api/admin/outbox${situacao === undefined ? '' : `?situacao=${situacao}`}`)
+    .get(
+      `/api/admin/outbox${situacao === undefined ? '' : `?situacao=${situacao}`}`,
+    )
     .set('authorization', `Bearer ${tokenDoAdmin}`)
     .expect(200);
   return resposta.body as never;

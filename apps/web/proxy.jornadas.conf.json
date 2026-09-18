@@ -1,0 +1,15 @@
+{
+  "//": "Proxy das JORNADAS (Etapa 12). Portas proprias — 8090 para a API e 9299 para o armazenamento falso — para a suite nunca disputar porta com o `pnpm dev` de quem esta trabalhando na maquina. O Firestore emulado ja ocupa a 8081, entao a API nao pode usar essa.",
+  "/api": {
+    "target": "http://localhost:8090",
+    "secure": false,
+    "changeOrigin": false,
+    "logLevel": "warn"
+  },
+  "/armazenamento-falso": {
+    "target": "http://localhost:9299",
+    "secure": false,
+    "changeOrigin": false,
+    "logLevel": "warn"
+  }
+}

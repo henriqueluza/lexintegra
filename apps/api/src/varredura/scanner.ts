@@ -45,17 +45,71 @@ export const SCANNER = Symbol('SCANNER');
  * acessivel"). Aqui, o veredito e CONFIGURADO pelo teste — o que se exercita e o
  * que a API faz com cada resposta possivel, que e o que codigo pode verificar.
  */
+/**
+ * O marcador que faz o scanner falso REPROVAR, em desenvolvimento.
+ *
+ * NAO E EICAR, e a distincao importa. EICAR e uma cadeia que antivirus de
+ * verdade reconhecem, e o plano de execucao reserva o teste com ela para
+ * validacao humana ("testar com o arquivo EICAR voce mesmo") — nenhum byte dela
+ * existe neste repositorio, decisao da Etapa 11 mantida na 12.
+ *
+ * Isto aqui e outra coisa: um marcador do PROJETO, que so este dublê conhece,
+ * para a jornada de upload conseguir exercitar o caminho "reprovado nunca e
+ * servido" (regra inviolavel 6) de ponta a ponta, com navegador. Em producao o
+ * scanner falso nao existe — `criarScanner` recusa subir sem `URL_SCANNER` —,
+ * entao nao ha o que desligar.
+ */
+export const MARCADOR_DE_REPROVACAO = 'LEXINTEGRA-ARQUIVO-DE-TESTE-REPROVAR';
+
+/** Quanto do arquivo o dublê olha atras do marcador. */
+const BYTES_OLHADOS = 512;
+
 @Injectable()
 export class ScannerFalso implements Scanner {
   private resposta: ResultadoDaVarredura = { veredito: 'limpo' };
   readonly varridos: string[] = [];
 
+  /**
+   * O armazenamento so entra em desenvolvimento, e e ele que habilita o
+   * marcador. Nos testes de unidade o dublê e construido sem ele, e o veredito
+   * continua vindo de `responderCom` — o que se exercita ali e o que a API faz
+   * com cada resposta possivel, e isso nao depende de conteudo nenhum.
+   */
+  constructor(private readonly armazenamento?: LeitorDeObjeto) {}
+
   responderCom(resultado: ResultadoDaVarredura): void {
     this.resposta = resultado;
   }
 
-  varrer(objeto: Objeto): Promise<ResultadoDaVarredura> {
+  async varrer(objeto: Objeto): Promise<ResultadoDaVarredura> {
     this.varridos.push(`${objeto.balde}:${objeto.caminho}`);
-    return Promise.resolve(this.resposta);
+
+    if (this.armazenamento !== undefined && (await this.temMarcador(objeto))) {
+      return {
+        veredito: 'infectado',
+        assinatura: 'Lexintegra.MarcadorDeTeste',
+      };
+    }
+
+    return this.resposta;
   }
+
+  private async temMarcador(objeto: Objeto): Promise<boolean> {
+    try {
+      const inicio = await this.armazenamento!.lerPrimeirosBytes(
+        objeto,
+        BYTES_OLHADOS,
+      );
+      return Buffer.from(inicio)
+        .toString('latin1')
+        .includes(MARCADOR_DE_REPROVACAO);
+    } catch {
+      return false;
+    }
+  }
+}
+
+/** So o que o dublê usa do armazenamento. */
+export interface LeitorDeObjeto {
+  lerPrimeirosBytes(objeto: Objeto, quantidade: number): Promise<Uint8Array>;
 }

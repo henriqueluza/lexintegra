@@ -829,6 +829,31 @@ Não sobra nenhum. O quarto job em diante custa US$ 0,10/mês cada — irrelevan
 
 **Limitação a documentar.** Cloud Trace e Cloud Monitoring têm cotas gratuitas generosas, mas amostragem agressiva de traces em produção pode ultrapassá-las. A taxa de amostragem deve ser configurável por variável de ambiente.
 
+### O que foi construído na Etapa 12 — e o que mudou desta seção
+
+- **O log estruturado é um `LoggerService` próprio** (`observabilidade/logger-estruturado.ts`), e não o `json: true` do Nest: aquele escreve `level` e um `timestamp` numérico, e o Cloud Logging lê `severity`. Sem isso, o alerta crítico chegava como linha de texto comum e **nenhuma política conseguiria casar com ele** — que era o estado até aqui.
+- **A amostragem não usa as variáveis padrão do OpenTelemetry.** `OTEL_TRACES_SAMPLER=parentbased_traceidratio` deixa `remoteParentNotSampled` em `AlwaysOff`, e esse é justamente o caso comum: o Cloud Run popula o `traceparent` de entrada com amostragem própria, quase sempre negativa. Com o padrão, nenhum trace nosso existiria. Ver `observabilidade/amostragem.ts`.
+- **As métricas de negócio vêm de uma sonda**, e não do Monitoring: ele não consulta o Firestore. `POST /api/interno/sinais`, chamada a cada cinco minutos pelo Scheduler, lê a idade do outbox mais antigo e do arquivo mais antigo em quarentena e escreve os dois números num log estruturado, que as métricas por log consomem. A sonda **só lê e loga** — corrigir o que ela mede seria um segundo caminho de entrega do outbox, contra a regra inviolável 3.
+- **"Taxa de falha do webhook" virou contagem de falhas de ENTREGA por janela.** Razão é ruim no volume previsto: uma entrega e uma falha dariam 100%. A falha sustentada é coberta pelo alerta de outbox parado.
+- **"Advogados com disponibilidade publicada e sem link de reunião" existe como métrica e política, sem emissor.** Não há campo de reunião no modelo — é Etapa 10. A política dispara com `> 0` e, sem dado, não dispara nunca; emitir `0` seria fingir medição.
+- **Os listeners globais de `error` e `unhandledrejection` não são nossos.** O Angular já os registra (`provideBrowserGlobalErrorListeners`), e acrescentar os nossos duplicaria cada relato. O que a Etapa 12 acrescentou foi o `ErrorHandler` — e a regra inviolável 10 ganha dele: na home, antes do pré-cadastro, o relato espera em memória e não vira requisição.
+
+---
+
+### ADR-20 — Rastreio pelo endpoint OTLP, e não pelo exportador do Cloud Trace
+
+**Contexto.** A seção 9 pede traces via OpenTelemetry exportando para o Cloud Trace. O caminho óbvio era `@google-cloud/opentelemetry-cloud-trace-exporter`, que a Etapa 12 chegou a instalar.
+
+**O que apareceu.** O pacote emite, em tempo de execução, um aviso de depreciação: ele **será arquivado depois de 30/10/2026** — semanas depois desta etapa, e antes da entrega prevista na cláusula 4.3. O Google publicou a Telemetry API (`telemetry.googleapis.com`), que recebe OTLP nativamente e grava no mesmo Cloud Trace.
+
+**Decisão.** Exportar por OTLP para `https://telemetry.googleapis.com/v1/traces`, com `@opentelemetry/exporter-trace-otlp-proto` e credencial do ambiente (ADC). Entregar a um terceiro um componente que morre em semanas seria transferir o problema junto com o sistema.
+
+**Custo da decisão.** Duas mudanças de infraestrutura: a API `telemetry.googleapis.com` habilitada e o papel `roles/telemetry.tracesWriter` na conta de runtime. O papel `roles/cloudtrace.agent` fica até a primeira exportação ser confirmada em produção — remover os dois de uma vez deixaria a etapa sem caminho de volta.
+
+**Armadilha que o desenho evita.** O token do Google expira em uma hora. O exportador OTLP aceita callback assíncrono de cabeçalho exatamente por isso; fixar o token na criação faria o rastreio funcionar por sessenta minutos e parar depois, sem erro nenhum — a instância continuaria de pé, só sem trace.
+
+**Sobre a instrumentação sob ESM.** `apps/api` é ESM-only, e a leitura corrente é que instrumentação automática exigiria o gancho de carregamento (`import-in-the-middle`). Não exige: `instrumentation-http` embrulha `Server.prototype.emit` e `http.request`, e quem carrega `node:http` é o Express 5, que é CommonJS. Verificado com servidor CJS sob entrada ESM, span ativo no handler. O gancho de ESM roda com `internals: true` — reescreve todo módulo do grafo a cada partida a frio, num serviço com `min = 0` — e por isso fica atrás de `RASTREIO_HOOK_ESM`, desligado. `instrumentation-nestjs-core` **não entra**: declara compatibilidade `>=4 <12` e o projeto está no Nest 12, então o patch nunca se aplicaria.
+
 ---
 
 ## 10. Testes e qualidade
@@ -881,8 +906,9 @@ Estimativa mensal em regime permanente, com câmbio aproximado de R$ 5,40:
 | Firebase Auth | R$ 0 |
 | Cloud Storage (5 GB) | R$ 0 |
 | Cloud Tasks (1 M operações) | R$ 0 |
-| Cloud Scheduler (3 jobs) | R$ 0 |
+| Cloud Scheduler (3 jobs gratuitos + 2) | ~R$ 1 |
 | Secret Manager, KMS, Logging | R$ 0 a R$ 2 |
+| Cloud Monitoring (alertas, uptime check, painel) | R$ 0 até 09/2027, depois ~R$ 16 |
 | Artifact Registry | R$ 1 a R$ 3 |
 | Resend | R$ 0 |
 | Domínio `.com.br` amortizado | ~R$ 3,50 |
@@ -893,6 +919,8 @@ Custos variáveis por transação: R$ 0,80 por Pix recebido, ou 3,5% + R$ 0,60 p
 **Alerta de comunicação.** Como a cláusula 3.4 põe os custos recorrentes na CONTRATANTE, a planilha de custo em regime permanente deve ser entregue por escrito **antes** da aprovação da plataforma prevista no 6.2. Sem isso, quando a primeira fatura chegar, a ligação vem para o CONTRATADO.
 
 Essa planilha (`LexIntegra-custos-mensais.xlsx`) já foi preparada como artefato separado, com abas de premissas editáveis, custos fixos, custos por venda, resumo e cenários de aumento de custo. Ela é o insumo do item 5 (bloco de formalizações) na mensagem enviada ao Marcos, e deve ser anexada ao documento de abertura da Etapa 0.
+
+**Duas notas da Etapa 12.** O quarto e o quinto jobs do Scheduler — retenção (Etapa 11) e sonda de sinais — custam US$ 0,10/mês cada; os três gratuitos já estavam ocupados. E o Cloud Monitoring passa a cobrar alertas **a partir de 1º de setembro de 2027** (US$ 0,35/mês por referência de métrica em política): com as oito políticas de hoje, algo em torno de US$ 3/mês. Nenhum dos dois muda a conta agora, e os dois precisam estar na planilha entregue à CONTRATANTE antes da aprovação do 6.2 — surpresa em fatura recorrente é o tipo de coisa que a cláusula 3.4 transforma em ligação para o CONTRATADO.
 
 **Onde essa conta quebra.** Limite de 100 e-mails por dia do Resend no plano gratuito. É a trava mais provável de ser atingida primeiro, e ela **pausa o envio** em vez de cobrar excedente — o que significa cliente sem link de senha e sem confirmação de agendamento. Precisa de alerta antes do teto e de plano de contingência.
 

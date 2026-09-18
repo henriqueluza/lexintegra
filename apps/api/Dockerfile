@@ -42,4 +42,9 @@ COPY --from=build --chown=node:node /saida/package.json ./package.json
 USER node
 # Documental: o Cloud Run injeta PORT e main.ts escuta nela.
 EXPOSE 8080
-CMD ["node", "dist/main.js"]
+# `--import` carrega a instrumentacao do OpenTelemetry ANTES da aplicacao: ela
+# precisa embrulhar `node:http` antes de o Express o carregar. O `./` e
+# obrigatorio — sem ele, o Node trata o caminho como especificador de pacote e
+# sai com ERR_MODULE_NOT_FOUND. Sem RASTREIO_AMOSTRAGEM, o arquivo nao sobe SDK
+# nenhum (ver `instrumentacao.ts`).
+CMD ["node", "--import", "./dist/observabilidade/instrumentacao.js", "dist/main.js"]

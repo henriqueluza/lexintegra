@@ -50,15 +50,17 @@ describe('criarFila', () => {
   /** A variavel da fila e por dominio: pedir outra nao pode aceitar esta. */
   it('cobra a variavel do pedido, e nao qualquer uma', () => {
     expect(() =>
-      criarFila(
-        { ...PEDIDO, variavelDaFila: 'FILA_EVENTOS' },
-        { ...COMPLETO, NODE_ENV: 'production' } as NodeJS.ProcessEnv,
-      ),
+      criarFila({ ...PEDIDO, variavelDaFila: 'FILA_EVENTOS' }, {
+        ...COMPLETO,
+        NODE_ENV: 'production',
+      } as NodeJS.ProcessEnv),
     ).toThrow(/FILA_EVENTOS/);
   });
 
   it('fora de producao, sem configuracao, usa a fila falsa', () => {
-    expect(criarFila(PEDIDO, {} as NodeJS.ProcessEnv)).toBeInstanceOf(FilaFalsa);
+    expect(criarFila(PEDIDO, {} as NodeJS.ProcessEnv)).toBeInstanceOf(
+      FilaFalsa,
+    );
   });
 
   it('com tudo configurado, usa o Cloud Tasks', () => {

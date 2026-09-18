@@ -146,7 +146,7 @@ function emMilissegundos(valor: unknown): number | null {
 }
 
 function casa(dados: Dados, filtro: Filtro): boolean {
-  const campo = dados[filtro.campo];
+  const campo = valorDe(dados, filtro.campo);
 
   if (filtro.operador === 'array-contains') {
     return Array.isArray(campo) && campo.includes(filtro.valor);
@@ -170,6 +170,25 @@ function casa(dados: Dados, filtro: Filtro): boolean {
   return campo === filtro.valor;
 }
 
+/**
+ * Campo aninhado por caminho com ponto — `arquivoAtual.estado`.
+ *
+ * Entrou na Etapa 12, com a sonda de sinais operacionais: o estado do arquivo do
+ * entregavel mora dentro de `arquivoAtual`, e sem isto a consulta de grupo
+ * devolveria `undefined` para todo documento e a sonda mediria zero em silencio.
+ */
+export function valorDe(dados: Dados | undefined, campo: string): unknown {
+  return campo
+    .split('.')
+    .reduce<unknown>(
+      (atual, parte) =>
+        typeof atual === 'object' && atual !== null
+          ? (atual as Dados)[parte]
+          : undefined,
+      dados,
+    );
+}
+
 export class ConsultaFalsa {
   constructor(
     protected readonly banco: FirestoreFalso,
@@ -178,6 +197,12 @@ export class ConsultaFalsa {
     private readonly ordem: string | null = null,
     private readonly descendente = false,
     private readonly teto: number | null = null,
+    /**
+     * Consulta de GRUPO de colecao: casa toda subcolecao com este nome, em
+     * qualquer pedido. E o que a sonda de sinais usa para achar o arquivo mais
+     * antigo parado em quarentena, que pode estar sob qualquer `pedidos/{id}`.
+     */
+    private readonly grupo: boolean = false,
   ) {}
 
   where(campo: string, operador: string, valor: unknown): ConsultaFalsa {
@@ -201,6 +226,7 @@ export class ConsultaFalsa {
       this.ordem,
       this.descendente,
       this.teto,
+      this.grupo,
     );
   }
 
@@ -212,6 +238,7 @@ export class ConsultaFalsa {
       campo,
       direcao === 'desc',
       this.teto,
+      this.grupo,
     );
   }
 
@@ -223,6 +250,7 @@ export class ConsultaFalsa {
       this.ordem,
       this.descendente,
       quantidade,
+      this.grupo,
     );
   }
 
@@ -239,16 +267,26 @@ export class ConsultaFalsa {
 
     const prefixo = `${this.colecao}/`;
     const docs = [...this.banco.documentos.entries()]
-      .filter(([caminho]) => caminho.startsWith(prefixo))
+      .filter(([caminho]) =>
+        this.grupo
+          ? // Grupo: a colecao PAI do documento tem este nome, em qualquer nivel.
+            caminho.split('/').at(-2) === this.colecao
+          : caminho.startsWith(prefixo),
+      )
       // Filho direto da colecao: `produtos/p1` entra, `produtos/p1/notas/n1` nao.
-      .filter(([caminho]) => !caminho.slice(prefixo.length).includes('/'))
+      .filter(
+        ([caminho]) =>
+          this.grupo || !caminho.slice(prefixo.length).includes('/'),
+      )
       .filter(([, dados]) =>
         this.filtros.every((filtro) => casa(dados, filtro)),
       )
       .map(
         ([caminho, dados]) =>
           new DocumentoFalso(
-            caminho.slice(prefixo.length),
+            this.grupo
+              ? (caminho.split('/').at(-1) ?? caminho)
+              : caminho.slice(prefixo.length),
             dados,
             new ReferenciaFalsa(this.banco, caminho),
           ),
@@ -258,7 +296,8 @@ export class ConsultaFalsa {
     if (ordem !== null) {
       const sinal = this.descendente ? -1 : 1;
       docs.sort(
-        (a, b) => sinal * comparar(a.data()?.[ordem], b.data()?.[ordem]),
+        (a, b) =>
+          sinal * comparar(valorDe(a.data(), ordem), valorDe(b.data(), ordem)),
       );
     }
 
@@ -385,6 +424,11 @@ export class FirestoreFalso {
 
   collection(caminho: string): ColecaoFalsa {
     return new ColecaoFalsa(this, caminho);
+  }
+
+  /** Como o `collectionGroup` de verdade: toda subcolecao com este nome. */
+  collectionGroup(nome: string): ConsultaFalsa {
+    return new ConsultaFalsa(this, nome, [], null, false, null, true);
   }
 
   runTransaction<T>(

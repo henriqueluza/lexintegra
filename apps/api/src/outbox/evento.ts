@@ -92,6 +92,20 @@ export interface RegistroOutbox {
   readonly enviadoEm?: Timestamp;
   /** Ja limpo de endereco pelo adaptador (ver `redigirEnderecos`). */
   readonly ultimoErro?: string;
+  /**
+   * O `traceparent` de quando o evento NASCEU. Ausente sem rastreio ativo.
+   *
+   * A entrega quase sempre acontece noutro trace: o varredor reenfileira a
+   * partir de um job do Scheduler, e a reentrega da fila pode vir horas depois.
+   * Guardado aqui, o id do trace de origem entra no log da entrega, e a linha da
+   * entrega volta a ser alcancavel a partir do request que a originou — que e o
+   * que a secao 9 da arquitetura chama de "traceId propagado do frontend ate a
+   * task".
+   *
+   * NAO E DADO PESSOAL e nao identifica ninguem: e um numero aleatorio de 16
+   * bytes gerado por requisicao.
+   */
+  readonly rastreio?: string;
 }
 
 /** Janela de deduplicacao do pedido de redefinicao, em milissegundos. */

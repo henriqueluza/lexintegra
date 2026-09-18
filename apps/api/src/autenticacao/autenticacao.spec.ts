@@ -36,6 +36,16 @@ class ControladorMisto {
   restrito(): void {}
 
   livre(): void {}
+
+  /**
+   * `@Perfis()` SEM PERFIL NENHUM. Existe para fixar o que o guard faz com a
+   * lista vazia — "nao restringe" —, que ate a Etapa 12 nenhum teste dizia. A
+   * analise de mutacao apontou: trocar `exigidos.length === 0` por `false` nao
+   * quebrava teste nenhum, e a consequencia real seria recusar toda rota
+   * anotada assim, com 403 para usuario legitimo.
+   */
+  @Perfis()
+  semRestricao(): void {}
 }
 
 interface Requisicao {
@@ -312,6 +322,17 @@ describe('PerfisGuard', () => {
       });
       expect(guard.canActivate(contexto)).toBe(true);
     }
+  });
+
+  /** Lista vazia nao restringe. Ver o comentario em `ControladorMisto`. */
+  it('deixa passar rota com @Perfis vazio', () => {
+    const { contexto } = montarContexto({
+      classe: ControladorMisto,
+      metodo: 'semRestricao',
+      usuario: usuario('cliente'),
+    });
+
+    expect(guard.canActivate(contexto)).toBe(true);
   });
 
   /**

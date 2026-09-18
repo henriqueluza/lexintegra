@@ -23,6 +23,17 @@ const LARGURAS = [
 
 export default defineConfig({
   testDir: './e2e',
+
+  /*
+   * As suites que precisam da PILHA ficam de fora daqui (Etapa 12). Esta
+   * configuracao sobe so o `ng serve`, e jornada autenticada exige emuladores e
+   * API — sem o recorte, `pnpm test:visual` tenta roda-las e 57 casos falham por
+   * falta de sessao, o que nao tem nada a ver com regressao visual. Elas rodam
+   * por `playwright.pilha.config.ts` (`pnpm test:jornadas` e
+   * `scripts/visual.sh paineis`).
+   */
+  testIgnore: ['jornadas/**', 'paineis/**'],
+
   fullyParallel: true,
   forbidOnly: !!process.env['CI'],
   retries: 0,

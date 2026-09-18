@@ -1,0 +1,26 @@
+{
+  "_leia-me": [
+    "DECISAO OPERACIONAL PENDENTE (plano de execucao, 'So voce' da Etapa 12).",
+    "Quais alertas acordam alguem e quais so ficam registrados depende de quem vai",
+    "atender depois da entrega, e isso e da CONTRATANTE. Por isso o roteamento e",
+    "ARQUIVO, e nao valor dentro de politica: responder a pergunta nao deve exigir",
+    "mexer em logica de infraestrutura.",
+    "",
+    "Valores aceitos:",
+    "  acordar    -> canais de plantao (var.alertas_canais_plantao) + desenvolvimento",
+    "  pendente   -> so o canal de desenvolvimento; e o estado de hoje",
+    "  registrar  -> nenhum canal; o incidente existe no console e mais nada",
+    "",
+    "Toda politica declarada em observabilidade.tf precisa de uma entrada aqui, e",
+    "toda entrada precisa de uma politica: `pnpm lint` confere os dois lados."
+  ],
+
+  "alertas-criticos": "pendente",
+  "outbox-parado": "pendente",
+  "entrega-de-email-falhando": "pendente",
+  "quarentena-parada": "pendente",
+  "clamav-base-velha": "pendente",
+  "clamav-base-sem-publicacao": "pendente",
+  "disponibilidade-sem-link": "pendente",
+  "api-fora-do-ar": "pendente"
+}
