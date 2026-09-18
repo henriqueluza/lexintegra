@@ -17,7 +17,7 @@
     "lint:eslint": "eslint .",
     "lint:styles": "stylelint \"apps/web/src/**/*.css\"",
     "lint:deps": "depcruise apps packages --config .dependency-cruiser.cjs",
-    "lint:terraform": "node scripts/conferir-defaults-terraform.mjs",
+    "lint:terraform": "node scripts/conferir-defaults-terraform.mjs && node scripts/conferir-roteamento-alertas.mjs",
     "quality": "pnpm run lint && pnpm run test:coverage",
     "test:coverage": "pnpm --filter \"./apps/*\" --filter \"./packages/*\" test:coverage",
     "format": "prettier --write .",

@@ -103,6 +103,8 @@ export class DespachanteOutbox {
        * pagou" ate "o e-mail saiu" pelo log.
        */
       this.log.log(`registro ${id} entregue`, {
+        sinal: 'outbox.entrega',
+        resultado: 'entregue',
         tipo: registro.tipo,
         rastreioDeOrigem: traceIdDe(registro.rastreio),
       });
@@ -124,8 +126,20 @@ export class DespachanteOutbox {
       motivo,
     });
 
+    /*
+     * `sinal` e `resultado` sao o que a metrica por log conta (Etapa 12). A taxa
+     * de falha de entrega e razao entre este campo e o `entregue` acima — sem os
+     * dois com o mesmo nome de sinal, a politica teria de casar a MENSAGEM, e
+     * quebraria na primeira vez que alguem melhorasse o texto.
+     */
     this.log.error(
       `registro ${id} falhou na tentativa ${String(registro.tentativas)}: ${motivo}`,
+      {
+        sinal: 'outbox.entrega',
+        resultado: 'falhou',
+        tipo: registro.tipo,
+        tentativas: registro.tentativas,
+      },
     );
 
     if (estado !== 'abandonado') return 'falhou';
