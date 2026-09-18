@@ -24,7 +24,8 @@ import { defineConfig, devices } from '@playwright/test';
  * `webServer` aqui sobe API e web, que os herdam.
  */
 export default defineConfig({
-  testDir: './e2e/jornadas',
+  testDir: './e2e',
+  testMatch: ['jornadas/**/*.spec.ts', 'paineis/**/*.spec.ts'],
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env['CI'],
@@ -37,6 +38,59 @@ export default defineConfig({
     trace: 'retain-on-failure',
     ...devices['Desktop Chrome'],
   },
+
+  /* As mesmas regras de captura da suite visual: ver `playwright.config.ts`. */
+  expect: {
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0,
+      threshold: 0.2,
+      animations: 'disabled',
+      caret: 'hide',
+    },
+  },
+
+  snapshotPathTemplate: '{testDir}/referencia/{arg}-{projectName}{ext}',
+
+  /*
+   * As jornadas rodam UMA VEZ, numa largura so: o que elas verificam e
+   * comportamento, e repeti-las em tres larguras triplicaria o tempo sem
+   * verificar nada novo. Os paineis rodam nas tres, porque ali o que se verifica
+   * e justamente o desenho.
+   */
+  projects: [
+    {
+      name: 'jornadas',
+      testMatch: 'jornadas/**/*.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 1000 },
+      },
+    },
+    {
+      name: 'estreito',
+      testMatch: 'paineis/**/*.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 360, height: 900 },
+      },
+    },
+    {
+      name: 'medio',
+      testMatch: 'paineis/**/*.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 768, height: 1000 },
+      },
+    },
+    {
+      name: 'largo',
+      testMatch: 'paineis/**/*.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 1000 },
+      },
+    },
+  ],
 
   webServer: [
     {

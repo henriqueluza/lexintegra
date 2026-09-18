@@ -40,10 +40,20 @@ fi
 # argumento extra fazia o Playwright receber `e2e` mais o arquivo, e como os dois
 # sao filtros o resultado era a suite inteira — quem pedia um arquivo esperando
 # uma execucao curta recebia todas, e demorava a perceber.
+#
+# `paineis` e outra coisa: ele roda a config da PILHA (emuladores, API e
+# `ng serve`), porque painel autenticado nao existe sem sessao. E a razao de o
+# conteiner precisar de uma JVM — os emuladores do Firebase rodam sobre ela — e
+# de a instalacao acontecer so nesse caso, que e o unico que a usa.
 ALVO="e2e"
+PILHA=0
 case "${1:-}" in
   a11y)
     ALVO="e2e/catalogo.a11y.spec.ts e2e/publico.a11y.spec.ts"
+    shift
+    ;;
+  paineis)
+    PILHA=1
     shift
     ;;
   e2e/*)
@@ -90,6 +100,17 @@ docker run --rm --init \
     # crase aqui vira substituicao de comando executada pelo shell do HOST — e o
     # erro que ela produz aparece antes de o conteiner sequer subir.
     pnpm install --frozen-lockfile --store-dir /pnpm-store
-    cd /trabalho/apps/web
-    pnpm exec playwright test $ALVO $*
+
+    if [ $PILHA -eq 1 ]; then
+      # A imagem do Playwright nao traz JVM. Instalada so aqui, e so quando a
+      # suite pedida precisa dela.
+      apt-get update -qq
+      apt-get install -y -qq --no-install-recommends default-jre-headless >/dev/null
+      cd /trabalho
+      pnpm --filter api build
+      scripts/emuladores.sh 'pnpm --filter web exec playwright test --config playwright.pilha.config.ts $*'
+    else
+      cd /trabalho/apps/web
+      pnpm exec playwright test $ALVO $*
+    fi
   "
