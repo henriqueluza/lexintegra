@@ -46,7 +46,8 @@ module.exports = {
         'produziria uma tela que falha em producao sem falhar em nenhum teste de unidade.',
       from: { path: '^apps/web' },
       to: {
-        path: '^(firebase/(firestore|storage|database|functions|analytics|messaging)|firebase-admin)',
+        /* Caminho resolvido — ver o comentario em `so-o-armazenamento-...`. */
+        path: '/(firebase/(firestore|storage|database|functions|analytics|messaging)|firebase-admin)/',
       },
     },
     {
@@ -110,8 +111,55 @@ module.exports = {
         path: '^apps/api',
         pathNot: '^apps/api/src/armazenamento/',
       },
-      to: { path: '^@google-cloud/storage' },
+      /*
+       * O caminho RESOLVIDO, e nao o especificador. Sob pnpm o pacote vive em
+       * `node_modules/.pnpm/@google-cloud+storage@.../node_modules/...`, e o
+       * padrao ancorado em `^@google-cloud/storage` que existia aqui ate a Etapa
+       * 12 nunca casava com nada: a regra parecia proteger a fronteira e nao
+       * protegia.
+       */
+      to: { path: '/@google-cloud/storage/' },
     },
+    {
+      name: 'so-a-instrumentacao-conhece-o-sdk-de-rastreio',
+      severity: 'error',
+      comment:
+        'Etapa 12. O SDK do OpenTelemetry e os pacotes de instrumentacao so sao ' +
+        'carregados por `observabilidade/instrumentacao.ts`, que roda ANTES da ' +
+        'aplicacao, por `--import`. Um `new NodeSDK(...)` dentro de um modulo do ' +
+        'Nest subiria um segundo provedor depois de o Express ja ter carregado o ' +
+        '`http`: a instrumentacao nao pegaria nada e os dois exportadores ' +
+        'disputariam o mesmo trace. `@opentelemetry/api` fica de FORA desta regra ' +
+        'de proposito — ela e a interface, e sem SDK carregado nao faz nada, que e ' +
+        'exatamente o que o logger e a fila precisam.',
+      from: {
+        path: '^apps/api',
+        pathNot: [
+          '^apps/api/src/observabilidade/(instrumentacao|amostragem)\\.ts$',
+          // O teste do amostrador precisa do `SamplingDecision` do SDK para
+          // afirmar a decisao; ele nao sobe provedor nenhum.
+          '\\.spec\\.ts$',
+        ],
+      },
+      to: {
+        path: '/(@opentelemetry/(sdk-|instrumentation-|resources|resource-detector)|@google-cloud/opentelemetry)',
+      },
+    },
+
+    {
+      name: 'o-scanner-nao-depende-do-monorepo',
+      severity: 'error',
+      comment:
+        'Etapa 11, mantida na 12. O contentor do ClamAV nao importa ' +
+        '`packages/shared` nem nada de `apps/` — e essa ausencia que permite ' +
+        'construi-lo e implanta-lo sozinho, com Dockerfile e pipeline proprios. ' +
+        'Ate aqui isso era convencao escrita em comentario; agora e lint. O custo ' +
+        'de violar seria descoberto tarde: o build do scanner passaria a exigir o ' +
+        'workspace inteiro.',
+      from: { path: '^apps/scanner' },
+      to: { path: '^(packages/|apps/(api|web))' },
+    },
+
     {
       name: 'so-a-fabrica-conhece-o-abacatepay',
       severity: 'error',
@@ -136,8 +184,25 @@ module.exports = {
     {
       name: 'sem-dev-dep-em-producao',
       severity: 'error',
-      comment: 'Modulo de producao dependendo de devDependency.',
-      from: { path: '^(apps|packages)', pathNot: '\\.spec\\.ts$' },
+      comment:
+        'Modulo de producao dependendo de devDependency. As isencoes cobrem o ' +
+        'que NAO e producao: testes de unidade e de integracao, arnes de e2e e ' +
+        'arquivos de configuracao. Ate a Etapa 12 esta regra nao valia nada — o ' +
+        '`node_modules` estava fora do grafo, entao nenhuma aresta para pacote ' +
+        'externo existia e a regra nunca podia disparar.',
+      from: {
+        path: '^(apps|packages)',
+        pathNot: [
+          '\\.spec\\.ts$',
+          '\\.integration-spec\\.ts$',
+          '^apps/web/e2e/',
+          '\\.config\\.(mjs|cjs|js|ts)$',
+          '^apps/web/setup-jest\\.ts$',
+          // Arneses de teste que vivem em `src/` para compilar junto (ver o
+          // cabecalho de `firestore-falso.ts`).
+          '^apps/api/src/(firestore-falso|emulador|arnes-.*)\\.ts$',
+        ],
+      },
       to: { dependencyTypes: ['npm-dev'] },
     },
     {
@@ -162,8 +227,30 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(node_modules|dist|coverage|\\.angular|out-tsc)' },
+    /*
+     * ANCORADO EM SEGMENTO DE CAMINHO, e nao em qualquer lugar do texto.
+     *
+     * O padrao antigo era `(node_modules|dist|coverage|...)`, sem ancora, e
+     * `dist` casava com **`distribuicao`**: sete arquivos ficavam fora do grafo,
+     * entre eles `pedidos/distribuicao.service.ts` e as telas de distribuicao do
+     * administrador. O "zero ciclos" de ate a Etapa 12 nao cobria o que parecia
+     * cobrir — e a falha era silenciosa, porque arquivo excluido nao aparece nem
+     * como aviso.
+     */
+    exclude: {
+      path: '(^|/)(dist|coverage|\\.angular|out-tsc|\\.stryker-tmp)(/|$)',
+    },
     tsPreCompilationDeps: true,
+
+    /*
+     * `shared` resolve para `packages/shared/dist/*` pelo `exports` do pacote, e
+     * `dist` e excluido do grafo — entao NENHUMA aresta entrava em
+     * `packages/shared`, e as regras sobre ele nunca eram exercitadas. Pior: em
+     * CI o `dist` nem existe quando o lint roda. `tsconfig.deps.json` existe so
+     * para isto: ele mapeia `shared` para a FONTE, que e o que o compilador e o
+     * Jest tambem enxergam.
+     */
+    tsConfig: { fileName: 'tsconfig.deps.json' },
     enhancedResolveOptions: {
       exportsFields: ['exports'],
       conditionNames: ['import', 'require', 'node', 'default', 'types'],
