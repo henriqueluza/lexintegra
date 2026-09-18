@@ -5,13 +5,22 @@
 # datastore.owner, run.admin, secretmanager.admin, cloudkms.admin,
 # artifactregistry.admin, iam.serviceAccountUser, iam.serviceAccountAdmin,
 # resourcemanager.projectIamAdmin, serviceusage.serviceUsageAdmin,
-# firebasehosting.admin e workloadIdentityPoolAdmin) NAO sao geridos aqui, de
-# proposito.
+# firebasehosting.admin, firebaserules.admin, cloudtasks.admin,
+# cloudscheduler.admin e workloadIdentityPoolAdmin, mais logging.configWriter e
+# monitoring.editor desde a Etapa 12) NAO sao geridos aqui, de proposito.
 #
 # Seriam autorreferenciais: os papeis que dao ao pipeline o direito de rodar,
 # geridos pelo proprio pipeline. Um plan mal revisado poderia revogar o acesso do
 # CI a si mesmo e travar toda a infraestrutura, sem caminho de volta pelo Terraform.
 # Ficam como bootstrap manual, documentados em infra/terraform/README.md.
+#
+# E NAO ADIANTARIA MOVE-LOS PARA CA PARA RESOLVER O PROBLEMA QUE ELES CAUSAM.
+# A falta de papel so aparece no apply — o plan nao cria nada e passa verde —, e
+# o Terraform nao consegue conceder a si mesmo dentro do mesmo apply: IAM tem
+# propagacao eventual, e nao ha dependencia implicita entre a concessao e o
+# recurso que precisa dela. Aconteceu na Etapa 7 (cloudtasks e cloudscheduler) e
+# de novo na Etapa 12 (logging e monitoring). O que passou a avisar antes e o
+# `scripts/conferir-papeis-de-bootstrap.mjs`, no `pnpm lint`.
 # =============================================================================
 
 # --- Identidade do CI (IMPORTADA) ---------------------------------------------

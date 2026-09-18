@@ -190,6 +190,15 @@ jobs:
           TF_VAR_api_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/api:${{ github.sha }}
           TF_VAR_scanner_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/scanner:${{ github.sha }}
           TF_VAR_commit_sha: ${{ github.sha }}
+          # Etapa 12. Destinatario PROVISORIO dos alertas, ate a CONTRATANTE
+          # decidir quem atende. Nao mora no repositorio, que e publico.
+          #
+          # FALTAVA, e a falta era silenciosa: o canal de notificacao tem
+          # `count = var == "" ? 0 : 1`, entao sem a variavel ele simplesmente
+          # nao nasce. As politicas de alerta seriam criadas sem destinatario
+          # nenhum, o incidente apareceria so no console, e nada falharia — o
+          # deploy ficaria verde com o alerta mudo.
+          TF_VAR_alertas_email_desenvolvimento: ${{ secrets.ALERTAS_EMAIL_DESENVOLVIMENTO }}
         run: terraform apply -input=false -auto-approve -lock-timeout=10m
         working-directory: infra/terraform
 

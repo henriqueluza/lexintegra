@@ -190,10 +190,19 @@ cd infra/terraform && terraform init && terraform plan
 uptime check e o painel; `sinais.tf` tem a sonda que os alimenta com o que só
 existe dentro do Firestore.
 
-**Quem recebe alerta não está aqui, e é de propósito.** O destinatário vem da
-variável `ALERTAS_EMAIL_DESENVOLVIMENTO` do GitHub Actions — o repositório é
-público. Sem ela, nenhum canal é criado e o incidente fica no console, que é o
-comportamento certo para um `plan` rodado por quem não configurou a variável.
+**Quem recebe alerta não está aqui, e é de propósito.** O destinatário vem do
+secret `ALERTAS_EMAIL_DESENVOLVIMENTO` do GitHub Actions — o repositório é
+público. Sem ele, nenhum canal é criado e o incidente fica no console, que é o
+comportamento certo para um `plan` rodado por quem não o configurou.
+
+**Os papéis que o CI precisa para isto não estão no Terraform.** `logging.configWriter`
+e `monitoring.editor` são concessão manual, como todos os papéis de projeto da
+`terraform-ci` (ver o cabeçalho de `iam.tf`). A Etapa 12 descobriu isso do jeito
+caro: seis métricas por log e um uptime check recusados com 403 num deploy já
+mesclado, porque `plan` não cria nada e passa verde. Desde então
+`scripts/conferir-papeis-de-bootstrap.mjs` obriga a decisão a acontecer antes do
+merge — ele não consulta o IAM, ele cobra que o papel esteja declarado em
+`papeis-de-bootstrap.json`.
 
 **O roteamento é arquivo**, `alertas-roteamento.json`: cada alerta vale
 `acordar`, `pendente` ou `registrar`, e hoje os oito estão em `pendente` porque a

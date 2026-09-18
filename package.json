@@ -18,7 +18,7 @@
     "lint:eslint": "eslint .",
     "lint:styles": "stylelint \"apps/web/src/**/*.css\"",
     "lint:deps": "depcruise apps packages --config .dependency-cruiser.cjs",
-    "lint:terraform": "node scripts/conferir-defaults-terraform.mjs && node scripts/conferir-roteamento-alertas.mjs",
+    "lint:terraform": "node scripts/conferir-defaults-terraform.mjs && node scripts/conferir-roteamento-alertas.mjs && node scripts/conferir-papeis-de-bootstrap.mjs",
     "mutacao": "scripts/mutacao.sh",
     "relatorio:qualidade": "node scripts/relatorio-qualidade.mjs",
     "quality": "pnpm run lint && pnpm run test:coverage && pnpm run relatorio:qualidade",
