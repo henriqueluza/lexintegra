@@ -34,6 +34,9 @@ export const TIPOS_EVENTO = [
   'aviso-exclusao-arquivos',
   'acesso-cliente',
   'estorno-integral',
+  'criar-sala-reuniao',
+  'convite-reuniao',
+  'cancelamento-reuniao',
 ] as const;
 
 export type TipoEvento = (typeof TIPOS_EVENTO)[number];
@@ -44,6 +47,27 @@ export type TipoEvento = (typeof TIPOS_EVENTO)[number];
  * razao que separa `definir-senha` de `redefinir-senha`: "o administrador criou
  * um acesso de advogado" e "um cliente pagou e ganhou conta" sao fatos distintos,
  * com trilhas e textos proprios.
+ */
+
+/*
+ * OS TRES DA ETAPA 10, e por que sao tres e nao um.
+ *
+ * `criar-sala-reuniao` NAO E E-MAIL, como `estorno-integral`: e a chamada a
+ * Microsoft Graph, que tem o mesmo problema de todo efeito externo — nao pode
+ * sair de dentro de transacao, nao pode se perder e nao pode acontecer duas
+ * vezes. E ele que faz a reuniao sair de `reservada_sem_link`, e e a reentrega
+ * dele que a arquitetura 7.2 exige quando o Graph falha.
+ *
+ * `convite-reuniao` e o iCalendar `METHOD:REQUEST`. Nasce DEPOIS da sala, porque
+ * convite sem link nao serve — e sao DOIS por reuniao, um para o cliente e um
+ * para o advogado, porque o outbox tem destinatario unico. A remarcacao produz
+ * outros dois, com `SEQUENCE` maior.
+ *
+ * `cancelamento-reuniao` e o `METHOD:CANCEL`. E evento SEPARADO do convite, e
+ * nao um convite com outro estado, porque o que ele faz no calendario de quem
+ * recebe e o oposto: remover o evento em vez de atualiza-lo. Colapsa-los daria
+ * um so montador com um `if` no meio, e o `if` erraria no dia em que a ordem dos
+ * campos do iCalendar importasse.
  */
 
 /*

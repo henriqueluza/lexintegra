@@ -35,6 +35,20 @@ import { POLITICA } from './politica.js';
 const MODELO_SENHA = 'password-reset';
 
 /**
+ * O tipo que nao tem montador. NAO ALCANCAVEL: o `never` faz o compilador
+ * recusar antes.
+ *
+ * ESTE E O PONTO DO `switch`. Antes daqui, `montar` terminava num `return` que
+ * gerava link de redefinicao de senha, e um tipo de evento novo sem ramo proprio
+ * caia nele EM SILENCIO — o destinatario de um convite de reuniao receberia um
+ * e-mail para trocar a propria senha, e nada falharia. Agora o compilador cobra
+ * o ramo.
+ */
+function semMontador(tipo: never): never {
+  throw new Error(`Tipo de evento sem montador: ${String(tipo)}`);
+}
+
+/**
  * O que aconteceu com uma tentativa de entrega. O controlador traduz cada caso
  * num status HTTP, e e por esse status que o Cloud Tasks decide reentregar ou
  * nao — por isso a distincao nao pode ser um booleano.
@@ -246,28 +260,69 @@ export class DespachanteOutbox {
       throw new Error(`usuario ${registro.destinatarioUid} nao tem e-mail`);
     }
 
-    /*
-     * O AVISO PREVIO DE EXCLUSAO (Etapa 11, arquitetura secao 13). Nao gera link
-     * de senha nenhum — e por isso ele sai antes do bloco abaixo, e nao como um
-     * ramo dentro dele.
-     *
-     * ⚠️ O TEXTO NAO FOI APROVADO pela CONTRATANTE. `TEXTO_AVISO_EXCLUSAO` e um
-     * marcador literal, e ha teste que cai quando ele for substituido — ver
-     * `termos/termos.textos.ts`. O e-mail SAI mesmo assim, de propósito: a
-     * alternativa seria uma rotina de conformidade que nao roda ate alguem
-     * lembrar de aprovar um texto.
-     */
-    if (registro.tipo === 'aviso-exclusao-arquivos') {
-      return {
-        para: [usuario.email],
-        assunto: ASSUNTO_AVISO_EXCLUSAO,
-        corpoTexto: TEXTO_AVISO_EXCLUSAO,
-      };
-    }
+    const para = [usuario.email];
 
-    const linkDoFirebase = await this.auth.generatePasswordResetLink(
-      usuario.email,
-    );
+    switch (registro.tipo) {
+      /*
+       * O AVISO PREVIO DE EXCLUSAO (Etapa 11, arquitetura secao 13). Nao gera
+       * link de senha nenhum.
+       *
+       * ⚠️ O TEXTO NAO FOI APROVADO pela CONTRATANTE. `TEXTO_AVISO_EXCLUSAO` e
+       * um marcador literal, e ha teste que cai quando ele for substituido — ver
+       * `termos/termos.textos.ts`. O e-mail SAI mesmo assim, de propósito: a
+       * alternativa seria uma rotina de conformidade que nao roda ate alguem
+       * lembrar de aprovar um texto.
+       */
+      case 'aviso-exclusao-arquivos':
+        return {
+          para,
+          assunto: ASSUNTO_AVISO_EXCLUSAO,
+          corpoTexto: TEXTO_AVISO_EXCLUSAO,
+        };
+
+      /*
+       * Os tres que levam link de senha. Sao eventos DIFERENTES — "o
+       * administrador criou um acesso de advogado", "alguem esqueceu a senha" e
+       * "um cliente pagou e ganhou conta" sao fatos distintos, com trilhas
+       * proprias — e hoje compartilham o unico modelo publicado no Resend.
+       */
+      case 'definir-senha':
+      case 'redefinir-senha':
+      case 'acesso-cliente':
+        return { para, modelo: await this.modeloDeSenha(usuario.email) };
+
+      /*
+       * `estorno-integral` nao chega aqui: ele nao e e-mail, e `executar` o
+       * desvia antes. O ramo existe para o `switch` ser exaustivo — e para
+       * alguem que o remova descobrir o outro caminho em vez de mandar um
+       * e-mail de senha a quem pediu estorno.
+       */
+      case 'estorno-integral':
+        throw new Error('estorno-integral nao produz e-mail');
+
+      /* Os tres da Etapa 10. Chegam no commit seguinte. */
+      case 'criar-sala-reuniao':
+      case 'convite-reuniao':
+      case 'cancelamento-reuniao':
+        throw new Error(
+          `despachante de ${registro.tipo} ainda nao instalado (Etapa 10)`,
+        );
+
+      default:
+        return semMontador(registro.tipo);
+    }
+  }
+
+  /**
+   * O link nasce aqui e morre aqui. Nao volta para o Firestore, nao entra em log,
+   * nao aparece na resposta HTTP: e credencial viva — quem o tiver troca a senha
+   * da conta.
+   */
+  private async modeloDeSenha(email: string): Promise<{
+    alias: string;
+    variaveis: Record<string, string>;
+  }> {
+    const linkDoFirebase = await this.auth.generatePasswordResetLink(email);
     const link = montarLinkDeSenha(linkDoFirebase, urlDaAplicacao());
     if (!link.proprio) {
       this.log.warn(
@@ -275,9 +330,6 @@ export class DespachanteOutbox {
       );
     }
 
-    return {
-      para: [usuario.email],
-      modelo: { alias: MODELO_SENHA, variaveis: { LINK: link.url } },
-    };
+    return { alias: MODELO_SENHA, variaveis: { LINK: link.url } };
   }
 }
