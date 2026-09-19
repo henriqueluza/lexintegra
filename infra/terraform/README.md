@@ -190,10 +190,13 @@ cd infra/terraform && terraform init && terraform plan
 uptime check e o painel; `sinais.tf` tem a sonda que os alimenta com o que só
 existe dentro do Firestore.
 
-**Quem recebe alerta não está aqui, e é de propósito.** O destinatário vem do
-secret `ALERTAS_EMAIL_DESENVOLVIMENTO` do GitHub Actions — o repositório é
-público. Sem ele, nenhum canal é criado e o incidente fica no console, que é o
-comportamento certo para um `plan` rodado por quem não o configurou.
+**Quem recebe alerta não está aqui, e é de propósito.** O destinatário vem de
+`ALERTAS_EMAIL_DESENVOLVIMENTO` no GitHub Actions — o repositório é público. O
+`deploy.yml` lê **secret ou variable**, nessa ordem: os dois são lugares
+plausíveis, e ler só um reproduz uma falha silenciosa (o canal tem
+`count = var == "" ? 0 : 1`, então sem valor ele não nasce e as políticas ficam
+sem destinatário, sem nada falhar). Prefira o **secret**: em repositório público
+o log do Actions é público, e variable não é mascarada.
 
 **Os papéis que o CI precisa para isto não estão no Terraform.** `logging.configWriter`
 e `monitoring.editor` são concessão manual, como todos os papéis de projeto da
