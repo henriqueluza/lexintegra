@@ -9,6 +9,7 @@ import {
   type AnexoResumo,
   type CartaoPedido,
   type EntregavelResumo,
+  type HorarioDisponivel,
   type NovaObservacao,
   type ObservacaoResumo,
   type ReuniaoResumo,
@@ -21,6 +22,7 @@ import { Perfis, UsuarioAtual } from '../autenticacao/decoradores.js';
 import type { UsuarioAutenticado } from '../autenticacao/usuario.js';
 import { EntregaveisService } from '../entregaveis/entregaveis.service.js';
 import { ObservacoesService } from '../observacoes/observacoes.service.js';
+import { HorariosService } from '../reunioes/horarios.service.js';
 import { ReunioesService } from '../reunioes/reunioes.service.js';
 import { ZodPipe } from '../validacao/zod.pipe.js';
 import { CancelamentoService } from './cancelamento.service.js';
@@ -75,6 +77,7 @@ export class PedidosClienteController {
     private readonly termos: TermosService,
     private readonly cancelamento: CancelamentoService,
     private readonly reunioes: ReunioesService,
+    private readonly horarios: HorariosService,
   ) {}
 
   /** Um cartao por pedido (item 2.3.2), cada um com seus proprios entregaveis. */
@@ -107,6 +110,21 @@ export class PedidosClienteController {
   /* ---------------------------------------------------------------------- */
   /* Reunioes (Etapa 10)                                                     */
   /* ---------------------------------------------------------------------- */
+
+  /**
+   * Os horarios escolhiveis para ESTE pedido.
+   *
+   * O que chega na tela ja passou por saldo, janela, intervalo e antecedencia —
+   * pelas mesmas funcoes que o `POST` usa dentro da transacao. A tela desenha a
+   * lista sem reaplicar regra nenhuma.
+   */
+  @Get(':pedidoId/horarios')
+  horariosDeReuniao(
+    @Param('pedidoId') pedidoId: string,
+    @UsuarioAtual() cliente: UsuarioAutenticado,
+  ): Promise<HorarioDisponivel[]> {
+    return this.horarios.listar(pedidoId, cliente.uid);
+  }
 
   /**
    * Marca uma reuniao DESTE pedido (itens 2.7.1 a 2.7.4).

@@ -6,6 +6,7 @@ import { FilaFalsa } from '../tarefas/fila.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import type { TarefaDeEvento } from '../outbox/fila.js';
 import type { ConfiguracaoDoOutbox } from '../outbox/politica.js';
+import { HorariosService } from './horarios.service.js';
 import { ReunioesService } from './reunioes.service.js';
 import type { ConfiguracaoReunioes } from './sala/modo.js';
 
@@ -37,6 +38,7 @@ interface Ajustes {
 
 function montar(ajustes: Ajustes = {}): {
   servico: ReunioesService;
+  horarios: HorariosService;
   banco: FirestoreFalso;
   fila: FilaFalsa<TarefaDeEvento>;
 } {
@@ -85,6 +87,7 @@ function montar(ajustes: Ajustes = {}): {
       new EnfileiradorDeEventos(outbox, fila),
       ajustes.configuracao ?? LIGADO,
     ),
+    horarios: new HorariosService(db),
     banco,
     fila,
   };
@@ -335,5 +338,103 @@ describe('ReunioesService.agendar', () => {
     await expect(
       servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+});
+
+describe('HorariosService.listar', () => {
+  /*
+   * O relogio de referencia cai na semana de 2026-09-21, e o slot base
+   * (2026-09-24) pertence a ela. `AGORA` do outro describe fica 30 dias antes e
+   * nao serviria: a consulta e pelas semanas CORRENTE e SEGUINTE.
+   */
+  const NA_SEMANA = Date.parse('2026-09-21T12:00:00.000Z');
+
+  it('devolve o slot livre do advogado atribuido', async () => {
+    const { horarios } = montar();
+
+    await expect(
+      horarios.listar(PEDIDO, CLIENTE, NA_SEMANA),
+    ).resolves.toEqual([{ slotId: SLOT, inicio: INICIO, fim: FIM }]);
+  });
+
+  it('omite slot ja reservado', async () => {
+    const { horarios } = montar({
+      slot: { reserva: { pedidoId: 'pedido-2', reuniaoId: 'r001' } },
+    });
+
+    await expect(
+      horarios.listar(PEDIDO, CLIENTE, NA_SEMANA),
+    ).resolves.toEqual([]);
+  });
+
+  /**
+   * O QUE CHEGA NA LISTA JA E ESCOLHIVEL. A tela nao reaplica regra nenhuma, e
+   * por isso a lista precisa aplicar TODAS — com as mesmas funcoes que o `POST`
+   * usa. Um horario na lista que o `POST` recusa e a pior forma de errar aqui.
+   */
+  it('omite horario com menos de 24h de antecedencia', async () => {
+    const { horarios } = montar();
+    const vespera = Date.parse(INICIO) - 3_600_000;
+
+    await expect(
+      horarios.listar(PEDIDO, CLIENTE, vespera),
+    ).resolves.toEqual([]);
+  });
+
+  it('omite horario que viola o intervalo minimo', async () => {
+    const { horarios, banco } = montar();
+    banco.documentos.set(`pedidos/${PEDIDO}/reunioes/r001`, {
+      estado: 'confirmada',
+      inicio: '2026-09-25T17:00:00.000Z',
+    });
+
+    await expect(
+      horarios.listar(PEDIDO, CLIENTE, NA_SEMANA),
+    ).resolves.toEqual([]);
+  });
+
+  it('devolve vazio com o saldo esgotado', async () => {
+    const { horarios } = montar({
+      pedido: {
+        snapshot: {
+          nome: 'Revisao de contrato',
+          quantidadeReunioes: 0,
+          prazoValidadeReunioesDias: 365,
+          intervaloMinimoReunioesDias: 7,
+          numeroRevisoesPermitidas: 2,
+        },
+      },
+    });
+
+    await expect(
+      horarios.listar(PEDIDO, CLIENTE, NA_SEMANA),
+    ).resolves.toEqual([]);
+  });
+
+  /** Sem advogado atribuido nao ha grade para consultar. A tela diz por que. */
+  it('devolve vazio com o pedido nao distribuido', async () => {
+    const { horarios } = montar({
+      pedido: { advogadoId: null, distribuido: false },
+    });
+
+    await expect(
+      horarios.listar(PEDIDO, CLIENTE, NA_SEMANA),
+    ).resolves.toEqual([]);
+  });
+
+  it('nao devolve a grade de outro advogado', async () => {
+    const { horarios } = montar({ slot: { advogadoId: 'uid-carlos' } });
+
+    await expect(
+      horarios.listar(PEDIDO, CLIENTE, NA_SEMANA),
+    ).resolves.toEqual([]);
+  });
+
+  it('pedido de outro cliente responde 404', async () => {
+    const { horarios } = montar();
+
+    await expect(
+      horarios.listar(PEDIDO, 'uid-bruno', NA_SEMANA),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

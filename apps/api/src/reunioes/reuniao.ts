@@ -1,5 +1,10 @@
 import { Timestamp, type FieldValue } from 'firebase-admin/firestore';
-import type { EstadoReuniao, ReuniaoDaAgenda, ReuniaoResumo } from 'shared';
+import {
+  fimDaJanela,
+  type EstadoReuniao,
+  type ReuniaoDaAgenda,
+  type ReuniaoResumo,
+} from 'shared';
 
 /**
  * A forma do documento de reuniao e as projecoes que cada perfil recebe.
@@ -78,6 +83,27 @@ export interface DocumentoReuniao {
 /** ISO 8601, ou `null` enquanto o carimbo do servidor nao materializou. */
 export function paraIso(valor: unknown): string | null {
   return valor instanceof Timestamp ? valor.toDate().toISOString() : null;
+}
+
+/**
+ * Ate quando uma reuniao deste pedido pode COMECAR (ADR-21, decisao 3).
+ *
+ * Vive aqui, e nao em cada servico, porque os DOIS precisam do mesmo numero: o
+ * que lista horarios e o que agenda. Duas copias da mesma conta divergiriam, e a
+ * que divergisse ofereceria na tela um horario que o `POST` recusa.
+ *
+ * `null` so enquanto o carimbo do servidor nao materializou.
+ */
+export function fimDaJanelaDoPedido(pedido: {
+  readonly criadoEm: unknown;
+  readonly snapshot: { readonly prazoValidadeReunioesDias: number };
+}): number | null {
+  if (!(pedido.criadoEm instanceof Timestamp)) return null;
+
+  return fimDaJanela(
+    pedido.criadoEm.toMillis(),
+    pedido.snapshot.prazoValidadeReunioesDias,
+  );
 }
 
 /**

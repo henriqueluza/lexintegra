@@ -14,13 +14,15 @@ import {
   type Transaction,
 } from 'firebase-admin/firestore';
 import {
-  fimDaJanela,
   impedimentoParaAgendar,
   MOTIVO_DO_IMPEDIMENTO,
   reuniaoAtiva,
   type ReuniaoResumo,
 } from 'shared';
-import { COLECAO_DISPONIBILIDADES, type DocumentoSlot } from '../disponibilidades/slot.js';
+import {
+  COLECAO_DISPONIBILIDADES,
+  type DocumentoSlot,
+} from '../disponibilidades/slot.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
@@ -35,6 +37,7 @@ import {
   type ConfiguracaoReunioes,
 } from './sala/modo.js';
 import {
+  fimDaJanelaDoPedido,
   idDaReuniao,
   paraResumo,
   SUBCOLECAO_REUNIOES,
@@ -248,7 +251,7 @@ export class ReunioesService {
       distribuido: pedido.distribuido,
       quantidadeContratada: pedido.snapshot.quantidadeReunioes,
       intervaloMinimoDias: pedido.snapshot.intervaloMinimoReunioesDias,
-      fimDaJanelaMs: this.fimDaJanelaDe(pedido),
+      fimDaJanelaMs: fimDaJanelaDoPedido(pedido),
       reunioes: contexto.reunioes,
       inicio: slot.inicio,
       agoraMs: agora,
@@ -259,16 +262,6 @@ export class ReunioesService {
     }
 
     this.log.debug?.(`slot ${slotId} liberado para o pedido`);
-  }
-
-  /** `null` so se o carimbo nao materializou, o que nao acontece aqui. */
-  private fimDaJanelaDe(pedido: DocumentoPedido): number | null {
-    if (!(pedido.criadoEm instanceof Timestamp)) return null;
-
-    return fimDaJanela(
-      pedido.criadoEm.toMillis(),
-      pedido.snapshot.prazoValidadeReunioesDias,
-    );
   }
 
   private async gravar(
