@@ -25,6 +25,7 @@ import type { UsuarioAutenticado } from '../autenticacao/usuario.js';
 import { EntregaveisService } from '../entregaveis/entregaveis.service.js';
 import { ObservacoesService } from '../observacoes/observacoes.service.js';
 import { AlteracoesDeReuniaoService } from '../reunioes/alteracoes.service.js';
+import { CancelamentoDeReuniaoService } from '../reunioes/cancelamento.service.js';
 import { HorariosService } from '../reunioes/horarios.service.js';
 import { ReunioesService } from '../reunioes/reunioes.service.js';
 import { ZodPipe } from '../validacao/zod.pipe.js';
@@ -82,6 +83,7 @@ export class PedidosClienteController {
     private readonly reunioes: ReunioesService,
     private readonly horarios: HorariosService,
     private readonly alteracoes: AlteracoesDeReuniaoService,
+    private readonly cancelamentoDeReuniao: CancelamentoDeReuniaoService,
   ) {}
 
   /** Um cartao por pedido (item 2.3.2), cada um com seus proprios entregaveis. */
@@ -176,6 +178,27 @@ export class PedidosClienteController {
       { pedidoId, reuniaoId },
       cliente.uid,
       corpo.slotId,
+    );
+  }
+
+  /**
+   * Cancela uma reuniao (ADR-12, regra das 24 horas).
+   *
+   * SEM CORPO: a unica informacao e "esta", e ela ja esta no caminho — como o
+   * cancelamento de pedido da Etapa 8. Se devolve ou nao o credito nao e escolha
+   * de quem chama: e consequencia do relogio, decidida no servidor contra o
+   * `inicio` gravado.
+   */
+  @Post(':pedidoId/reunioes/:reuniaoId/cancelamento')
+  @HttpCode(200)
+  cancelarReuniao(
+    @Param('pedidoId') pedidoId: string,
+    @Param('reuniaoId') reuniaoId: string,
+    @UsuarioAtual() cliente: UsuarioAutenticado,
+  ): Promise<ReuniaoResumo> {
+    return this.cancelamentoDeReuniao.cancelar(
+      { pedidoId, reuniaoId },
+      { uid: cliente.uid, perfil: 'cliente' },
     );
   }
 

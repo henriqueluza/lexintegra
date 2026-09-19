@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AlteracoesDeReuniaoService } from './alteracoes.service.js';
+import { CancelamentoDeReuniaoService } from './cancelamento.service.js';
 import { HorariosService } from './horarios.service.js';
 import { ReunioesService } from './reunioes.service.js';
 
@@ -17,7 +18,17 @@ import { ReunioesService } from './reunioes.service.js';
  * aqui.
  */
 @Module({
-  providers: [ReunioesService, HorariosService, AlteracoesDeReuniaoService],
-  exports: [ReunioesService, HorariosService, AlteracoesDeReuniaoService],
+  providers: [
+    ReunioesService,
+    HorariosService,
+    AlteracoesDeReuniaoService,
+    CancelamentoDeReuniaoService,
+  ],
+  exports: [
+    ReunioesService,
+    HorariosService,
+    AlteracoesDeReuniaoService,
+    CancelamentoDeReuniaoService,
+  ],
 })
 export class ReunioesModule {}

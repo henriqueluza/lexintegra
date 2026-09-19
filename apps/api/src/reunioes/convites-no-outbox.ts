@@ -45,3 +45,37 @@ export async function registrarConvitesDaReuniao(
 
   return ids;
 }
+
+/**
+ * Escreve os DOIS `METHOD:CANCEL` de uma reuniao cancelada.
+ *
+ * SO FAZ SENTIDO SE ALGUM CONVITE FOI EMITIDO, e quem decide isso e o chamador,
+ * por `sequenceComunicada`. A funcao nao repete essa conferencia de proposito:
+ * ela seria a segunda copia de uma regra que o `ConvitesService` ja aplica na
+ * montagem, e duas copias divergem.
+ *
+ * Simetrica a `registrarConvitesDaReuniao`, e separada dela porque o que o
+ * destinatario faz com cada uma e o oposto — uma poe o compromisso no
+ * calendario, a outra o tira.
+ */
+export async function registrarCancelamentosDaReuniao(
+  outbox: OutboxService,
+  transacao: Transaction,
+  alvo: { readonly pedidoId: string; readonly reuniaoId: string },
+  reuniao: Pick<DocumentoReuniao, 'sequence' | 'clienteId' | 'advogadoId'>,
+): Promise<string[]> {
+  const carga = { ...alvo, sequence: reuniao.sequence };
+  const ids: string[] = [];
+
+  for (const destinatarioUid of [reuniao.clienteId, reuniao.advogadoId]) {
+    ids.push(
+      await outbox.registrarSeAusente(transacao, {
+        tipo: 'cancelamento-reuniao',
+        destinatarioUid,
+        reuniao: carga,
+      }),
+    );
+  }
+
+  return ids;
+}
