@@ -1,10 +1,5 @@
 import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
-import {
-  FieldValue,
-  type FieldValue as TipoFieldValue,
-  type Firestore,
-  type Timestamp,
-} from 'firebase-admin/firestore';
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import {
   idDoSlot,
   semanaDe,
@@ -13,16 +8,13 @@ import {
   type SlotResumo,
 } from 'shared';
 import { FIRESTORE } from '../firebase/firebase.module.js';
+import {
+  COLECAO_DISPONIBILIDADES,
+  reservaDoSlot,
+  type DocumentoSlot,
+} from './slot.js';
 
-export const COLECAO_DISPONIBILIDADES = 'disponibilidades';
-
-interface DocumentoSlot {
-  advogadoId: string;
-  inicio: string;
-  fim: string;
-  semana: string;
-  criadoEm: Timestamp | TipoFieldValue;
-}
+export { COLECAO_DISPONIBILIDADES } from './slot.js';
 
 /**
  * O registro semanal de disponibilidade do advogado (item 2.6.3, ADR-06).
@@ -97,6 +89,21 @@ export class DisponibilidadesService {
           .where('semana', '==', corpo.semana),
       );
 
+      /*
+       * AS RESERVAS SAO CARREGADAS ADIANTE (Etapa 10). O `set` abaixo e
+       * SUBSTITUICAO, nao merge: sem ler a reserva aqui e escreve-la de volta,
+       * republicar a semana — o que o advogado faz toda segunda — apagaria o
+       * campo de um slot ja reservado. O slot voltaria a parecer livre, um
+       * segundo cliente o reservaria, e dois clientes teriam o mesmo horario com
+       * o mesmo advogado. Nada falharia.
+       */
+      const reservas = new Map(
+        existentes.docs.map((documento) => [
+          documento.id,
+          reservaDoSlot(documento.data() as DocumentoSlot),
+        ]),
+      );
+
       for (const documento of existentes.docs) {
         if (!desejados.has(documento.id)) {
           transacao.delete(documento.ref);
@@ -108,6 +115,8 @@ export class DisponibilidadesService {
           advogadoId,
           inicio: slot.inicio,
           fim: slot.fim,
+          /* Sempre escrito, inclusive nulo. Ver a nota em `slot.ts`. */
+          reserva: reservas.get(id) ?? null,
           semana: corpo.semana,
           criadoEm: FieldValue.serverTimestamp(),
         } satisfies DocumentoSlot);

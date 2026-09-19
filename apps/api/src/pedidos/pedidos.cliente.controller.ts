@@ -1,14 +1,17 @@
 import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
 import { z } from 'zod';
 import {
+  esquemaAgendamento,
   esquemaNovaObservacao,
   esquemaPedidoDeUpload,
   POLITICA_UPLOAD,
+  type Agendamento,
   type AnexoResumo,
   type CartaoPedido,
   type EntregavelResumo,
   type NovaObservacao,
   type ObservacaoResumo,
+  type ReuniaoResumo,
   type SituacaoPedido,
 } from 'shared';
 import { AnexosService } from '../anexos/anexos.service.js';
@@ -18,6 +21,7 @@ import { Perfis, UsuarioAtual } from '../autenticacao/decoradores.js';
 import type { UsuarioAutenticado } from '../autenticacao/usuario.js';
 import { EntregaveisService } from '../entregaveis/entregaveis.service.js';
 import { ObservacoesService } from '../observacoes/observacoes.service.js';
+import { ReunioesService } from '../reunioes/reunioes.service.js';
 import { ZodPipe } from '../validacao/zod.pipe.js';
 import { CancelamentoService } from './cancelamento.service.js';
 import { ConsultaPedidosService } from './consulta.service.js';
@@ -70,6 +74,7 @@ export class PedidosClienteController {
     private readonly portao: PortaoDeArquivos,
     private readonly termos: TermosService,
     private readonly cancelamento: CancelamentoService,
+    private readonly reunioes: ReunioesService,
   ) {}
 
   /** Um cartao por pedido (item 2.3.2), cada um com seus proprios entregaveis. */
@@ -97,6 +102,32 @@ export class PedidosClienteController {
     @UsuarioAtual() cliente: UsuarioAutenticado,
   ): Promise<{ situacao: SituacaoPedido }> {
     return this.cancelamento.cancelar(pedidoId, cliente.uid);
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Reunioes (Etapa 10)                                                     */
+  /* ---------------------------------------------------------------------- */
+
+  /**
+   * Marca uma reuniao DESTE pedido (itens 2.7.1 a 2.7.4).
+   *
+   * A ROTA E SUBCAMINHO DO PEDIDO, e isso e o desenho e nao arrumacao. O ADR-12
+   * e a arquitetura 5.4 exigem que nao haja ambiguidade sobre qual saldo esta
+   * sendo debitado: com dois pedidos ativos, um `POST /reunioes` de topo nao
+   * teria como saber. `app.routes.spec.ts` guarda o mesmo do lado da interface.
+   *
+   * O corpo traz o `slotId`, e nada mais: o cliente escolhe um horario que o
+   * advogado PUBLICOU (ADR-06), e o id do slot ja carrega o advogado e o
+   * instante.
+   */
+  @Post(':pedidoId/reunioes')
+  @HttpCode(201)
+  marcarReuniao(
+    @Param('pedidoId') pedidoId: string,
+    @Body(new ZodPipe(esquemaAgendamento)) corpo: Agendamento,
+    @UsuarioAtual() cliente: UsuarioAutenticado,
+  ): Promise<ReuniaoResumo> {
+    return this.reunioes.agendar(pedidoId, cliente.uid, corpo.slotId);
   }
 
   /* ---------------------------------------------------------------------- */
