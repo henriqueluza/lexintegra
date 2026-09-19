@@ -194,11 +194,22 @@ jobs:
           # decidir quem atende. Nao mora no repositorio, que e publico.
           #
           # FALTAVA, e a falta era silenciosa: o canal de notificacao tem
-          # `count = var == "" ? 0 : 1`, entao sem a variavel ele simplesmente
-          # nao nasce. As politicas de alerta seriam criadas sem destinatario
+          # `count = var == "" ? 0 : 1`, entao sem valor ele simplesmente nao
+          # nasce. As politicas de alerta seriam criadas sem destinatario
           # nenhum, o incidente apareceria so no console, e nada falharia — o
           # deploy ficaria verde com o alerta mudo.
-          TF_VAR_alertas_email_desenvolvimento: ${{ secrets.ALERTAS_EMAIL_DESENVOLVIMENTO }}
+          #
+          # SECRET **OU** VARIABLE, nesta ordem. Os dois sao lugares plausiveis
+          # para guardar um e-mail no GitHub, e ler so um deles reproduz a falha
+          # silenciosa acima quando alguem escolhe o outro — que foi o que
+          # aconteceu no primeiro deploy desta etapa. `secrets.X` vazio cai no
+          # `vars.X` pelo `||`.
+          #
+          # PREFIRA O SECRET: em repositorio publico, o log do Actions e publico,
+          # e variable NAO e mascarada no log — secret e. A variavel do Terraform
+          # e `sensitive`, entao o valor nao sai no plan; o risco e um passo
+          # futuro que ecoe a variavel sem pensar.
+          TF_VAR_alertas_email_desenvolvimento: ${{ secrets.ALERTAS_EMAIL_DESENVOLVIMENTO || vars.ALERTAS_EMAIL_DESENVOLVIMENTO }}
         run: terraform apply -input=false -auto-approve -lock-timeout=10m
         working-directory: infra/terraform
 
