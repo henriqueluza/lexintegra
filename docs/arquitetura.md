@@ -574,6 +574,161 @@ roteiro.
 
 ---
 
+### ADR-21 — Agendamento de reunião: as regras que o contrato não fixa
+
+**Estado: PROVISÓRIO, a confirmar com a CONTRATANTE.** O ADR-05 decidiu *como* a sala
+nasce (Graph API, app-only) e o ADR-12 decidiu a janela de 24 horas do cancelamento. Entre
+os dois sobra um conjunto de regras que a Etapa 10 precisa responder para existir e que
+nenhum documento fixa. Elas estão aqui, cada uma isolada o suficiente para mudar sem
+reescrever o módulo, e cada uma na lista de confirmação do "Só você" da Etapa 10.
+
+#### As oito decisões de produto
+
+1. **Quais horários o cliente vê.** Só os slots do advogado **distribuído para aquele
+   pedido** (`pedidos.advogadoId`). Pedido com `distribuido == false` não agenda, e a tela
+   diz isso ("seu pedido ainda está em análise"). A alternativa — mostrar a grade de todos
+   os advogados e atribuir quem tiver o horário — inverteria a distribuição do item 2.5.6,
+   que é decisão do administrador e não do cliente.
+
+2. **Pré-condições para agendar.** Pedido com `situacao == 'ativo'`. Pedido cancelado ou
+   estornado não marca reunião; é o mesmo eixo que o ADR-12 separou do estado do entregável.
+
+3. **Janela de validade.** Conta a partir de `pedidos.criadoEm`, que é o momento da
+   confirmação do pagamento. O início da reunião precisa cair dentro de
+   `criadoEm + prazoValidadeReunioesDias`, lido do **snapshot** (regra inviolável 5).
+   **A expiração é calculada na leitura, sem job no Cloud Scheduler**, como a semana da
+   disponibilidade (seção 8). O job de "expiração da janela de 12 meses" que a seção 8
+   listava **deixa de existir**: ele não tem nada a fazer que a leitura não faça, e um job
+   a mais é uma peça móvel que falha em silêncio. Já são cinco jobs; um sexto só se
+   justifica se o escritório quiser um **e-mail de aviso de vencimento** — que é
+   funcionalidade nova, não infraestrutura, e é pergunta ao Marcos.
+
+4. **Consumo do saldo.** Saldo = `quantidadeReunioes` do snapshot menos as reuniões do
+   pedido em qualquer estado **exceto** `cancelada_com_devolucao`. Não comparecimento
+   consome o saldo (ADR-12) **sem precisar de marcação manual de "realizada"**: a reunião
+   agendada já consumiu, e ninguém precisa lembrar de fechar nada. É o que evita um estado
+   "compareceu?" que só existiria para ser preenchido errado.
+
+5. **Intervalo mínimo.** A distância entre o início da nova reunião e o início de cada
+   reunião **ativa daquele pedido** precisa ser ≥ `intervaloMinimoReunioesDias × 24h`.
+   Reuniões `cancelada_com_devolucao` não contam. Na remarcação, a própria reunião sendo
+   remarcada não conta contra si mesma. **Pedidos diferentes não se afetam** (seção 5.4) —
+   a consequência de negócio já registrada lá: um cliente com três pedidos ativos pode
+   marcar três reuniões na mesma semana.
+
+6. **Regra das 24h.** Cancelamento com `agora <= inicio − 24h` devolve o crédito
+   (`cancelada_com_devolucao`); com menos que isso, consome (`cancelada_sem_devolucao`).
+   **A remarcação segue a mesma janela**, medida contra o `inicio` **atual** da reunião:
+   com menos de 24 horas o cliente só pode cancelar, sem devolução. Remarcar dentro das 24h
+   seria a forma óbvia de contornar a regra do ADR-12 — marca-se outro horário em vez de
+   cancelar, e o crédito nunca se perde.
+
+7. **A sala do Teams na remarcação e no cancelamento.** Na remarcação o link é
+   **reaproveitado**, sem chamar o Graph de novo: só o convite muda. No cancelamento a sala
+   **não é apagada** no Teams — um link órfão é inofensivo, e apagá-lo seria mais um efeito
+   externo com falha própria, retentativa própria e um alerta a mais para alguém ignorar.
+   **Ponto a revisitar** se o escritório passar a considerar sala órfã um problema de
+   conformidade.
+
+8. **Horários.** Guardados em UTC, como o slot já faz. Exibidos e escritos no convite em
+   `America/Sao_Paulo`. O fuso é explícito em todo cálculo (ver `packages/shared/src/semana.ts`):
+   o Cloud Run roda em UTC, e às 22h de um domingo brasileiro um cálculo sem fuso responde
+   pela semana seguinte.
+
+#### As decisões que o código impôs
+
+Estas não são de produto: saíram de restrições reais do Firestore, do Graph e das suítes
+que já existem. Estão aqui porque mudá-las é mudar o módulo, não um parâmetro.
+
+**A. O ID da reunião é estável e sequencial (`r001`, `r002`, …), e não é o ID do slot.**
+A regra inviolável 4 sugere o ID determinístico do slot, e ele **não serve** aqui. A
+remarcação **atualiza o mesmo documento** — troca `slotId`, `inicio` e `fim`, incrementa
+`sequence`, libera o slot antigo e reserva o novo. Três razões, e cada uma sozinha já
+derruba a alternativa:
+
+- o `externalId` que identifica a sala no Graph **é o `reuniaoId`**, e um ID que muda
+  criaria uma segunda sala a cada remarcação;
+- uma reunião cancelada continuaria ocupando o ID do slot, e uma reserva futura no mesmo
+  horário colidiria com ela;
+- eventos de outbox em trânsito referenciam `reuniaoId`, e ficariam órfãos.
+
+A regra 4 continua honrada onde ela funciona: a **exclusividade** vive no campo `reserva`
+do documento do slot (`disponibilidades/{advogadoId}_{inicioISO}`), lido e escrito dentro
+da transação, **sempre presente** pela armadilha de sempre — `where(campo,'!=',null)`
+ignora documento sem o campo. Duas reservas concorrentes no mesmo slot: uma reexecuta e
+perde. Duplo clique no slot **já reservado pelo mesmo pedido** devolve a reunião existente
+(200), e não 409 — é duplicata esperada, não conflito.
+
+**A.1 A serialização por PEDIDO é um segundo mecanismo, e é obrigatória.** Agendar,
+remarcar e cancelar **leem e escrevem o documento do pedido** (`reunioesEmitidas`, um
+contador **fora do snapshot**, que é imutável), e é dele que sai o próximo `rNNN`. A
+transação do Firestore só entra em conflito nos documentos que ela **toca**: duas
+requisições do mesmo pedido para **slots diferentes** tocariam documentos diferentes, não
+conflitariam, e passariam as duas — furando o saldo e o intervalo, colidindo no `rNNN`, e
+fazendo a leitura de duplicata devolver a reunião errada. O campo `reserva` do slot não
+cobre esse caso, porque os slots são outros. Escrever o pedido é o que põe as duas em série.
+
+**B. O advogado no Microsoft 365 é identificado por `usuarioTeams`, só object ID do Entra.**
+`POST /users/{userId}/onlineMeetings/createOrGet` aceita permissão de aplicação
+(`OnlineMeetings.ReadWrite.All` mais a application access policy), `externalId` é
+obrigatório, a resposta é 201 ao criar e 200 ao reaproveitar, e a reunião **não aparece no
+calendário do usuário** — o que confirma que `Calendars.ReadWrite` continua desnecessária
+(ADR-05). Mas o `{userId}` é o **object ID do Entra**, e não o uid do Firebase: o documento
+`advogados/{uid}` ganhou `usuarioTeams`, **validado como GUID**. Aceitar UPN no lugar seria
+mais cômodo e faria a integração depender de o e-mail da plataforma ser o mesmo do
+Microsoft 365 do escritório — suposição que quebra em silêncio no dia em que um advogado se
+cadastrar com outro endereço. O adaptador do Graph recusa com erro claro e **reentregável**
+quando o campo está vazio.
+
+**D. Atribuição e suspensão respeitam reunião futura.** Atribuir, remover atribuição e
+suspender advogado respondem **409 enquanto houver reunião futura ativa** do pedido — ou do
+advogado, na suspensão. Sem isso, trocar o advogado de um pedido deixaria uma reunião
+marcada com quem não atende mais o caso, e a sala já criada em nome dele.
+
+**E. `VTIMEZONE` fixo em −03:00, sem bloco `DAYLIGHT`.** O Brasil não tem horário de verão
+hoje. Um bloco `DAYLIGHT` escrito "por precaução" descreveria uma regra que não existe, e
+os clientes de calendário a aplicariam — deslocando reuniões em uma hora numa parte do ano.
+Se o horário de verão voltar, **este** é o ponto único a mudar, como o `hora + 3` da grade
+de disponibilidade.
+
+**F. Antecedência mínima para agendar: 24 horas. PROVISÓRIO.** Marcar para daqui a dez
+minutos não dá ao advogado tempo de se preparar nem à sala tempo de ser criada — a criação
+passa pelo outbox e pode ser reentregue. O número não veio de lugar nenhum: é **pergunta ao
+Marcos**, e vive numa constante em `packages/shared/src/regras-reuniao.ts`.
+
+**G. Advogado suspenso não recebe reunião.** A transação de agendar e a de remarcar leem
+`advogados/{advogadoId}` e recusam se estiver suspenso. É o outro lado de **D**: sem as
+duas, a corrida entre "suspender" e "marcar" termina com uma reunião nova na agenda de
+quem acabou de perder o acesso.
+
+**H. Cancelamento pelo administrador, sempre com devolução. PROVISÓRIO.** O escritório
+precisa poder desmarcar — advogado doente, agenda remanejada — e nesse caso a culpa não é
+do cliente: a reunião volta ao saldo **mesmo dentro das 24 horas**. Reaproveita o mesmo
+serviço do cancelamento do cliente, com o ator vindo do token. A regra de devolução nesse
+caso **não está no contrato**, e é **pergunta ao Marcos**.
+
+#### O que fica fora desta branch
+
+A integração real com o Teams. Ela depende de licença Teams confirmada para cada advogado,
+do registro do aplicativo no Entra ID com consentimento do administrador do tenant, e da
+application access policy configurada por PowerShell — com propagação relatada de até 48
+horas (ADR-05, risco 1). Enquanto isso não existe, a etapa fica no mesmo estado em que a
+Etapa 8 ficou: **código completo e testado contra um adaptador falso**, com a trava de modo
+no código (`REUNIOES_MODO`, que **não aceita `graph`**) no mesmo espírito da regra
+inviolável 20. O adaptador do Graph está escrito, não é alcançável, e não foi validado
+contra tenant nenhum.
+
+#### Um ponto a revisitar
+
+O painel do administrador lista as reuniões `reservada_sem_link` de **todos** os pedidos, e
+`reunioes` é subcoleção de `pedidos` — a consulta é de **grupo de coleções**, com índice
+próprio. É o oposto do que a Etapa 8 fez com `estornos`, que virou coleção raiz justamente
+para evitar isso. A diferença é que a subcoleção já estava fixada pela seção 5.1, e mover a
+reunião para a raiz a separaria do pedido que lhe dá saldo, janela e intervalo — que é
+exatamente o acoplamento que o ADR-12 quer preservar.
+
+---
+
 ## 5. Modelo de dados
 
 ### 5.1 Coleções raiz
