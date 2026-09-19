@@ -22,6 +22,7 @@ import { PedidosModule } from './pedidos/pedidos.module.js';
 import { ErrosDoNavegadorModule } from './erros-do-navegador/erros-do-navegador.module.js';
 import { SinaisModule } from './sinais/sinais.module.js';
 import { PreCadastrosModule } from './pre-cadastros/pre-cadastros.module.js';
+import { SalaDeReuniaoModule } from './reunioes/sala/sala.module.js';
 import { RetencaoModule } from './retencao/retencao.module.js';
 import { TarefasModule } from './tarefas/tarefas.module.js';
 import { TermosModule } from './termos/termos.module.js';
@@ -67,6 +68,14 @@ import { VitrineModule } from './vitrine/vitrine.module.js';
      * invalido ou `producao` derruba a inicializacao (regra inviolavel 20).
      */
     GatewayPagamentoModule,
+    /*
+     * Etapa 10. `@Global()`: a usam o agendamento, que recusa cedo quando o modo
+     * e `desligado`, e o despachante do outbox, que e quem cria a sala. A
+     * configuracao e validada aqui, no boot — `REUNIOES_MODO=graph` derruba a
+     * inicializacao (ADR-21), e o que esta do outro lado dessa trava e o tenant
+     * da B&C com advogados e clientes reais.
+     */
+    SalaDeReuniaoModule,
     HealthModule,
     SenhaModule,
     AdvogadosModule,
