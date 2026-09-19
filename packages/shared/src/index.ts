@@ -27,6 +27,7 @@ export * from './esquemas/upload.js';
 export * from './esquemas/vitrine.js';
 export * from './magic-bytes.js';
 export * from './perfil.js';
+export * from './regras-reuniao.js';
 export * from './retencao.js';
 export * from './semana.js';
 export * from './situacao-pedido.js';

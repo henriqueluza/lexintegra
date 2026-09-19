@@ -4,7 +4,12 @@ import type {
   Firestore,
   Query,
 } from 'firebase-admin/firestore';
-import type { CartaoPedido, DemandaResumo, EntregavelResumo } from 'shared';
+import type {
+  CartaoPedido,
+  DemandaResumo,
+  EntregavelResumo,
+  ReuniaoResumo,
+} from 'shared';
 import { ClientesService } from '../clientes/clientes.service.js';
 import {
   resumoDoEntregavel,
@@ -12,6 +17,11 @@ import {
   type DocumentoEntregavel,
 } from '../entregaveis/entregavel.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
+import {
+  paraResumo,
+  SUBCOLECAO_REUNIOES,
+  type DocumentoReuniao,
+} from '../reunioes/reuniao.js';
 import {
   COLECAO_PEDIDOS,
   paraCartao,
@@ -60,6 +70,7 @@ export class ConsultaPedidosService {
           documento.id,
           documento.data() as DocumentoPedido,
           await this.entregaveisDe(documento.ref),
+          await this.reunioesDe(documento.ref),
         ),
       ),
     );
@@ -74,7 +85,12 @@ export class ConsultaPedidosService {
       (pedido) => pedido.clienteId === clienteId,
     );
 
-    return paraCartao(pedidoId, dados, await this.entregaveisDe(referencia));
+    return paraCartao(
+      pedidoId,
+      dados,
+      await this.entregaveisDe(referencia),
+      await this.reunioesDe(referencia),
+    );
   }
 
   /** As demandas do advogado. So o que lhe foi distribuido chega aqui. */
@@ -162,6 +178,25 @@ export class ConsultaPedidosService {
       .where(campo, '==', valor)
       .orderBy('criadoEm', 'desc')
       .limit(TETO);
+  }
+
+  /**
+   * As reunioes do pedido, da mais antiga para a mais nova.
+   *
+   * Ordena pelo ID do documento (`r001`, `r002`, …), que e a ordem de EMISSAO, e
+   * nao por `inicio`: uma reuniao remarcada para tras pularia para o comeco da
+   * lista e a tela mostraria a "primeira reuniao" como sendo a segunda marcada.
+   * Tres digitos com zero a esquerda existem justamente para essa ordenacao ser
+   * a alfabetica que o Firestore faz por nome de documento.
+   */
+  private async reunioesDe(
+    pedido: DocumentReference,
+  ): Promise<ReuniaoResumo[]> {
+    const pagina = await pedido.collection(SUBCOLECAO_REUNIOES).get();
+
+    return pagina.docs.map((documento) =>
+      paraResumo(documento.id, documento.data() as DocumentoReuniao),
+    );
   }
 
   private async entregaveisDe(

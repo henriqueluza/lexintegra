@@ -31,6 +31,9 @@ function pedido(
       intervaloMinimoReunioesDias: 7,
       numeroRevisoesPermitidas: 2,
     },
+    reunioes: [],
+    saldoDeReunioes: 2,
+    reunioesValidasAte: '2027-09-01T12:00:00.000Z',
   };
 }
 

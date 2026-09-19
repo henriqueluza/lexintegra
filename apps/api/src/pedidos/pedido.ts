@@ -1,12 +1,15 @@
 import { Timestamp, type FieldValue } from 'firebase-admin/firestore';
-import type {
-  CartaoPedido,
-  DemandaResumo,
-  EntregavelResumo,
-  PedidoParaDistribuir,
-  Perfil,
-  SituacaoPedido,
-  SnapshotProduto,
+import {
+  fimDaJanela,
+  saldoDeReunioes,
+  type CartaoPedido,
+  type DemandaResumo,
+  type EntregavelResumo,
+  type PedidoParaDistribuir,
+  type Perfil,
+  type ReuniaoResumo,
+  type SituacaoPedido,
+  type SnapshotProduto,
 } from 'shared';
 
 /**
@@ -83,6 +86,28 @@ export interface DocumentoPedido {
    * descobrir quais fecharam seria trabalho proporcional ao total, e nao ao que
    * mudou.
    */
+  /**
+   * Etapa 10. Quantas reunioes este pedido ja EMITIU — nao quantas estao ativas.
+   *
+   * DUAS RAZOES, e cada uma sozinha ja justifica o campo:
+   *
+   * 1. E a fonte do id sequencial (`idDaReuniao`). Contar os documentos
+   *    existentes daria o mesmo numero depois de um cancelamento, e duas
+   *    reunioes diferentes acabariam com o mesmo id — a segunda sobrescrevendo a
+   *    primeira.
+   *
+   * 2. E O QUE SERIALIZA as operacoes de reuniao do mesmo pedido. A transacao do
+   *    Firestore so entra em conflito nos documentos que TOCA: duas requisicoes
+   *    do mesmo pedido para slots DIFERENTES tocariam documentos diferentes, nao
+   *    conflitariam, e passariam as duas — furando o saldo e o intervalo. O campo
+   *    `reserva` do slot nao cobre esse caso, porque os slots sao outros.
+   *    Escrever aqui e o que poe as duas em serie.
+   *
+   * FICA FORA DO SNAPSHOT, que e imutavel (regra inviolavel 5). Ausente e zero:
+   * todo pedido anterior a esta etapa.
+   */
+  reunioesEmitidas?: number;
+
   retencaoEm?: Timestamp | FieldValue | null;
   /**
    * Redundante com `retencaoEm != null`, e existe pela mesma razao de
@@ -109,6 +134,7 @@ export function paraCartao(
   id: string,
   pedido: DocumentoPedido,
   entregaveis: readonly EntregavelResumo[],
+  reunioes: readonly ReuniaoResumo[] = [],
 ): CartaoPedido {
   return {
     id,
@@ -117,7 +143,48 @@ export function paraCartao(
     distribuido: pedido.distribuido,
     situacao: situacaoDe(pedido),
     criadoEm: paraIso(pedido.criadoEm),
+    reunioes,
+    /*
+     * CALCULADO AQUI, com a mesma funcao que a tela usa para decidir se habilita
+     * o botao. Mandar so a lista e deixar a tela somar seria a mesma aritmetica
+     * em dois lugares — e o lugar que errasse seria o que o cliente ve.
+     */
+    saldoDeReunioes: saldoDeReunioes(
+      pedido.snapshot.quantidadeReunioes,
+      reunioes,
+    ),
+    reunioesValidasAte: validadeDasReunioes(pedido),
   };
+}
+
+/**
+ * Ate quando uma reuniao deste pedido pode COMECAR (ADR-21, decisao 3).
+ *
+ * CALCULADO NA LEITURA, sem job no Cloud Scheduler — a mesma escolha da semana de
+ * disponibilidade (arquitetura, secao 8). O job de "expiracao da janela de 12
+ * meses" que a secao 8 listava deixou de existir por causa desta linha: ele nao
+ * teria nada a fazer que isto nao faca, e seria mais uma peca movel que falha em
+ * silencio.
+ *
+ * `null` so enquanto o carimbo do servidor nao materializou, o que e um estado de
+ * leitura logo depois da escrita — dentro da transacao o pedido ja foi gravado.
+ */
+function validadeDasReunioes(pedido: DocumentoPedido): string | null {
+  if (!(pedido.criadoEm instanceof Timestamp)) return null;
+
+  return new Date(
+    fimDaJanela(
+      pedido.criadoEm.toMillis(),
+      pedido.snapshot.prazoValidadeReunioesDias,
+    ),
+  ).toISOString();
+}
+
+/** O pedido anterior a Etapa 10 nao tem o campo, e nunca emitiu reuniao. */
+export function reunioesEmitidasDe(
+  pedido: Pick<DocumentoPedido, 'reunioesEmitidas'>,
+): number {
+  return pedido.reunioesEmitidas ?? 0;
 }
 
 /** O pedido anterior a Etapa 8 nao tem o campo, e e ativo. */
