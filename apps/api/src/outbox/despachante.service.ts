@@ -82,12 +82,7 @@ export class DespachanteOutbox {
 
     let entrega: EmailResultado;
     try {
-      entrega =
-        registro.tipo === 'estorno-integral'
-          ? await this.estornarNoGateway(registro)
-          : await this.transporte.enviar(
-              await this.montarComChave(id, registro),
-            );
+      entrega = await this.executar(id, registro);
     } catch (erro) {
       // Falha ao MONTAR (usuario sumiu, Auth fora do ar). O transporte nunca
       // lanca; se lancou, foi antes dele.
@@ -159,6 +154,30 @@ export class DespachanteOutbox {
     });
 
     return 'abandonado';
+  }
+
+  /**
+   * O efeito externo de cada tipo de evento.
+   *
+   * ERA UM TERNARIO — "se for estorno, chama o gateway; senao, manda e-mail" — e
+   * a forma aguentava exatamente dois tipos de efeito. Com tres, um ternario
+   * vira encadeamento, e o ULTIMO ramo de um encadeamento e o padrao: tipo novo
+   * sem ramo proprio cai nele em silencio, e o que ele faria aqui e mandar um
+   * e-mail de redefinicao de senha para o destinatario do evento.
+   *
+   * Separado em metodo proprio, o padrao fica numa linha visivel, e acrescentar
+   * um efeito e acrescentar um `if` antes dela — nao descobrir onde estava o
+   * `else`.
+   */
+  private async executar(
+    id: string,
+    registro: RegistroOutbox,
+  ): Promise<EmailResultado> {
+    if (registro.tipo === 'estorno-integral') {
+      return this.estornarNoGateway(registro);
+    }
+
+    return this.transporte.enviar(await this.montarComChave(id, registro));
   }
 
   /**
