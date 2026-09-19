@@ -133,6 +133,124 @@ describe('DisponibilidadesService', () => {
     });
   });
 
+  /* ---------------------------------------------------------------------- */
+  /* Slot reservado (Etapa 10)                                               */
+  /* ---------------------------------------------------------------------- */
+
+  describe('slot reservado', () => {
+    /** Reserva um slot ja publicado, como o agendamento faria. */
+    function reservar(
+      banco: FirestoreFalso,
+      inicio: string,
+      reuniaoId = 'r001',
+    ): void {
+      const caminho = `disponibilidades/${ANA}_${inicio}`;
+      banco.documentos.set(caminho, {
+        ...(banco.documentos.get(caminho) ?? {}),
+        reserva: { pedidoId: 'pedido-1', reuniaoId },
+      });
+    }
+
+    /**
+     * O AVISO DA ETAPA 9 VIRANDO TRAVA. Apagar um slot reservado desmarcaria uma
+     * reuniao que o cliente ja agendou — e ele descobriria pela sala vazia no
+     * horario, nao por um erro.
+     */
+    it('recusa publicar a semana sem um slot reservado', async () => {
+      const { banco, disponibilidades } = montar();
+      const semana = semanaAtual();
+      const manha = slot(semana, 1, 13);
+      const tarde = slot(semana, 1, 16);
+
+      await disponibilidades.publicar(ANA, {
+        semana,
+        slots: [manha, tarde],
+      });
+      reservar(banco, manha.inicio);
+
+      await expect(
+        disponibilidades.publicar(ANA, { semana, slots: [tarde] }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    /**
+     * A MENSAGEM DIZ QUAL HORARIO. O advogado olha uma grade de ate quarenta
+     * caixinhas; "ha horario reservado nesta semana" o obrigaria a cacar qual.
+     */
+    it('a recusa nomeia o horario, no fuso do escritorio', async () => {
+      const { banco, disponibilidades } = montar();
+      const semana = semanaAtual();
+      const manha = slot(semana, 1, 13);
+
+      await disponibilidades.publicar(ANA, { semana, slots: [manha] });
+      reservar(banco, manha.inicio);
+
+      /* 13h UTC e 10h em Sao Paulo. A mensagem tem de mostrar 10, nao 13. */
+      await expect(
+        disponibilidades.publicar(ANA, { semana, slots: [] }),
+      ).rejects.toThrow(/10:00/);
+    });
+
+    /**
+     * RECUSA A SEMANA INTEIRA. Publicar so os livres deixaria a grade num estado
+     * que o advogado nao pediu e nao consegue ver.
+     */
+    it('nao apaga nem grava nada quando recusa', async () => {
+      const { banco, disponibilidades } = montar();
+      const semana = semanaAtual();
+      const manha = slot(semana, 1, 13);
+      const tarde = slot(semana, 1, 16);
+
+      await disponibilidades.publicar(ANA, { semana, slots: [manha, tarde] });
+      reservar(banco, manha.inicio);
+      const antes = [...banco.documentos.keys()].sort();
+
+      await expect(
+        disponibilidades.publicar(ANA, { semana, slots: [] }),
+      ).rejects.toThrow();
+
+      expect([...banco.documentos.keys()].sort()).toEqual(antes);
+    });
+
+    /**
+     * O SLOT RESERVADO QUE CONTINUA NA GRADE MANTEM A RESERVA. O `set` e
+     * substituicao: sem carregar o campo adiante, republicar a semana — o que o
+     * advogado faz toda segunda — deixaria o slot parecendo livre, um segundo
+     * cliente o reservaria, e dois clientes teriam o mesmo horario.
+     */
+    it('republicar a semana preserva a reserva', async () => {
+      const { banco, disponibilidades } = montar();
+      const semana = semanaAtual();
+      const manha = slot(semana, 1, 13);
+
+      await disponibilidades.publicar(ANA, { semana, slots: [manha] });
+      reservar(banco, manha.inicio);
+
+      await disponibilidades.publicar(ANA, { semana, slots: [manha] });
+
+      expect(
+        banco.documentos.get(`disponibilidades/${ANA}_${manha.inicio}`),
+      ).toMatchObject({ reserva: { pedidoId: 'pedido-1', reuniaoId: 'r001' } });
+    });
+
+    /** Slot livre continua saindo da grade normalmente. */
+    it('nao impede remover slot livre', async () => {
+      const { banco, disponibilidades } = montar();
+      const semana = semanaAtual();
+      const manha = slot(semana, 1, 13);
+      const tarde = slot(semana, 1, 16);
+
+      await disponibilidades.publicar(ANA, { semana, slots: [manha, tarde] });
+      reservar(banco, manha.inicio);
+
+      await disponibilidades.publicar(ANA, { semana, slots: [manha] });
+
+      expect(banco.documentos.has(`disponibilidades/${ANA}_${tarde.inicio}`)).toBe(
+        false,
+      );
+    });
+  });
+
   describe('janela editavel', () => {
     it('aceita a semana corrente e a seguinte', async () => {
       const { disponibilidades } = montar();
