@@ -6,6 +6,7 @@ import { FIRESTORE } from '../firebase/firebase.module.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import type { ReuniaoDoEvento } from '../outbox/evento.js';
 import { COLECAO_PEDIDOS, type DocumentoPedido } from '../pedidos/pedido.js';
+import { registrarConvitesDaReuniao } from './convites-no-outbox.js';
 import {
   cancelamentoDeReuniao,
   conviteDeReuniao,
@@ -104,7 +105,14 @@ export class ConvitesService {
    *   nenhum convite nasce.
    * - REMARCADA: o convite sai com o `sequence` ATUAL, e nao com o que estava no
    *   registro do outbox. Sem isso, o cliente receberia um convite com o horario
-   *   velho depois de ja ter remarcado.
+   *   velho depois de ja ter remarcado. Quem garante isso e
+   *   `registrarConvitesDaReuniao`, que tira o `sequence` da reuniao relida.
+   *
+   * `sequenceComunicada` e escrito junto, e significa "algum convite com este
+   * `sequence` foi ESCRITO no outbox" — nao "foi entregue". A diferenca e
+   * deliberada: esperar a entrega exigiria o despachante voltar a escrever aqui
+   * depois de o provedor responder, e o que importa para o cancelamento e apenas
+   * se ALGUM convite chegou a ser emitido.
    */
   private async gravarSala(
     evento: ReuniaoDoEvento,
@@ -117,12 +125,16 @@ export class ConvitesService {
       const reuniao = documento.data() as DocumentoReuniao | undefined;
       if (reuniao === undefined) return;
 
-      const clienteId = reuniao.clienteId;
       const ativa = reuniaoAtiva(reuniao.estado);
 
       if (ativa) {
         /* Os convites sao a ULTIMA leitura antes das escritas. */
-        await this.registrarConvites(transacao, evento, reuniao, clienteId);
+        await registrarConvitesDaReuniao(
+          this.outbox,
+          transacao,
+          evento,
+          reuniao,
+        );
       }
 
       transacao.update(referencia, {
@@ -136,39 +148,6 @@ export class ConvitesService {
           : {}),
       });
     });
-  }
-
-  /**
-   * DOIS CONVITES POR REUNIAO, um para cada lado — o outbox tem destinatario
-   * unico. O `sequence` que entra e o ATUAL da reuniao, nao o do registro.
-   *
-   * `sequenceComunicada` e escrito junto, e significa "algum convite com este
-   * `sequence` foi ESCRITO no outbox" — nao "foi entregue". A diferenca e
-   * deliberada: esperar a entrega exigiria o despachante voltar a escrever aqui
-   * depois de o provedor responder, e o que importa para o cancelamento e apenas
-   * se ALGUM convite chegou a ser emitido.
-   */
-  private async registrarConvites(
-    transacao: Parameters<
-      Parameters<Firestore['runTransaction']>[0]
-    >[0],
-    evento: ReuniaoDoEvento,
-    reuniao: DocumentoReuniao,
-    clienteId: string,
-  ): Promise<void> {
-    const carga = {
-      pedidoId: evento.pedidoId,
-      reuniaoId: evento.reuniaoId,
-      sequence: reuniao.sequence,
-    };
-
-    for (const destinatarioUid of [clienteId, reuniao.advogadoId]) {
-      await this.outbox.registrarSeAusente(transacao, {
-        tipo: 'convite-reuniao',
-        destinatarioUid,
-        reuniao: carga,
-      });
-    }
   }
 
   /**

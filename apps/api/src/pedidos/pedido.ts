@@ -108,6 +108,21 @@ export interface DocumentoPedido {
    */
   reunioesEmitidas?: number;
 
+  /**
+   * Etapa 10. Incrementado por REMARCACAO e CANCELAMENTO, e so por eles.
+   *
+   * Existe pela mesma razao 2 de `reunioesEmitidas` — serializar as operacoes de
+   * reuniao do mesmo pedido —, e e um campo SEPARADO porque `reunioesEmitidas` e
+   * a fonte do id sequencial: incrementa-lo numa remarcacao faria o proximo
+   * agendamento pular um numero, e o `rNNN` deixaria de dizer quantas reunioes o
+   * pedido emitiu.
+   *
+   * O CONFLITO DO FIRESTORE E POR DOCUMENTO, e nao por campo, entao escrever
+   * qualquer um dos dois serializa contra o outro: agendar e remarcar tocam o
+   * mesmo `pedidos/{id}` e uma das duas transacoes reexecuta.
+   */
+  reunioesVersao?: number;
+
   retencaoEm?: Timestamp | FieldValue | null;
   /**
    * Redundante com `retencaoEm != null`, e existe pela mesma razao de

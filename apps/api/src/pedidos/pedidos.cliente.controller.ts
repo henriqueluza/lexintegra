@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
 import { z } from 'zod';
 import {
   esquemaAgendamento,
+  esquemaRemarcacao,
   esquemaNovaObservacao,
   esquemaPedidoDeUpload,
   POLITICA_UPLOAD,
@@ -12,6 +13,7 @@ import {
   type HorarioDisponivel,
   type NovaObservacao,
   type ObservacaoResumo,
+  type Remarcacao,
   type ReuniaoResumo,
   type SituacaoPedido,
 } from 'shared';
@@ -22,6 +24,7 @@ import { Perfis, UsuarioAtual } from '../autenticacao/decoradores.js';
 import type { UsuarioAutenticado } from '../autenticacao/usuario.js';
 import { EntregaveisService } from '../entregaveis/entregaveis.service.js';
 import { ObservacoesService } from '../observacoes/observacoes.service.js';
+import { AlteracoesDeReuniaoService } from '../reunioes/alteracoes.service.js';
 import { HorariosService } from '../reunioes/horarios.service.js';
 import { ReunioesService } from '../reunioes/reunioes.service.js';
 import { ZodPipe } from '../validacao/zod.pipe.js';
@@ -78,6 +81,7 @@ export class PedidosClienteController {
     private readonly cancelamento: CancelamentoService,
     private readonly reunioes: ReunioesService,
     private readonly horarios: HorariosService,
+    private readonly alteracoes: AlteracoesDeReuniaoService,
   ) {}
 
   /** Um cartao por pedido (item 2.3.2), cada um com seus proprios entregaveis. */
@@ -146,6 +150,33 @@ export class PedidosClienteController {
     @UsuarioAtual() cliente: UsuarioAutenticado,
   ): Promise<ReuniaoResumo> {
     return this.reunioes.agendar(pedidoId, cliente.uid, corpo.slotId);
+  }
+
+  /**
+   * Remarca uma reuniao (ADR-21, decisao 6).
+   *
+   * `POST .../remarcacao` e nao `PUT .../reunioes/:id`: remarcar e um EVENTO de
+   * dominio, com regra propria — as 24 horas medidas contra o `inicio` atual — e
+   * nao a substituicao de um recurso. E a mesma forma de `/cancelamento` e
+   * `/atribuicao`, e a mesma razao pela qual o entregavel nao tem
+   * `PATCH { estado }` (ADR-11).
+   *
+   * O `reuniaoId` no caminho NAO MUDA depois de remarcar: o documento e o mesmo
+   * (ADR-21, decisao A). A tela nao precisa reaprender o id.
+   */
+  @Post(':pedidoId/reunioes/:reuniaoId/remarcacao')
+  @HttpCode(200)
+  remarcarReuniao(
+    @Param('pedidoId') pedidoId: string,
+    @Param('reuniaoId') reuniaoId: string,
+    @Body(new ZodPipe(esquemaRemarcacao)) corpo: Remarcacao,
+    @UsuarioAtual() cliente: UsuarioAutenticado,
+  ): Promise<ReuniaoResumo> {
+    return this.alteracoes.remarcar(
+      { pedidoId, reuniaoId },
+      cliente.uid,
+      corpo.slotId,
+    );
   }
 
   /* ---------------------------------------------------------------------- */

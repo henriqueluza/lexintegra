@@ -51,6 +51,7 @@ import type { DistribuicaoService } from './pedidos/distribuicao.service.js';
 import { PedidosAdminController } from './pedidos/pedidos.admin.controller.js';
 import { PedidosAdvogadoController } from './pedidos/pedidos.advogado.controller.js';
 import type { CancelamentoService } from './pedidos/cancelamento.service.js';
+import type { AlteracoesDeReuniaoService } from './reunioes/alteracoes.service.js';
 import type { HorariosService } from './reunioes/horarios.service.js';
 import type { ReunioesService } from './reunioes/reunioes.service.js';
 import { PedidosClienteController } from './pedidos/pedidos.cliente.controller.js';
@@ -983,6 +984,10 @@ describe('perfis das areas autenticadas', () => {
       'cliente.horariosDeReuniao (Etapa 10)',
       PedidosClienteController.prototype.horariosDeReuniao,
     ],
+    [
+      'cliente.remarcarReuniao (Etapa 10)',
+      PedidosClienteController.prototype.remarcarReuniao,
+    ],
     ['advogado.listar', PedidosAdvogadoController.prototype.listar],
     ['advogado.anamnese', PedidosAdvogadoController.prototype.anamnese],
     ['admin.atribuir', PedidosAdminController.prototype.atribuir],
@@ -1059,6 +1064,9 @@ describe('PedidosClienteController', () => {
         {
           listar: registrar('horarios.listar'),
         } as unknown as HorariosService,
+        {
+          remarcar: registrar('alteracoes.remarcar'),
+        } as unknown as AlteracoesDeReuniaoService,
       ),
       chamadas,
     };

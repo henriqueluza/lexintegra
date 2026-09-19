@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AlteracoesDeReuniaoService } from './alteracoes.service.js';
 import { HorariosService } from './horarios.service.js';
 import { ReunioesService } from './reunioes.service.js';
 
@@ -16,7 +17,7 @@ import { ReunioesService } from './reunioes.service.js';
  * aqui.
  */
 @Module({
-  providers: [ReunioesService, HorariosService],
-  exports: [ReunioesService, HorariosService],
+  providers: [ReunioesService, HorariosService, AlteracoesDeReuniaoService],
+  exports: [ReunioesService, HorariosService, AlteracoesDeReuniaoService],
 })
 export class ReunioesModule {}
