@@ -222,13 +222,28 @@ resource "google_service_account" "tarefas" {
   display_name = "Cloud Scheduler e Cloud Tasks chamando a API"
 }
 
+# DUAS VEZES POR DIA desde a Etapa 12, e a razao nao e a base: e o ALERTA.
+#
+# A condicao de ausencia do Cloud Monitoring tem teto de 23h30m. Com publicacao
+# diaria, o intervalo normal entre dois sinais (24h) e maior que qualquer janela
+# que a API aceite — entao "nenhuma publicacao na janela" seria verdade todo dia,
+# meia hora antes da proxima execucao, e o alerta gritaria sem nada ter
+# acontecido. Com 12 horas de intervalo, a janela de 23h so fecha quando o job
+# de fato para.
+#
+# O nome do recurso continua `clamav-base-diaria` de proposito: renomea-lo
+# forcaria destruir e recriar o job por uma questao de rotulo. O que ele faz esta
+# aqui, no `schedule` e neste comentario.
+#
+# Efeito colateral bem-vindo: o ClamAV publica assinatura varias vezes ao dia, e
+# a base no bucket passa a ficar no maximo 12 horas atras do mirror.
 resource "google_cloud_scheduler_job" "clamav_base" {
   project  = var.project_id
   name     = "clamav-base-diaria"
   region   = var.region
-  schedule = "0 4 * * *"
-  # 4h no horario de Sao Paulo: fora do horario comercial, e antes de o escritorio
-  # comecar a trabalhar.
+  schedule = "0 4,16 * * *"
+  # 4h e 16h no horario de Sao Paulo: a primeira antes de o escritorio comecar, a
+  # segunda no meio da tarde, quando uma falha ainda da tempo de ser notada.
   time_zone = "America/Sao_Paulo"
 
   http_target {

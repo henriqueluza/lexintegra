@@ -365,7 +365,14 @@ resource "google_monitoring_alert_policy" "clamav_base_velha" {
     display_name = "idade da base publicada acima do limite"
 
     condition_threshold {
-      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.clamav_base_idade.name}\""
+      /*
+       * `resource.type` e OBRIGATORIO no filtro — a API recusa a politica sem
+       * ele (400: "must specify a restriction on resource.type"). E aqui e
+       * `cloud_run_job`, e nao `cloud_run_revision` como nas outras politicas:
+       * quem publica a base e o job diario, nao o servico. Conferido no log do
+       * proprio job, nao suposto.
+       */
+      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.clamav_base_idade.name}\" AND resource.type=\"cloud_run_job\""
       comparison      = "COMPARISON_GT"
       threshold_value = var.limite_base_clamav_horas
       duration        = "0s"
@@ -380,6 +387,18 @@ resource "google_monitoring_alert_policy" "clamav_base_velha" {
 
 # A outra metade do alerta acima: o job pode parar de rodar. Ausencia de sinal
 # nao dispara limiar nenhum — precisa de condicao de AUSENCIA.
+#
+# E A AUSENCIA TEM TETO DE 23h30m NA API, o que muda o desenho do job.
+#
+# Com publicacao DIARIA, qualquer janela menor que 24 horas dispara todo dia, meia
+# hora antes da proxima execucao: o intervalo normal entre dois sinais ja e maior
+# que a janela. Seria um alerta que grita sem nada ter acontecido — exatamente o
+# que o comentario do alerta de entrega diz que treina quem recebe a ignorar.
+#
+# Por isso a atualizacao passou a rodar DUAS VEZES POR DIA (ver `varredura.tf`).
+# O intervalo normal cai para 12 horas, a janela de 23 horas cabe com folga, e o
+# alerta passa a significar o que o nome diz: o job parou. De quebra, a base fica
+# mais nova — o ClamAV publica varias vezes ao dia.
 resource "google_monitoring_alert_policy" "clamav_base_sem_publicacao" {
   project               = var.project_id
   display_name          = "Base do ClamAV sem publicacao"
@@ -388,18 +407,23 @@ resource "google_monitoring_alert_policy" "clamav_base_sem_publicacao" {
 
   documentation {
     content = <<-EOT
-      O job diario nao publicou base nas ultimas 26 horas — a folga de duas horas
-      absorve atraso de agendamento. Sem esta politica, um job que simplesmente para de
-      rodar nao dispara nada: o alerta de base velha depende de haver sinal para medir.
+      Nenhuma base foi publicada nas ultimas 23 horas. A atualizacao roda duas vezes por
+      dia, entao isto significa pelo menos uma execucao perdida — e provavelmente duas.
+      Sem esta politica, um job que simplesmente para de rodar nao dispara nada: o alerta
+      de base velha depende de haver sinal para medir.
     EOT
   }
 
   conditions {
-    display_name = "nenhuma publicacao em 26 horas"
+    display_name = "nenhuma publicacao em 23 horas"
 
     condition_absent {
-      filter   = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.clamav_base_idade.name}\""
-      duration = "93600s"
+      # Mesmo `resource.type` obrigatorio do alerta acima.
+      filter = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.clamav_base_idade.name}\" AND resource.type=\"cloud_run_job\""
+
+      # 23h. O teto da API e 23h30m; o valor fica abaixo dele de proposito, para
+      # nao depender do limite exato de uma API que pode mudar.
+      duration = "82800s"
 
       aggregations {
         alignment_period   = "3600s"
