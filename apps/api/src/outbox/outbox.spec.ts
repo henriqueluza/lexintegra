@@ -13,6 +13,7 @@ import {
 import { montarLinkDeSenha, urlDaAplicacao } from './link-de-senha.js';
 import type { OutboxService, Reivindicacao } from './outbox.service.js';
 import { GatewayPagamentoFalso } from '../pagamentos/gateway/gateway-falso.js';
+import type { ConvitesService } from '../reunioes/convites.service.js';
 
 /* -------------------------------------------------------------------------- */
 /* Identidade e deduplicacao dos eventos                                       */
@@ -343,11 +344,29 @@ const REGISTRO: RegistroOutbox = {
   varrerApos: null as never,
 };
 
+/** O que a sala falsa devolve por padrao no dublê de `ConvitesService`. */
+const SALA_CRIADA = {
+  sucesso: true,
+  link: 'https://teams.test/sala',
+  idExterno: 'sala_1',
+  jaExistia: false,
+} as const;
+
+const CONVITE = {
+  enviar: true,
+  mensagem: {
+    para: ['clara@exemplo.test'],
+    assunto: 'Reuniao marcada',
+    corpoTexto: 'convite',
+  },
+} as const;
+
 interface Cenario {
   despachante: DespachanteOutbox;
   transporte: EmailFalsoTransport;
   alertas: AlertaFalso;
   gateway: GatewayPagamentoFalso;
+  convites: ConvitesService;
   concluidos: Array<{
     id: string;
     estado: 'enviado' | 'falhou' | 'abandonado';
@@ -366,6 +385,9 @@ function montarCenario(opcoes: {
   gateway?: GatewayPagamentoFalso;
   /** Faz `concluir` responder `abandonado`, como se o orcamento tivesse acabado. */
   esgotado?: boolean;
+  criarSala?: () => Promise<unknown>;
+  montarConvite?: () => Promise<unknown>;
+  montarCancelamento?: () => Promise<unknown>;
 }): Cenario {
   const concluidos: Cenario['concluidos'] = [];
 
@@ -412,6 +434,19 @@ function montarCenario(opcoes: {
   const transporte = new EmailFalsoTransport();
   const alertas = new AlertaFalso();
   const gateway = opcoes.gateway ?? new GatewayPagamentoFalso();
+  /*
+   * O servico de convites tem suite propria (`convites.service.spec.ts`), com o
+   * Firestore falso e a sala falsa. Aqui ele e um dublê: o que se testa neste
+   * arquivo e o DESPACHANTE — que ele desvia os tres tipos de reuniao de
+   * `montar`, e que "nao enviar" conclui como sucesso.
+   */
+  const convites = {
+    criarSala: opcoes.criarSala ?? (() => Promise.resolve(SALA_CRIADA)),
+    montarConvite: opcoes.montarConvite ?? (() => Promise.resolve(CONVITE)),
+    montarCancelamento:
+      opcoes.montarCancelamento ?? (() => Promise.resolve(CONVITE)),
+  } as unknown as ConvitesService;
+
   return {
     despachante: new DespachanteOutbox(
       outbox,
@@ -419,11 +454,13 @@ function montarCenario(opcoes: {
       opcoes.transporte ?? transporte,
       alertas,
       gateway,
+      convites,
     ),
     transporte,
     alertas,
     concluidos,
     gateway,
+    convites,
   };
 }
 

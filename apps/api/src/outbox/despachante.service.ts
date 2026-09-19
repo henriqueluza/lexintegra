@@ -20,6 +20,10 @@ import {
   ASSUNTO_AVISO_EXCLUSAO,
   TEXTO_AVISO_EXCLUSAO,
 } from '../termos/termos.textos.js';
+import {
+  ConvitesService,
+  type Destinatario,
+} from '../reunioes/convites.service.js';
 import { OutboxService } from './outbox.service.js';
 import { POLITICA } from './politica.js';
 
@@ -80,6 +84,7 @@ export class DespachanteOutbox {
     @Inject(EMAIL_TRANSPORT) private readonly transporte: EmailTransport,
     @Inject(ALERTAS) private readonly alertas: CanalDeAlerta,
     @Inject(GATEWAY_PAGAMENTO) private readonly gateway: GatewayPagamento,
+    private readonly convites: ConvitesService,
   ) {}
 
   async despachar(id: string): Promise<ResultadoDoDespacho> {
@@ -190,8 +195,91 @@ export class DespachanteOutbox {
     if (registro.tipo === 'estorno-integral') {
       return this.estornarNoGateway(registro);
     }
+    if (registro.tipo === 'criar-sala-reuniao') {
+      return this.criarSalaDeReuniao(registro);
+    }
+    if (
+      registro.tipo === 'convite-reuniao' ||
+      registro.tipo === 'cancelamento-reuniao'
+    ) {
+      return this.entregarConvite(id, registro);
+    }
 
     return this.transporte.enviar(await this.montarComChave(id, registro));
+  }
+
+  /**
+   * A SALA DO TEAMS (Etapa 10, arquitetura 7.2). Nao e e-mail, como o estorno.
+   *
+   * O convite NAO nasce aqui: ele nasce na transacao que grava o link, dentro do
+   * servico — junto com a releitura que decide se a reuniao ainda vale. Escrever
+   * os convites daqui os poria fora daquela transacao, e uma falha entre as duas
+   * escritas deixaria a reuniao confirmada sem convite nenhum.
+   */
+  private async criarSalaDeReuniao(
+    registro: RegistroOutbox,
+  ): Promise<EmailResultado> {
+    if (registro.reuniao === undefined) {
+      return { sucesso: false, motivo: 'registro de reuniao sem referencia' };
+    }
+
+    const criada = await this.convites.criarSala(registro.reuniao);
+    if (!criada.sucesso) return { sucesso: false, motivo: criada.motivo };
+
+    if (criada.jaExistia) {
+      this.log.warn(
+        `sala da reuniao ${registro.reuniao.reuniaoId} ja existia no provedor`,
+      );
+    }
+
+    return { sucesso: true, idProvedor: criada.idExterno };
+  }
+
+  /**
+   * O CONVITE E O CANCELAMENTO, com a possibilidade de NAO ENVIAR.
+   *
+   * "Nao enviar" conclui o registro como SUCESSO, e nao como falha: um convite
+   * superado por remarcacao, ou de uma reuniao ja cancelada, nao tem o que ser
+   * reentregue. Tratar como falha gastaria o orcamento de dez tentativas e
+   * terminaria num alerta critico sobre um evento que fez a coisa certa.
+   */
+  private async entregarConvite(
+    id: string,
+    registro: RegistroOutbox,
+  ): Promise<EmailResultado> {
+    if (registro.reuniao === undefined) {
+      return { sucesso: false, motivo: 'registro de reuniao sem referencia' };
+    }
+
+    const destinatario = await this.destinatarioDe(registro.destinatarioUid);
+    const convite =
+      registro.tipo === 'cancelamento-reuniao'
+        ? await this.convites.montarCancelamento(registro.reuniao, destinatario)
+        : await this.convites.montarConvite(registro.reuniao, destinatario);
+
+    if (!convite.enviar) {
+      this.log.log(`registro ${id} nao precisa sair: ${convite.motivo}`, {
+        sinal: 'outbox.entrega',
+        resultado: 'pulado',
+        tipo: registro.tipo,
+      });
+      return { sucesso: true, idProvedor: 'pulado' };
+    }
+
+    return this.transporte.enviar({
+      ...convite.mensagem,
+      chaveIdempotencia: `${id}-c${String(registro.ciclo)}`,
+    });
+  }
+
+  /** O nome vai para o `CN` do iCalendar; o endereco, para o `mailto:`. */
+  private async destinatarioDe(uid: string): Promise<Destinatario> {
+    const usuario = await this.auth.getUser(uid);
+    if (usuario.email === undefined) {
+      throw new Error(`usuario ${uid} nao tem e-mail`);
+    }
+
+    return { uid, nome: usuario.displayName ?? '', email: usuario.email };
   }
 
   /**
@@ -300,13 +388,17 @@ export class DespachanteOutbox {
       case 'estorno-integral':
         throw new Error('estorno-integral nao produz e-mail');
 
-      /* Os tres da Etapa 10. Chegam no commit seguinte. */
+      /*
+       * Os tres da Etapa 10 nao chegam aqui: `executar` os desvia antes, porque
+       * a sala nao e e-mail e os convites precisam RELER a reuniao para decidir
+       * se ainda valem. Os ramos existem para o `switch` ser exaustivo — e para
+       * quem os remover descobrir o outro caminho em vez de mandar um e-mail de
+       * senha a quem esperava um convite.
+       */
       case 'criar-sala-reuniao':
       case 'convite-reuniao':
       case 'cancelamento-reuniao':
-        throw new Error(
-          `despachante de ${registro.tipo} ainda nao instalado (Etapa 10)`,
-        );
+        throw new Error(`${registro.tipo} nao produz e-mail de senha`);
 
       default:
         return semMontador(registro.tipo);
