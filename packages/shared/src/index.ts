@@ -8,6 +8,7 @@
 export * from './anamnese-provisoria.js';
 export * from './carrinho.js';
 export * from './estado-entregavel.js';
+export * from './estado-reuniao.js';
 export * from './evento-outbox.js';
 export * from './esquemas/advogado.js';
 export * from './esquemas/anamnese-provisoria.js';
@@ -20,6 +21,7 @@ export * from './esquemas/observacao.js';
 export * from './esquemas/pedido.js';
 export * from './esquemas/pre-cadastro.js';
 export * from './esquemas/produto.js';
+export * from './esquemas/reuniao.js';
 export * from './esquemas/senha.js';
 export * from './esquemas/upload.js';
 export * from './esquemas/vitrine.js';

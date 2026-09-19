@@ -389,6 +389,7 @@ describe('ApiService', () => {
     const promessa = api.criarAdvogado({
       nome: 'Ana Souza',
       email: 'ana@escritorio.test',
+      usuarioTeams: null,
     });
     const chamada = http.expectOne('/api/admin/advogados');
 
@@ -396,6 +397,7 @@ describe('ApiService', () => {
     expect(chamada.request.body).toEqual({
       nome: 'Ana Souza',
       email: 'ana@escritorio.test',
+      usuarioTeams: null,
     });
     chamada.flush({ uid: 'uid-1' });
     await promessa;

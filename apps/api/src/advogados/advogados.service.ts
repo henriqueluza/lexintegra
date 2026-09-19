@@ -29,6 +29,33 @@ interface DocumentoAdvogado {
   status: StatusAdvogado;
   criadoEm: Timestamp | FieldValue;
   criadoPor: string;
+  /**
+   * Etapa 10 (ADR-21, decisao B). O object ID do advogado no Entra ID, que e o
+   * `{userId}` da chamada ao Graph — NAO o uid do Firebase.
+   *
+   * SEMPRE ESCRITO, inclusive como `null`, pela armadilha de sempre: uma consulta
+   * futura por "advogados sem identificador do Teams" usaria igualdade, e
+   * documento sem o campo nao casa com `== null` no Firestore.
+   */
+  usuarioTeams: string | null;
+}
+
+/** O documento anterior a Etapa 10 nao tem o campo, e isso e o mesmo que nulo. */
+function usuarioTeamsDe(dados: DocumentoAdvogado): string | null {
+  return dados.usuarioTeams ?? null;
+}
+
+/**
+ * `?? null` e obrigatorio, e nao defensivo a toa.
+ *
+ * O schema garante a chave quando o corpo passa pelo `ZodPipe`, mas este servico
+ * tambem e chamado DIRETO — pela suite de integracao e por quem vier a precisar
+ * dele. Sem isto, `usuarioTeams: undefined` chega ao Firestore, que recusa a
+ * escrita inteira com "Cannot use undefined as a Firestore value" e derruba a
+ * criacao do advogado. Foi exatamente assim que a suite de integracao pegou isto.
+ */
+function usuarioTeamsDoPedido(dados: NovoAdvogado): string | null {
+  return dados.usuarioTeams ?? null;
 }
 
 /**
@@ -90,6 +117,7 @@ export class AdvogadosService {
       email: dados.email,
       status: 'ativo',
       criadoEm: null,
+      usuarioTeams: usuarioTeamsDoPedido(dados),
     };
   }
 
@@ -110,6 +138,7 @@ export class AdvogadosService {
           dados.criadoEm instanceof Timestamp
             ? dados.criadoEm.toDate().toISOString()
             : null,
+        usuarioTeams: usuarioTeamsDe(dados),
       };
     });
   }
@@ -183,6 +212,7 @@ export class AdvogadosService {
         dados.criadoEm instanceof Timestamp
           ? dados.criadoEm.toDate().toISOString()
           : null,
+      usuarioTeams: usuarioTeamsDe(dados),
     };
   }
 
@@ -236,6 +266,7 @@ export class AdvogadosService {
       nome: dados.nome,
       email: dados.email,
       status: 'ativo',
+      usuarioTeams: usuarioTeamsDoPedido(dados),
       criadoEm: FieldValue.serverTimestamp(),
       criadoPor,
     };

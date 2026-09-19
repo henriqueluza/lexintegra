@@ -46,3 +46,10 @@
   color: var(--estado-alerta);
   font-weight: var(--peso-medio);
 }
+
+/* O GUID e longo e nao precisa competir com o nome: menor e em fonte tabular. */
+.advogados__teams {
+  font-size: var(--t-micro);
+  color: var(--texto-3);
+  font-variant-numeric: tabular-nums;
+}

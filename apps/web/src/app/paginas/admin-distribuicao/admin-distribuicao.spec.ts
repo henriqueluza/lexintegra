@@ -12,6 +12,7 @@ const ANA: AdvogadoResumo = {
   email: 'ana@escritorio.test',
   status: 'ativo',
   criadoEm: null,
+  usuarioTeams: null,
 };
 
 /** Suspensa: a API recusa distribuir para ela, entao a tela nao a oferece. */
@@ -21,6 +22,7 @@ const BIA: AdvogadoResumo = {
   email: 'bia@escritorio.test',
   status: 'suspenso',
   criadoEm: null,
+  usuarioTeams: null,
 };
 
 const NA_FILA: PedidoParaDistribuir = {

@@ -59,6 +59,7 @@ export class AdminAdvogados implements OnInit {
     { chave: 'nome', rotulo: 'Nome' },
     { chave: 'email', rotulo: 'E-mail' },
     { chave: 'status', rotulo: 'Situacao' },
+    { chave: 'usuarioTeams', rotulo: 'Teams' },
     { chave: 'acoes', rotulo: 'Acoes', alinhamento: 'fim' },
   ];
 
@@ -70,9 +71,16 @@ export class AdminAdvogados implements OnInit {
   /** uid do advogado cuja suspensao esta em curso, para o botao certo girar. */
   protected readonly emCurso = signal<string | null>(null);
 
+  /*
+   * `usuarioTeams` e OPCIONAL, e sem `Validators.required` de proposito (Etapa
+   * 10, ADR-21 decisao B): a integracao com o Graph nao esta ligada, e exigir o
+   * identificador agora impediria de cadastrar advogado ate alguem ir buscar um
+   * GUID no Entra ID. O formato e conferido pelo mesmo schema que o servidor usa.
+   */
   protected readonly formulario = inject(FormBuilder).nonNullable.group({
     nome: ['', [Validators.required, Validators.minLength(3)]],
     email: ['', [Validators.required, Validators.email]],
+    usuarioTeams: [''],
   });
 
   ngOnInit(): void {
@@ -86,6 +94,11 @@ export class AdminAdvogados implements OnInit {
     return nome === 'email'
       ? 'Informe um e-mail valido.'
       : 'Informe o nome completo.';
+  }
+
+  /** O que a tabela mostra na coluna do Teams. Ver a nota em `AdvogadoResumo`. */
+  protected teamsDe(linha: Record<string, unknown>): string {
+    return (linha as unknown as AdvogadoResumo).usuarioTeams ?? '—';
   }
 
   private async recarregar(): Promise<void> {
