@@ -764,7 +764,15 @@ Subcoleções: `clientes/{id}/anamnese`, `pedidos/{id}/entregaveis`, `pedidos/{i
 
 **`observacoes` é append-only**, e isso é decisão e não limitação: o advogado trabalha a partir do que o cliente escreveu, e texto reescrito faz "o cliente pediu X" virar "o cliente sempre pediu Y", sem trilha. A API não expõe edição nem exclusão, e há teste que defende a ausência.
 
-**Índices compostos.** Um só até aqui: `produtos` por `ativo` + `nome`, para o filtro de situação da listagem administrativa. Declarado em `infra/terraform/firestore.tf`, nunca criado à mão no console — o emulador não exige índice, então uma consulta sem índice declarado passa local e falha em produção. A regra é um índice por consulta que existe, não por consulta imaginável: índice composto custa escrita em toda gravação da coleção.
+**Sobre `pedidos/{id}/reunioes` (Etapa 10, ADR-21).** O id é **sequencial e estável por pedido** (`r001`), e não o id do slot: o `externalId` que identifica a sala no Graph *é* esse id, e um id que mudasse na remarcação criaria uma segunda sala a cada vez. Remarcar **atualiza o mesmo documento** — troca `slotId`, `inicio` e `fim`, incrementa `sequence` e empilha `historico[]`. O número sai de `pedidos.reunioesEmitidas`, um contador **fora do snapshot** (o snapshot é imutável, seção 5.3), e não da contagem dos documentos existentes: contar documentos daria o mesmo número depois de um cancelamento, e duas reuniões acabariam com o mesmo id.
+
+Esse contador é também a **serialização por pedido**, e não é redundante com a reserva do slot. A transação do Firestore só entra em conflito nos documentos que toca: duas requisições do mesmo pedido para **slots diferentes** tocariam documentos diferentes, não conflitariam e passariam as duas, furando saldo e intervalo. Agendar, remarcar e cancelar escrevem o documento do pedido justamente para se porem em fila.
+
+`sequenceComunicada` é o último `SEQUENCE` cujo convite foi **escrito no outbox** — não "entregue". É o que decide se o `METHOD:CANCEL` sai: cancelar uma reunião que nunca chegou ao calendário de ninguém produziria um cancelamento para um `UID` que o destinatário nunca viu.
+
+**Índices compostos.** Onze, todos em `infra/terraform/firestore.tf`, nunca criados à mão no console — o emulador não exige índice, então uma consulta sem índice declarado passa local e falha em produção. A regra é um índice por consulta que existe, não por consulta imaginável: índice composto custa escrita em toda gravação da coleção.
+
+Os dois da Etapa 10 são **de grupo de coleções** (`reunioes_por_advogado` e `reunioes_sem_sala`), porque `reunioes` é subcoleção do pedido e as duas consultas atravessam todos os pedidos. O precedente contrário é `estornos`, que virou coleção raiz justamente para evitar isso — aqui a subcoleção está fixada pela seção 5.1, e o preço é o índice de grupo. **O emulador não impõe índice nenhum**, então estes dois só existem de verdade depois do `apply`; a prova local é o `terraform plan`.
 
 ### 5.2 O agregado de compra
 
@@ -922,6 +930,14 @@ Nada de envio de e-mail dentro da transação. O evento vai para o outbox, e o c
 
 **Regra de cancelamento com 24 horas, ver ADR-12.** A verificação da antecedência mínima acontece no servidor, comparando o momento da solicitação de cancelamento com o `DTSTART` da reunião — nunca confiando em validação só de interface.
 
+**Como ficou, na Etapa 10 (ver ADR-21).** A transação acima ganhou duas leituras que o texto original não previa: `advogados/{id}`, para recusar advogado suspenso — é o que fecha a corrida entre "suspender" e "marcar" —, e o documento do pedido, que ela também **escreve**, porque a reserva do slot sozinha não serializa duas marcações do mesmo pedido em slots diferentes (seção 5.1).
+
+A falha prevista acima é o estado `reservada_sem_link`, e ele é desenhado e não excepcional: com a integração ainda desligada, **toda** reunião nasce assim. O painel do administrador lista essas reuniões com o id do registro do outbox, e o botão de tentar de novo reenvia **aquele** registro pelo caminho normal — regra inviolável 3, nada de quarto caminho de entrega.
+
+O despachante **relê a reunião dentro da transação** antes de gravar o link, porque ele roda depois do commit e pode chegar tarde: a reunião pode ter sido cancelada (não cria sala) ou remarcada (o convite sai com o `sequence` atual, não com o do registro). Convite só sai com link; `METHOD:CANCEL` só sai se algum convite chegou a ser emitido.
+
+**A antecedência mínima para marcar é de 24 horas** (ADR-21, decisão F, **provisória**) e é uma constante separada da janela de cancelamento, embora hoje valham o mesmo número: são regras diferentes, e confundi-las faria uma mudança em uma alterar a outra em silêncio.
+
 ### 7.3 Upload de arquivos
 
 Fluxo: navegador envia direto ao bucket de quarentena via URL assinada de escrita, emitida pela API com validação de quem envia, para qual entregável ou pedido, com qual `content-type` e tamanho máximo. O arquivo nunca passa pelo Cloud Run — o que economiza exatamente o recurso que o Cloud Run cobra.
@@ -954,22 +970,28 @@ Suspensão precisa revogar tokens ativos, não apenas marcar um campo — senão
 
 ## 8. Assincronia e jobs
 
-Os três jobs gratuitos do Cloud Scheduler ficam integralmente ocupados:
+O Cloud Scheduler dá três jobs gratuitos. **Hoje são quatro**, e o quarto é deliberado:
 
 1. **Varredor do outbox** — reenfileira pendências não entregues. *Implementado na Etapa 7, a cada minuto.*
-2. **Atualização da base ClamAV** — mantém assinaturas atuais no bucket.
-3. **Expiração da janela de 12 meses** — encerra saldos de reunião vencidos conforme o 2.7.2.
+2. **Atualização da base ClamAV** — mantém assinaturas atuais no bucket. *Duas vezes por dia, e o motivo é o alerta de ausência, não a base — ver seção 9.*
+3. **Retenção de arquivos** — avisa no 23º dia e exclui no 30º. *Implementado na Etapa 11.*
+4. **Sonda de sinais operacionais** — `POST /api/interno/sinais`, porque o Monitoring não consulta o Firestore. *Implementado na Etapa 12, US$ 0,10/mês.*
 
-Não sobra nenhum. O quarto job em diante custa US$ 0,10/mês cada — irrelevante em dinheiro, mas relevante como sinal de que uma rotina nova está sendo criada.
+Cada job além do terceiro custa US$ 0,10/mês — irrelevante em dinheiro, e relevante como sinal de que uma rotina nova está sendo criada. É esse sinal que importa, não a economia.
 
-**Candidatos a uma quarta rotina, em ordem de probabilidade de surgir:**
+**Duas rotinas que este documento previu e que NÃO existem, por decisão:**
 
-- **Exclusão de arquivo por política de retenção, agora com gatilho definido** (30 dias a partir de `entregue`, seção 7.3 e 13). Como a contagem depende do estado do pedido (todos os entregáveis em `entregue`), a regra nativa de ciclo de vida do Cloud Storage não basta sozinha — ela só sabe a idade do objeto, não o estado do pedido. Esta é a quarta rotina mais provável de ser necessária, e inclui o envio do aviso prévio por e-mail antes da exclusão de fato.
-- **Lembrete de reunião próxima**, cogitado mas não solicitado no contrato.
-- **Abertura do registro semanal de disponibilidade** (item 2.6.3). Evitável: em vez de uma rotina que "abre" a janela toda segunda, o sistema calcula a semana corrente no momento da leitura. Preferível, porque elimina uma peça móvel sem perder a funcionalidade.
+- **Expiração da janela de validade das reuniões** (item 2.7.2), listada aqui como job obrigatório até a Etapa 10. A janela é **calculada na leitura**, a partir de `criadoEm` do pedido mais o prazo do snapshot — uma rotina que "encerrasse saldos vencidos" seria uma peça móvel para produzir um número que a leitura já produz, e ainda poderia estar atrasada no momento em que alguém perguntasse.
+- **Abertura do registro semanal de disponibilidade** (item 2.6.3), pelo mesmo raciocínio e desde a Etapa 9: a semana corrente é calculada, nunca aberta.
+
+São o mesmo padrão, e vale enunciá-lo: **estado derivável do tempo se calcula na leitura; rotina agendada é para efeito externo** — entregar e-mail, apagar arquivo, atualizar base de antivírus. As duas rotinas descartadas não tinham efeito externo nenhum.
+
+**Candidatos a uma rotina nova, em ordem de probabilidade:**
+
+- **Lembrete de reunião próxima**, cogitado mas não solicitado no contrato. Tem efeito externo, então seria job de verdade.
 - **Limpeza de pré-cadastros abandonados**, se a política de dados exigir descarte de quem nunca comprou.
 
-**Duas advertências sobre esse limite.** Primeira: ele é por **conta de faturamento**, não por projeto — se um ambiente de staging replicar as três rotinas de produção, o total sobe para seis, três delas pagas, o que é fácil de não perceber ao decidir sobre staging (seção 15, item de staging). Segunda: existe a alternativa estrutural de consolidar tudo numa única rotina agendada de alta frequência, que decide internamente quais tarefas executar a cada disparo. Isso elimina o limite por completo, ao custo de forçar todas as tarefas para a mesma cadência — ruim quando elas têm ritmos naturalmente diferentes, como o varredor do outbox (idealmente a cada minuto) e a atualização do ClamAV (uma vez por dia) — e de exigir isolamento de falha entre tarefas, para que uma travar não impeça as demais de rodar. Não adotada como padrão; fica registrada como saída caso o número de rotinas necessárias ultrapasse o que compensa pagar.
+**Duas advertências sobre esse limite.** Primeira: ele é por **conta de faturamento**, não por projeto — se um ambiente de staging replicar as rotinas de produção, o total dobra e quase tudo passa a ser pago, o que é fácil de não perceber ao decidir sobre staging (seção 15, item de staging). Segunda: existe a alternativa estrutural de consolidar tudo numa única rotina agendada de alta frequência, que decide internamente quais tarefas executar a cada disparo. Isso elimina o limite por completo, ao custo de forçar todas as tarefas para a mesma cadência — ruim quando elas têm ritmos naturalmente diferentes, como o varredor do outbox (idealmente a cada minuto) e a atualização do ClamAV (uma vez por dia) — e de exigir isolamento de falha entre tarefas, para que uma travar não impeça as demais de rodar. Não adotada como padrão; fica registrada como saída caso o número de rotinas necessárias ultrapasse o que compensa pagar.
 
 ---
 
