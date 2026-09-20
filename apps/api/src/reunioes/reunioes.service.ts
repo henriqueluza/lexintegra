@@ -297,6 +297,7 @@ export class ReunioesService {
       link: null,
       idExterno: null,
       advogadoId,
+      pedidoId,
       clienteId: clienteUid,
       criadoEm: Timestamp.fromMillis(agora),
       historico: [],

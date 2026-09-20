@@ -53,6 +53,8 @@ import { PedidosAdvogadoController } from './pedidos/pedidos.advogado.controller
 import type { CancelamentoService } from './pedidos/cancelamento.service.js';
 import type { AlteracoesDeReuniaoService } from './reunioes/alteracoes.service.js';
 import type { CancelamentoDeReuniaoService } from './reunioes/cancelamento.service.js';
+import { ReunioesAdminController } from './reunioes/reunioes.admin.controller.js';
+import { ReunioesAdvogadoController } from './reunioes/reunioes.advogado.controller.js';
 import type { HorariosService } from './reunioes/horarios.service.js';
 import type { ReunioesService } from './reunioes/reunioes.service.js';
 import { PedidosClienteController } from './pedidos/pedidos.cliente.controller.js';
@@ -113,6 +115,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['clientes', ClientesAdminController],
     ['entregas do outbox', OutboxAdminController],
     ['estornos (Etapa 8)', EstornosAdminController],
+    ['reunioes sem sala (Etapa 10)', ReunioesAdminController],
   ])(
     'a superficie administrativa de %s exige admin, na classe',
     (_nome, classe) => {
@@ -962,6 +965,7 @@ describe('perfis das areas autenticadas', () => {
     ['cliente', PedidosClienteController, ['cliente']],
     ['advogado', PedidosAdvogadoController, ['advogado']],
     ['disponibilidade', DisponibilidadesController, ['advogado']],
+    ['agenda do advogado (Etapa 10)', ReunioesAdvogadoController, ['advogado']],
   ])('a area de %s declara o perfil na classe', (_nome, classe, esperado) => {
     expect(reflector.get<readonly Perfil[]>(CHAVE_PERFIS, classe)).toEqual(
       esperado,
@@ -992,6 +996,18 @@ describe('perfis das areas autenticadas', () => {
     [
       'cliente.cancelarReuniao (Etapa 10)',
       PedidosClienteController.prototype.cancelarReuniao,
+    ],
+    [
+      'advogado.agenda (Etapa 10)',
+      ReunioesAdvogadoController.prototype.agenda,
+    ],
+    [
+      'admin.reunioesSemSala (Etapa 10)',
+      ReunioesAdminController.prototype.semSala,
+    ],
+    [
+      'admin.cancelarReuniao (Etapa 10)',
+      ReunioesAdminController.prototype.cancelar,
     ],
     ['advogado.listar', PedidosAdvogadoController.prototype.listar],
     ['advogado.anamnese', PedidosAdvogadoController.prototype.anamnese],

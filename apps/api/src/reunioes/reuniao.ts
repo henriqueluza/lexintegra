@@ -69,6 +69,15 @@ export interface DocumentoReuniao {
    * outro para filtrar seria uma consulta que o Firestore nao sabe fazer.
    */
   advogadoId: string;
+  /**
+   * Redundante com o caminho do documento, e existe pela MESMA razao de
+   * `advogadoId`: as consultas de GRUPO DE COLECOES (a agenda do advogado e o
+   * painel de reunioes sem sala) devolvem documentos de pedidos diferentes, e
+   * sem o campo o id do pedido teria de sair da travessia do caminho — que o
+   * dublê do Firestore nao reproduz, e que em producao custa uma linha de
+   * parsing em todo lugar que consome o resultado.
+   */
+  pedidoId: string;
   clienteId: string;
   criadoEm: Timestamp | FieldValue;
   /**
