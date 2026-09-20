@@ -6,6 +6,10 @@ import type {
   SituacaoAnamnese,
 } from 'shared/esquemas/anamnese-provisoria';
 import type { AnexoResumo } from 'shared/esquemas/anexo';
+import type {
+  HorarioDisponivel,
+  ReuniaoResumo,
+} from 'shared/esquemas/reuniao';
 import type { PedidoDeUpload } from 'shared/esquemas/upload';
 import type {
   NovaObservacao,
@@ -62,6 +66,60 @@ export class ApiClienteService {
     return firstValueFrom(
       this.http.post<{ situacao: SituacaoPedido }>(
         `/api/pedidos/${encodeURIComponent(pedidoId)}/cancelamento`,
+        {},
+      ),
+    );
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Reunioes (Etapa 10)                                                     */
+  /* ---------------------------------------------------------------------- */
+
+  /**
+   * Os horarios escolhiveis para ESTE pedido.
+   *
+   * O que volta ja passou por saldo, janela, intervalo e antecedencia no
+   * servidor — a tela desenha a lista sem reaplicar regra nenhuma.
+   */
+  horariosDeReuniao(pedidoId: string): Promise<HorarioDisponivel[]> {
+    return firstValueFrom(
+      this.http.get<HorarioDisponivel[]>(
+        `/api/pedidos/${encodeURIComponent(pedidoId)}/horarios`,
+      ),
+    );
+  }
+
+  marcarReuniao(pedidoId: string, slotId: string): Promise<ReuniaoResumo> {
+    return firstValueFrom(
+      this.http.post<ReuniaoResumo>(reunioes(pedidoId), { slotId }),
+    );
+  }
+
+  /** O `reuniaoId` NAO muda depois de remarcar (ADR-21, decisao A). */
+  remarcarReuniao(
+    pedidoId: string,
+    reuniaoId: string,
+    slotId: string,
+  ): Promise<ReuniaoResumo> {
+    return firstValueFrom(
+      this.http.post<ReuniaoResumo>(
+        `${reuniao(pedidoId, reuniaoId)}/remarcacao`,
+        { slotId },
+      ),
+    );
+  }
+
+  /**
+   * Sem corpo: se devolve ou nao o credito e consequencia do relogio, decidida
+   * no servidor contra o `inicio` gravado — nao escolha de quem chama.
+   */
+  cancelarReuniao(
+    pedidoId: string,
+    reuniaoId: string,
+  ): Promise<ReuniaoResumo> {
+    return firstValueFrom(
+      this.http.post<ReuniaoResumo>(
+        `${reuniao(pedidoId, reuniaoId)}/cancelamento`,
         {},
       ),
     );
@@ -198,6 +256,15 @@ export class ApiClienteService {
       ),
     );
   }
+}
+
+/** Um lugar so monta o caminho das reunioes do pedido. */
+function reunioes(pedidoId: string): string {
+  return `/api/pedidos/${encodeURIComponent(pedidoId)}/reunioes`;
+}
+
+function reuniao(pedidoId: string, reuniaoId: string): string {
+  return `${reunioes(pedidoId)}/${encodeURIComponent(reuniaoId)}`;
 }
 
 /** Um lugar so monta o caminho do entregavel do cliente. */

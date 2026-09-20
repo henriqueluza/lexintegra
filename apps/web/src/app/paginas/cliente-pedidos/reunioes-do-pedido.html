@@ -1,0 +1,125 @@
+<section class="reunioes" aria-label="Reuniões deste pedido">
+  <h4 class="reunioes__rotulo">Reuniões</h4>
+
+  <p class="reunioes__saldo">
+    <b>{{ contratadas() - saldo() }}/{{ contratadas() }}</b>
+    <span>
+      usadas @if (validasAte(); as ate) { · válidas até {{ ate }} }
+    </span>
+  </p>
+
+  @for (reuniao of ativas(); track reuniao.id) {
+  <article class="reuniao">
+    <p class="reuniao__quando">{{ quando(reuniao) }}</p>
+
+    @if (reuniao.link; as link) {
+    <a class="reuniao__link" [href]="link" target="_blank" rel="noopener">
+      Abrir sala
+    </a>
+    } @else {
+    <!--
+      Regra inviolavel 13: nunca um link vazio nem o de outra reuniao. O estado
+      e dito com todas as letras, e a reentrega do outbox e quem o resolve.
+    -->
+    <p class="reuniao__sem-sala">
+      Link a caminho. Assim que a sala for criada, ele chega por e-mail.
+    </p>
+    }
+
+    @if (escolhendo() === reuniao.id) {
+    <div class="reunioes__escolha">
+      @if (carregando()) {
+      <p class="reunioes__aviso">Buscando horários…</p>
+      } @else if (opcoes().length === 0) {
+      <p class="reunioes__aviso">
+        Nenhum horário disponível para remarcar no momento.
+      </p>
+      } @else {
+      <app-selecao
+        rotulo="Novo horário"
+        marcador="Escolha um horário"
+        [opcoes]="opcoes()"
+        [formControl]="escolhido"
+      />
+      <div class="reunioes__acoes">
+        <app-botao variante="texto" tamanho="p" (click)="fechar()">
+          Voltar
+        </app-botao>
+        <app-botao
+          variante="primario"
+          tamanho="p"
+          [carregando]="emCurso() === 'remarcar-' + reuniao.id"
+          (click)="remarcar(reuniao.id)"
+        >
+          Confirmar novo horário
+        </app-botao>
+      </div>
+      }
+    </div>
+    } @else {
+    <div class="reunioes__acoes">
+      @if (podeTrocarHorario(reuniao)) {
+      <app-botao tamanho="p" (click)="abrir(reuniao.id)">Remarcar</app-botao>
+      }
+      <app-botao
+        tamanho="p"
+        [carregando]="emCurso() === 'cancelar-' + reuniao.id"
+        (click)="cancelar(reuniao.id)"
+      >
+        Cancelar
+      </app-botao>
+    </div>
+
+    <!-- A tela diz ANTES do clique se o cancelamento devolve o credito. -->
+    <p class="reunioes__nota">
+      @if (devolveCredito(reuniao)) { Cancelar agora devolve a reunião ao saldo
+      deste pedido. } @else { Faltam menos de 24 horas: cancelar agora NÃO
+      devolve a reunião ao saldo. }
+    </p>
+    }
+  </article>
+  }
+
+  @if (falha(); as mensagem) {
+  <app-mensagem-erro variante="linha">{{ mensagem }}</app-mensagem-erro>
+  }
+
+  @if (motivo(); as texto) {
+  <p class="reunioes__aviso">{{ texto }}</p>
+  } @else if (escolhendo() === 'nova') {
+  <div class="reunioes__escolha">
+    @if (carregando()) {
+    <p class="reunioes__aviso">Buscando horários…</p>
+    } @else if (opcoes().length === 0) {
+    <p class="reunioes__aviso">
+      Nenhum horário disponível no momento. O advogado publica a grade toda
+      segunda-feira.
+    </p>
+    } @else {
+    <app-selecao
+      rotulo="Horário"
+      marcador="Escolha um horário"
+      [opcoes]="opcoes()"
+      [formControl]="escolhido"
+    />
+    <div class="reunioes__acoes">
+      <app-botao variante="texto" tamanho="p" (click)="fechar()">
+        Voltar
+      </app-botao>
+      <app-botao
+        variante="primario"
+        tamanho="p"
+        [carregando]="emCurso() === 'marcar'"
+        (click)="marcar()"
+      >
+        Confirmar reunião
+      </app-botao>
+    </div>
+    }
+  </div>
+  } @else {
+  <app-botao tamanho="p" (click)="abrir('nova')">
+    Marcar reunião ({{ saldo() }} restante(s))
+  </app-botao>
+  }
+</section>

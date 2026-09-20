@@ -211,10 +211,29 @@ describe('ClientePedidos', () => {
       pedidos: [pedido('p1', [AGUARDANDO]), pedido('p2', [AGUARDANDO])],
     });
 
+    /*
+     * Sem o acento no padrao. O texto do botao e "Marcar reunião", com acento
+     * — como todo texto que o cliente le —, e um literal sem ele nao casaria.
+     * E a mesma armadilha que as jornadas registram com "Juridico".
+     */
     const marcar = botoes(fixture).filter((b) =>
-      b.textContent?.includes('Marcar reuniao'),
+      /Marcar reuni/u.test(b.textContent ?? ''),
     );
     expect(marcar).toHaveLength(2);
+  });
+
+  /**
+   * O painel de reunioes e componente proprio desde a Etapa 10, e continua
+   * DENTRO do cartao — um por pedido, nunca uma tela solta (ADR-12).
+   */
+  it('o painel de reunioes existe uma vez por cartao', async () => {
+    const { fixture } = await montar({
+      pedidos: [pedido('p1', [AGUARDANDO]), pedido('p2', [AGUARDANDO])],
+    });
+
+    expect(
+      fixture.nativeElement.querySelectorAll('app-reunioes-do-pedido'),
+    ).toHaveLength(2);
   });
 
   it('mostra estado vazio sem pedidos', async () => {

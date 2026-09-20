@@ -1,0 +1,80 @@
+/* Direcao B (Pauta) por heranca da shell autenticada. Regra inviolavel 8: so
+ * token semantico, nunca primitivo. */
+.reunioes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  width: 100%;
+}
+
+.reunioes__rotulo {
+  margin: 0;
+  font-size: var(--t-micro);
+  font-weight: var(--peso-medio);
+  letter-spacing: var(--letra-caixa-alta);
+  text-transform: uppercase;
+  color: var(--texto-3);
+}
+
+.reunioes__saldo {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  font-size: var(--t-menor);
+  color: var(--texto-2);
+}
+
+.reunioes__saldo b {
+  font-size: var(--t-numeral);
+  font-weight: var(--peso-forte);
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+}
+
+.reuniao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  padding: var(--s3);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio);
+}
+
+.reuniao__quando {
+  margin: 0;
+  font-weight: var(--peso-medio);
+  color: var(--texto);
+}
+
+.reuniao__link {
+  color: var(--acento);
+  font-size: var(--t-menor);
+  font-weight: var(--peso-medio);
+}
+
+/* Regra inviolavel 13: a ausencia do link e dita, nunca disfarcada. */
+.reuniao__sem-sala {
+  margin: 0;
+  font-size: var(--t-mini);
+  color: var(--estado-alerta);
+}
+
+.reunioes__escolha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.reunioes__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.reunioes__aviso,
+.reunioes__nota {
+  margin: 0;
+  font-size: var(--t-mini);
+  color: var(--texto-3);
+}

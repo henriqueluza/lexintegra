@@ -96,16 +96,18 @@
       {{ detalhesAbertos() ? 'Ocultar detalhes' : 'Observacoes e arquivos' }}
     </app-botao>
 
-    <!--
-      A ACAO DE REUNIAO VIVE AQUI DENTRO, escopada a este pedido — nunca numa
-      tela solta. Com dois pedidos ativos, uma tela de agendamento separada nao
-      teria como saber qual saldo debitar (ADR-12, arquitetura 5.4).
-      O agendamento em si e a Etapa 10.
-    -->
-    <app-botao tamanho="p" [desabilitado]="true">
-      Marcar reuniao ({{ pedido().snapshot.quantidadeReunioes }} incluida(s))
-    </app-botao>
   </div>
+
+  <!--
+    A ACAO DE REUNIAO VIVE AQUI DENTRO, escopada a este pedido — nunca numa tela
+    solta. Com dois pedidos ativos, uma tela de agendamento separada nao teria
+    como saber qual saldo debitar (ADR-12, arquitetura 5.4), e
+    `app.routes.spec.ts` guarda o mesmo do lado das rotas.
+  -->
+  <app-reunioes-do-pedido
+    [pedido]="pedido()"
+    (alterado)="recarregado.emit()"
+  />
 
   @if (detalhesAbertos()) {
   <section class="cartao-pedido__detalhes">
