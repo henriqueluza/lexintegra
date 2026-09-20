@@ -34,6 +34,29 @@ export function agora(): number {
   return fixo ?? Date.now();
 }
 
+/**
+ * Le o relogio na INICIALIZACAO, para uma variavel invalida derrubar o boot.
+ *
+ * SEM ISTO, A RECUSA CHEGAVA TARDE. `agora()` le a variavel na primeira chamada,
+ * e a primeira chamada acontece quando alguem lista horarios ou marca uma
+ * reuniao — entao um `RELOGIO_FIXO` deixado no ambiente de producao passaria
+ * pelo boot, pelo startup probe e pelo smoke test, e so apareceria como erro 500
+ * na cara do primeiro cliente que tentasse marcar. Uma configuracao que nao tem
+ * uso legitimo em producao precisa ser recusada enquanto ainda ha alguem
+ * olhando o deploy.
+ *
+ * Devolve o instante fixado, ou `null` quando o relogio e o de verdade — quem
+ * chama usa isso para AVISAR: um processo com o tempo parado tem de dizer que
+ * esta, senao a primeira pessoa a estranhar uma data vai procurar no lugar
+ * errado.
+ */
+export function conferirRelogio(
+  ambiente: NodeJS.ProcessEnv = process.env,
+): number | null {
+  if (fixo === undefined) fixo = lerRelogioFixo(ambiente);
+  return fixo;
+}
+
 /** Para o teste do proprio relogio. Nenhum codigo de producao chama. */
 export function esquecerRelogio(): void {
   fixo = undefined;
