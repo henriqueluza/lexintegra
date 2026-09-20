@@ -5,6 +5,7 @@ import { ClientesModule } from '../clientes/clientes.module.js';
 import { EntregaveisModule } from '../entregaveis/entregaveis.module.js';
 import { TermosModule } from '../termos/termos.module.js';
 import { ObservacoesService } from '../observacoes/observacoes.service.js';
+import { ConsultaReunioesModule } from '../reunioes/consulta.module.js';
 import { ReunioesModule } from '../reunioes/reunioes.module.js';
 import { AcessoPedidoModule } from './acesso.module.js';
 import { CancelamentoService } from './cancelamento.service.js';
@@ -41,6 +42,7 @@ import { PedidosService } from './pedidos.service.js';
     ArquivosModule,
     TermosModule,
     ReunioesModule,
+    ConsultaReunioesModule,
   ],
   controllers: [
     PedidosClienteController,

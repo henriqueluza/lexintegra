@@ -20,6 +20,7 @@ import {
 import { FIRESTORE, AUTH_FIREBASE } from '../firebase/firebase.module.js';
 import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
+import { ConsultaReunioesService } from '../reunioes/consulta.service.js';
 
 export const COLECAO_ADVOGADOS = 'advogados';
 
@@ -86,6 +87,7 @@ export class AdvogadosService {
     @Inject(FIRESTORE) private readonly db: Firestore,
     private readonly outbox: OutboxService,
     private readonly enfileirador: EnfileiradorDeEventos,
+    private readonly reunioes: ConsultaReunioesService,
   ) {}
 
   async criar(dados: NovoAdvogado, criadoPor: string): Promise<AdvogadoResumo> {
@@ -163,8 +165,23 @@ export class AdvogadosService {
    * A claim NAO e removida. Suspenso continua sendo advogado; o que muda e o
    * acesso. Mexer na claim aqui faria a reativacao precisar reescreve-la — e cada
    * escrita de claim a mais e uma chance a mais de elevacao de privilegio errada.
+   *
+   * ZERO EFEITO: 409 ENQUANTO HOUVER REUNIAO FUTURA ATIVA (Etapa 10, ADR-21,
+   * decisao D). Com um compromisso marcado, suspender faria o cliente aparecer
+   * numa sala que o advogado nao consegue mais abrir — e ninguem descobriria
+   * antes da hora. A conferencia vem ANTES dos tres efeitos acima, e nao depois:
+   * desabilitar a conta e revogar os tokens nao se desfazem com um `throw`.
+   *
+   * Reuniao PASSADA nao impede nada, e a REATIVACAO nao confere: devolver acesso
+   * nunca e o que cria o problema.
    */
   async suspender(uid: string, admin: string): Promise<AdvogadoResumo> {
+    if (await this.reunioes.futuraAtivaDoAdvogado(uid)) {
+      throw new ConflictException(
+        'Este advogado tem reuniao marcada. Cancele ou remarque a reuniao antes de suspender.',
+      );
+    }
+
     return this.alternarAcesso(uid, admin, 'suspenso');
   }
 

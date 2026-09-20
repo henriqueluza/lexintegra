@@ -22,6 +22,7 @@ import { DespachanteOutbox } from '../outbox/despachante.service.js';
 import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import type { TarefaDeEvento } from '../outbox/fila.js';
 import { OutboxService } from '../outbox/outbox.service.js';
+import { ConsultaReunioesService } from '../reunioes/consulta.service.js';
 import { AdvogadosService } from './advogados.service.js';
 import { GatewayPagamentoFalso } from '../pagamentos/gateway/gateway-falso.js';
 
@@ -72,6 +73,7 @@ beforeEach(async () => {
     banco,
     outbox,
     new EnfileiradorDeEventos(outbox, fila),
+    new ConsultaReunioesService(banco),
   );
   autenticacao = new AutenticacaoGuard(new Reflector(), auth);
 });

@@ -13,6 +13,7 @@ import { ObservacoesService } from '../observacoes/observacoes.service.js';
 import { ProdutosService } from '../produtos/produtos.service.js';
 import { AcessoPedidoService } from './acesso.service.js';
 import { ConsultaPedidosService } from './consulta.service.js';
+import { ConsultaReunioesService } from '../reunioes/consulta.service.js';
 import { DistribuicaoService } from './distribuicao.service.js';
 import { PedidosService, type NovoPedido } from './pedidos.service.js';
 import { comSnapshot } from '../arnes-pedidos.js';
@@ -46,7 +47,11 @@ beforeEach(async () => {
   pedidos = new PedidosService(banco);
   clientes = new ClientesService(banco);
   consulta = new ConsultaPedidosService(banco, clientes);
-  distribuicao = new DistribuicaoService(banco, clientes);
+  distribuicao = new DistribuicaoService(
+    banco,
+    clientes,
+    new ConsultaReunioesService(banco),
+  );
   entregaveis = new EntregaveisService(banco);
 
   const acesso = new AcessoPedidoService(banco);
