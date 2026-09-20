@@ -67,8 +67,8 @@ async function montar(
       {
         provide: ApiClienteService,
         useValue: {
-          horariosDeReuniao: (id: string) => {
-            api.chamadas.push(`horarios ${id}`);
+          horariosDeReuniao: (id: string, reuniaoId?: string) => {
+            api.chamadas.push(`horarios ${id} ${reuniaoId ?? '-'}`);
             return Promise.resolve(api.horarios);
           },
           marcarReuniao: (id: string, slotId: string) => {
@@ -214,7 +214,7 @@ describe('ReunioesDoPedido', () => {
     const { fixture, api } = await montar();
 
     await clicar(fixture, /Marcar reuni/u);
-    expect(api.chamadas).toContain('horarios pedido-1');
+    expect(api.chamadas).toContain('horarios pedido-1 -');
 
     const selecao: HTMLSelectElement =
       fixture.nativeElement.querySelector('select');
@@ -225,6 +225,21 @@ describe('ReunioesDoPedido', () => {
     await clicar(fixture, /Confirmar reuni/u);
 
     expect(api.chamadas).toContain('marcar pedido-1 uid-ana_x');
+  });
+
+  /**
+   * REMARCAR PEDE A LISTA DIZENDO QUAL REUNIAO ESTA SENDO MOVIDA.
+   *
+   * Sem o id, o servidor conta a reuniao movida contra o proprio intervalo
+   * minimo e contra o proprio saldo, e devolve lista vazia — a tela mostraria
+   * "nenhum horario disponivel para remarcar" em todo pedido, sem erro nenhum.
+   */
+  it('remarcar pede os horarios identificando a reuniao movida', async () => {
+    const { fixture, api } = await montar(pedido({ reunioes: [reuniao()] }));
+
+    await clicar(fixture, /^\s*Remarcar\s*$/u);
+
+    expect(api.chamadas).toContain('horarios pedido-1 r001');
   });
 
   it('cancelar chama a API para aquela reuniao', async () => {

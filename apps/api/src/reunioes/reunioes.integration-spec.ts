@@ -50,6 +50,15 @@ const INICIO = '2026-09-24T17:00:00.000Z';
 const FIM = '2026-09-24T18:00:00.000Z';
 const INICIO_MS = Date.parse(INICIO);
 const AGORA = INICIO_MS - 30 * DIA;
+/**
+ * Um instante DENTRO da semana dos slots, para quem LE a grade.
+ *
+ * `AGORA` esta a trinta dias, o que e otimo para exercitar as regras de
+ * agendamento e inutil para a LISTA: ela so consulta a semana corrente e a
+ * seguinte (ADR-06), entao com `AGORA` ela volta vazia sempre — e uma assercao
+ * de `not.toContain` contra lista vazia passa sem provar nada.
+ */
+const NA_SEMANA = Date.parse('2026-09-21T12:00:00.000Z');
 const COMPRA = INICIO_MS - 60 * DIA;
 
 let banco: Firestore;
@@ -131,11 +140,14 @@ async function comprar(opcoes: Compra = {}): Promise<string> {
   });
 
   /* A distribuicao e do administrador; aqui ela e parte do arranjo. */
-  await banco.collection('pedidos').doc(pedidoId).update({
-    advogadoId: ADVOGADO,
-    distribuido: true,
-    criadoEm: new Date(COMPRA),
-  });
+  await banco
+    .collection('pedidos')
+    .doc(pedidoId)
+    .update({
+      advogadoId: ADVOGADO,
+      distribuido: true,
+      criadoEm: new Date(COMPRA),
+    });
   await banco
     .collection('advogados')
     .doc(ADVOGADO)
@@ -150,16 +162,13 @@ async function publicarSlot(
   advogadoId = ADVOGADO,
 ): Promise<string> {
   const id = `${advogadoId}_${inicio}`;
-  await banco
-    .collection('disponibilidades')
-    .doc(id)
-    .set({
-      advogadoId,
-      inicio,
-      fim,
-      semana: '2026-09-21',
-      reserva: null,
-    });
+  await banco.collection('disponibilidades').doc(id).set({
+    advogadoId,
+    inicio,
+    fim,
+    semana: '2026-09-21',
+    reserva: null,
+  });
   return id;
 }
 
@@ -200,9 +209,7 @@ describe('agendamento', () => {
     expect(await slot(slotId)).toMatchObject({
       reserva: { pedidoId: 'pedido-1', reuniaoId: 'r001' },
     });
-    expect(fila.tarefas).toEqual([
-      { id: 'criar-sala-reuniao_pedido-1_r001' },
-    ]);
+    expect(fila.tarefas).toEqual([{ id: 'criar-sala-reuniao_pedido-1_r001' }]);
   });
 
   it('pedido de outro cliente responde 404', async () => {
@@ -307,15 +314,90 @@ describe('agendamento', () => {
   it('os horarios oferecidos excluem o ja reservado', async () => {
     await comprar({ intervaloMinimoReunioesDias: 0 });
     const primeiro = await publicarSlot(INICIO, FIM);
-    await publicarSlot(
+    const outro = await publicarSlot(
       '2026-09-25T17:00:00.000Z',
       '2026-09-25T18:00:00.000Z',
     );
 
     await reunioes.agendar('pedido-1', CLIENTE, primeiro, AGORA);
-    const oferecidos = await horarios.listar('pedido-1', CLIENTE, AGORA);
+    const oferecidos = await horarios.listar(
+      'pedido-1',
+      CLIENTE,
+      null,
+      NA_SEMANA,
+    );
 
-    expect(oferecidos.map((h) => h.slotId)).not.toContain(primeiro);
+    /* Os DOIS lados: sem o segundo, uma lista vazia passaria por "excluiu". */
+    expect(oferecidos.map((h) => h.slotId)).toEqual([outro]);
+  });
+
+  /*
+   * A LISTA DA REMARCACAO, e o defeito que ela existe para impedir.
+   *
+   * Sem dizer qual reuniao esta sendo movida, a lista conta essa reuniao contra
+   * ela mesma — pelo intervalo minimo, porque o horario velho fica perto demais
+   * do novo, e pelo saldo, porque ela ja o consumiu. O resultado era uma lista
+   * VAZIA em todo pedido, com a tela dizendo "nenhum horario disponivel para
+   * remarcar": um estado legitimo, com a aparencia exata de um advogado sem
+   * grade publicada. Nada falhava, nem aqui nem na unidade — quem pegou foi a
+   * jornada autenticada, que clica no botao.
+   */
+  it('a lista da remarcacao ignora a reuniao que esta sendo movida', async () => {
+    await comprar({ intervaloMinimoReunioesDias: 7 });
+    const primeiro = await publicarSlot(INICIO, FIM);
+    const vizinho = await publicarSlot(
+      '2026-09-25T17:00:00.000Z',
+      '2026-09-25T18:00:00.000Z',
+    );
+
+    const reuniao = await reunioes.agendar(
+      'pedido-1',
+      CLIENTE,
+      primeiro,
+      AGORA,
+    );
+
+    const paraMarcar = await horarios.listar(
+      'pedido-1',
+      CLIENTE,
+      null,
+      NA_SEMANA,
+    );
+    const paraRemarcar = await horarios.listar(
+      'pedido-1',
+      CLIENTE,
+      reuniao.id,
+      NA_SEMANA,
+    );
+
+    expect(paraMarcar.map((h) => h.slotId)).not.toContain(vizinho);
+    expect(paraRemarcar.map((h) => h.slotId)).toContain(vizinho);
+  });
+
+  /* O mesmo, pelo outro lado: com o saldo esgotado ainda se remarca. */
+  it('a lista da remarcacao ignora o saldo que a propria reuniao consumiu', async () => {
+    await comprar({ quantidadeReunioes: 1, intervaloMinimoReunioesDias: 0 });
+    const primeiro = await publicarSlot(INICIO, FIM);
+    const outro = await publicarSlot(
+      '2026-09-25T17:00:00.000Z',
+      '2026-09-25T18:00:00.000Z',
+    );
+
+    const reuniao = await reunioes.agendar(
+      'pedido-1',
+      CLIENTE,
+      primeiro,
+      AGORA,
+    );
+
+    expect(await horarios.listar('pedido-1', CLIENTE, null, NA_SEMANA)).toEqual(
+      [],
+    );
+    expect(
+      (await horarios.listar('pedido-1', CLIENTE, reuniao.id, NA_SEMANA)).map(
+        (h) => h.slotId,
+      ),
+    ).toEqual([outro]);
   });
 });
 

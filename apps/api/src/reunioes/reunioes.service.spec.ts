@@ -353,7 +353,7 @@ describe('HorariosService.listar', () => {
     const { horarios } = montar();
 
     await expect(
-      horarios.listar(PEDIDO, CLIENTE, NA_SEMANA),
+      horarios.listar(PEDIDO, CLIENTE, null, NA_SEMANA),
     ).resolves.toEqual([{ slotId: SLOT, inicio: INICIO, fim: FIM }]);
   });
 
@@ -363,7 +363,7 @@ describe('HorariosService.listar', () => {
     });
 
     await expect(
-      horarios.listar(PEDIDO, CLIENTE, NA_SEMANA),
+      horarios.listar(PEDIDO, CLIENTE, null, NA_SEMANA),
     ).resolves.toEqual([]);
   });
 
@@ -377,7 +377,7 @@ describe('HorariosService.listar', () => {
     const vespera = Date.parse(INICIO) - 3_600_000;
 
     await expect(
-      horarios.listar(PEDIDO, CLIENTE, vespera),
+      horarios.listar(PEDIDO, CLIENTE, null, vespera),
     ).resolves.toEqual([]);
   });
 
@@ -389,7 +389,7 @@ describe('HorariosService.listar', () => {
     });
 
     await expect(
-      horarios.listar(PEDIDO, CLIENTE, NA_SEMANA),
+      horarios.listar(PEDIDO, CLIENTE, null, NA_SEMANA),
     ).resolves.toEqual([]);
   });
 
@@ -407,7 +407,7 @@ describe('HorariosService.listar', () => {
     });
 
     await expect(
-      horarios.listar(PEDIDO, CLIENTE, NA_SEMANA),
+      horarios.listar(PEDIDO, CLIENTE, null, NA_SEMANA),
     ).resolves.toEqual([]);
   });
 
@@ -418,7 +418,7 @@ describe('HorariosService.listar', () => {
     });
 
     await expect(
-      horarios.listar(PEDIDO, CLIENTE, NA_SEMANA),
+      horarios.listar(PEDIDO, CLIENTE, null, NA_SEMANA),
     ).resolves.toEqual([]);
   });
 
@@ -426,7 +426,7 @@ describe('HorariosService.listar', () => {
     const { horarios } = montar({ slot: { advogadoId: 'uid-carlos' } });
 
     await expect(
-      horarios.listar(PEDIDO, CLIENTE, NA_SEMANA),
+      horarios.listar(PEDIDO, CLIENTE, null, NA_SEMANA),
     ).resolves.toEqual([]);
   });
 
@@ -434,7 +434,7 @@ describe('HorariosService.listar', () => {
     const { horarios } = montar();
 
     await expect(
-      horarios.listar(PEDIDO, 'uid-bruno', NA_SEMANA),
+      horarios.listar(PEDIDO, 'uid-bruno', null, NA_SEMANA),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

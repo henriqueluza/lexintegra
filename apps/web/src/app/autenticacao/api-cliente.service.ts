@@ -6,10 +6,7 @@ import type {
   SituacaoAnamnese,
 } from 'shared/esquemas/anamnese-provisoria';
 import type { AnexoResumo } from 'shared/esquemas/anexo';
-import type {
-  HorarioDisponivel,
-  ReuniaoResumo,
-} from 'shared/esquemas/reuniao';
+import type { HorarioDisponivel, ReuniaoResumo } from 'shared/esquemas/reuniao';
 import type { PedidoDeUpload } from 'shared/esquemas/upload';
 import type {
   NovaObservacao,
@@ -80,11 +77,20 @@ export class ApiClienteService {
    *
    * O que volta ja passou por saldo, janela, intervalo e antecedencia no
    * servidor — a tela desenha a lista sem reaplicar regra nenhuma.
+   *
+   * `reuniaoId` diz que e uma REMARCACAO, e nao e opcional de conveniencia: sem
+   * ele o servidor conta a reuniao que esta sendo movida contra o intervalo
+   * minimo e contra o saldo dela mesma, e a lista volta vazia. Ver
+   * `HorariosService` na API.
    */
-  horariosDeReuniao(pedidoId: string): Promise<HorarioDisponivel[]> {
+  horariosDeReuniao(
+    pedidoId: string,
+    reuniaoId?: string,
+  ): Promise<HorarioDisponivel[]> {
     return firstValueFrom(
       this.http.get<HorarioDisponivel[]>(
         `/api/pedidos/${encodeURIComponent(pedidoId)}/horarios`,
+        reuniaoId === undefined ? {} : { params: { reuniao: reuniaoId } },
       ),
     );
   }
@@ -113,10 +119,7 @@ export class ApiClienteService {
    * Sem corpo: se devolve ou nao o credito e consequencia do relogio, decidida
    * no servidor contra o `inicio` gravado — nao escolha de quem chama.
    */
-  cancelarReuniao(
-    pedidoId: string,
-    reuniaoId: string,
-  ): Promise<ReuniaoResumo> {
+  cancelarReuniao(pedidoId: string, reuniaoId: string): Promise<ReuniaoResumo> {
     return firstValueFrom(
       this.http.post<ReuniaoResumo>(
         `${reuniao(pedidoId, reuniaoId)}/cancelamento`,

@@ -1,4 +1,12 @@
-import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { z } from 'zod';
 import {
   esquemaAgendamento,
@@ -123,13 +131,17 @@ export class PedidosClienteController {
    * O que chega na tela ja passou por saldo, janela, intervalo e antecedencia —
    * pelas mesmas funcoes que o `POST` usa dentro da transacao. A tela desenha a
    * lista sem reaplicar regra nenhuma.
+   *
+   * `?reuniao=` diz que a tela esta REMARCANDO aquela reuniao, e nao marcando
+   * uma nova. Sem isso a lista da remarcacao sai vazia: ver `HorariosService`.
    */
   @Get(':pedidoId/horarios')
   horariosDeReuniao(
     @Param('pedidoId') pedidoId: string,
     @UsuarioAtual() cliente: UsuarioAutenticado,
+    @Query('reuniao') reuniaoId?: string,
   ): Promise<HorarioDisponivel[]> {
-    return this.horarios.listar(pedidoId, cliente.uid);
+    return this.horarios.listar(pedidoId, cliente.uid, reuniaoId ?? null);
   }
 
   /**

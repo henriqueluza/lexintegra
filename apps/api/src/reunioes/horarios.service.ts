@@ -44,9 +44,25 @@ import {
 export class HorariosService {
   constructor(@Inject(FIRESTORE) private readonly db: Firestore) {}
 
+  /**
+   * `remarcando` e o id da reuniao que esta sendo MOVIDA, e sem ele a lista da
+   * remarcacao sai vazia — sempre, em todo pedido.
+   *
+   * Duas regras contam a reuniao movida contra ela mesma: o intervalo minimo,
+   * porque o horario velho fica perto demais do novo, e o saldo, porque ela ja o
+   * consumiu. A transacao que remarca ja sabe disso e as ignora; a LISTA nao
+   * sabia, e oferecia zero horarios para uma operacao que o servidor aceitaria.
+   * A tela dizia "nenhum horario disponivel para remarcar" — um estado legitimo,
+   * com a aparencia exata de um advogado sem grade publicada.
+   *
+   * Id que nao corresponde a nenhuma reuniao deste pedido nao ignora nada, e o
+   * pior que faz e devolver uma lista otimista: quem decide e a transacao, que
+   * recebe o id pelo caminho da rota e nao por parametro de consulta.
+   */
   async listar(
     pedidoId: string,
     clienteUid: string,
+    remarcando: string | null = null,
     agora: number = Date.now(),
   ): Promise<HorarioDisponivel[]> {
     const pedido = await this.pedidoDoCliente(pedidoId, clienteUid);
@@ -70,6 +86,7 @@ export class HorariosService {
             reunioes,
             inicio: slot.inicio,
             agoraMs: agora,
+            ignorarReuniaoId: remarcando ?? undefined,
           }) === null,
       )
       .map((slot) => ({ slotId: slot.id, inicio: slot.inicio, fim: slot.fim }));

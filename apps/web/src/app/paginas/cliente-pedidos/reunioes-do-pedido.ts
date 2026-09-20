@@ -139,7 +139,15 @@ export class ReunioesDoPedido {
     this.falha.set(null);
     this.carregando.set(true);
     try {
-      this.horarios.set(await this.api.horariosDeReuniao(this.pedido().id));
+      /* `nova` e marcar; qualquer outro valor e o id da reuniao que esta sendo
+       * remarcada, e o servidor precisa saber disso para nao contar a reuniao
+       * movida contra ela mesma. */
+      this.horarios.set(
+        await this.api.horariosDeReuniao(
+          this.pedido().id,
+          alvo === 'nova' ? undefined : alvo,
+        ),
+      );
     } catch (erro) {
       this.falha.set(mensagemDoErro(erro));
     } finally {
