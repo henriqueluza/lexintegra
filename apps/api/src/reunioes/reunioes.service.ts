@@ -24,6 +24,7 @@ import {
   type DocumentoSlot,
 } from '../disponibilidades/slot.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
+import { agora as agora_ } from '../relogio.js';
 import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import {
@@ -96,7 +97,7 @@ export class ReunioesService {
     pedidoId: string,
     clienteUid: string,
     slotId: string,
-    agora: number = Date.now(),
+    agora: number = agora_(),
   ): Promise<ReuniaoResumo> {
     this.exigirModoLigado();
 

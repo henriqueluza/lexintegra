@@ -8,6 +8,7 @@ import {
   type SlotResumo,
 } from 'shared';
 import { FIRESTORE } from '../firebase/firebase.module.js';
+import { agora } from '../relogio.js';
 import {
   COLECAO_DISPONIBILIDADES,
   reservaDoSlot,
@@ -70,9 +71,16 @@ export class DisponibilidadesService {
 
   constructor(@Inject(FIRESTORE) private readonly db: Firestore) {}
 
-  /** A grade de uma semana. Sem `semana`, a corrente — calculada, nao guardada. */
+  /**
+   * A grade de uma semana. Sem `semana`, a corrente — calculada, nao guardada.
+   *
+   * O RELOGIO VEM DE `relogio.ts`, e nao de `new Date()` direto (Etapa 10). E o
+   * mesmo que a lista de horarios do cliente le: com metade do servidor num
+   * relogio e metade noutro, o advogado publicaria a grade de uma semana
+   * enquanto o cliente escolheria horarios de outra, e nada falharia.
+   */
   async obter(advogadoId: string, semana?: string): Promise<SlotResumo[]> {
-    const alvo = semana ?? semanaDe(new Date());
+    const alvo = semana ?? semanaDe(new Date(agora()));
 
     const pagina = await this.db
       .collection(COLECAO_DISPONIBILIDADES)
@@ -220,7 +228,7 @@ export class DisponibilidadesService {
    * a data chegar.
    */
   private exigirSemanaEditavel(semana: string): void {
-    if (!semanasEditaveis(new Date()).includes(semana)) {
+    if (!semanasEditaveis(new Date(agora())).includes(semana)) {
       throw new ConflictException(
         'So e possivel publicar a semana corrente ou a seguinte.',
       );

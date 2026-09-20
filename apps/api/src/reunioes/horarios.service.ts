@@ -12,6 +12,7 @@ import {
   type DocumentoSlot,
 } from '../disponibilidades/slot.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
+import { agora as agora_ } from '../relogio.js';
 import {
   COLECAO_PEDIDOS,
   situacaoDe,
@@ -63,7 +64,7 @@ export class HorariosService {
     pedidoId: string,
     clienteUid: string,
     remarcando: string | null = null,
-    agora: number = Date.now(),
+    agora: number = agora_(),
   ): Promise<HorarioDisponivel[]> {
     const pedido = await this.pedidoDoCliente(pedidoId, clienteUid);
 

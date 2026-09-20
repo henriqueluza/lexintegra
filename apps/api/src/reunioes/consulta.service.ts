@@ -10,6 +10,7 @@ import {
 } from 'shared';
 import { ClientesService } from '../clientes/clientes.service.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
+import { agora as agora_ } from '../relogio.js';
 import { chaveDoEvento, idDoEvento } from '../outbox/evento.js';
 import { COLECAO_PEDIDOS, type DocumentoPedido } from '../pedidos/pedido.js';
 import {
@@ -54,7 +55,7 @@ export class ConsultaReunioesService {
   async futuraAtivaNoPedido(
     transacao: Transaction,
     pedidoId: string,
-    agora: number = Date.now(),
+    agora: number = agora_(),
   ): Promise<boolean> {
     const pagina = await transacao.get(
       this.db
@@ -87,7 +88,7 @@ export class ConsultaReunioesService {
    */
   async futuraAtivaDoAdvogado(
     advogadoId: string,
-    agora: number = Date.now(),
+    agora: number = agora_(),
   ): Promise<boolean> {
     const paginas = await Promise.all(
       ESTADOS_ATIVOS.map((estado) =>
@@ -122,7 +123,7 @@ export class ConsultaReunioesService {
    */
   async agendaDoAdvogado(
     advogadoId: string,
-    agora: number = Date.now(),
+    agora: number = agora_(),
   ): Promise<ReuniaoDaAgenda[]> {
     const reunioes = (await this.ativasDoAdvogado(advogadoId))
       .filter((reuniao) => (msDe(reuniao.inicio) ?? 0) >= agora)

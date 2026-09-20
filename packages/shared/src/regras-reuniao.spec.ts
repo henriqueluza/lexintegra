@@ -178,6 +178,24 @@ describe('respeitaIntervalo', () => {
 
 describe('as tres janelas de 24 horas', () => {
   /**
+   * O VALOR, e nao so o comportamento.
+   *
+   * Todo teste daqui para baixo monta o instante a partir da propria constante
+   * (`INICIO_MS - JANELA_CANCELAMENTO_MS`), que e o jeito certo de escrever a
+   * borda — mas tem uma consequencia: mudar a constante move os DOIS lados da
+   * comparacao, e a suite inteira continua verde com a janela valendo 24
+   * segundos. Foi o que a analise de mutacao mostrou, trocando um `*` por `/`
+   * dentro da expressao.
+   *
+   * Entao o numero e afirmado uma vez, aqui, contra o que o ADR-12 e a decisao F
+   * do ADR-21 dizem em portugues: vinte e quatro horas.
+   */
+  it('as duas janelas sao de 24 horas em milissegundos', () => {
+    expect(JANELA_CANCELAMENTO_MS).toBe(86_400_000);
+    expect(ANTECEDENCIA_MINIMA_MS).toBe(86_400_000);
+  });
+
+  /**
    * O CRITERIO DE ACEITE DA ETAPA, do lado puro: exatamente 24 horas devolve,
    * 24 horas menos um milissegundo nao. O criterio pede a mesma prova no
    * servidor, e ela esta na suite de integracao.
@@ -372,6 +390,19 @@ describe('impedimentoParaAgendar', () => {
   /** Todo impedimento tem texto: um `undefined` na tela seria um botao mudo. */
   it.each(IMPEDIMENTOS_PARA_AGENDAR)('%s tem motivo legivel', (impedimento) => {
     expect(MOTIVO_DO_IMPEDIMENTO[impedimento]).toMatch(/\S/u);
+  });
+
+  /**
+   * `podeAgendar` E O MESMO JUIZO, em booleano — e precisa dizer NAO.
+   *
+   * O resto desta suite chama `impedimentoParaAgendar`, porque e dele que sai o
+   * motivo. Sem um caso negativo aqui, o `=== null` do invólucro podia ser
+   * trocado por `true` sem nada falhar: a funcao que a tela usa para habilitar o
+   * botao passaria a habilita-lo sempre.
+   */
+  it('podeAgendar acompanha o impedimento nos dois sentidos', () => {
+    expect(podeAgendar(base)).toBe(true);
+    expect(podeAgendar({ ...base, distribuido: false })).toBe(false);
   });
 });
 
