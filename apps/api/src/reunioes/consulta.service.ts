@@ -151,17 +151,23 @@ export class ConsultaReunioesService {
    * botao que reenvia coisa nenhuma sem dizer por que.
    */
   async semSala(): Promise<ReuniaoSemSala[]> {
+    /*
+     * `orderBy` no BANCO, e nao em memoria: a consulta e uma igualdade mais uma
+     * ordenacao por outro campo, que e a forma que exige indice composto — e
+     * declara-lo e o que faz esta consulta existir em producao. A agenda do
+     * advogado ordena em memoria porque la sao DUAS consultas cujos resultados
+     * se juntam, e ordenar cada uma nao ordena a uniao.
+     */
     const pagina = await this.db
       .collectionGroup(SUBCOLECAO_REUNIOES)
       .where('estado', '==', 'reservada_sem_link')
+      .orderBy('inicio')
       .get();
 
-    const reunioes = pagina.docs
-      .map((documento) => ({
-        id: documento.id,
-        ...(documento.data() as DocumentoReuniao),
-      }))
-      .sort((a, b) => a.inicio.localeCompare(b.inicio));
+    const reunioes = pagina.docs.map((documento) => ({
+      id: documento.id,
+      ...(documento.data() as DocumentoReuniao),
+    }));
 
     return reunioes.map((reuniao) => ({
       id: reuniao.id,
