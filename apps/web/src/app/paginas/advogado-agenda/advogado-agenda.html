@@ -1,0 +1,44 @@
+<section class="agenda">
+  <h1 class="agenda__titulo">Minha agenda</h1>
+
+  <p class="agenda__nota">
+    As reuniões marcadas nos pedidos que você atende, da mais próxima para a mais
+    distante. Reunião cancelada não aparece aqui.
+  </p>
+
+  @if (falha()) {
+  <app-mensagem-erro variante="bloco">
+    Nao foi possivel carregar a agenda. Recarregue a pagina.
+  </app-mensagem-erro>
+  }
+
+  @if (carregando()) {
+  <app-carregando variante="tabela" rotulo="Carregando a agenda" />
+  } @else if (vazia()) {
+  <app-estado-vazio
+    icone="calendario"
+    mensagem="Nenhuma reunião marcada. Publique sua disponibilidade para os clientes poderem marcar."
+  />
+  } @else {
+  <app-tabela
+    legenda="Reuniões marcadas"
+    [colunas]="colunas"
+    [linhas]="linhas()"
+    mensagemVazia="Nenhuma reunião marcada."
+  >
+    <ng-template appCelulaTabela let-linha let-coluna="coluna">
+      @switch (coluna.chave) { @case ('quando') { {{ quando(comoReuniao(linha))
+      }} } @case ('cliente') { {{ comoReuniao(linha).cliente }} } @case
+      ('produto') { {{ comoReuniao(linha).produto }} } @case ('sala') { @if
+      (comoReuniao(linha).link; as link) {
+      <a class="agenda__link" [href]="link" target="_blank" rel="noopener">
+        Abrir sala
+      </a>
+      } @else {
+      <!-- Regra inviolavel 13: a ausencia do link e dita, nunca disfarcada. -->
+      <span class="agenda__sem-sala">Link a caminho</span>
+      } } }
+    </ng-template>
+  </app-tabela>
+  }
+</section>

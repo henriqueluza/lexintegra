@@ -1,0 +1,35 @@
+/* Direcao B (Pauta) por heranca da shell autenticada. */
+.reunioes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+.reunioes__titulo {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t1);
+  font-weight: var(--peso-titulo);
+  line-height: var(--altura-titulo);
+  letter-spacing: var(--letra-titulo);
+}
+
+.reunioes__nota {
+  margin: 0;
+  max-width: var(--medida-texto);
+  color: var(--texto-2);
+  font-size: var(--t-menor);
+}
+
+.reunioes__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  justify-content: flex-end;
+}
+
+.reunioes__aviso {
+  display: block;
+  margin-top: var(--s1);
+  font-size: var(--t-mini);
+  color: var(--estado-ok);
+}

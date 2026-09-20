@@ -1,0 +1,53 @@
+<section class="reunioes">
+  <h1 class="reunioes__titulo">Reuniões sem sala</h1>
+
+  <p class="reunioes__nota">
+    Reuniões que o cliente marcou e que ainda não ganharam link do Teams. O slot
+    está reservado e o saldo debitado — falta a sala. O outbox tenta de novo
+    sozinho; use o botão quando quiser forçar a tentativa.
+  </p>
+
+  @if (falha(); as mensagem) {
+  <app-mensagem-erro variante="bloco">{{ mensagem }}</app-mensagem-erro>
+  } @if (falhaDaLista()) {
+  <app-mensagem-erro variante="bloco">
+    Nao foi possivel carregar a lista. Recarregue a pagina.
+  </app-mensagem-erro>
+  }
+
+  <app-tabela
+    legenda="Reuniões reservadas sem sala"
+    [colunas]="colunas"
+    [linhas]="linhas()"
+    [carregando]="carregando()"
+    mensagemVazia="Nenhuma reunião esperando sala."
+  >
+    <ng-template appCelulaTabela let-linha let-coluna="coluna">
+      @switch (coluna.chave) { @case ('quando') { {{ quando(comoReuniao(linha))
+      }} } @case ('pedido') { {{ comoReuniao(linha).pedidoId }} } @case ('acoes')
+      {
+      <div class="reunioes__acoes">
+        <app-botao
+          variante="primario"
+          tamanho="p"
+          [carregando]="emCurso() === comoReuniao(linha).id"
+          (click)="tentarDeNovo(comoReuniao(linha))"
+        >
+          Tentar de novo
+        </app-botao>
+        <app-botao
+          tamanho="p"
+          [carregando]="emCurso() === comoReuniao(linha).id"
+          (click)="cancelar(comoReuniao(linha))"
+        >
+          Cancelar reunião
+        </app-botao>
+      </div>
+      @if (reenviado() === comoReuniao(linha).id) {
+      <span class="reunioes__aviso" role="status">
+        Reenviado. O link chega por e-mail quando a sala for criada.
+      </span>
+      } } }
+    </ng-template>
+  </app-tabela>
+</section>
