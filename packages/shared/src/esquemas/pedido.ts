@@ -84,6 +84,22 @@ export type CartaoPedido = {
    * `null` enquanto `criadoEm` nao materializou. A tela mostra "validas ate ...".
    */
   readonly reunioesValidasAte: string | null;
+  /**
+   * `false` quando `REUNIOES_MODO=desligado` — o agendamento inteiro esta fora do
+   * ar, e nao e este pedido que tem impedimento.
+   *
+   * VEM DO SERVIDOR PORQUE A TELA NAO TEM COMO SABER. E configuracao de
+   * processo, nao dado do pedido, e enquanto a integracao com o Teams nao
+   * existir sera `false` para todo mundo. Sem este campo, o cartao ofereceria o
+   * botao de marcar, o cliente clicaria, e a resposta seria 503 — um erro
+   * generico para uma condicao que o servidor conhecia desde o primeiro byte.
+   *
+   * SEPARADO DOS IMPEDIMENTOS de `regras-reuniao.ts` de proposito: aqueles sao
+   * deste pedido (saldo, janela, distribuicao) e o cliente pode agir sobre
+   * alguns; este e nosso, e a unica coisa util a dizer e que estamos
+   * providenciando.
+   */
+  readonly agendamentoDisponivel: boolean;
 };
 
 /**

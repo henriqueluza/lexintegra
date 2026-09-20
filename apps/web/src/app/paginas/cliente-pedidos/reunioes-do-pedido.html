@@ -84,7 +84,18 @@
   <app-mensagem-erro variante="linha">{{ mensagem }}</app-mensagem-erro>
   }
 
-  @if (motivo(); as texto) {
+  <!--
+    O AGENDAMENTO INTEIRO FORA DO AR vem ANTES de qualquer impedimento deste
+    pedido: nao adianta dizer ao cliente que o saldo acabou se nem daria para
+    marcar. E `REUNIOES_MODO=desligado` no servidor, enquanto a integracao com o
+    Teams nao existe — sem este ramo, o botao apareceria e o clique daria 503.
+  -->
+  @if (!pedido().agendamentoDisponivel) {
+  <p class="reunioes__indisponivel">
+    O agendamento de reuniões ainda não está disponível. Assim que estiver, você
+    poderá marcar por aqui — o saldo deste pedido continua guardado.
+  </p>
+  } @else if (motivo(); as texto) {
   <p class="reunioes__aviso">{{ texto }}</p>
   } @else if (escolhendo() === 'nova') {
   <div class="reunioes__escolha">

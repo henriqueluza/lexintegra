@@ -150,8 +150,17 @@ export function paraCartao(
   pedido: DocumentoPedido,
   entregaveis: readonly EntregavelResumo[],
   reunioes: readonly ReuniaoResumo[] = [],
+  agendamentoDisponivel = false,
 ): CartaoPedido {
   return {
+    /*
+     * O PADRAO E `false`, e nao `true`. Quem chama sem informar e teste ou
+     * caminho que nao tem a configuracao a mao, e o pior que acontece com o
+     * padrao fechado e a tela dizer "indisponivel" onde havia agendamento. Com
+     * o padrao aberto, o erro seria oferecer o botao onde nao ha agendamento —
+     * que e exatamente o defeito que este campo existe para corrigir.
+     */
+    agendamentoDisponivel,
     id,
     snapshot: pedido.snapshot,
     entregaveis,

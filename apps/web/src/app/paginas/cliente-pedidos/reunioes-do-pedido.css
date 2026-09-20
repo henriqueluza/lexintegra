@@ -78,3 +78,17 @@
   font-size: var(--t-mini);
   color: var(--texto-3);
 }
+
+/*
+ * O agendamento inteiro fora do ar. Mais presente que `__aviso` — e informacao
+ * sobre a plataforma, nao sobre este pedido — e deliberadamente NAO usa a cor de
+ * erro: nada falhou, e o cliente nao tem nada a corrigir.
+ */
+.reunioes__indisponivel {
+  margin: 0;
+  padding: var(--s2);
+  border-left: var(--borda-media) solid var(--divisor-forte);
+  background: var(--superficie-sutil);
+  font-size: var(--t-mini);
+  color: var(--texto-2);
+}

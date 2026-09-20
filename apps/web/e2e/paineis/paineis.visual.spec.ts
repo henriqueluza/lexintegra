@@ -80,4 +80,51 @@ test.describe('regressao visual dos paineis', () => {
       });
     });
   }
+
+  /**
+   * O CARTAO COM O AGENDAMENTO FORA DO AR — que e o estado de PRODUCAO enquanto
+   * a integracao com o Teams nao existir (`REUNIOES_MODO=desligado`).
+   *
+   * POR QUE ESTE TESTE INTERCEPTA, sendo que a suite inteira existe para NAO
+   * interceptar. O modo e configuracao do processo da API, e o `webServer` desta
+   * config e um so para a execucao inteira: subir a API em `desligado` apagaria
+   * o agendamento de todas as outras telas e derrubaria a jornada, que precisa
+   * marcar de verdade. Um segundo servidor so para uma captura custaria mais do
+   * que defende.
+   *
+   * E A INTERCEPCAO E MINIMA DE PROPOSITO: ela pega a resposta REAL do servidor
+   * e vira UM booleano, exatamente o que a configuracao de producao viraria.
+   * Nao ha jogo de respostas escrito a mao — que e o que a suite recusa, porque
+   * envelhece em silencio —, entao qualquer mudanca na forma do cartao continua
+   * chegando aqui inteira.
+   */
+  test('cliente-pedidos-sem-agendamento', async ({ page }) => {
+    await entrar(page, CONTAS.cliente);
+
+    await page.route('**/api/pedidos', async (rota) => {
+      const resposta = await rota.fetch();
+      const cartoes = (await resposta.json()) as Record<string, unknown>[];
+
+      await rota.fulfill({
+        response: resposta,
+        json: cartoes.map((cartao) => ({
+          ...cartao,
+          agendamentoDisponivel: false,
+        })),
+      });
+    });
+
+    await page.goto('/painel');
+
+    await expect(page.getByRole('heading').first()).toBeVisible();
+    await expect(page.getByText(/ainda não está disponível/).first()).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => resolve(null))),
+    );
+
+    await expect(page).toHaveScreenshot('cliente-pedidos-sem-agendamento.png', {
+      fullPage: true,
+    });
+  });
 });

@@ -23,6 +23,10 @@ import {
   type DocumentoReuniao,
 } from '../reunioes/reuniao.js';
 import {
+  CONFIGURACAO_REUNIOES,
+  type ConfiguracaoReunioes,
+} from '../reunioes/sala/modo.js';
+import {
   COLECAO_PEDIDOS,
   paraCartao,
   paraDemanda,
@@ -58,7 +62,18 @@ export class ConsultaPedidosService {
   constructor(
     @Inject(FIRESTORE) private readonly db: Firestore,
     private readonly clientes: ClientesService,
+    @Inject(CONFIGURACAO_REUNIOES)
+    private readonly reunioesConfig: ConfiguracaoReunioes,
   ) {}
+
+  /**
+   * O agendamento inteiro esta no ar? E configuracao de PROCESSO, nao dado do
+   * pedido — por isso e a mesma resposta para todo cartao —, e viaja no cartao
+   * porque a tela nao tem como saber. Ver `CartaoPedido.agendamentoDisponivel`.
+   */
+  private get agendamentoDisponivel(): boolean {
+    return this.reunioesConfig.modo !== 'desligado';
+  }
 
   /** Os cartoes do cliente (item 2.3.2). Um por pedido, com saldo proprio. */
   async listarDoCliente(clienteId: string): Promise<CartaoPedido[]> {
@@ -71,6 +86,7 @@ export class ConsultaPedidosService {
           documento.data() as DocumentoPedido,
           await this.entregaveisDe(documento.ref),
           await this.reunioesDe(documento.ref),
+          this.agendamentoDisponivel,
         ),
       ),
     );
@@ -90,6 +106,7 @@ export class ConsultaPedidosService {
       dados,
       await this.entregaveisDe(referencia),
       await this.reunioesDe(referencia),
+      this.agendamentoDisponivel,
     );
   }
 

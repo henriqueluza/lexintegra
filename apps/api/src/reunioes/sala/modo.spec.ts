@@ -29,9 +29,9 @@ describe('configuracaoDeReunioes', () => {
   });
 
   describe('em producao', () => {
-    it('exige a variavel', () => {
+    it('exige a variavel, nomeando o unico valor aceito', () => {
       expect(() => configuracaoDeReunioes({ NODE_ENV: 'production' })).toThrow(
-        /REUNIOES_MODO precisa ser/,
+        /precisa ser "desligado"/,
       );
     });
 
@@ -45,19 +45,33 @@ describe('configuracaoDeReunioes', () => {
     });
 
     /**
-     * `falso` em producao e PERMITIDO, e avisa alto. E o estado em que a Etapa 10
-     * entra no ar antes de a integracao existir: o cliente marca, o slot e
-     * reservado, o saldo e debitado, e a reuniao fica em `reservada_sem_link`.
-     * Recusar subir aqui deixaria o agendamento inteiro fora do ar por causa de
-     * uma integracao pendente.
+     * `falso` EM PRODUCAO DERRUBA O BOOT, e este teste existe porque o contrario
+     * era o comportamento ate a revisao do PR #26.
+     *
+     * A sala falsa nao "deixa a reuniao sem link": ela devolve SUCESSO, com um
+     * link `teams.microsoft.test`. O despachante grava esse link, passa a reuniao
+     * a `confirmada` e manda o convite iCalendar para o cliente e o advogado
+     * REAIS — um compromisso no calendario com um link que nao existe,
+     * descoberto na hora da reuniao. Nenhuma das duas metades falha; e a regra
+     * inviolavel 13 furada por configuracao em vez de por codigo.
      */
-    it('aceita falso, com aviso', () => {
-      expect(
+    it('recusa falso, que mandaria convite com link inexistente', () => {
+      expect(() =>
         configuracaoDeReunioes({
           NODE_ENV: 'production',
           REUNIOES_MODO: 'falso',
         }),
-      ).toEqual({ modo: 'falso', graph: null });
+      ).toThrow(/nao sobe em producao/);
+    });
+
+    /* O espaco ao redor nao salva `falso`, como nao salva `graph`. */
+    it('recusa falso com espacos em volta', () => {
+      expect(() =>
+        configuracaoDeReunioes({
+          NODE_ENV: 'production',
+          REUNIOES_MODO: '  falso  ',
+        }),
+      ).toThrow(/nao sobe em producao/);
     });
   });
 

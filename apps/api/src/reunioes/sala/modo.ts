@@ -1,5 +1,3 @@
-import { Logger } from '@nestjs/common';
-
 export const CONFIGURACAO_REUNIOES = Symbol('CONFIGURACAO_REUNIOES');
 
 /**
@@ -46,11 +44,32 @@ const DESLIGADO: ConfiguracaoReunioes = { modo: 'desligado', graph: null };
  * - `graph` RECUSA SUBIR em qualquer ambiente. Liberar exige o registro no Entra
  *   ID, o consentimento do administrador do tenant, a application access policy
  *   por PowerShell e uma chamada de teste manual — tudo em commit proprio.
+ * - `falso` RECUSA SUBIR EM PRODUCAO. Ver abaixo: e a correcao de um defeito
+ *   real, nao rigor decorativo.
  * - Em producao a variavel e OBRIGATORIA. Um padrao silencioso escolheria
  *   sozinho entre "agendamento fora do ar" e "agendamento ligado", como
  *   `APP_CHECK_ENFORCE` e `PAGAMENTOS_MODO`.
  * - Fora de producao, ausente e `falso`: desenvolvimento e emulador nao devem
  *   precisar de credencial nenhuma.
+ *
+ * POR QUE `falso` EM PRODUCAO E PIOR QUE O AGENDAMENTO FORA DO AR. Este arquivo
+ * dizia, ate a revisao do PR #26, que `falso` em producao deixaria as reunioes
+ * em `reservada_sem_link` com um aviso alto — e isso estava ERRADO.
+ * `SalaDeReuniaoFalsa.criar` devolve SUCESSO, com link
+ * `https://teams.microsoft.test/l/meetup-join/{reuniaoId}`. O despachante grava
+ * esse link, passa a reuniao a `confirmada` e manda o convite iCalendar para o
+ * cliente e para o advogado REAIS. O cliente recebe um compromisso no
+ * calendario, com um link que nao existe, e descobre na hora da reuniao.
+ *
+ * Nenhuma das duas metades falha: o modo falso e um duble bem-comportado, e o
+ * outbox faz o trabalho dele com o que recebeu. E exatamente o desenho da regra
+ * inviolavel 13 — "nunca mostrar link vazio ou de outra reuniao como solucao
+ * alternativa" — furado por configuracao em vez de por codigo.
+ *
+ * `desligado` e o estado certo enquanto a integracao nao existe: o cliente nao
+ * marca nada, e o cartao dele DIZ que o agendamento esta indisponivel
+ * (`CartaoPedido.agendamentoDisponivel`), em vez de oferecer um botao que
+ * responde 503.
  */
 export function configuracaoDeReunioes(
   ambiente: NodeJS.ProcessEnv = process.env,
@@ -59,20 +78,6 @@ export function configuracaoDeReunioes(
   const modo = lerModo(texto(ambiente['REUNIOES_MODO']), producao);
 
   if (modo === 'desligado') return DESLIGADO;
-
-  /*
-   * `falso` em PRODUCAO e permitido e avisa alto. E o estado em que a Etapa 10
-   * entra no ar antes de a integracao existir: o cliente marca, o slot e
-   * reservado, o saldo e debitado, e a reuniao fica em `reservada_sem_link` com
-   * o link chegando quando o modo mudar. Recusar subir aqui seria pior — deixaria
-   * o agendamento inteiro fora do ar por causa de uma integracao pendente.
-   */
-  if (producao) {
-    new Logger('Reunioes').warn(
-      'REUNIOES_MODO=falso em producao: a sala do Teams NAO e criada. As ' +
-        'reunioes ficam em "reservada_sem_link" ate a integracao ser ligada.',
-    );
-  }
 
   return { modo: 'falso', graph: null };
 }
@@ -87,6 +92,15 @@ function lerModo(bruto: string | null, producao: boolean): ModoReunioes {
         'ver "So voce — Etapa 10" no plano de execucao.',
     );
   }
+  if (bruto === 'falso' && producao) {
+    throw new Error(
+      'REUNIOES_MODO=falso nao sobe em producao (Etapa 10, ADR-21). A sala ' +
+        'falsa devolve SUCESSO com um link teams.microsoft.test: a reuniao ' +
+        'viraria "confirmada" e o convite iCalendar sairia para o cliente com ' +
+        'um link que nao existe. Use "desligado" — o cartao do cliente diz que ' +
+        'o agendamento esta indisponivel.',
+    );
+  }
   if (bruto === 'desligado' || bruto === 'falso') return bruto;
   if (bruto !== null) {
     throw new Error(
@@ -95,9 +109,9 @@ function lerModo(bruto: string | null, producao: boolean): ModoReunioes {
   }
   if (producao) {
     throw new Error(
-      'REUNIOES_MODO precisa ser "desligado" ou "falso" em producao. ' +
-        'Recusando subir sem que alguem tenha decidido se o agendamento esta ' +
-        'no ar.',
+      'REUNIOES_MODO precisa ser "desligado" em producao, e e o unico valor ' +
+        'aceito ali enquanto a integracao com o Teams nao existir. Recusando ' +
+        'subir sem que alguem tenha decidido se o agendamento esta no ar.',
     );
   }
 

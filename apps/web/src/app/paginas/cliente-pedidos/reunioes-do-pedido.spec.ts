@@ -32,6 +32,7 @@ function pedido(ajustes: Partial<CartaoPedido> = {}): CartaoPedido {
     reunioes: [],
     saldoDeReunioes: 2,
     reunioesValidasAte: emDias(300),
+    agendamentoDisponivel: true,
     snapshot: {
       nome: 'Revisao de contrato',
       descricao: 'Descricao',
@@ -161,6 +162,49 @@ describe('ReunioesDoPedido', () => {
   /* ---------------------------------------------------------------------- */
   /* Os estados obrigatorios                                                 */
   /* ---------------------------------------------------------------------- */
+
+  /**
+   * O AGENDAMENTO INTEIRO FORA DO AR (`REUNIOES_MODO=desligado`), que e o estado
+   * de producao enquanto a integracao com o Teams nao existir.
+   *
+   * Sem este ramo o botao apareceria e o clique daria 503 — um erro generico
+   * para uma condicao que o servidor conhecia desde o primeiro byte. E vem do
+   * SERVIDOR, em `CartaoPedido.agendamentoDisponivel`: e configuracao de
+   * processo, e a tela nao tem como saber.
+   */
+  it('agendamento indisponivel nao oferece marcar, e diz por que', async () => {
+    const { fixture } = await montar(
+      pedido({ agendamentoDisponivel: false }),
+    );
+
+    expect(texto(fixture)).toContain('ainda não está disponível');
+    expect(
+      botoes(fixture).some((b) => /Marcar reuni/u.test(b.textContent ?? '')),
+    ).toBe(false);
+  });
+
+  /**
+   * VEM ANTES DOS IMPEDIMENTOS DO PEDIDO. Nao adianta dizer ao cliente que o
+   * saldo acabou se nem daria para marcar: a informacao util e que o
+   * agendamento nao esta no ar.
+   */
+  it('indisponivel vence o impedimento do proprio pedido', async () => {
+    const { fixture } = await montar(
+      pedido({ agendamentoDisponivel: false, distribuido: false }),
+    );
+
+    expect(texto(fixture)).toContain('ainda não está disponível');
+    expect(texto(fixture)).not.toContain('em analise');
+  });
+
+  /** O saldo continua visivel: o credito nao se perde por estar indisponivel. */
+  it('indisponivel ainda mostra o saldo do pedido', async () => {
+    const { fixture } = await montar(
+      pedido({ agendamentoDisponivel: false }),
+    );
+
+    expect(texto(fixture)).toContain('0/2');
+  });
 
   /**
    * A MESMA MENSAGEM QUE O SERVIDOR USA no 409 (`MOTIVO_DO_IMPEDIMENTO`). A
