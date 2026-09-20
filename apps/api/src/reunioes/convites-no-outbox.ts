@@ -23,6 +23,11 @@ import type { DocumentoReuniao } from './reuniao.js';
  * dele — a mesma armadilha que `nome-da-tarefa.ts` isola por regra de lint: o id
  * montado com um campo a menos nao quebra nada, a tarefa e criada, o teste passa,
  * e o registro certo nunca e entregue.
+ *
+ * EM LOTE, E NAO NUM LACO DE `registrarSeAusente`. Cada chamada daquele faz `get`
+ * e depois `create`; na segunda volta o `get` viria DEPOIS de uma escrita, e o
+ * Firestore recusa a transacao inteira. O dublê em memoria nao impoe essa ordem,
+ * entao o laco passava na unidade e so caiu contra o emulador.
  */
 export async function registrarConvitesDaReuniao(
   outbox: OutboxService,
@@ -31,19 +36,15 @@ export async function registrarConvitesDaReuniao(
   reuniao: Pick<DocumentoReuniao, 'sequence' | 'clienteId' | 'advogadoId'>,
 ): Promise<string[]> {
   const carga = { ...alvo, sequence: reuniao.sequence };
-  const ids: string[] = [];
 
-  for (const destinatarioUid of [reuniao.clienteId, reuniao.advogadoId]) {
-    ids.push(
-      await outbox.registrarSeAusente(transacao, {
-        tipo: 'convite-reuniao',
-        destinatarioUid,
-        reuniao: carga,
-      }),
-    );
-  }
-
-  return ids;
+  return outbox.registrarSeAusenteEmLote(
+    transacao,
+    [reuniao.clienteId, reuniao.advogadoId].map((destinatarioUid) => ({
+      tipo: 'convite-reuniao' as const,
+      destinatarioUid,
+      reuniao: carga,
+    })),
+  );
 }
 
 /**
@@ -65,17 +66,13 @@ export async function registrarCancelamentosDaReuniao(
   reuniao: Pick<DocumentoReuniao, 'sequence' | 'clienteId' | 'advogadoId'>,
 ): Promise<string[]> {
   const carga = { ...alvo, sequence: reuniao.sequence };
-  const ids: string[] = [];
 
-  for (const destinatarioUid of [reuniao.clienteId, reuniao.advogadoId]) {
-    ids.push(
-      await outbox.registrarSeAusente(transacao, {
-        tipo: 'cancelamento-reuniao',
-        destinatarioUid,
-        reuniao: carga,
-      }),
-    );
-  }
-
-  return ids;
+  return outbox.registrarSeAusenteEmLote(
+    transacao,
+    [reuniao.clienteId, reuniao.advogadoId].map((destinatarioUid) => ({
+      tipo: 'cancelamento-reuniao' as const,
+      destinatarioUid,
+      reuniao: carga,
+    })),
+  );
 }

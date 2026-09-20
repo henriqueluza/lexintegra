@@ -146,6 +146,43 @@ export class OutboxService {
     return this.registrar(transacao, evento, agora);
   }
 
+  /**
+   * Varios eventos numa transacao so, com TODAS as leituras antes das escritas.
+   *
+   * EXISTE PORQUE UM LACO DE `registrarSeAusente` NAO FUNCIONA. Cada chamada faz
+   * `get` e depois `create`; na segunda volta, o `get` acontece DEPOIS de uma
+   * escrita, e o Firestore recusa a transacao inteira com "all reads to be
+   * executed before all writes". O dublê em memoria nao impoe essa ordem, entao
+   * o laco passava na suite de unidade e so caiu contra o emulador — a mesma
+   * classe de defeito que o `preparar`/`gravar` da Etapa 5 documenta.
+   *
+   * Devolve os ids na mesma ordem dos eventos, para quem chama poder enfileirar
+   * depois do commit.
+   */
+  async registrarSeAusenteEmLote(
+    transacao: Transaction,
+    eventos: readonly NovoEvento[],
+    agora?: number,
+  ): Promise<string[]> {
+    const ids = eventos.map((evento) =>
+      idDoEvento(evento.tipo, chaveDoEvento(evento), agora),
+    );
+
+    /* Todas as leituras primeiro. */
+    const existentes = await Promise.all(
+      ids.map((id) => transacao.get(this.referencia(id))),
+    );
+
+    /* Só entao as escritas. */
+    eventos.forEach((evento, indice) => {
+      if (!existentes[indice].exists) {
+        this.registrar(transacao, evento, agora);
+      }
+    });
+
+    return ids;
+  }
+
   async ler(id: string): Promise<RegistroOutbox | null> {
     const documento = await this.referencia(id).get();
     return documento.exists ? (documento.data() as RegistroOutbox) : null;
