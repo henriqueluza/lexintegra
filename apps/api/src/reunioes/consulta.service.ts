@@ -31,11 +31,23 @@ const ESTADOS_ATIVOS = ESTADOS_REUNIAO.filter(reuniaoAtiva);
  * O OPERADOR DE FAIXA NAO E USADO, e isso e decisao registrada. O
  * `FirestoreFalso` implementa `==`, `array-contains` e `<=`, e recusa o resto em
  * vez de fingir que suporta — um `>` sobre `inicio` exigiria implementa-lo la. A
- * alternativa escolhida e consultar por IGUALDADE de `estado` e filtrar o horario
- * EM MEMORIA, e ela e melhor por uma razao que nao e a preguica: filtrar por
- * estado corta o que cresce sem limite (reuniao cancelada acumula para sempre),
- * enquanto o horario so separa futuro de passado dentro do que sobrou. Duas
- * consultas de igualdade, uma por estado ativo, como o varredor do outbox faz.
+ * alternativa e consultar por IGUALDADE de `estado` e filtrar o horario EM
+ * MEMORIA: duas consultas de igualdade, uma por estado ativo, como o varredor do
+ * outbox faz.
+ *
+ * O QUE ESSA ESCOLHA **NAO** RESOLVE, e o comentario aqui afirmava que resolvia
+ * (corrigido na revisao do PR #26). Filtrar por estado tira as canceladas — e so
+ * isso. `confirmada` TAMBEM cresce sem limite: reuniao que ja aconteceu continua
+ * `confirmada` para sempre, porque nao existe estado "realizada" e nao havia por
+ * que inventar um. Entao o que a consulta le e "toda reuniao ativa que este
+ * advogado ja teve", e o recorte de futuro acontece depois, em memoria.
+ *
+ * ISSO E ACEITAVEL HOJE E NAO PARA SEMPRE. O teto por advogado e o numero de
+ * reunioes que ele atendeu desde o inicio — algumas centenas por ano, no volume
+ * previsto —, e a leitura acontece na abertura da agenda e na suspensao. Quando
+ * pesar, a saida e a faixa sobre `inicio` na consulta (e implementar `>=` no
+ * dublê), nao um estado novo na maquina: ADR-21 registra isso como ponto a
+ * revisitar, com o gatilho.
  */
 @Injectable()
 export class ConsultaReunioesService {

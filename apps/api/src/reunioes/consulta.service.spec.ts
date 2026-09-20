@@ -126,10 +126,13 @@ describe('ConsultaReunioesService.futuraAtivaDoAdvogado', () => {
   });
 
   /**
-   * A CONSULTA FILTRA POR ESTADO, e nao por horario. E a decisao registrada no
-   * servico: o `FirestoreFalso` nao implementa faixa, e filtrar por estado corta
-   * justamente o que cresce sem limite — reuniao cancelada acumula para sempre.
-   * O horario separa futuro de passado dentro do que sobrou, em memoria.
+   * A CONSULTA FILTRA POR ESTADO, e nao por horario — decisao registrada no
+   * servico, porque o `FirestoreFalso` nao implementa faixa. O horario separa
+   * futuro de passado depois, em memoria.
+   *
+   * O filtro por estado tira as CANCELADAS, e so isso: `confirmada` tambem
+   * acumula para sempre, porque reuniao que ja aconteceu continua confirmada.
+   * Ver o cabecalho do servico e o ADR-21 para o gatilho de revisitar.
    */
   it.each(['cancelada_com_devolucao', 'cancelada_sem_devolucao'])(
     'ignora reuniao %s',

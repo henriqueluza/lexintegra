@@ -718,14 +718,35 @@ no código (`REUNIOES_MODO`, que **não aceita `graph`**) no mesmo espírito da 
 inviolável 20. O adaptador do Graph está escrito, não é alcançável, e não foi validado
 contra tenant nenhum.
 
-#### Um ponto a revisitar
+#### Pontos a revisitar
 
-O painel do administrador lista as reuniões `reservada_sem_link` de **todos** os pedidos, e
-`reunioes` é subcoleção de `pedidos` — a consulta é de **grupo de coleções**, com índice
-próprio. É o oposto do que a Etapa 8 fez com `estornos`, que virou coleção raiz justamente
-para evitar isso. A diferença é que a subcoleção já estava fixada pela seção 5.1, e mover a
-reunião para a raiz a separaria do pedido que lhe dá saldo, janela e intervalo — que é
-exatamente o acoplamento que o ADR-12 quer preservar.
+**A consulta de grupo de coleções.** O painel do administrador lista as reuniões
+`reservada_sem_link` de **todos** os pedidos, e `reunioes` é subcoleção de `pedidos` — a
+consulta é de **grupo de coleções**, com índice próprio. É o oposto do que a Etapa 8 fez
+com `estornos`, que virou coleção raiz justamente para evitar isso. A diferença é que a
+subcoleção já estava fixada pela seção 5.1, e mover a reunião para a raiz a separaria do
+pedido que lhe dá saldo, janela e intervalo — que é exatamente o acoplamento que o ADR-12
+quer preservar.
+
+**O que as consultas de reunião leem cresce sem limite, e o filtro por estado não
+resolve.** `ConsultaReunioesService` consulta por igualdade de `estado` e recorta o futuro
+em memória, porque o dublê do Firestore não implementa faixa e um `>=` sobre `inicio`
+exigiria implementá-lo lá. O comentário no serviço afirmava que filtrar por estado cortava
+"o que cresce sem limite" — **isso estava errado, e foi corrigido na revisão do PR #26.**
+O filtro tira as canceladas e só isso: **`confirmada` acumula para sempre**, porque reunião
+que já aconteceu continua confirmada. Não existe estado "realizada", e não havia por que
+inventar um só para a máquina de estados ter mais um nó.
+
+Então a agenda do advogado e a conferência da suspensão leem *toda reunião ativa que aquele
+advogado já teve*. No volume previsto — algumas centenas por advogado por ano, lidas na
+abertura da agenda e na suspensão — isso é aceitável, e trocar agora seria otimizar contra
+um número imaginado.
+
+**O gatilho para revisitar:** quando a agenda de um advogado passar de ~1.000 reuniões
+acumuladas, ou quando a leitura aparecer no custo do Firestore. A saída é a faixa sobre
+`inicio` na própria consulta, com o índice correspondente e `>=` implementado no dublê —
+**não** um estado novo na máquina, que mudaria a semântica do domínio para resolver um
+problema de leitura.
 
 ---
 
