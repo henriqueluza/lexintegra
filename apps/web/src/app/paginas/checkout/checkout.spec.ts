@@ -197,13 +197,13 @@ describe('Checkout', () => {
       expect(texto(cenario.fixture)).toContain(TEXTOS_CHECKOUT.vazio.titulo);
     });
 
-    it('mostra os itens, o total estimado e o termo pendente', async () => {
+    it('mostra os itens, o total estimado e os termos ampliados', async () => {
       const cenario = await montar();
 
       const conteudo = texto(cenario.fixture).replace(/\s/g, ' ');
       expect(conteudo).toContain('Servico 0');
       expect(conteudo).toContain('R$ 2.000,00');
-      expect(conteudo).toContain('Ao contratar, confira o escopo');
+      expect(conteudo).toContain('Escopo, entregáveis e condições da oferta');
       expect(conteudo).not.toContain('TODO');
     });
 

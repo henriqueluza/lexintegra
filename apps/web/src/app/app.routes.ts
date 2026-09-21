@@ -68,10 +68,9 @@ export const routes: Routes = [
   },
   {
     path: 'todas-as-imagens',
-    loadComponent: () =>
-      import('./paginas/landing/landing').then((m) => m.Landing),
-    title: 'LexIntegra — Todas as imagens',
-    data: { todasImagens: true },
+    redirectTo: '',
+    pathMatch: 'full',
+    title: 'LexIntegra',
   },
   {
     path: 'privacidade',

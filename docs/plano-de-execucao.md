@@ -1,6 +1,6 @@
 # LexIntegra — Plano de Execução
 
-> **Atualização de setembro de 2026:** o redesign solicitado nesta sessão está registrado em [revisao-frontend.md](revisao-frontend.md). A landing, o cadastro e a compra agora são páginas distintas; existe uma variante autorizada com martelo animado. Textos visíveis foram redigidos como minutas. As referências anteriores a placeholders e formulário dentro da home são históricas.
+> **Atualização de setembro de 2026:** landing única com quatro fotografias, identidade LexIntegra, navbar por sessão, FAQ com transições e páginas legais ampliadas. Ver [identidade-navegacao.md](identidade-navegacao.md). Cadastro e compra permanecem separados. As referências anteriores a variantes, placeholders e formulário dentro da home são históricas.
 
 
 Complemento ao rascunho de arquitetura. Cada etapa tem um entregável verificável — algo que pode ser demonstrado, não apenas declarado como pronto — e uma lista explícita do que **só você pode fazer**, porque envolve credencial, dinheiro, identidade jurídica ou risco de destruição.

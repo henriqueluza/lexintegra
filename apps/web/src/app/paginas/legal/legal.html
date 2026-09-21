@@ -1,9 +1,42 @@
 <main class="pagina legal">
   <header class="abertura">
     <p class="contexto">Informação e transparência</p>
-    <h1>{{ termos ? 'Termos de contratação' : 'Privacidade' }}</h1>
+    <h1>
+      {{ termos ? 'Termos de contratação' : 'Privacidade e dados pessoais' }}
+    </h1>
+    <p>
+      Conheça as condições do atendimento e como suas informações são utilizadas
+      ao longo da sua relação com a LexIntegra.
+    </p>
+    <p class="auxiliar">
+      Versão de setembro de 2026 · Minuta ampliada para revisão do escritório.
+    </p>
   </header>
-  <p>{{ texto }}</p>
-  <p class="auxiliar">Versão de setembro de 2026.</p>
-  <a href="/">Voltar ao início</a>
+  <div class="legal__grade">
+    <nav aria-label="Nesta página">
+      <h2>Nesta página</h2>
+      @for (secao of secoes; track secao.titulo; let i = $index) {
+      <a [href]="'#secao-' + i">{{ secao.titulo }}</a> }
+    </nav>
+    <div>
+      @for (secao of secoes; track secao.titulo; let i = $index) {
+      <section [id]="'secao-' + i">
+        <h2>{{ secao.titulo }}</h2>
+        <p>{{ secao.texto }}</p>
+      </section>
+      }
+      <p class="auxiliar">
+        Referências:
+        <a
+          href="https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm"
+          >Lei Geral de Proteção de Dados</a
+        >
+        e
+        <a href="https://www.planalto.gov.br/ccivil_03/leis/l8078compilado.htm"
+          >Código de Defesa do Consumidor</a
+        >, nas hipóteses aplicáveis.
+      </p>
+      <a href="/">Voltar ao início</a>
+    </div>
+  </div>
 </main>

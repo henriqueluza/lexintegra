@@ -173,19 +173,6 @@ h3 {
   grid-template-columns: 1fr 1.3fr;
   gap: var(--s8);
 }
-details {
-  padding: var(--s5) 0;
-  border-bottom: var(--borda-fina) solid var(--divisor);
-}
-summary {
-  cursor: pointer;
-  font-size: var(--t-maior);
-}
-details p {
-  margin-top: var(--s4);
-  color: var(--texto-2);
-  line-height: var(--altura-solta);
-}
 .convite {
   display: flex;
   justify-content: space-between;
@@ -194,35 +181,6 @@ details p {
   padding-top: var(--s8);
   padding-bottom: var(--s8);
   border-top: var(--borda-fina) solid var(--divisor);
-}
-.rodape {
-  padding-top: var(--s6);
-  padding-bottom: var(--s6);
-  display: flex;
-  justify-content: space-between;
-  gap: var(--s7);
-  border-top: var(--borda-fina) solid var(--divisor);
-}
-.marca {
-  font-family: var(--fonte-display);
-  font-size: var(--t-t3);
-  color: var(--texto);
-  text-decoration: none;
-}
-.rodape p {
-  color: var(--texto-3);
-  font-size: var(--t-mini);
-  max-width: var(--medida-auxiliar);
-  margin-top: var(--s3);
-}
-.rodape nav {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s3);
-}
-.rodape nav a {
-  color: var(--texto-2);
-  font-size: var(--t-mini);
 }
 @media (max-width: 800px) {
   .hero,
@@ -240,8 +198,7 @@ details p {
     grid-template-columns: 1fr 1fr;
   }
   .secao__cabecalho,
-  .convite,
-  .rodape {
+  .convite {
     flex-direction: column;
     align-items: start;
   }

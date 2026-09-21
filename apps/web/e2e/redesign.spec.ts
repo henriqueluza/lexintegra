@@ -41,8 +41,9 @@ test('as duas versões carregam fotografias e a antiga animação redireciona', 
 }) => {
   await page.goto('/com-movimento');
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator('main img')).toHaveCount(2);
-  await page.getByRole('link', { name: 'Ver todas as imagens' }).click();
+  await expect(page.locator('main img')).toHaveCount(4);
+  await page.goto('/todas-as-imagens');
+  await expect(page).toHaveURL(/\/$/);
   await expect(page.locator('main img')).toHaveCount(4);
   for (const foto of await page.locator('main img').all()) {
     await foto.scrollIntoViewIfNeeded();
@@ -65,9 +66,28 @@ test('a navegação oferece acesso independente aos fluxos', async ({ page }) =>
   await expect(
     nav.getByRole('link', { name: 'Entrar', exact: true }),
   ).toHaveAttribute('href', '/entrar');
-  await nav.getByRole('link', { name: 'Carrinho 0' }).click();
+  await expect(nav.getByRole('link', { name: /Carrinho/ })).toHaveCount(0);
+  await page.goto('/carrinho');
   await expect(page).toHaveURL(/\/carrinho$/);
   await expect(
     page.getByRole('heading', { name: 'Seu carrinho', exact: true }),
   ).toBeVisible();
+});
+
+test('as quatro perguntas animam abertura e fechamento com redução de movimento', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  for (const botao of await page.locator('.pergunta button').all()) {
+    await botao.click();
+    await expect(botao).toHaveAttribute('aria-expanded', 'true');
+    const id = await botao.getAttribute('aria-controls');
+    const duracao = await page
+      .locator('#' + id)
+      .evaluate((el) => parseFloat(getComputedStyle(el).transitionDuration));
+    expect(duracao).toBeLessThanOrEqual(0.001);
+    await botao.click();
+    await expect(botao).toHaveAttribute('aria-expanded', 'false');
+  }
 });

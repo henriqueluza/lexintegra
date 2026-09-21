@@ -21,7 +21,7 @@
         fetchpriority="high"
       />
       <div class="foto__legenda">
-        <span>Clareza para decidir.</span><span>Estrutura para seguir.</span>
+        <span>Estrutura para seguir.</span><span>Clareza para decidir.</span>
       </div>
     </div>
   </section>
@@ -30,7 +30,9 @@
     <p>
       Saiba o que está contratando, converse com quem cuida do seu pedido e
       acompanhe cada etapa. A LexIntegra aproxima sua empresa do trabalho
-      jurídico, com organização e transparência.
+      jurídico, com organização e transparência. Uma boa decisão começa com
+      informações compreensíveis: o escopo do serviço, os documentos necessários
+      e um histórico que pode ser consultado ao longo do atendimento.
     </p>
   </section>
   <section class="secao" id="como">
@@ -64,7 +66,6 @@
         <app-link-acao destino="/servicos" variante="secundario"
           >Explorar serviços e escopos</app-link-acao
         >
-        @if (todasImagens) {
         <img
           class="imagem-editorial"
           src="/imagens/assinatura-lexintegra.jpg"
@@ -73,7 +74,6 @@
           height="800"
           loading="lazy"
         />
-        }
       </div>
       <div class="beneficios">
         <article>
@@ -115,7 +115,9 @@
       <p class="apoio">
         Na sua área, cada serviço tem seu próprio pedido. Consulte o andamento,
         envie o contexto necessário e revise os documentos sem perder o
-        histórico.
+        histórico. Você encontra as versões disponíveis dos documentos e as
+        orientações do atendimento no contexto de cada pedido. Assim, a equipe
+        recebe informações organizadas e você sabe qual é o próximo passo.
       </p>
       <app-link-acao destino="/entrar" variante="secundario"
         >Acessar minha área</app-link-acao
@@ -125,7 +127,6 @@
   <section class="secao faixa duvidas">
     <div>
       <h2>Antes de começar</h2>
-      @if (todasImagens) {
       <img
         class="imagem-editorial"
         src="/imagens/criterio-lexintegra.jpg"
@@ -134,41 +135,132 @@
         height="800"
         loading="lazy"
       />
-      }
     </div>
     <div>
-      <details>
-        <summary>Preciso pagar para conhecer os serviços?</summary>
-        <p>
-          Não. O cadastro inicial libera o catálogo e seus valores. A
-          contratação acontece somente quando você escolhe os serviços e
-          confirma o pagamento.
-        </p>
-      </details>
-      <details>
-        <summary>O cadastro já cria uma senha?</summary>
-        <p>
-          O cadastro inicial libera a consulta ao catálogo. Após a primeira
-          compra, enviamos ao seu e-mail um link para definir a senha da área de
-          acompanhamento. Se já tem acesso, use Entrar.
-        </p>
-      </details>
-      <details>
-        <summary>O que está incluído em cada serviço?</summary>
-        <p>
-          O catálogo informa o escopo, os entregáveis e as condições de reuniões
-          e revisões de cada produto. Leia essas informações antes de adicionar
-          ao carrinho.
-        </p>
-      </details>
-      <details>
-        <summary>Como acompanho meu pedido?</summary>
-        <p>
-          Depois da confirmação do pagamento, acesse sua área e preencha a ficha
-          inicial. Cada pedido reúne o andamento dos entregáveis, os arquivos e
-          as informações do atendimento.
-        </p>
-      </details>
+      <article class="pergunta">
+        <h3>
+          <button
+            type="button"
+            id="pergunta-0"
+            [attr.aria-expanded]="perguntasAbertas().has(0)"
+            aria-controls="resposta-0"
+            (click)="alternar(0)"
+          >
+            Preciso pagar para conhecer os serviços?<span aria-hidden="true"
+              >{{ perguntasAbertas().has(0) ? '−' : '+' }}</span
+            >
+          </button>
+        </h3>
+        <div
+          class="resposta"
+          id="resposta-0"
+          role="region"
+          aria-labelledby="pergunta-0"
+          [class.resposta--aberta]="perguntasAbertas().has(0)"
+          [attr.inert]="perguntasAbertas().has(0) ? null : ''"
+        >
+          <div>
+            <p>
+              Não. O cadastro inicial libera o catálogo e seus valores. A
+              contratação acontece somente quando você escolhe os serviços e
+              confirma o pagamento.
+            </p>
+          </div>
+        </div>
+      </article>
+      <article class="pergunta">
+        <h3>
+          <button
+            type="button"
+            id="pergunta-1"
+            [attr.aria-expanded]="perguntasAbertas().has(1)"
+            aria-controls="resposta-1"
+            (click)="alternar(1)"
+          >
+            O cadastro já cria uma senha?<span aria-hidden="true"
+              >{{ perguntasAbertas().has(1) ? '−' : '+' }}</span
+            >
+          </button>
+        </h3>
+        <div
+          class="resposta"
+          id="resposta-1"
+          role="region"
+          aria-labelledby="pergunta-1"
+          [class.resposta--aberta]="perguntasAbertas().has(1)"
+          [attr.inert]="perguntasAbertas().has(1) ? null : ''"
+        >
+          <div>
+            <p>
+              O cadastro inicial libera a consulta ao catálogo. Após a primeira
+              compra, enviamos ao seu e-mail um link para definir a senha da
+              área de acompanhamento. Se já tem acesso, use Entrar.
+            </p>
+          </div>
+        </div>
+      </article>
+      <article class="pergunta">
+        <h3>
+          <button
+            type="button"
+            id="pergunta-2"
+            [attr.aria-expanded]="perguntasAbertas().has(2)"
+            aria-controls="resposta-2"
+            (click)="alternar(2)"
+          >
+            O que está incluído em cada serviço?<span aria-hidden="true"
+              >{{ perguntasAbertas().has(2) ? '−' : '+' }}</span
+            >
+          </button>
+        </h3>
+        <div
+          class="resposta"
+          id="resposta-2"
+          role="region"
+          aria-labelledby="pergunta-2"
+          [class.resposta--aberta]="perguntasAbertas().has(2)"
+          [attr.inert]="perguntasAbertas().has(2) ? null : ''"
+        >
+          <div>
+            <p>
+              O catálogo informa o escopo, os entregáveis e as condições de
+              reuniões e revisões de cada produto. Leia essas informações antes
+              de adicionar ao carrinho.
+            </p>
+          </div>
+        </div>
+      </article>
+      <article class="pergunta">
+        <h3>
+          <button
+            type="button"
+            id="pergunta-3"
+            [attr.aria-expanded]="perguntasAbertas().has(3)"
+            aria-controls="resposta-3"
+            (click)="alternar(3)"
+          >
+            Como acompanho meu pedido?<span aria-hidden="true"
+              >{{ perguntasAbertas().has(3) ? '−' : '+' }}</span
+            >
+          </button>
+        </h3>
+        <div
+          class="resposta"
+          id="resposta-3"
+          role="region"
+          aria-labelledby="pergunta-3"
+          [class.resposta--aberta]="perguntasAbertas().has(3)"
+          [attr.inert]="perguntasAbertas().has(3) ? null : ''"
+        >
+          <div>
+            <p>
+              Depois da confirmação do pagamento, acesse sua área e preencha a
+              ficha inicial. Cada pedido reúne o andamento dos entregáveis, os
+              arquivos e as informações do atendimento.
+            </p>
+          </div>
+        </div>
+      </article>
     </div>
   </section>
   <section class="convite faixa">
@@ -178,16 +270,54 @@
     >
   </section>
 </main>
-<footer class="rodape faixa">
-  <div>
-    <a class="marca" href="/">LexIntegra</a>
-    <p>{{ textos.rodape.linha }}</p>
+<footer class="rodape">
+  <div class="faixa rodape__grade">
+    <div class="rodape__marca">
+      <a href="/" aria-label="LexIntegra — início"
+        ><img
+          src="/imagens/logo-lexintegra.png"
+          alt="LexIntegra"
+          width="128"
+          height="128"
+          loading="lazy"
+      /></a>
+      <h2>Direito próximo.<br />Do primeiro passo à entrega.</h2>
+      <p>
+        Um espaço para conhecer serviços jurídicos, organizar informações e
+        acompanhar o trabalho realizado para a sua empresa.
+      </p>
+    </div>
+    <nav aria-label="Explore a LexIntegra">
+      <h3>Comece por aqui</h3>
+      <a href="/#como">Como funciona</a
+      ><a href="/servicos">Serviços e escopos</a
+      ><a href="/cadastro">Cadastro inicial</a
+      ><a href="/entrar">Área de acompanhamento</a>
+    </nav>
+    <div>
+      <h3>Um atendimento com contexto</h3>
+      <p>
+        Depois da contratação, concentre documentos, observações e informações
+        no seu pedido. Consulte as condições de reuniões e revisões no escopo de
+        cada serviço.
+      </p>
+      <p>
+        Acompanhe as notificações no e-mail informado no cadastro e mantenha
+        seus dados atualizados com o responsável pelo atendimento.
+      </p>
+    </div>
+    <nav aria-label="Informações legais">
+      <h3>Informação e confiança</h3>
+      <a href="/privacidade">Privacidade e dados pessoais</a
+      ><a href="/termos">Termos de contratação</a>
+      <p>
+        A contratação depende do escopo escolhido. A prestação de serviços
+        jurídicos não representa garantia de resultado.
+      </p>
+    </nav>
   </div>
-  <nav aria-label="Rodapé">
-    <a href="/privacidade">Privacidade</a
-    ><a href="/termos">Termos de contratação</a
-    ><a [href]="todasImagens ? '/' : '/todas-as-imagens'"
-      >{{ todasImagens ? 'Ver seleção de imagens' : 'Ver todas as imagens' }}</a
-    >
-  </nav>
+  <div class="faixa rodape__base">
+    <p>© 2026 LexIntegra. Plataforma jurídica inteligente.</p>
+    <p>Clareza em cada etapa. Organização em cada pedido.</p>
+  </div>
 </footer>

@@ -1,6 +1,8 @@
+import { SECOES_TERMOS } from './documentos-legais.js';
 /** Minuta operacional redigida no redesign. Revisão jurídica antes de produção. */
-export const VERSAO_TERMOS_CHECKOUT = 'checkout-v1-minuta-2026-09';
-export const TEXTO_TERMOS_CHECKOUT =
-  'Ao contratar, confira o escopo, os entregáveis, as reuniões, as revisões incluídas e o valor de cada serviço. Cada item pago gera um pedido independente, com as condições registradas no momento da contratação. O início do trabalho depende da confirmação do pagamento e das informações necessárias ao atendimento. No fluxo da plataforma, o cancelamento e a solicitação de estorno estão disponíveis antes de começar a elaboração; cancelar o pedido não devolve automaticamente o valor. O estorno é analisado e processado pelo escritório responsável. Serviços já em execução exigem avaliação individual do atendimento. Estas condições não afastam direitos assegurados pela legislação aplicável, inclusive o direito de arrependimento quando cabível. A contratação não representa garantia de resultado jurídico.';
+export const VERSAO_TERMOS_CHECKOUT = 'checkout-v2-minuta-2026-09';
+export const TEXTO_TERMOS_CHECKOUT = SECOES_TERMOS.map(
+  (secao) => secao.titulo + '. ' + secao.texto,
+).join('\n\n');
 export const RESUMO_TERMOS_CHECKOUT =
   'Confira o escopo e as condições de cada serviço. No fluxo da plataforma, o estorno é solicitado antes de o pedido começar a ser elaborado. Os direitos legais aplicáveis são preservados.';

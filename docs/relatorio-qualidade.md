@@ -11,9 +11,9 @@ mutacao no `stryker.config.mjs`, complexidade e fronteiras no `pnpm lint`.
 | Pacote | Statements | Branches | Functions | Lines |
 |---|---|---|---|---|
 | API (NestJS) | 91.28% | 82.23% | 90.47% | 92.45% |
-| Web (Angular) | 95.22% | 88.37% | 90.28% | 96.22% |
+| Web (Angular) | 95.28% | 88.47% | 90.12% | 96.33% |
 | Scanner (ClamAV) | 100% | 90.47% | 100% | 100% |
-| shared | 98.11% | 100% | 100% | 97.93% |
+| shared | 98.13% | 100% | 100% | 97.95% |
 
 Rode `pnpm test:coverage` para atualizar.
 
@@ -32,7 +32,7 @@ Rode `pnpm mutacao` para atualizar.
 
 ## Complexidade ciclomatica
 
-Funcoes analisadas: **5605**. Limite do lint: **10**.
+Funcoes analisadas: **5617**. Limite do lint: **10**.
 
 | Complexidade | Funcao | Arquivo |
 |---|---|---|
@@ -49,7 +49,7 @@ Funcoes analisadas: **5605**. Limite do lint: **10**.
 
 ## Dependencias
 
-- Modulos no grafo: **572**
-- Dependencias: **2444**
+- Modulos no grafo: **575**
+- Dependencias: **2451**
 - Ciclos: **0**
 - Violacoes de fronteira: **0** erro(s), 0 aviso(s)

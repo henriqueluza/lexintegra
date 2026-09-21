@@ -5,7 +5,7 @@ import {
 } from './termos-checkout.js';
 describe('termos do checkout', () => {
   it('versiona a minuta sem reaproveitar o aceite anterior', () => {
-    expect(VERSAO_TERMOS_CHECKOUT).toBe('checkout-v1-minuta-2026-09');
+    expect(VERSAO_TERMOS_CHECKOUT).toBe('checkout-v2-minuta-2026-09');
   });
   it('explica cancelamento, estorno e preserva direitos legais', () => {
     expect(TEXTO_TERMOS_CHECKOUT).not.toContain('TODO');

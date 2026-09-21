@@ -1,0 +1,115 @@
+.pergunta {
+  padding: var(--s5) 0;
+  border-bottom: var(--borda-fina) solid var(--divisor);
+}
+.pergunta h3 {
+  margin: 0;
+}
+.pergunta button {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s4);
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pergunta button span {
+  color: var(--acento-forte);
+}
+.resposta {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--duracao-acordeao) ease,
+    opacity var(--duracao-acordeao) ease;
+}
+.resposta--aberta {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.resposta > div {
+  overflow: hidden;
+}
+.resposta p {
+  margin-top: var(--s4);
+  color: var(--texto-2);
+  line-height: var(--altura-solta);
+}
+.rodape {
+  background: var(--superficie-sutil);
+  border-top: var(--borda-grossa) solid var(--acento);
+  padding: var(--s8) 0 var(--s5);
+}
+.rodape__grade {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1.3fr 1fr;
+  gap: var(--s7);
+}
+.rodape img {
+  background: var(--marca-fundo);
+  padding: var(--s2);
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+  margin-bottom: var(--s5);
+}
+.rodape h2 {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t2);
+  line-height: var(--altura-titulo);
+  margin-bottom: var(--s4);
+}
+.rodape h3 {
+  font-size: var(--t-menor);
+  color: var(--acento-forte);
+  margin-bottom: var(--s4);
+}
+.rodape p,
+.rodape a {
+  color: var(--texto-2);
+  font-size: var(--t-menor);
+  line-height: var(--altura-solta);
+}
+.rodape p + p {
+  margin-top: var(--s4);
+}
+.rodape nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.rodape a {
+  text-underline-offset: var(--s1);
+}
+.rodape__base {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s4);
+  margin-top: var(--s7);
+  padding-top: var(--s5);
+  border-top: var(--borda-fina) solid var(--divisor);
+}
+@media (max-width: 1000px) {
+  .rodape__grade {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .rodape__grade {
+    grid-template-columns: 1fr;
+  }
+  .rodape__base {
+    flex-direction: column;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .resposta {
+    transition: none;
+  }
+}
