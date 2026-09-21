@@ -97,6 +97,13 @@ export class ConsultaReunioesService {
    * efeitos em sistemas diferentes (Auth, claim, documento), e o que esta
    * conferencia impede e o administrador suspender sem SABER que ha compromisso
    * marcado — nao uma corrida de milissegundos.
+   *
+   * A CORRIDA QUE SOBRA E RISCO ACEITO, registrada no ADR-21 ("Um risco
+   * aceito"): entre esta leitura e a escrita da suspensao, um cliente pode
+   * marcar, porque a transacao dele le `advogados/{id}` e ainda encontra
+   * `ativo`. O resultado e visivel e reparavel — o administrador cancela pela
+   * decisao H, com devolucao, e redistribui. Fechar exigiria trava por advogado
+   * no caminho mais quente do modulo, ou transacao sobre o Auth, que nao existe.
    */
   async futuraAtivaDoAdvogado(
     advogadoId: string,

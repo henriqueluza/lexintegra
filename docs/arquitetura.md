@@ -698,8 +698,9 @@ Marcos**, e vive numa constante em `packages/shared/src/regras-reuniao.ts`.
 
 **G. Advogado suspenso não recebe reunião.** A transação de agendar e a de remarcar leem
 `advogados/{advogadoId}` e recusam se estiver suspenso. É o outro lado de **D**: sem as
-duas, a corrida entre "suspender" e "marcar" termina com uma reunião nova na agenda de
-quem acabou de perder o acesso.
+duas, marcar na agenda de quem acabou de perder o acesso seria o caso comum, e não o raro.
+As duas juntas **estreitam** a corrida entre "suspender" e "marcar", mas não a fecham — ver
+"Um risco aceito", abaixo.
 
 **H. Cancelamento pelo administrador, sempre com devolução. PROVISÓRIO.** O escritório
 precisa poder desmarcar — advogado doente, agenda remanejada — e nesse caso a culpa não é
@@ -717,6 +718,41 @@ Etapa 8 ficou: **código completo e testado contra um adaptador falso**, com a t
 no código (`REUNIOES_MODO`, que **não aceita `graph`**) no mesmo espírito da regra
 inviolável 20. O adaptador do Graph está escrito, não é alcançável, e não foi validado
 contra tenant nenhum.
+
+#### Um risco aceito: a corrida entre suspender e marcar
+
+A decisão **D** confere, na suspensão, se o advogado tem reunião futura ativa; a **G**
+confere, no agendamento, se o advogado está suspenso. As duas juntas estreitam a janela,
+mas **não a fecham**, e a razão é que as conferências vivem em transações diferentes — a da
+suspensão vive fora de qualquer transação.
+
+O entrelaçamento que sobra:
+
+1. o administrador suspende; a conferência lê as reuniões do advogado e não acha nenhuma futura;
+2. **nesse intervalo**, um cliente marca. A transação de agendar lê `advogados/{id}`, encontra `ativo`, reserva o slot e grava a reunião;
+3. a suspensão grava `status: suspenso` e revoga os tokens.
+
+O resultado é exatamente o que **D** existe para evitar: advogado suspenso com reunião
+futura marcada, e a sala criada em nome dele.
+
+**Por que é aceito.** A janela são as centenas de milissegundos entre a leitura do passo 1 e
+a escrita do passo 3, e as duas operações são raras e humanas — suspender é ato do
+administrador, marcar é ato de um cliente *daquele* advogado. Mais importante: o resultado
+é **visível e reparável**. A reunião aparece na agenda e no painel do administrador, que a
+cancela pela decisão **H** — sempre com devolução do crédito — e redistribui o pedido. Nada
+fica silenciosamente errado: nenhum dinheiro se move, e nenhum convite com link de outra
+reunião sai. O custo real é uma sala do Teams criada em nome de quem não vai comparecer.
+
+**Por que não é fechado.** Fechar exigiria uma transação cobrindo três sistemas, e só um
+deles é transacional: o documento do advogado está no Firestore, mas `revokeRefreshTokens` e
+a custom claim estão no Firebase Auth, que não participa de transação do Firestore. A
+alternativa seria um documento de trava por advogado, escrito por **toda** marcação de
+reunião — uma escrita a mais no caminho mais quente do módulo, para proteger contra uma
+corrida cuja reparação é um clique.
+
+**O gatilho para revisitar:** se a suspensão deixar de ser um ato manual raro — por exemplo,
+se passar a ser automática por inatividade ou por integração de RH. Aí a frequência muda, e
+com ela a conta.
 
 #### Pontos a revisitar
 
@@ -951,7 +987,7 @@ Nada de envio de e-mail dentro da transação. O evento vai para o outbox, e o c
 
 **Regra de cancelamento com 24 horas, ver ADR-12.** A verificação da antecedência mínima acontece no servidor, comparando o momento da solicitação de cancelamento com o `DTSTART` da reunião — nunca confiando em validação só de interface.
 
-**Como ficou, na Etapa 10 (ver ADR-21).** A transação acima ganhou duas leituras que o texto original não previa: `advogados/{id}`, para recusar advogado suspenso — é o que fecha a corrida entre "suspender" e "marcar" —, e o documento do pedido, que ela também **escreve**, porque a reserva do slot sozinha não serializa duas marcações do mesmo pedido em slots diferentes (seção 5.1).
+**Como ficou, na Etapa 10 (ver ADR-21).** A transação acima ganhou duas leituras que o texto original não previa: `advogados/{id}`, para recusar advogado suspenso — o que **estreita**, sem fechar, a corrida entre "suspender" e "marcar"; o resto dela é risco aceito e registrado no ADR-21 —, e o documento do pedido, que ela também **escreve**, porque a reserva do slot sozinha não serializa duas marcações do mesmo pedido em slots diferentes (seção 5.1).
 
 A falha prevista acima é o estado `reservada_sem_link`, e ele é desenhado e não excepcional: com a integração ainda desligada, **toda** reunião nasce assim. O painel do administrador lista essas reuniões com o id do registro do outbox, e o botão de tentar de novo reenvia **aquele** registro pelo caminho normal — regra inviolável 3, nada de quarto caminho de entrega.
 
