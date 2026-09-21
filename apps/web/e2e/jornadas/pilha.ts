@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { expect, test as base, type Page } from '@playwright/test';
+import { RELOGIO_DA_PILHA } from '../../playwright.pilha.config';
 
 /**
  * O arnes das jornadas: estado limpo, semente conhecida e login por perfil.
@@ -58,11 +59,18 @@ async function limpar(): Promise<void> {
   );
 }
 
+/**
+ * A SEMENTE RECEBE O MESMO RELOGIO QUE A API (Etapa 10). Sao tres relogios a
+ * concordar — servidor, navegador e semente —, e este e o terceiro: a grade de
+ * horarios e gravada relativa a ele, e a API so enxerga a semana corrente e a
+ * seguinte. Com a semente no relogio de verdade e a API no fixo, o seletor
+ * viria vazio, sem erro nenhum e sem nada que dissesse por que.
+ */
 function semear(): void {
   execFileSync('node', ['scripts/semear-emulador.mjs'], {
     cwd: RAIZ,
     stdio: 'pipe',
-    env: process.env,
+    env: { ...process.env, RELOGIO_FIXO: RELOGIO_DA_PILHA },
   });
 }
 
@@ -109,11 +117,25 @@ export async function entrar(page: Page, email: string): Promise<void> {
   await expect(page).not.toHaveURL(/\/entrar/);
 }
 
+/**
+ * O relogio do NAVEGADOR, fixo no mesmo instante que o do servidor.
+ *
+ * Os dois precisam concordar (Etapa 10). A tela decide com as funcoes de
+ * `shared/regras-reuniao` — se devolve credito, se da para remarcar — e o
+ * servidor decide com as MESMAS: com relogios diferentes, a tela ofereceria
+ * remarcar num horario que o servidor recusa por estar dentro das 24 horas.
+ *
+ * `RELOGIO_DA_PILHA` mora na configuracao do Playwright, que e quem passa a
+ * variavel a API. Um literal repetido aqui seria a primeira coisa a divergir.
+ */
+export { RELOGIO_DA_PILHA };
+
 export const test = base.extend({
   // eslint-disable-next-line no-empty-pattern -- assinatura de fixture do Playwright
   page: async ({ page }, usar) => {
     await limpar();
     semear();
+    await page.clock.setFixedTime(new Date(RELOGIO_DA_PILHA));
     await usar(page);
   },
 });

@@ -57,16 +57,19 @@ export class ShellAutenticada {
         /* Etapa 8: as devolucoes que o escritorio faz por fora do gateway. */
         { rota: '/admin/estornos', rotulo: 'Estornos' },
         /*
-         * Por ultimo, e de proposito: e uma tela de diagnostico, visitada quando
-         * algo deu errado, e nao parte do trabalho do dia.
+         * As duas ultimas sao telas de DIAGNOSTICO, visitadas quando algo deu
+         * errado — nao parte do trabalho do dia. Por isso no fim.
          */
         { rota: '/admin/entregas', rotulo: 'Entregas' },
+        { rota: '/admin/reunioes', rotulo: 'Reunioes' },
       ];
     }
 
     if (perfil === 'advogado') {
       return [
         { rota: '/advogado/demandas', rotulo: 'Demandas' },
+        /* Etapa 10: o que ele tem marcado, atravessando os pedidos. */
+        { rota: '/advogado/agenda', rotulo: 'Agenda' },
         { rota: '/advogado/disponibilidade', rotulo: 'Disponibilidade' },
       ];
     }

@@ -132,9 +132,10 @@ describe('rotas', () => {
    * a Etapa 10 a implementa la.
    */
   it('nao existe rota de agendamento fora do cartao do pedido', () => {
+    const cliente = routes.find((r) => r.path === 'painel');
     const caminhos = [
       ...routes.map((r) => r.path ?? ''),
-      ...routes.flatMap((r) => (r.children ?? []).map((f) => f.path ?? '')),
+      ...(cliente?.children ?? []).map((f) => f.path ?? ''),
     ];
 
     const suspeitas = caminhos.filter((caminho) =>
@@ -143,6 +144,38 @@ describe('rotas', () => {
 
     expect(suspeitas).toEqual([]);
   });
+
+  /**
+   * O ESTREITAMENTO DA REGRA ACIMA, E POR QUE ELE NAO A ENFRAQUECE (Etapa 10).
+   *
+   * Ate aqui o filtro varria TODAS as rotas e todos os filhos. A Etapa 10 trouxe
+   * duas telas que casam com o padrao e que sao legitimas — e por isso o filtro
+   * passou a valer no topo e na arvore do CLIENTE, que e onde a ambiguidade
+   * existe.
+   *
+   * A razao da regra e o saldo: cada PEDIDO tem reunioes, janela e intervalo
+   * proprios, e uma tela de agendamento solta nao saberia qual debitar. Isso vale
+   * para quem MARCA — o cliente. O advogado so olha a propria agenda e o
+   * administrador so olha a fila de reunioes sem sala: nenhum dos dois debita
+   * saldo de pedido nenhum, entao nao ha o que confundir.
+   *
+   * A lista e NOMINAL para que uma rota de reuniao nova continue exigindo passar
+   * por este arquivo — que era o ponto do teste original.
+   */
+  it.each([
+    ['advogado', 'agenda'],
+    ['admin', 'reunioes'],
+  ])(
+    'a tela de reuniao de %s existe sob a arvore dela, e so ela',
+    (raiz, caminho) => {
+      const arvore = routes.find((r) => r.path === raiz);
+      const deReuniao = (arvore?.children ?? [])
+        .map((f) => f.path ?? '')
+        .filter((p) => /reuni|agend|calendario|marcar/i.test(p));
+
+      expect(deReuniao).toEqual([caminho]);
+    },
+  );
 
   /**
    * As duas areas autenticadas sao arvores SEPARADAS, com guard de perfil
@@ -186,6 +219,8 @@ describe('rotas', () => {
     'clientes',
     'estornos',
     'entregas',
+    /* Etapa 10, arquitetura 7.2: a fila de reunioes sem sala. */
+    'reunioes',
   ])('registra a tela administrativa %s sob admin', (caminho) => {
     const admin = routes.find((r) => r.path === 'admin');
 

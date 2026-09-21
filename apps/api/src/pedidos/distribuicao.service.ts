@@ -9,6 +9,7 @@ import {
   FieldValue,
   type Firestore,
   type Query,
+  type Transaction,
 } from 'firebase-admin/firestore';
 import type {
   PedidoParaDistribuir,
@@ -17,6 +18,7 @@ import type {
 } from 'shared';
 import { COLECAO_ADVOGADOS } from '../advogados/advogados.service.js';
 import { ClientesService } from '../clientes/clientes.service.js';
+import { ConsultaReunioesService } from '../reunioes/consulta.service.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import {
   COLECAO_PEDIDOS,
@@ -42,6 +44,7 @@ export class DistribuicaoService {
   constructor(
     @Inject(FIRESTORE) private readonly db: Firestore,
     private readonly clientes: ClientesService,
+    private readonly reunioes: ConsultaReunioesService,
   ) {}
 
   /** A caixa de entrada do administrador (item 2.5.5). */
@@ -122,6 +125,14 @@ export class DistribuicaoService {
         );
       }
 
+      /*
+       * ADR-21, decisao D. Trocar o advogado de um pedido com reuniao marcada
+       * deixaria o compromisso na agenda de quem nao atende mais o caso — e a
+       * sala do Teams ja criada em nome dele. A leitura acontece DENTRO da
+       * transacao, junto com o resto, e e a ultima antes da escrita.
+       */
+      await this.exigirSemReuniaoFutura(transacao, pedidoId);
+
       transacao.update(referencia, {
         advogadoId,
         distribuido: true,
@@ -150,6 +161,23 @@ export class DistribuicaoService {
    * o campo convidaria a trata-lo como campo editavel, e o proximo passo seria
    * alguem mandar `advogadoId` direto num `PUT` de outra coisa.
    */
+  /**
+   * ADR-21, decisao D. 409 enquanto houver reuniao FUTURA ativa.
+   *
+   * Reuniao passada nao impede nada: ela aconteceu, e o historico dela nao e
+   * motivo para travar uma decisao administrativa de hoje.
+   */
+  private async exigirSemReuniaoFutura(
+    transacao: Transaction,
+    pedidoId: string,
+  ): Promise<void> {
+    if (await this.reunioes.futuraAtivaNoPedido(transacao, pedidoId)) {
+      throw new ConflictException(
+        'Este pedido tem reuniao marcada. Cancele a reuniao antes de mudar o advogado.',
+      );
+    }
+  }
+
   async remover(
     pedidoId: string,
     adminUid: string,
@@ -160,6 +188,16 @@ export class DistribuicaoService {
     if (!documento.exists) {
       throw new NotFoundException('Pedido nao encontrado.');
     }
+
+    /*
+     * ADR-21, decisao D, do outro lado: devolver o pedido a caixa de entrada com
+     * reuniao marcada deixaria o cliente com um compromisso e o pedido sem
+     * advogado. Numa transacao propria — este caminho nao tinha uma, e a
+     * conferencia precisa ler.
+     */
+    await this.db.runTransaction((transacao) =>
+      this.exigirSemReuniaoFutura(transacao, pedidoId),
+    );
 
     await referencia.update({
       advogadoId: null,

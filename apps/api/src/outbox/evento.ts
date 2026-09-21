@@ -43,17 +43,41 @@ export interface EstornoDoEvento {
   readonly origem: OrigemDaCobranca;
 }
 
+/**
+ * O que os eventos de reuniao precisam para ser executados (Etapa 10).
+ *
+ * SO IDS E UM INTEIRO. Nao ha link, nao ha horario e nao ha nome — como em
+ * `EstornoDoEvento`, e pela mesma razao: o link e credencial de acesso a uma sala
+ * e o horario e dado do titular, e os dois sao lidos da REUNIAO no momento do
+ * despacho. Guardados aqui, ficariam em repouso num segundo lugar, replicados no
+ * backup e no PITR, e a secao 13 pede caminho conhecido de eliminacao para cada
+ * lugar onde o dado exista.
+ *
+ * `sequence` e a excecao util: ele nao identifica ninguem, e e o que permite ao
+ * despachante descobrir que o convite que ele esta prestes a mandar ja foi
+ * superado por uma remarcacao.
+ */
+export interface ReuniaoDoEvento {
+  readonly pedidoId: string;
+  readonly reuniaoId: string;
+  /** O `SEQUENCE` do iCalendar no momento em que o evento nasceu. */
+  readonly sequence: number;
+}
+
 export interface NovoEvento {
   readonly tipo: TipoEvento;
   readonly destinatarioUid: string;
   /** So em `estorno-integral`. E o pagamento, e nao o destinatario, que da o id. */
   readonly estorno?: EstornoDoEvento;
+  /** Nos tres eventos de reuniao da Etapa 10. */
+  readonly reuniao?: ReuniaoDoEvento;
 }
 
 export interface RegistroOutbox {
   readonly tipo: TipoEvento;
   readonly destinatarioUid: string;
   readonly estorno?: EstornoDoEvento;
+  readonly reuniao?: ReuniaoDoEvento;
   readonly estado: EstadoEntrega;
   readonly criadoEm: Timestamp;
   /** Quantas vezes o registro foi REIVINDICADO. Ver `OutboxService.reivindicar`. */
@@ -128,35 +152,69 @@ export function idDoEvento(
   uid: string,
   agora: number = Date.now(),
 ): string {
-  if (tipo === 'definir-senha') return `definir-senha_${uid}`;
+  switch (tipo) {
+    case 'definir-senha':
+      return `definir-senha_${uid}`;
 
-  /*
-   * O acesso do cliente acontece UMA vez por conta: a primeira compra. Quem compra
-   * de novo ja tem senha, e o id deterministico faz a segunda compra cair no
-   * mesmo documento em vez de mandar outro link — quem perdeu o primeiro usa
-   * "esqueci a senha".
-   */
-  if (tipo === 'acesso-cliente') return `acesso-cliente_${uid}`;
+    /*
+     * O acesso do cliente acontece UMA vez por conta: a primeira compra. Quem
+     * compra de novo ja tem senha, e o id deterministico faz a segunda compra
+     * cair no mesmo documento em vez de mandar outro link — quem perdeu o
+     * primeiro usa "esqueci a senha".
+     */
+    case 'acesso-cliente':
+      return `acesso-cliente_${uid}`;
 
-  /*
-   * Um estorno integral por PAGAMENTO: quem chama passa o id do pagamento no
-   * lugar do uid (ver `chaveDoEvento`). Um segundo pedido de estorno da mesma
-   * cobranca cai no mesmo documento — o gateway nao recebe dois.
-   */
-  if (tipo === 'estorno-integral') return `estorno-integral_${uid}`;
+    /*
+     * Um estorno integral por PAGAMENTO: quem chama passa o id do pagamento no
+     * lugar do uid (ver `chaveDoEvento`). Um segundo pedido de estorno da mesma
+     * cobranca cai no mesmo documento — o gateway nao recebe dois.
+     */
+    case 'estorno-integral':
+      return `estorno-integral_${uid}`;
 
-  /*
-   * O aviso de exclusao acontece UMA vez por pedido fechado, e o pedido ja e
-   * marcado como avisado na mesma transacao. O uid basta — e se o job repetir a
-   * passagem no mesmo dia, o `create` estoura como duplicata esperada em vez de
-   * mandar o mesmo aviso duas vezes.
-   */
-  if (tipo === 'aviso-exclusao-arquivos') {
-    return `aviso-exclusao_${uid}`;
+    /*
+     * O aviso de exclusao acontece UMA vez por pedido fechado, e o pedido ja e
+     * marcado como avisado na mesma transacao. O uid basta — e se o job repetir
+     * a passagem no mesmo dia, o `create` estoura como duplicata esperada em vez
+     * de mandar o mesmo aviso duas vezes.
+     */
+    case 'aviso-exclusao-arquivos':
+      return `aviso-exclusao_${uid}`;
+
+    /*
+     * OS TRES DA ETAPA 10 tem a mesma FORMA de id — `tipo_chave` —, e o que os
+     * distingue e a CHAVE, montada em `chaveDoEvento`: a sala leva so (pedido,
+     * reuniao); o convite e o cancelamento levam tambem `sequence` e o
+     * destinatario. O porque de cada parte esta la, junto da composicao.
+     */
+    case 'criar-sala-reuniao':
+    case 'convite-reuniao':
+    case 'cancelamento-reuniao':
+      return `${tipo}_${uid}`;
+
+    case 'redefinir-senha': {
+      const janela = Math.floor(agora / JANELA_REDEFINICAO_MS);
+      return `redefinir-senha_${uid}_${janela}`;
+    }
+
+    default:
+      return semRamo(tipo);
   }
+}
 
-  const janela = Math.floor(agora / JANELA_REDEFINICAO_MS);
-  return `redefinir-senha_${uid}_${janela}`;
+/**
+ * O tipo que nao tem ramo. NAO ALCANCAVEL: o `never` faz o compilador recusar
+ * antes.
+ *
+ * ESTE E O PONTO DE TODO O `switch`. Antes daqui, `idDoEvento` terminava num
+ * `return` de `redefinir-senha`, e um tipo novo sem ramo proprio ganhava um id
+ * `redefinir-senha_...` EM SILENCIO — com a janela de 15 minutos junto, o que
+ * faria dois eventos distintos do mesmo destinatario colidirem. Agora o
+ * compilador cobra o ramo.
+ */
+function semRamo(tipo: never): never {
+  throw new Error(`Tipo de evento sem ramo em idDoEvento: ${String(tipo)}`);
 }
 
 /**
@@ -174,7 +232,35 @@ export function ehDuplicata(erro: unknown): boolean {
   );
 }
 
-/** A chave do id: o pagamento, no estorno integral; o destinatario, no resto. */
+/**
+ * A chave do id: o pagamento, no estorno; a reuniao, nos tres da Etapa 10; o
+ * destinatario, no resto.
+ *
+ * A DA SALA NAO LEVA `sequence` NEM DESTINATARIO — uma sala por reuniao, para
+ * sempre. Remarcar nao cria sala nova (ADR-21, decisao 7), e o `create` que
+ * estoura na segunda passagem e a prova disso. E o id da reuniao ser estavel e o
+ * que faz esta chave continuar valendo depois de remarcada.
+ *
+ * AS DO CONVITE E DO CANCELAMENTO LEVAM OS DOIS, e as duas partes sao
+ * necessarias:
+ *
+ * - sem o DESTINATARIO, o convite do cliente e o do advogado colidiriam: o
+ *   segundo `create` estouraria como duplicata esperada e UM DOS DOIS nunca
+ *   receberia o convite, sem erro nenhum;
+ *
+ * - sem o `sequence`, o convite da remarcacao colidiria com o convite original
+ *   — que ja foi entregue — e seria engolido como duplicata. O cliente ficaria
+ *   com o horario VELHO na agenda e nada falharia. E a mesma classe de defeito
+ *   que o campo `ciclo` resolve no reenvio manual.
+ */
 export function chaveDoEvento(evento: NovoEvento): string {
-  return evento.estorno?.pagamentoId ?? evento.destinatarioUid;
+  if (evento.estorno !== undefined) return evento.estorno.pagamentoId;
+
+  const reuniao = evento.reuniao;
+  if (reuniao === undefined) return evento.destinatarioUid;
+
+  const alvo = `${reuniao.pedidoId}_${reuniao.reuniaoId}`;
+  if (evento.tipo === 'criar-sala-reuniao') return alvo;
+
+  return `${alvo}_s${String(reuniao.sequence)}_${evento.destinatarioUid}`;
 }

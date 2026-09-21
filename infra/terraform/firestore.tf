@@ -278,3 +278,69 @@ resource "google_firestore_index" "estornos_pendentes" {
     order      = "DESCENDING"
   }
 }
+
+# ------------------------------------------------------------------------------
+# Etapa 10 — agendamento de reunioes
+# ------------------------------------------------------------------------------
+# DOIS INDICES, E OS DOIS SAO DE GRUPO DE COLECOES (`query_scope`), porque
+# `reunioes` e SUBCOLECAO de `pedidos` e as duas consultas atravessam todos eles.
+#
+# E o oposto do que a Etapa 8 fez com `estornos`, que virou colecao RAIZ
+# justamente para evitar indice de grupo de colecoes — e a diferenca esta
+# registrada no ADR-21. Aqui a subcolecao ja estava fixada pela arquitetura 5.1,
+# e mover a reuniao para a raiz a separaria do pedido que lhe da saldo, janela e
+# intervalo, que e o acoplamento que o ADR-12 quer preservar.
+#
+# ⚠️ O EMULADOR NAO EXIGE INDICE. A suite de integracao passa sem estes blocos, e
+# producao recusaria as duas consultas com FAILED_PRECONDITION. E a armadilha que
+# a arquitetura, secao 10, registra — e a razao de o indice ser declarado aqui e
+# nunca criado a mao pelo console.
+
+# A agenda do advogado (`GET /api/advogado/reunioes`) e a conferencia de reuniao
+# futura que trava a suspensao (ADR-21, decisao D). As duas montam
+# `where('advogadoId','==',uid).where('estado','==',E)` — DUAS IGUALDADES, uma
+# consulta por estado ativo.
+#
+# O horario NAO entra no indice: ele e filtrado em memoria, de proposito. Ver a
+# nota em `ConsultaReunioesService` — filtrar por estado corta o que cresce sem
+# limite (reuniao cancelada acumula para sempre), e o horario so separa futuro de
+# passado dentro do que sobrou.
+resource "google_firestore_index" "reunioes_por_advogado" {
+  project     = var.project_id
+  database    = google_firestore_database.default.name
+  collection  = "reunioes"
+  query_scope = "COLLECTION_GROUP"
+
+  fields {
+    field_path = "advogadoId"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "estado"
+    order      = "ASCENDING"
+  }
+}
+
+# O painel de reunioes sem sala (`GET /api/admin/reunioes`, arquitetura 7.2):
+# `where('estado','==','reservada_sem_link').orderBy('inicio')`.
+#
+# Igualdade mais ordenacao por OUTRO campo — a forma que o Firestore nao resolve
+# com indice de campo unico. A ordem dos blocos espelha a consulta; invertida, o
+# indice existe e a consulta continua falhando em producao pedindo outro.
+resource "google_firestore_index" "reunioes_sem_sala" {
+  project     = var.project_id
+  database    = google_firestore_database.default.name
+  collection  = "reunioes"
+  query_scope = "COLLECTION_GROUP"
+
+  fields {
+    field_path = "estado"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "inicio"
+    order      = "ASCENDING"
+  }
+}

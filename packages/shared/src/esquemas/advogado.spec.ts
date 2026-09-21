@@ -1,5 +1,7 @@
 import { esquemaNovoAdvogado, STATUS_ADVOGADO } from './advogado.js';
 
+const GUID = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';
+
 describe('esquemaNovoAdvogado', () => {
   it('aceita um cadastro valido', () => {
     expect(
@@ -7,7 +9,11 @@ describe('esquemaNovoAdvogado', () => {
         nome: 'Ana Souza',
         email: 'ana@escritorio.test',
       }),
-    ).toEqual({ nome: 'Ana Souza', email: 'ana@escritorio.test' });
+    ).toEqual({
+      nome: 'Ana Souza',
+      email: 'ana@escritorio.test',
+      usuarioTeams: null,
+    });
   });
 
   it('apara o nome antes de medir', () => {
@@ -74,7 +80,78 @@ describe('esquemaNovoAdvogado', () => {
         status: 'suspenso',
         role: 'admin',
       }),
-    ).toEqual({ nome: 'Ana Souza', email: 'ana@x.test' });
+    ).toEqual({ nome: 'Ana Souza', email: 'ana@x.test', usuarioTeams: null });
+  });
+});
+
+describe('usuarioTeams (Etapa 10, ADR-21 decisao B)', () => {
+  it('aceita o object ID do Entra', () => {
+    expect(
+      esquemaNovoAdvogado.parse({
+        nome: 'Ana Souza',
+        email: 'ana@x.test',
+        usuarioTeams: GUID,
+      }).usuarioTeams,
+    ).toBe(GUID);
+  });
+
+  it('normaliza a caixa do GUID', () => {
+    expect(
+      esquemaNovoAdvogado.parse({
+        nome: 'Ana Souza',
+        email: 'ana@x.test',
+        usuarioTeams: GUID.toUpperCase(),
+      }).usuarioTeams,
+    ).toBe(GUID);
+  });
+
+  /* Campo em branco no formulario do administrador e ausencia, nao erro. */
+  it.each([
+    ['ausente', undefined],
+    ['vazio', ''],
+    ['so espacos', '   '],
+    ['nulo', null],
+  ])('trata %s como null', (_caso, usuarioTeams) => {
+    expect(
+      esquemaNovoAdvogado.parse({
+        nome: 'Ana Souza',
+        email: 'ana@x.test',
+        usuarioTeams,
+      }).usuarioTeams,
+    ).toBeNull();
+  });
+
+  /**
+   * A RECUSA QUE DA NOME A DECISAO B. O Graph aceita UPN no lugar do object ID,
+   * e reaproveitar o e-mail do cadastro seria comodo — e faria a integracao
+   * depender de o e-mail da plataforma ser o do Microsoft 365 do escritorio. No
+   * dia em que um advogado se cadastrar com outro endereco, a criacao da sala
+   * falharia com "usuario nao encontrado" e nada no cadastro explicaria por que.
+   */
+  it('recusa UPN, mesmo sendo um e-mail valido', () => {
+    expect(
+      esquemaNovoAdvogado.safeParse({
+        nome: 'Ana Souza',
+        email: 'ana@x.test',
+        usuarioTeams: 'ana@escritorio.onmicrosoft.com',
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['sem hifens', GUID.replaceAll('-', '')],
+    ['curto', '3f2504e0-4f89-41d3-9a0c'],
+    ['com caractere fora do hexadecimal', '3g2504e0-4f89-41d3-9a0c-0305e82c3301'],
+    ['com sobra no fim', `${GUID}x`],
+    ['nao e texto', 42],
+  ])('recusa GUID %s', (_caso, usuarioTeams) => {
+    expect(
+      esquemaNovoAdvogado.safeParse({
+        nome: 'Ana Souza',
+        email: 'ana@x.test',
+        usuarioTeams,
+      }).success,
+    ).toBe(false);
   });
 });
 

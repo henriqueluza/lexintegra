@@ -10,6 +10,7 @@ const ANA: AdvogadoResumo = {
   email: 'ana@escritorio.test',
   status: 'ativo',
   criadoEm: '2026-09-01T12:00:00.000Z',
+  usuarioTeams: null,
 };
 
 const BRUNO: AdvogadoResumo = {
@@ -18,6 +19,7 @@ const BRUNO: AdvogadoResumo = {
   email: 'bruno@escritorio.test',
   status: 'suspenso',
   criadoEm: null,
+  usuarioTeams: null,
 };
 
 interface ApiDeTeste {
@@ -76,16 +78,29 @@ async function montar(opcoes: Partial<ApiDeTeste> = {}): Promise<{
   return { fixture, api };
 }
 
+/**
+ * `usuarioTeams` entra aqui com o valor vazio (Etapa 10): `setValue` exige o
+ * grupo INTEIRO, e um campo novo no formulario derruba todo teste que use este
+ * ajudante — que e o ponto. `patchValue` aceitaria o objeto parcial e esconderia
+ * a adicao do campo.
+ */
 function preencher(
   fixture: ComponentFixture<AdminAdvogados>,
   nome: string,
   email: string,
+  usuarioTeams = '',
 ): void {
   (
     fixture.componentInstance as unknown as {
-      formulario: { setValue: (v: { nome: string; email: string }) => void };
+      formulario: {
+        setValue: (v: {
+          nome: string;
+          email: string;
+          usuarioTeams: string;
+        }) => void;
+      };
     }
-  ).formulario.setValue({ nome, email });
+  ).formulario.setValue({ nome, email, usuarioTeams });
   fixture.detectChanges();
 }
 

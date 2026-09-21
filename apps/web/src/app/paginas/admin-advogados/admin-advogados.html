@@ -24,6 +24,12 @@
           [obrigatorio]="true"
           [erro]="erroDoCampo('email')"
         />
+        <app-campo
+          rotulo="ID do Teams (Entra)"
+          formControlName="usuarioTeams"
+          marcador="00000000-0000-0000-0000-000000000000"
+          dica="Opcional. ID de objeto do Entra, nao o e-mail. So e usado quando a criacao da sala do Teams for ligada."
+        />
       </div>
 
       <p class="advogados__aviso">
@@ -77,6 +83,8 @@
       >
         {{ linha.status === 'suspenso' ? 'Reativar' : 'Suspender' }}
       </app-botao>
+      } @case ('usuarioTeams') {
+      <span class="advogados__teams">{{ teamsDe(linha) }}</span>
       } @default { {{ linha[coluna.chave] }} } }
     </ng-template>
   </app-tabela>

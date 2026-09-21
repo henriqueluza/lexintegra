@@ -574,6 +574,218 @@ roteiro.
 
 ---
 
+### ADR-21 — Agendamento de reunião: as regras que o contrato não fixa
+
+**Estado: PROVISÓRIO, a confirmar com a CONTRATANTE.** O ADR-05 decidiu *como* a sala
+nasce (Graph API, app-only) e o ADR-12 decidiu a janela de 24 horas do cancelamento. Entre
+os dois sobra um conjunto de regras que a Etapa 10 precisa responder para existir e que
+nenhum documento fixa. Elas estão aqui, cada uma isolada o suficiente para mudar sem
+reescrever o módulo, e cada uma na lista de confirmação do "Só você" da Etapa 10.
+
+#### As oito decisões de produto
+
+1. **Quais horários o cliente vê.** Só os slots do advogado **distribuído para aquele
+   pedido** (`pedidos.advogadoId`). Pedido com `distribuido == false` não agenda, e a tela
+   diz isso ("seu pedido ainda está em análise"). A alternativa — mostrar a grade de todos
+   os advogados e atribuir quem tiver o horário — inverteria a distribuição do item 2.5.6,
+   que é decisão do administrador e não do cliente.
+
+2. **Pré-condições para agendar.** Pedido com `situacao == 'ativo'`. Pedido cancelado ou
+   estornado não marca reunião; é o mesmo eixo que o ADR-12 separou do estado do entregável.
+
+3. **Janela de validade.** Conta a partir de `pedidos.criadoEm`, que é o momento da
+   confirmação do pagamento. O início da reunião precisa cair dentro de
+   `criadoEm + prazoValidadeReunioesDias`, lido do **snapshot** (regra inviolável 5).
+   **A expiração é calculada na leitura, sem job no Cloud Scheduler**, como a semana da
+   disponibilidade (seção 8). O job de "expiração da janela de 12 meses" que a seção 8
+   listava **deixa de existir**: ele não tem nada a fazer que a leitura não faça, e um job
+   a mais é uma peça móvel que falha em silêncio. Já são cinco jobs; um sexto só se
+   justifica se o escritório quiser um **e-mail de aviso de vencimento** — que é
+   funcionalidade nova, não infraestrutura, e é pergunta ao Marcos.
+
+4. **Consumo do saldo.** Saldo = `quantidadeReunioes` do snapshot menos as reuniões do
+   pedido em qualquer estado **exceto** `cancelada_com_devolucao`. Não comparecimento
+   consome o saldo (ADR-12) **sem precisar de marcação manual de "realizada"**: a reunião
+   agendada já consumiu, e ninguém precisa lembrar de fechar nada. É o que evita um estado
+   "compareceu?" que só existiria para ser preenchido errado.
+
+5. **Intervalo mínimo.** A distância entre o início da nova reunião e o início de cada
+   reunião **ativa daquele pedido** precisa ser ≥ `intervaloMinimoReunioesDias × 24h`.
+   Reuniões `cancelada_com_devolucao` não contam. Na remarcação, a própria reunião sendo
+   remarcada não conta contra si mesma. **Pedidos diferentes não se afetam** (seção 5.4) —
+   a consequência de negócio já registrada lá: um cliente com três pedidos ativos pode
+   marcar três reuniões na mesma semana.
+
+6. **Regra das 24h.** Cancelamento com `agora <= inicio − 24h` devolve o crédito
+   (`cancelada_com_devolucao`); com menos que isso, consome (`cancelada_sem_devolucao`).
+   **A remarcação segue a mesma janela**, medida contra o `inicio` **atual** da reunião:
+   com menos de 24 horas o cliente só pode cancelar, sem devolução. Remarcar dentro das 24h
+   seria a forma óbvia de contornar a regra do ADR-12 — marca-se outro horário em vez de
+   cancelar, e o crédito nunca se perde.
+
+7. **A sala do Teams na remarcação e no cancelamento.** Na remarcação o link é
+   **reaproveitado**, sem chamar o Graph de novo: só o convite muda. No cancelamento a sala
+   **não é apagada** no Teams — um link órfão é inofensivo, e apagá-lo seria mais um efeito
+   externo com falha própria, retentativa própria e um alerta a mais para alguém ignorar.
+   **Ponto a revisitar** se o escritório passar a considerar sala órfã um problema de
+   conformidade.
+
+8. **Horários.** Guardados em UTC, como o slot já faz. Exibidos e escritos no convite em
+   `America/Sao_Paulo`. O fuso é explícito em todo cálculo (ver `packages/shared/src/semana.ts`):
+   o Cloud Run roda em UTC, e às 22h de um domingo brasileiro um cálculo sem fuso responde
+   pela semana seguinte.
+
+#### As decisões que o código impôs
+
+Estas não são de produto: saíram de restrições reais do Firestore, do Graph e das suítes
+que já existem. Estão aqui porque mudá-las é mudar o módulo, não um parâmetro.
+
+**A. O ID da reunião é estável e sequencial (`r001`, `r002`, …), e não é o ID do slot.**
+A regra inviolável 4 sugere o ID determinístico do slot, e ele **não serve** aqui. A
+remarcação **atualiza o mesmo documento** — troca `slotId`, `inicio` e `fim`, incrementa
+`sequence`, libera o slot antigo e reserva o novo. Três razões, e cada uma sozinha já
+derruba a alternativa:
+
+- o `externalId` que identifica a sala no Graph **é o `reuniaoId`**, e um ID que muda
+  criaria uma segunda sala a cada remarcação;
+- uma reunião cancelada continuaria ocupando o ID do slot, e uma reserva futura no mesmo
+  horário colidiria com ela;
+- eventos de outbox em trânsito referenciam `reuniaoId`, e ficariam órfãos.
+
+A regra 4 continua honrada onde ela funciona: a **exclusividade** vive no campo `reserva`
+do documento do slot (`disponibilidades/{advogadoId}_{inicioISO}`), lido e escrito dentro
+da transação, **sempre presente** pela armadilha de sempre — `where(campo,'!=',null)`
+ignora documento sem o campo. Duas reservas concorrentes no mesmo slot: uma reexecuta e
+perde. Duplo clique no slot **já reservado pelo mesmo pedido** devolve a reunião existente
+(200), e não 409 — é duplicata esperada, não conflito.
+
+**A.1 A serialização por PEDIDO é um segundo mecanismo, e é obrigatória.** Agendar,
+remarcar e cancelar **leem e escrevem o documento do pedido** (`reunioesEmitidas`, um
+contador **fora do snapshot**, que é imutável), e é dele que sai o próximo `rNNN`. A
+transação do Firestore só entra em conflito nos documentos que ela **toca**: duas
+requisições do mesmo pedido para **slots diferentes** tocariam documentos diferentes, não
+conflitariam, e passariam as duas — furando o saldo e o intervalo, colidindo no `rNNN`, e
+fazendo a leitura de duplicata devolver a reunião errada. O campo `reserva` do slot não
+cobre esse caso, porque os slots são outros. Escrever o pedido é o que põe as duas em série.
+
+**B. O advogado no Microsoft 365 é identificado por `usuarioTeams`, só object ID do Entra.**
+`POST /users/{userId}/onlineMeetings/createOrGet` aceita permissão de aplicação
+(`OnlineMeetings.ReadWrite.All` mais a application access policy), `externalId` é
+obrigatório, a resposta é 201 ao criar e 200 ao reaproveitar, e a reunião **não aparece no
+calendário do usuário** — o que confirma que `Calendars.ReadWrite` continua desnecessária
+(ADR-05). Mas o `{userId}` é o **object ID do Entra**, e não o uid do Firebase: o documento
+`advogados/{uid}` ganhou `usuarioTeams`, **validado como GUID**. Aceitar UPN no lugar seria
+mais cômodo e faria a integração depender de o e-mail da plataforma ser o mesmo do
+Microsoft 365 do escritório — suposição que quebra em silêncio no dia em que um advogado se
+cadastrar com outro endereço. O adaptador do Graph recusa com erro claro e **reentregável**
+quando o campo está vazio.
+
+**D. Atribuição e suspensão respeitam reunião futura.** Atribuir, remover atribuição e
+suspender advogado respondem **409 enquanto houver reunião futura ativa** do pedido — ou do
+advogado, na suspensão. Sem isso, trocar o advogado de um pedido deixaria uma reunião
+marcada com quem não atende mais o caso, e a sala já criada em nome dele.
+
+**E. `VTIMEZONE` fixo em −03:00, sem bloco `DAYLIGHT`.** O Brasil não tem horário de verão
+hoje. Um bloco `DAYLIGHT` escrito "por precaução" descreveria uma regra que não existe, e
+os clientes de calendário a aplicariam — deslocando reuniões em uma hora numa parte do ano.
+Se o horário de verão voltar, **este** é o ponto único a mudar, como o `hora + 3` da grade
+de disponibilidade.
+
+**F. Antecedência mínima para agendar: 24 horas. PROVISÓRIO.** Marcar para daqui a dez
+minutos não dá ao advogado tempo de se preparar nem à sala tempo de ser criada — a criação
+passa pelo outbox e pode ser reentregue. O número não veio de lugar nenhum: é **pergunta ao
+Marcos**, e vive numa constante em `packages/shared/src/regras-reuniao.ts`.
+
+**G. Advogado suspenso não recebe reunião.** A transação de agendar e a de remarcar leem
+`advogados/{advogadoId}` e recusam se estiver suspenso. É o outro lado de **D**: sem as
+duas, marcar na agenda de quem acabou de perder o acesso seria o caso comum, e não o raro.
+As duas juntas **estreitam** a corrida entre "suspender" e "marcar", mas não a fecham — ver
+"Um risco aceito", abaixo.
+
+**H. Cancelamento pelo administrador, sempre com devolução. PROVISÓRIO.** O escritório
+precisa poder desmarcar — advogado doente, agenda remanejada — e nesse caso a culpa não é
+do cliente: a reunião volta ao saldo **mesmo dentro das 24 horas**. Reaproveita o mesmo
+serviço do cancelamento do cliente, com o ator vindo do token. A regra de devolução nesse
+caso **não está no contrato**, e é **pergunta ao Marcos**.
+
+#### O que fica fora desta branch
+
+A integração real com o Teams. Ela depende de licença Teams confirmada para cada advogado,
+do registro do aplicativo no Entra ID com consentimento do administrador do tenant, e da
+application access policy configurada por PowerShell — com propagação relatada de até 48
+horas (ADR-05, risco 1). Enquanto isso não existe, a etapa fica no mesmo estado em que a
+Etapa 8 ficou: **código completo e testado contra um adaptador falso**, com a trava de modo
+no código (`REUNIOES_MODO`, que **não aceita `graph`**) no mesmo espírito da regra
+inviolável 20. O adaptador do Graph está escrito, não é alcançável, e não foi validado
+contra tenant nenhum.
+
+#### Um risco aceito: a corrida entre suspender e marcar
+
+A decisão **D** confere, na suspensão, se o advogado tem reunião futura ativa; a **G**
+confere, no agendamento, se o advogado está suspenso. As duas juntas estreitam a janela,
+mas **não a fecham**, e a razão é que as conferências vivem em transações diferentes — a da
+suspensão vive fora de qualquer transação.
+
+O entrelaçamento que sobra:
+
+1. o administrador suspende; a conferência lê as reuniões do advogado e não acha nenhuma futura;
+2. **nesse intervalo**, um cliente marca. A transação de agendar lê `advogados/{id}`, encontra `ativo`, reserva o slot e grava a reunião;
+3. a suspensão grava `status: suspenso` e revoga os tokens.
+
+O resultado é exatamente o que **D** existe para evitar: advogado suspenso com reunião
+futura marcada, e a sala criada em nome dele.
+
+**Por que é aceito.** A janela são as centenas de milissegundos entre a leitura do passo 1 e
+a escrita do passo 3, e as duas operações são raras e humanas — suspender é ato do
+administrador, marcar é ato de um cliente *daquele* advogado. Mais importante: o resultado
+é **visível e reparável**. A reunião aparece na agenda e no painel do administrador, que a
+cancela pela decisão **H** — sempre com devolução do crédito — e redistribui o pedido. Nada
+fica silenciosamente errado: nenhum dinheiro se move, e nenhum convite com link de outra
+reunião sai. O custo real é uma sala do Teams criada em nome de quem não vai comparecer.
+
+**Por que não é fechado.** Fechar exigiria uma transação cobrindo três sistemas, e só um
+deles é transacional: o documento do advogado está no Firestore, mas `revokeRefreshTokens` e
+a custom claim estão no Firebase Auth, que não participa de transação do Firestore. A
+alternativa seria um documento de trava por advogado, escrito por **toda** marcação de
+reunião — uma escrita a mais no caminho mais quente do módulo, para proteger contra uma
+corrida cuja reparação é um clique.
+
+**O gatilho para revisitar:** se a suspensão deixar de ser um ato manual raro — por exemplo,
+se passar a ser automática por inatividade ou por integração de RH. Aí a frequência muda, e
+com ela a conta.
+
+#### Pontos a revisitar
+
+**A consulta de grupo de coleções.** O painel do administrador lista as reuniões
+`reservada_sem_link` de **todos** os pedidos, e `reunioes` é subcoleção de `pedidos` — a
+consulta é de **grupo de coleções**, com índice próprio. É o oposto do que a Etapa 8 fez
+com `estornos`, que virou coleção raiz justamente para evitar isso. A diferença é que a
+subcoleção já estava fixada pela seção 5.1, e mover a reunião para a raiz a separaria do
+pedido que lhe dá saldo, janela e intervalo — que é exatamente o acoplamento que o ADR-12
+quer preservar.
+
+**O que as consultas de reunião leem cresce sem limite, e o filtro por estado não
+resolve.** `ConsultaReunioesService` consulta por igualdade de `estado` e recorta o futuro
+em memória, porque o dublê do Firestore não implementa faixa e um `>=` sobre `inicio`
+exigiria implementá-lo lá. O comentário no serviço afirmava que filtrar por estado cortava
+"o que cresce sem limite" — **isso estava errado, e foi corrigido na revisão do PR #26.**
+O filtro tira as canceladas e só isso: **`confirmada` acumula para sempre**, porque reunião
+que já aconteceu continua confirmada. Não existe estado "realizada", e não havia por que
+inventar um só para a máquina de estados ter mais um nó.
+
+Então a agenda do advogado e a conferência da suspensão leem *toda reunião ativa que aquele
+advogado já teve*. No volume previsto — algumas centenas por advogado por ano, lidas na
+abertura da agenda e na suspensão — isso é aceitável, e trocar agora seria otimizar contra
+um número imaginado.
+
+**O gatilho para revisitar:** quando a agenda de um advogado passar de ~1.000 reuniões
+acumuladas, ou quando a leitura aparecer no custo do Firestore. A saída é a faixa sobre
+`inicio` na própria consulta, com o índice correspondente e `>=` implementado no dublê —
+**não** um estado novo na máquina, que mudaria a semântica do domínio para resolver um
+problema de leitura.
+
+---
+
 ## 5. Modelo de dados
 
 ### 5.1 Coleções raiz
@@ -609,7 +821,15 @@ Subcoleções: `clientes/{id}/anamnese`, `pedidos/{id}/entregaveis`, `pedidos/{i
 
 **`observacoes` é append-only**, e isso é decisão e não limitação: o advogado trabalha a partir do que o cliente escreveu, e texto reescrito faz "o cliente pediu X" virar "o cliente sempre pediu Y", sem trilha. A API não expõe edição nem exclusão, e há teste que defende a ausência.
 
-**Índices compostos.** Um só até aqui: `produtos` por `ativo` + `nome`, para o filtro de situação da listagem administrativa. Declarado em `infra/terraform/firestore.tf`, nunca criado à mão no console — o emulador não exige índice, então uma consulta sem índice declarado passa local e falha em produção. A regra é um índice por consulta que existe, não por consulta imaginável: índice composto custa escrita em toda gravação da coleção.
+**Sobre `pedidos/{id}/reunioes` (Etapa 10, ADR-21).** O id é **sequencial e estável por pedido** (`r001`), e não o id do slot: o `externalId` que identifica a sala no Graph *é* esse id, e um id que mudasse na remarcação criaria uma segunda sala a cada vez. Remarcar **atualiza o mesmo documento** — troca `slotId`, `inicio` e `fim`, incrementa `sequence` e empilha `historico[]`. O número sai de `pedidos.reunioesEmitidas`, um contador **fora do snapshot** (o snapshot é imutável, seção 5.3), e não da contagem dos documentos existentes: contar documentos daria o mesmo número depois de um cancelamento, e duas reuniões acabariam com o mesmo id.
+
+Esse contador é também a **serialização por pedido**, e não é redundante com a reserva do slot. A transação do Firestore só entra em conflito nos documentos que toca: duas requisições do mesmo pedido para **slots diferentes** tocariam documentos diferentes, não conflitariam e passariam as duas, furando saldo e intervalo. Agendar, remarcar e cancelar escrevem o documento do pedido justamente para se porem em fila.
+
+`sequenceComunicada` é o último `SEQUENCE` cujo convite foi **escrito no outbox** — não "entregue". É o que decide se o `METHOD:CANCEL` sai: cancelar uma reunião que nunca chegou ao calendário de ninguém produziria um cancelamento para um `UID` que o destinatário nunca viu.
+
+**Índices compostos.** Onze, todos em `infra/terraform/firestore.tf`, nunca criados à mão no console — o emulador não exige índice, então uma consulta sem índice declarado passa local e falha em produção. A regra é um índice por consulta que existe, não por consulta imaginável: índice composto custa escrita em toda gravação da coleção.
+
+Os dois da Etapa 10 são **de grupo de coleções** (`reunioes_por_advogado` e `reunioes_sem_sala`), porque `reunioes` é subcoleção do pedido e as duas consultas atravessam todos os pedidos. O precedente contrário é `estornos`, que virou coleção raiz justamente para evitar isso — aqui a subcoleção está fixada pela seção 5.1, e o preço é o índice de grupo. **O emulador não impõe índice nenhum**, então estes dois só existem de verdade depois do `apply`; a prova local é o `terraform plan`.
 
 ### 5.2 O agregado de compra
 
@@ -767,6 +987,14 @@ Nada de envio de e-mail dentro da transação. O evento vai para o outbox, e o c
 
 **Regra de cancelamento com 24 horas, ver ADR-12.** A verificação da antecedência mínima acontece no servidor, comparando o momento da solicitação de cancelamento com o `DTSTART` da reunião — nunca confiando em validação só de interface.
 
+**Como ficou, na Etapa 10 (ver ADR-21).** A transação acima ganhou duas leituras que o texto original não previa: `advogados/{id}`, para recusar advogado suspenso — o que **estreita**, sem fechar, a corrida entre "suspender" e "marcar"; o resto dela é risco aceito e registrado no ADR-21 —, e o documento do pedido, que ela também **escreve**, porque a reserva do slot sozinha não serializa duas marcações do mesmo pedido em slots diferentes (seção 5.1).
+
+A falha prevista acima é o estado `reservada_sem_link`, e ele é desenhado e não excepcional: com a integração ainda desligada, **toda** reunião nasce assim. O painel do administrador lista essas reuniões com o id do registro do outbox, e o botão de tentar de novo reenvia **aquele** registro pelo caminho normal — regra inviolável 3, nada de quarto caminho de entrega.
+
+O despachante **relê a reunião dentro da transação** antes de gravar o link, porque ele roda depois do commit e pode chegar tarde: a reunião pode ter sido cancelada (não cria sala) ou remarcada (o convite sai com o `sequence` atual, não com o do registro). Convite só sai com link; `METHOD:CANCEL` só sai se algum convite chegou a ser emitido.
+
+**A antecedência mínima para marcar é de 24 horas** (ADR-21, decisão F, **provisória**) e é uma constante separada da janela de cancelamento, embora hoje valham o mesmo número: são regras diferentes, e confundi-las faria uma mudança em uma alterar a outra em silêncio.
+
 ### 7.3 Upload de arquivos
 
 Fluxo: navegador envia direto ao bucket de quarentena via URL assinada de escrita, emitida pela API com validação de quem envia, para qual entregável ou pedido, com qual `content-type` e tamanho máximo. O arquivo nunca passa pelo Cloud Run — o que economiza exatamente o recurso que o Cloud Run cobra.
@@ -799,22 +1027,28 @@ Suspensão precisa revogar tokens ativos, não apenas marcar um campo — senão
 
 ## 8. Assincronia e jobs
 
-Os três jobs gratuitos do Cloud Scheduler ficam integralmente ocupados:
+O Cloud Scheduler dá três jobs gratuitos. **Hoje são quatro**, e o quarto é deliberado:
 
 1. **Varredor do outbox** — reenfileira pendências não entregues. *Implementado na Etapa 7, a cada minuto.*
-2. **Atualização da base ClamAV** — mantém assinaturas atuais no bucket.
-3. **Expiração da janela de 12 meses** — encerra saldos de reunião vencidos conforme o 2.7.2.
+2. **Atualização da base ClamAV** — mantém assinaturas atuais no bucket. *Duas vezes por dia, e o motivo é o alerta de ausência, não a base — ver seção 9.*
+3. **Retenção de arquivos** — avisa no 23º dia e exclui no 30º. *Implementado na Etapa 11.*
+4. **Sonda de sinais operacionais** — `POST /api/interno/sinais`, porque o Monitoring não consulta o Firestore. *Implementado na Etapa 12, US$ 0,10/mês.*
 
-Não sobra nenhum. O quarto job em diante custa US$ 0,10/mês cada — irrelevante em dinheiro, mas relevante como sinal de que uma rotina nova está sendo criada.
+Cada job além do terceiro custa US$ 0,10/mês — irrelevante em dinheiro, e relevante como sinal de que uma rotina nova está sendo criada. É esse sinal que importa, não a economia.
 
-**Candidatos a uma quarta rotina, em ordem de probabilidade de surgir:**
+**Duas rotinas que este documento previu e que NÃO existem, por decisão:**
 
-- **Exclusão de arquivo por política de retenção, agora com gatilho definido** (30 dias a partir de `entregue`, seção 7.3 e 13). Como a contagem depende do estado do pedido (todos os entregáveis em `entregue`), a regra nativa de ciclo de vida do Cloud Storage não basta sozinha — ela só sabe a idade do objeto, não o estado do pedido. Esta é a quarta rotina mais provável de ser necessária, e inclui o envio do aviso prévio por e-mail antes da exclusão de fato.
-- **Lembrete de reunião próxima**, cogitado mas não solicitado no contrato.
-- **Abertura do registro semanal de disponibilidade** (item 2.6.3). Evitável: em vez de uma rotina que "abre" a janela toda segunda, o sistema calcula a semana corrente no momento da leitura. Preferível, porque elimina uma peça móvel sem perder a funcionalidade.
+- **Expiração da janela de validade das reuniões** (item 2.7.2), listada aqui como job obrigatório até a Etapa 10. A janela é **calculada na leitura**, a partir de `criadoEm` do pedido mais o prazo do snapshot — uma rotina que "encerrasse saldos vencidos" seria uma peça móvel para produzir um número que a leitura já produz, e ainda poderia estar atrasada no momento em que alguém perguntasse.
+- **Abertura do registro semanal de disponibilidade** (item 2.6.3), pelo mesmo raciocínio e desde a Etapa 9: a semana corrente é calculada, nunca aberta.
+
+São o mesmo padrão, e vale enunciá-lo: **estado derivável do tempo se calcula na leitura; rotina agendada é para efeito externo** — entregar e-mail, apagar arquivo, atualizar base de antivírus. As duas rotinas descartadas não tinham efeito externo nenhum.
+
+**Candidatos a uma rotina nova, em ordem de probabilidade:**
+
+- **Lembrete de reunião próxima**, cogitado mas não solicitado no contrato. Tem efeito externo, então seria job de verdade.
 - **Limpeza de pré-cadastros abandonados**, se a política de dados exigir descarte de quem nunca comprou.
 
-**Duas advertências sobre esse limite.** Primeira: ele é por **conta de faturamento**, não por projeto — se um ambiente de staging replicar as três rotinas de produção, o total sobe para seis, três delas pagas, o que é fácil de não perceber ao decidir sobre staging (seção 15, item de staging). Segunda: existe a alternativa estrutural de consolidar tudo numa única rotina agendada de alta frequência, que decide internamente quais tarefas executar a cada disparo. Isso elimina o limite por completo, ao custo de forçar todas as tarefas para a mesma cadência — ruim quando elas têm ritmos naturalmente diferentes, como o varredor do outbox (idealmente a cada minuto) e a atualização do ClamAV (uma vez por dia) — e de exigir isolamento de falha entre tarefas, para que uma travar não impeça as demais de rodar. Não adotada como padrão; fica registrada como saída caso o número de rotinas necessárias ultrapasse o que compensa pagar.
+**Duas advertências sobre esse limite.** Primeira: ele é por **conta de faturamento**, não por projeto — se um ambiente de staging replicar as rotinas de produção, o total dobra e quase tudo passa a ser pago, o que é fácil de não perceber ao decidir sobre staging (seção 15, item de staging). Segunda: existe a alternativa estrutural de consolidar tudo numa única rotina agendada de alta frequência, que decide internamente quais tarefas executar a cada disparo. Isso elimina o limite por completo, ao custo de forçar todas as tarefas para a mesma cadência — ruim quando elas têm ritmos naturalmente diferentes, como o varredor do outbox (idealmente a cada minuto) e a atualização do ClamAV (uma vez por dia) — e de exigir isolamento de falha entre tarefas, para que uma travar não impeça as demais de rodar. Não adotada como padrão; fica registrada como saída caso o número de rotinas necessárias ultrapasse o que compensa pagar.
 
 ---
 

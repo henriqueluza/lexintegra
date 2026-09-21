@@ -184,7 +184,26 @@ Documentos de referência na raiz: `docs/arquitetura.md` (decisões e ADRs), `do
 - **Mutacao medida** (`pnpm mutacao`): `shared` 98,46% e API 88,69%, limiar dois pontos abaixo do piso.
 - **Cobertura:** `apps/api` 93/85/93/95, `apps/web` 96/90/92/97, `shared` 99/100/100/99, `scanner` 100/90/100/100.
 
-**Próximo trabalho recomendado:** revisão humana do PR da Etapa 8 parcial. Do lado de fora do código, **iniciar já a homologação de cartão com o AbacatePay** (prazo de terceiro, e sem ela o cartão não funciona nem em produção) e, quando ela sair, fazer a parte de cartão da rodada no sandbox — o nome do evento de conclusão do cartão é o item de maior risco ainda aberto. O que a rodada desmentir se corrige antes de a etapa fechar. As Etapas 10 e 12 seguem dependendo de confirmação externa. O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde. Do lado da CONTRATANTE seguem pendentes: catálogo real da B&C, ficha de anamnese, textos jurídicos do estorno e do cancelamento, domínio verificado no Resend, chave de produção e os destinatários dos alertas.
+**Etapa 10 — agendamento e convite de calendário, PARCIAL (branch `feat/agendamento-reunioes`):**
+
+- **Não fecha a etapa.** Faltam os três pré-requisitos do Entra ID — licença Teams confirmada por advogado, aplicativo registrado com consentimento para `OnlineMeetings.ReadWrite.All`, e application access policy por PowerShell (propagação de até 48h) — mais o `usuarioTeams` de cada advogado e a aprovação das imagens de referência. O domínio inteiro está provado contra o **adaptador falso**, como a Etapa 8 com o gateway. O adaptador do Graph está escrito e **não ligado**: `REUNIOES_MODO=graph` derruba o boot.
+- **O ID da reunião é estável e sequencial** (`r001`), nunca o do slot, e **remarcar atualiza o mesmo documento** (ADR-21, decisão A). O `externalId` do Graph *é* esse id: um id que mudasse criaria uma segunda sala a cada remarcação. O número sai de `pedidos.reunioesEmitidas`, não da contagem dos documentos — contar daria o mesmo número depois de um cancelamento, e duas reuniões colidiriam.
+- **Dois mecanismos de exclusividade, e o segundo não é redundante.** `disponibilidades.reserva` protege o slot; escrever o **documento do pedido** protege o saldo. Transação do Firestore só conflita nos documentos que toca: duas marcações do mesmo pedido em **slots diferentes** não conflitariam e passariam as duas. Há um teste de concorrência por mecanismo, e o segundo falha sem `reunioesEmitidas`.
+- **`sequenceComunicada` decide se o `METHOD:CANCEL` sai.** É o último `SEQUENCE` **escrito no outbox** — não entregue. Cancelar reunião que nunca chegou ao calendário de ninguém produziria um cancelamento para um `UID` que o destinatário nunca viu.
+- **O despachante relê a reunião na transação.** Ele roda depois do commit e pode chegar tarde: cancelada não vira sala; remarcada emite o convite com o `sequence` **atual**, não o do registro. Convite só sai com link.
+- **`reservada_sem_link` é estado desenhado, não exceção** — quando a criação da sala falha, a reunião fica assim e o painel do admin a lista com o id do registro do outbox; o botão de tentar de novo reenvia **aquele** registro pelo caminho normal (regra 3).
+- **Em produção, `REUNIOES_MODO` só aceita `desligado`** — `graph` e `falso` derrubam o boot. `falso` foi proibido na revisão do PR #26: a sala falsa **devolve sucesso** com link `teams.microsoft.test`, então a reunião viraria `confirmada` e o convite iCalendar sairia para o cliente real com um link que não existe. É a regra inviolável 13 furada por configuração em vez de por código, e nenhuma das duas metades falha. A variável está no `cloud_run.tf` com `desligado` — faltava lá, e sem ela a revisão nova não passaria do startup probe.
+- **Com `desligado`, o cartão diz que o agendamento está indisponível** em vez de oferecer um botão que responde 503. `CartaoPedido.agendamentoDisponivel` vem do servidor (é configuração de processo, a tela não tem como saber) e vem **antes** dos impedimentos do próprio pedido: não adianta dizer que o saldo acabou se nem daria para marcar. O padrão de `paraCartao` é `false` — com o padrão fechado, o pior que acontece é dizer "indisponível" onde havia agendamento.
+- **A janela de validade é calculada na leitura**, e o job de expiração de 12 meses que a arquitetura previa **não existe** — mesmo raciocínio da semana de disponibilidade da Etapa 9. Regra geral registrada na arquitetura, seção 8: estado derivável do tempo se calcula na leitura; rotina agendada é para efeito externo.
+- **`RELOGIO_FIXO` só é aceito sob emulador, e derruba o boot fora dele** — **no boot**, e não na primeira reunião: `agora()` lê a variável na primeira chamada, e até a revisão do PR #26 era só isso, então um relógio fixo esquecido em produção passava pelo startup probe e pelo smoke test e só aparecia como 500 para o primeiro cliente. A leitura vive em `configuracaoNaInicializacao`, ao lado de `configuracaoDeReunioes`. Servidor, navegador (`page.clock`) e semente leem o mesmo instante — sem isso a jornada e a regressão visual mudariam de resultado todo dia. Efeito colateral: `advogado/disponibilidade` entrou na regressão visual, de onde estava excluída porque a grade mudava toda segunda. **`DisponibilidadesService` lê o mesmo relógio**: com metade do servidor num relógio e metade noutro, o advogado publicaria a grade de uma semana e o cliente escolheria horários de outra, sem nada falhar.
+- **A lista de horários precisa saber que é remarcação** (`?reuniao=`). Sem isso a reunião movida conta contra o próprio intervalo e o próprio saldo, e a lista volta vazia — remarcar era impossível pela tela, em todo pedido. **Quem pegou foi a jornada autenticada**; unidade e integração chamam `remarcar` direto, que é o caminho que sempre funcionou.
+- **Dois índices de GRUPO DE COLEÇÕES** (`reunioes` é subcoleção). O emulador não impõe índice, então eles só existem depois do `apply`; a prova local é o `terraform plan`.
+- **As consultas de reunião filtram por estado, não por horário** — o dublê do Firestore não implementa faixa, e o recorte de futuro acontece em memória. **Isso não limita o crescimento**, e o comentário que dizia que limitava foi corrigido na revisão do PR #26: filtrar por estado tira só as canceladas, e `confirmada` acumula para sempre, porque reunião que já aconteceu continua confirmada. Aceitável no volume previsto; o gatilho para trocar pela faixa sobre `inicio` está no ADR-21.
+- **A lista de sobreviventes da mutação do `apps/api` tem falso alarme** — pelo menos dois, verificados à mão, são mortos por testes que já existem. Antes de escrever teste para um sobrevivente de lá, **aplique o mutante à mão e rode a suíte**. Ver `apps/api/stryker.config.mjs`. O relatório de `packages/shared` não tem esse problema.
+- **Imagens de referência:** nove novas, **não aprovadas**, e todas as existentes dos painéis mudaram porque o menu ganhou item. Revisão humana, uma a uma.
+- **Cobertura:** `apps/api` 91/82/90/92, `apps/web` 96/89/91/97, `shared` 99/100/100/99. **Mutação:** `shared` 98,15%, API 87,69%.
+
+**Próximo trabalho recomendado:** revisão humana dos PRs das Etapas 8 e 10, os dois parciais. **As duas travam no mesmo lugar — prazo de terceiro — e as duas precisam ser iniciadas AGORA, não quando o código estiver pronto:** a homologação de cartão com o AbacatePay (sem ela o cartão não funciona nem em produção) e o registro do aplicativo no Entra ID com a application access policy (propagação de até 48h). Quando a primeira sair, fazer a parte de cartão da rodada no sandbox — o nome do evento de conclusão do cartão é o item de maior risco ainda aberto. Quando a segunda sair, preencher `usuarioTeams` de cada advogado e ligar `REUNIOES_MODO=graph` em commit próprio, com uma chamada de teste manual antes. As imagens de referência da regressão visual esperam aprovação uma a uma. O `infra/terraform/imports.tf` continua pendente de remoção, depois do primeiro apply verde. Do lado da CONTRATANTE seguem pendentes: catálogo real da B&C, ficha de anamnese, textos jurídicos do estorno e do cancelamento, domínio verificado no Resend, chave de produção, os destinatários dos alertas e a confirmação das oito decisões provisórias do ADR-21 — em especial a antecedência mínima de 24 horas para marcar e a devolução do crédito quando quem cancela é o escritório.
 
 ## Stack
 
@@ -211,9 +230,11 @@ apps/web/          Angular 22, pré-renderização estática das rotas públicas
   src/app/paginas/admin-estornos/ estornos pendentes de devolucao manual
   src/app/paginas/advogado-demandas/ so o que foi distribuido
   src/app/paginas/advogado-disponibilidade/ grade semanal (ADR-06)
+  src/app/paginas/advogado-agenda/ o que os clientes marcaram, so o futuro
   src/app/paginas/admin-distribuicao/ caixa de entrada e atribuicao
   src/app/paginas/admin-clientes/ busca e filtro (item 2.5.8)
   src/app/paginas/admin-entregas/ painel do outbox: o que falhou e o reenvio
+  src/app/paginas/admin-reunioes/ reunioes sem sala; o reenvio passa pelo outbox
   src/app/catalogo/ catálogo navegável, removido do build de produção
   e2e/             Playwright: regressão visual, axe e aninhamento de direção
   e2e/referencia/  imagens de referência da regressão visual
@@ -234,6 +255,9 @@ apps/api/          NestJS 12 (ESM-only), prefixo global /api
   src/estornos/     estorno do admin, manual ou integral via outbox
   src/anamnese-provisoria/ STUB da ficha inicial
   src/entregaveis/  máquina de estados do ADR-11 e a trilha de transições
+  src/reunioes/     agendamento, remarcacao, cancelamento e iCalendar
+  src/reunioes/sala/ porta da sala do Teams, adaptador falso e a trava de modo
+  src/relogio.ts    o relogio do servidor; RELOGIO_FIXO so sob emulador
   src/tarefas/      guard de tarefa interna, porta de fila e adaptador do Cloud Tasks
   src/outbox/       escrita na transação, arrendamento, despachante e varredor
   src/alertas/      porta de alerta; o destinatário é configurado no Monitoring
@@ -246,7 +270,7 @@ scripts/visual.sh  roda o Playwright na imagem oficial (precisa de Docker)
 scripts/mutacao.sh  Stryker nos dois pacotes; exige e confere arvore limpa
 scripts/relatorio-qualidade.mjs  junta cobertura, mutacao, complexidade e ciclos
 scripts/emuladores.sh  envolve um comando nos emuladores de Auth e Firestore
-scripts/semear-emulador.mjs  usuários e catálogo de desenvolvimento; só fala com o emulador
+scripts/semear-emulador.mjs  usuários, catálogo e grade de horários; só fala com o emulador
 scripts/simular-webhook.mjs  faz o papel do AbacatePay em `pnpm dev`; só loopback e emulador
 scripts/dados-ficticios/  DADOS FICTÍCIOS — substituir pelo catálogo real da B&C
 .github/workflows/ ci.yml e deploy.yml

@@ -741,6 +741,28 @@ Branch `feat/areas-cliente-advogado`. O que foi construído, e as decisões que 
 
 **Critério de aceite.** Teste que confirma o comportamento do `SEQUENCE`: remarcação com o mesmo `UID` atualiza, cancelamento remove. Teste que confirma a janela de 24 horas no cancelamento, validada no servidor contra o `DTSTART`, não só na interface.
 
+### Registro de execução — Etapa 10 (PARCIAL)
+
+Branch `feat/agendamento-reunioes`. **A etapa não fecha**: os três pré-requisitos do Entra ID (licença Teams confirmada por advogado, aplicativo registrado com consentimento, application access policy por PowerShell) não existem, e são todos de terceiro. O que foi entregue é **o domínio inteiro, provado contra um adaptador falso** — a mesma forma da Etapa 8 com o gateway de pagamento. O adaptador real do Graph está escrito e **não está ligado**: `REUNIOES_MODO` não aceita `graph` nesta branch, e tentar subir com ele derruba o boot.
+
+**Erratas do escopo acima, todas em ADR-21.** A primeira tarefa técnica listada (registrar o aplicativo antes de qualquer código de domínio) foi **invertida de propósito**: com a propagação de até 48 horas fora do nosso controle, esperar por ela pararia a etapa inteira, e o adaptador falso torna o domínio construível e testável sem tenant nenhum. O **job de expiração da janela de 12 meses foi removido** do escopo: a janela é calculada na leitura, como a semana de disponibilidade da Etapa 9 (arquitetura, seção 8), e uma rotina que "encerra saldos" seria uma peça móvel para produzir um número que a leitura já produz.
+
+**O ID da reunião é estável e sequencial** (`r001`), e não o ID do slot. Remarcar **atualiza o mesmo documento**. Três razões, e cada uma sozinha bastaria: o `externalId` do Graph **é** o `reuniaoId`, e um id que muda cria uma segunda sala; reunião cancelada continuaria ocupando o id do slot e colidiria com uma reserva futura no mesmo horário; e eventos de outbox em trânsito, que referenciam `reuniaoId`, ficariam órfãos.
+
+**Dois mecanismos de exclusividade, e o segundo não é redundante.** O slot carrega `reserva`, sempre escrita; e agendar, remarcar e cancelar **escrevem o documento do pedido**. A transação do Firestore só entra em conflito nos documentos que ela toca: duas requisições do mesmo pedido para **slots diferentes** tocariam documentos diferentes, não conflitariam, e passariam as duas — furando saldo e intervalo. A suíte de integração tem um teste de concorrência para cada mecanismo, e o segundo é o que falharia sem `reunioesEmitidas`.
+
+**As quatro corridas entre o outbox e a reunião** estão tratadas e testadas: o despachante relê a reunião na transação (cancelada não vira sala, remarcada emite convite com o `sequence` atual), convite só sai com link, e `METHOD:CANCEL` só sai se algum convite chegou a ser emitido — é para isso que existe `sequenceComunicada`.
+
+**Um defeito só a jornada autenticada pegou.** Remarcar era impossível pela tela, em todo pedido: a lista de horários é a mesma rota de marcar e não sabia que era uma remarcação, então a reunião sendo movida contava contra o próprio intervalo mínimo e contra o próprio saldo, e a lista voltava vazia. Nem a unidade nem a integração pegariam — as duas chamam `remarcar` direto, que é o caminho que sempre funcionou. A tela dizia "nenhum horário disponível", que é um estado legítimo com a aparência exata de um advogado sem grade publicada.
+
+**Um relógio do servidor, fixável só sob emulador.** As telas de reunião dependem da data, e jornada e imagem de regressão construídas sobre `Date.now()` mudariam de resultado todo dia. `RELOGIO_FIXO` **derruba o boot fora do emulador** — um relógio parado em produção congelaria a janela de validade, as 24 horas e a antecedência mínima. Servidor, navegador e semente leem o mesmo instante. Efeito colateral bem-vindo: `advogado/disponibilidade` entrou na regressão visual, de onde estava excluída justamente porque a grade mudava toda segunda.
+
+**Um achado sobre a própria ferramenta de mutação**, registrado em `apps/api/stryker.config.mjs`: a lista de sobreviventes do pacote da API tem falso alarme — pelo menos dois "sobreviventes" verificados à mão são mortos por testes que já existem, provavelmente por atribuição de cobertura por teste sob ESM. O erro é para o lado seguro, mas custa tempo: antes de escrever teste para um sobrevivente de lá, aplique o mutante à mão.
+
+**Imagens de referência:** nove novas, **não aprovadas**. E todas as existentes dos painéis vão acusar diferença até alguém olhar — o menu do advogado e o do administrador ganharam item, e ele desloca a página inteira. Revisão humana, uma a uma.
+
+**Cobertura:** `apps/api` 91/82/90/92, `apps/web` 96/89/91/97, `packages/shared` 99/100/100/99. **Mutação:** `shared` 98,15%, API 87,69%. O `apps/api` caiu de 93/85/93/95 e **continua acima dos limiares do Jest**. A queda não é do adaptador do Graph, que está em 98% — vem dos dois controladores novos e dos módulos de fiação, exercitados pela suíte de aceite, que roda sob outra configuração e não entra nesta contagem. É a mesma assimetria das etapas anteriores; o que mudou foi o peso, porque a etapa acrescentou fiação em proporção maior que lógica.
+
 ### Só você — Etapa 10
 
 **Impossível delegar**
@@ -750,6 +772,13 @@ Branch `feat/areas-cliente-advogado`. O que foi construído, e as decisões que 
 - Configurar a application access policy via PowerShell (ou coordenar com quem tiver esse acesso no escritório).
 - Obter o registro escrito do desvio do 2.7.3 (troca de Meet por Teams), conforme a Etapa 0.3.
 - Conferir em caixas reais de Gmail, Outlook e Apple Mail como o convite iCalendar chega. Renderização de e-mail não se testa por unidade.
+
+**Acrescentado depois da rodada parcial**
+
+- **Preencher `usuarioTeams` de cada advogado.** O Graph identifica o advogado pelo **object ID do Entra**, não pelo uid do Firebase nem pelo e-mail. O campo é opcional no formulário do administrador e o adaptador recusa com erro claro e reentregável quando está nulo — mas enquanto ele estiver vazio, nenhuma sala é criada para aquele advogado.
+- **Aprovar as imagens de referência da regressão visual.** Nove são novas; todas as outras dos painéis mudaram porque o menu ganhou item. Uma a uma — regravar em bloco apaga a regressão em vez de acusá-la.
+- **Confirmar com o Marcos as oito decisões provisórias do ADR-21**, em especial: a antecedência mínima de 24 horas para marcar (decisão F) e a devolução do crédito quando quem cancela é o escritório (decisão H). Nenhuma das duas está no contrato.
+- **Ligar `REUNIOES_MODO=graph` em commit próprio**, depois de o registro no Entra ID e a policy estarem confirmados, e com uma chamada de teste manual antes. Hoje o valor derruba o boot de propósito.
 
 ## Etapa 11 — Upload e varredura de malware
 

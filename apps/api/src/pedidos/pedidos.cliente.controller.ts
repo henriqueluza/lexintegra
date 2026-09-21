@@ -1,14 +1,28 @@
-import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { z } from 'zod';
 import {
+  esquemaAgendamento,
+  esquemaRemarcacao,
   esquemaNovaObservacao,
   esquemaPedidoDeUpload,
   POLITICA_UPLOAD,
+  type Agendamento,
   type AnexoResumo,
   type CartaoPedido,
   type EntregavelResumo,
+  type HorarioDisponivel,
   type NovaObservacao,
   type ObservacaoResumo,
+  type Remarcacao,
+  type ReuniaoResumo,
   type SituacaoPedido,
 } from 'shared';
 import { AnexosService } from '../anexos/anexos.service.js';
@@ -18,6 +32,10 @@ import { Perfis, UsuarioAtual } from '../autenticacao/decoradores.js';
 import type { UsuarioAutenticado } from '../autenticacao/usuario.js';
 import { EntregaveisService } from '../entregaveis/entregaveis.service.js';
 import { ObservacoesService } from '../observacoes/observacoes.service.js';
+import { AlteracoesDeReuniaoService } from '../reunioes/alteracoes.service.js';
+import { CancelamentoDeReuniaoService } from '../reunioes/cancelamento.service.js';
+import { HorariosService } from '../reunioes/horarios.service.js';
+import { ReunioesService } from '../reunioes/reunioes.service.js';
 import { ZodPipe } from '../validacao/zod.pipe.js';
 import { CancelamentoService } from './cancelamento.service.js';
 import { ConsultaPedidosService } from './consulta.service.js';
@@ -70,6 +88,10 @@ export class PedidosClienteController {
     private readonly portao: PortaoDeArquivos,
     private readonly termos: TermosService,
     private readonly cancelamento: CancelamentoService,
+    private readonly reunioes: ReunioesService,
+    private readonly horarios: HorariosService,
+    private readonly alteracoes: AlteracoesDeReuniaoService,
+    private readonly cancelamentoDeReuniao: CancelamentoDeReuniaoService,
   ) {}
 
   /** Um cartao por pedido (item 2.3.2), cada um com seus proprios entregaveis. */
@@ -97,6 +119,99 @@ export class PedidosClienteController {
     @UsuarioAtual() cliente: UsuarioAutenticado,
   ): Promise<{ situacao: SituacaoPedido }> {
     return this.cancelamento.cancelar(pedidoId, cliente.uid);
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Reunioes (Etapa 10)                                                     */
+  /* ---------------------------------------------------------------------- */
+
+  /**
+   * Os horarios escolhiveis para ESTE pedido.
+   *
+   * O que chega na tela ja passou por saldo, janela, intervalo e antecedencia —
+   * pelas mesmas funcoes que o `POST` usa dentro da transacao. A tela desenha a
+   * lista sem reaplicar regra nenhuma.
+   *
+   * `?reuniao=` diz que a tela esta REMARCANDO aquela reuniao, e nao marcando
+   * uma nova. Sem isso a lista da remarcacao sai vazia: ver `HorariosService`.
+   */
+  @Get(':pedidoId/horarios')
+  horariosDeReuniao(
+    @Param('pedidoId') pedidoId: string,
+    @UsuarioAtual() cliente: UsuarioAutenticado,
+    @Query('reuniao') reuniaoId?: string,
+  ): Promise<HorarioDisponivel[]> {
+    return this.horarios.listar(pedidoId, cliente.uid, reuniaoId ?? null);
+  }
+
+  /**
+   * Marca uma reuniao DESTE pedido (itens 2.7.1 a 2.7.4).
+   *
+   * A ROTA E SUBCAMINHO DO PEDIDO, e isso e o desenho e nao arrumacao. O ADR-12
+   * e a arquitetura 5.4 exigem que nao haja ambiguidade sobre qual saldo esta
+   * sendo debitado: com dois pedidos ativos, um `POST /reunioes` de topo nao
+   * teria como saber. `app.routes.spec.ts` guarda o mesmo do lado da interface.
+   *
+   * O corpo traz o `slotId`, e nada mais: o cliente escolhe um horario que o
+   * advogado PUBLICOU (ADR-06), e o id do slot ja carrega o advogado e o
+   * instante.
+   */
+  @Post(':pedidoId/reunioes')
+  @HttpCode(201)
+  marcarReuniao(
+    @Param('pedidoId') pedidoId: string,
+    @Body(new ZodPipe(esquemaAgendamento)) corpo: Agendamento,
+    @UsuarioAtual() cliente: UsuarioAutenticado,
+  ): Promise<ReuniaoResumo> {
+    return this.reunioes.agendar(pedidoId, cliente.uid, corpo.slotId);
+  }
+
+  /**
+   * Remarca uma reuniao (ADR-21, decisao 6).
+   *
+   * `POST .../remarcacao` e nao `PUT .../reunioes/:id`: remarcar e um EVENTO de
+   * dominio, com regra propria — as 24 horas medidas contra o `inicio` atual — e
+   * nao a substituicao de um recurso. E a mesma forma de `/cancelamento` e
+   * `/atribuicao`, e a mesma razao pela qual o entregavel nao tem
+   * `PATCH { estado }` (ADR-11).
+   *
+   * O `reuniaoId` no caminho NAO MUDA depois de remarcar: o documento e o mesmo
+   * (ADR-21, decisao A). A tela nao precisa reaprender o id.
+   */
+  @Post(':pedidoId/reunioes/:reuniaoId/remarcacao')
+  @HttpCode(200)
+  remarcarReuniao(
+    @Param('pedidoId') pedidoId: string,
+    @Param('reuniaoId') reuniaoId: string,
+    @Body(new ZodPipe(esquemaRemarcacao)) corpo: Remarcacao,
+    @UsuarioAtual() cliente: UsuarioAutenticado,
+  ): Promise<ReuniaoResumo> {
+    return this.alteracoes.remarcar(
+      { pedidoId, reuniaoId },
+      cliente.uid,
+      corpo.slotId,
+    );
+  }
+
+  /**
+   * Cancela uma reuniao (ADR-12, regra das 24 horas).
+   *
+   * SEM CORPO: a unica informacao e "esta", e ela ja esta no caminho — como o
+   * cancelamento de pedido da Etapa 8. Se devolve ou nao o credito nao e escolha
+   * de quem chama: e consequencia do relogio, decidida no servidor contra o
+   * `inicio` gravado.
+   */
+  @Post(':pedidoId/reunioes/:reuniaoId/cancelamento')
+  @HttpCode(200)
+  cancelarReuniao(
+    @Param('pedidoId') pedidoId: string,
+    @Param('reuniaoId') reuniaoId: string,
+    @UsuarioAtual() cliente: UsuarioAutenticado,
+  ): Promise<ReuniaoResumo> {
+    return this.cancelamentoDeReuniao.cancelar(
+      { pedidoId, reuniaoId },
+      { uid: cliente.uid, perfil: 'cliente' },
+    );
   }
 
   /* ---------------------------------------------------------------------- */

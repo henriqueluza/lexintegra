@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { EstadoEntregavel } from '../estado-entregavel.js';
 import type { ExecucaoEstorno, SituacaoPedido } from '../situacao-pedido.js';
 import type { SnapshotProduto } from './produto.js';
+import type { ReuniaoResumo } from './reuniao.js';
 
 /**
  * As formas do pedido que a API devolve, e a distribuicao pelo administrador
@@ -66,6 +67,39 @@ export type CartaoPedido = {
   readonly situacao: SituacaoPedido;
   /** ISO 8601, ou `null` enquanto o carimbo do servidor nao materializou. */
   readonly criadoEm: string | null;
+  /**
+   * Etapa 10. As reunioes DESTE pedido, com o saldo e o prazo ja calculados.
+   *
+   * OS TRES CAMPOS VIAJAM JUNTOS DE PROPOSITO. O saldo e derivavel de `reunioes`
+   * mais `snapshot.quantidadeReunioes`, e o prazo, de `criadoEm` mais
+   * `snapshot.prazoValidadeReunioesDias` — mas derivar na tela seria a mesma
+   * aritmetica em dois lugares, e o lugar que errasse seria o que o cliente ve.
+   * O servidor calcula com `regras-reuniao.ts`; a tela usa AS MESMAS funcoes para
+   * decidir o que habilitar, e o que vem pronto aqui e o que ela apenas exibe.
+   */
+  readonly reunioes: readonly ReuniaoResumo[];
+  readonly saldoDeReunioes: number;
+  /**
+   * ISO 8601 do ultimo instante em que uma reuniao deste pedido pode COMECAR, ou
+   * `null` enquanto `criadoEm` nao materializou. A tela mostra "validas ate ...".
+   */
+  readonly reunioesValidasAte: string | null;
+  /**
+   * `false` quando `REUNIOES_MODO=desligado` — o agendamento inteiro esta fora do
+   * ar, e nao e este pedido que tem impedimento.
+   *
+   * VEM DO SERVIDOR PORQUE A TELA NAO TEM COMO SABER. E configuracao de
+   * processo, nao dado do pedido, e enquanto a integracao com o Teams nao
+   * existir sera `false` para todo mundo. Sem este campo, o cartao ofereceria o
+   * botao de marcar, o cliente clicaria, e a resposta seria 503 — um erro
+   * generico para uma condicao que o servidor conhecia desde o primeiro byte.
+   *
+   * SEPARADO DOS IMPEDIMENTOS de `regras-reuniao.ts` de proposito: aqueles sao
+   * deste pedido (saldo, janela, distribuicao) e o cliente pode agir sobre
+   * alguns; este e nosso, e a unica coisa util a dizer e que estamos
+   * providenciando.
+   */
+  readonly agendamentoDisponivel: boolean;
 };
 
 /**

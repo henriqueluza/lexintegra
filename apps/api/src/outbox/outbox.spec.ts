@@ -13,6 +13,7 @@ import {
 import { montarLinkDeSenha, urlDaAplicacao } from './link-de-senha.js';
 import type { OutboxService, Reivindicacao } from './outbox.service.js';
 import { GatewayPagamentoFalso } from '../pagamentos/gateway/gateway-falso.js';
+import type { ConvitesService } from '../reunioes/convites.service.js';
 
 /* -------------------------------------------------------------------------- */
 /* Identidade e deduplicacao dos eventos                                       */
@@ -102,6 +103,128 @@ describe('idDoEvento', () => {
     expect(
       chaveDoEvento({ tipo: 'acesso-cliente', destinatarioUid: 'uid-1' }),
     ).toBe('uid-1');
+  });
+
+  /* ---------------------------------------------------------------------- */
+  /* Os tres da Etapa 10                                                      */
+  /* ---------------------------------------------------------------------- */
+
+  describe('eventos de reuniao', () => {
+    const reuniao = { pedidoId: 'pedido-1', reuniaoId: 'r001', sequence: 0 };
+
+    /**
+     * UMA SALA POR REUNIAO, PARA SEMPRE. A chave nao leva `sequence` nem
+     * destinatario: remarcar NAO cria sala nova (ADR-21, decisao 7), e o
+     * `create` que estoura na segunda passagem e a prova disso.
+     */
+    it('a sala tem um id por reuniao, indiferente ao sequence', () => {
+      const primeiro = chaveDoEvento({
+        tipo: 'criar-sala-reuniao',
+        destinatarioUid: 'uid-clara',
+        reuniao,
+      });
+      const depoisDeRemarcar = chaveDoEvento({
+        tipo: 'criar-sala-reuniao',
+        destinatarioUid: 'uid-clara',
+        reuniao: { ...reuniao, sequence: 3 },
+      });
+
+      expect(primeiro).toBe('pedido-1_r001');
+      expect(depoisDeRemarcar).toBe(primeiro);
+    });
+
+    /**
+     * SEM O DESTINATARIO, O CONVITE DO CLIENTE E O DO ADVOGADO COLIDIRIAM: o
+     * segundo `create` estouraria como duplicata esperada e UM DOS DOIS nunca
+     * receberia o convite, sem erro nenhum.
+     */
+    it('o convite separa cliente e advogado', () => {
+      const doCliente = chaveDoEvento({
+        tipo: 'convite-reuniao',
+        destinatarioUid: 'uid-clara',
+        reuniao,
+      });
+      const doAdvogado = chaveDoEvento({
+        tipo: 'convite-reuniao',
+        destinatarioUid: 'uid-ana',
+        reuniao,
+      });
+
+      expect(doCliente).not.toBe(doAdvogado);
+      expect(doCliente).toContain('uid-clara');
+    });
+
+    /**
+     * SEM O `sequence`, O CONVITE DA REMARCACAO COLIDIRIA com o original — que ja
+     * foi entregue — e seria engolido como duplicata. O cliente ficaria com o
+     * horario VELHO na agenda e nada falharia. E a mesma classe de defeito que o
+     * campo `ciclo` resolve no reenvio manual.
+     */
+    it('o convite da remarcacao nao colide com o convite original', () => {
+      const original = chaveDoEvento({
+        tipo: 'convite-reuniao',
+        destinatarioUid: 'uid-clara',
+        reuniao,
+      });
+      const remarcado = chaveDoEvento({
+        tipo: 'convite-reuniao',
+        destinatarioUid: 'uid-clara',
+        reuniao: { ...reuniao, sequence: 1 },
+      });
+
+      expect(remarcado).not.toBe(original);
+    });
+
+    it('o cancelamento tambem separa destinatario e sequence', () => {
+      expect(
+        chaveDoEvento({
+          tipo: 'cancelamento-reuniao',
+          destinatarioUid: 'uid-clara',
+          reuniao: { ...reuniao, sequence: 2 },
+        }),
+      ).toBe('pedido-1_r001_s2_uid-clara');
+    });
+
+    /** Reunioes de pedidos diferentes nunca compartilham documento. */
+    it('separa reunioes de pedidos diferentes', () => {
+      expect(
+        chaveDoEvento({
+          tipo: 'criar-sala-reuniao',
+          destinatarioUid: 'uid-clara',
+          reuniao,
+        }),
+      ).not.toBe(
+        chaveDoEvento({
+          tipo: 'criar-sala-reuniao',
+          destinatarioUid: 'uid-clara',
+          reuniao: { ...reuniao, pedidoId: 'pedido-2' },
+        }),
+      );
+    });
+
+    /**
+     * O QUE O `switch` EXAUSTIVO IMPEDE. Antes dele, `idDoEvento` terminava num
+     * `return` de `redefinir-senha`, e um tipo novo sem ramo ganhava um id
+     * `redefinir-senha_...` COM A JANELA DE 15 MINUTOS junto — dois eventos
+     * distintos do mesmo destinatario colidiriam dentro da janela.
+     */
+    it.each([
+      'criar-sala-reuniao',
+      'convite-reuniao',
+      'cancelamento-reuniao',
+    ] as const)('%s nao cai no id de redefinicao de senha', (tipo) => {
+      const id = idDoEvento(tipo, 'chave-qualquer');
+
+      expect(id).toBe(`${tipo}_chave-qualquer`);
+      expect(id).not.toContain('redefinir-senha');
+    });
+
+    /** O id da sala nao depende da hora, como o de `definir-senha`. */
+    it('a sala tem o mesmo id a qualquer hora', () => {
+      expect(idDoEvento('criar-sala-reuniao', 'pedido-1_r001', 0)).toBe(
+        idDoEvento('criar-sala-reuniao', 'pedido-1_r001', 10 ** 12),
+      );
+    });
   });
 
   it('nao mistura os dois tipos de evento', () => {
@@ -221,11 +344,29 @@ const REGISTRO: RegistroOutbox = {
   varrerApos: null as never,
 };
 
+/** O que a sala falsa devolve por padrao no dublê de `ConvitesService`. */
+const SALA_CRIADA = {
+  sucesso: true,
+  link: 'https://teams.test/sala',
+  idExterno: 'sala_1',
+  jaExistia: false,
+} as const;
+
+const CONVITE = {
+  enviar: true,
+  mensagem: {
+    para: ['clara@exemplo.test'],
+    assunto: 'Reuniao marcada',
+    corpoTexto: 'convite',
+  },
+} as const;
+
 interface Cenario {
   despachante: DespachanteOutbox;
   transporte: EmailFalsoTransport;
   alertas: AlertaFalso;
   gateway: GatewayPagamentoFalso;
+  convites: ConvitesService;
   concluidos: Array<{
     id: string;
     estado: 'enviado' | 'falhou' | 'abandonado';
@@ -244,6 +385,9 @@ function montarCenario(opcoes: {
   gateway?: GatewayPagamentoFalso;
   /** Faz `concluir` responder `abandonado`, como se o orcamento tivesse acabado. */
   esgotado?: boolean;
+  criarSala?: () => Promise<unknown>;
+  montarConvite?: () => Promise<unknown>;
+  montarCancelamento?: () => Promise<unknown>;
 }): Cenario {
   const concluidos: Cenario['concluidos'] = [];
 
@@ -290,6 +434,19 @@ function montarCenario(opcoes: {
   const transporte = new EmailFalsoTransport();
   const alertas = new AlertaFalso();
   const gateway = opcoes.gateway ?? new GatewayPagamentoFalso();
+  /*
+   * O servico de convites tem suite propria (`convites.service.spec.ts`), com o
+   * Firestore falso e a sala falsa. Aqui ele e um dublê: o que se testa neste
+   * arquivo e o DESPACHANTE — que ele desvia os tres tipos de reuniao de
+   * `montar`, e que "nao enviar" conclui como sucesso.
+   */
+  const convites = {
+    criarSala: opcoes.criarSala ?? (() => Promise.resolve(SALA_CRIADA)),
+    montarConvite: opcoes.montarConvite ?? (() => Promise.resolve(CONVITE)),
+    montarCancelamento:
+      opcoes.montarCancelamento ?? (() => Promise.resolve(CONVITE)),
+  } as unknown as ConvitesService;
+
   return {
     despachante: new DespachanteOutbox(
       outbox,
@@ -297,11 +454,13 @@ function montarCenario(opcoes: {
       opcoes.transporte ?? transporte,
       alertas,
       gateway,
+      convites,
     ),
     transporte,
     alertas,
     concluidos,
     gateway,
+    convites,
   };
 }
 

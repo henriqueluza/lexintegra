@@ -21,6 +21,7 @@ import { SeloEstado } from '../../ui/selo-estado/selo-estado';
 import { mensagemDoErro } from '../erros';
 import { anexosDeclarados, MAXIMO_ANEXOS } from './anexos-do-navegador';
 import { CancelamentoPedido } from './cancelamento-pedido';
+import { ReunioesDoPedido } from './reunioes-do-pedido';
 import { TEXTO_TERMO_DOWNLOAD } from './termo';
 
 /**
@@ -40,6 +41,7 @@ import { TEXTO_TERMO_DOWNLOAD } from './termo';
     Botao,
     Campo,
     CancelamentoPedido,
+    ReunioesDoPedido,
     Cartao,
     CartaoRodape,
     MensagemErro,

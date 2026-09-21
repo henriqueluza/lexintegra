@@ -182,6 +182,28 @@ module.exports = {
       },
     },
     {
+      name: 'so-a-fabrica-conhece-o-graph',
+      severity: 'error',
+      comment:
+        'Etapa 10, ADR-21. O adaptador da Microsoft Graph so pode ser ' +
+        'instanciado por `reunioes/sala/criar-sala-de-reuniao.ts`, que so o ' +
+        'escolhe depois de `modo.ts` validar o modo. Um `new GraphSalaDeReuniao' +
+        '(...)` em outro modulo passaria por cima da trava inteira — e o que ' +
+        'esta do outro lado dela e o tenant da B&C: salas criadas em nome de ' +
+        'advogados reais, com convites saindo para clientes reais, a partir de ' +
+        'um ambiente de teste. Mesma forma de `so-a-fabrica-conhece-o-abacatepay`.',
+      from: {
+        path: '^apps/api',
+        pathNot: [
+          '^apps/api/src/reunioes/sala/(criar-sala-de-reuniao|graph\\.sala-de-reuniao)\\.ts$',
+          'spec\\.ts$',
+        ],
+      },
+      to: {
+        path: '^apps/api/src/reunioes/sala/graph\\.sala-de-reuniao\\.ts$',
+      },
+    },
+    {
       name: 'sem-dev-dep-em-producao',
       severity: 'error',
       comment:
