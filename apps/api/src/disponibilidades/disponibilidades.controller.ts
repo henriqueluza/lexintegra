@@ -7,6 +7,7 @@ import {
 } from 'shared';
 import { Perfis, UsuarioAtual } from '../autenticacao/decoradores.js';
 import type { UsuarioAutenticado } from '../autenticacao/usuario.js';
+import { agora } from '../relogio.js';
 import { ZodPipe } from '../validacao/zod.pipe.js';
 import { DisponibilidadesService } from './disponibilidades.service.js';
 
@@ -41,7 +42,7 @@ export class DisponibilidadesController {
     readonly slots: readonly SlotResumo[];
   }> {
     return {
-      semanas: semanasEditaveis(new Date()),
+      semanas: semanasEditaveis(new Date(agora())),
       slots: await this.disponibilidades.obter(advogado.uid, semana),
     };
   }

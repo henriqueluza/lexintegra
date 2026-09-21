@@ -20,6 +20,7 @@ import {
 import { FIRESTORE, AUTH_FIREBASE } from '../firebase/firebase.module.js';
 import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
+import { ConsultaReunioesService } from '../reunioes/consulta.service.js';
 
 export const COLECAO_ADVOGADOS = 'advogados';
 
@@ -29,6 +30,33 @@ interface DocumentoAdvogado {
   status: StatusAdvogado;
   criadoEm: Timestamp | FieldValue;
   criadoPor: string;
+  /**
+   * Etapa 10 (ADR-21, decisao B). O object ID do advogado no Entra ID, que e o
+   * `{userId}` da chamada ao Graph — NAO o uid do Firebase.
+   *
+   * SEMPRE ESCRITO, inclusive como `null`, pela armadilha de sempre: uma consulta
+   * futura por "advogados sem identificador do Teams" usaria igualdade, e
+   * documento sem o campo nao casa com `== null` no Firestore.
+   */
+  usuarioTeams: string | null;
+}
+
+/** O documento anterior a Etapa 10 nao tem o campo, e isso e o mesmo que nulo. */
+function usuarioTeamsDe(dados: DocumentoAdvogado): string | null {
+  return dados.usuarioTeams ?? null;
+}
+
+/**
+ * `?? null` e obrigatorio, e nao defensivo a toa.
+ *
+ * O schema garante a chave quando o corpo passa pelo `ZodPipe`, mas este servico
+ * tambem e chamado DIRETO — pela suite de integracao e por quem vier a precisar
+ * dele. Sem isto, `usuarioTeams: undefined` chega ao Firestore, que recusa a
+ * escrita inteira com "Cannot use undefined as a Firestore value" e derruba a
+ * criacao do advogado. Foi exatamente assim que a suite de integracao pegou isto.
+ */
+function usuarioTeamsDoPedido(dados: NovoAdvogado): string | null {
+  return dados.usuarioTeams ?? null;
 }
 
 /**
@@ -59,6 +87,7 @@ export class AdvogadosService {
     @Inject(FIRESTORE) private readonly db: Firestore,
     private readonly outbox: OutboxService,
     private readonly enfileirador: EnfileiradorDeEventos,
+    private readonly reunioes: ConsultaReunioesService,
   ) {}
 
   async criar(dados: NovoAdvogado, criadoPor: string): Promise<AdvogadoResumo> {
@@ -90,6 +119,7 @@ export class AdvogadosService {
       email: dados.email,
       status: 'ativo',
       criadoEm: null,
+      usuarioTeams: usuarioTeamsDoPedido(dados),
     };
   }
 
@@ -110,6 +140,7 @@ export class AdvogadosService {
           dados.criadoEm instanceof Timestamp
             ? dados.criadoEm.toDate().toISOString()
             : null,
+        usuarioTeams: usuarioTeamsDe(dados),
       };
     });
   }
@@ -134,8 +165,23 @@ export class AdvogadosService {
    * A claim NAO e removida. Suspenso continua sendo advogado; o que muda e o
    * acesso. Mexer na claim aqui faria a reativacao precisar reescreve-la — e cada
    * escrita de claim a mais e uma chance a mais de elevacao de privilegio errada.
+   *
+   * ZERO EFEITO: 409 ENQUANTO HOUVER REUNIAO FUTURA ATIVA (Etapa 10, ADR-21,
+   * decisao D). Com um compromisso marcado, suspender faria o cliente aparecer
+   * numa sala que o advogado nao consegue mais abrir — e ninguem descobriria
+   * antes da hora. A conferencia vem ANTES dos tres efeitos acima, e nao depois:
+   * desabilitar a conta e revogar os tokens nao se desfazem com um `throw`.
+   *
+   * Reuniao PASSADA nao impede nada, e a REATIVACAO nao confere: devolver acesso
+   * nunca e o que cria o problema.
    */
   async suspender(uid: string, admin: string): Promise<AdvogadoResumo> {
+    if (await this.reunioes.futuraAtivaDoAdvogado(uid)) {
+      throw new ConflictException(
+        'Este advogado tem reuniao marcada. Cancele ou remarque a reuniao antes de suspender.',
+      );
+    }
+
     return this.alternarAcesso(uid, admin, 'suspenso');
   }
 
@@ -183,6 +229,7 @@ export class AdvogadosService {
         dados.criadoEm instanceof Timestamp
           ? dados.criadoEm.toDate().toISOString()
           : null,
+      usuarioTeams: usuarioTeamsDe(dados),
     };
   }
 
@@ -236,6 +283,7 @@ export class AdvogadosService {
       nome: dados.nome,
       email: dados.email,
       status: 'ativo',
+      usuarioTeams: usuarioTeamsDoPedido(dados),
       criadoEm: FieldValue.serverTimestamp(),
       criadoPor,
     };

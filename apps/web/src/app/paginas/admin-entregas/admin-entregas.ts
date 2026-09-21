@@ -35,6 +35,9 @@ const ROTULO_DO_TIPO: Readonly<Record<string, string>> = {
   'aviso-exclusao-arquivos': 'Aviso de exclusao',
   'acesso-cliente': 'Acesso de cliente',
   'estorno-integral': 'Estorno integral no gateway',
+  'criar-sala-reuniao': 'Sala da reuniao no Teams',
+  'convite-reuniao': 'Convite de reuniao',
+  'cancelamento-reuniao': 'Cancelamento de reuniao',
 };
 
 /**

@@ -30,6 +30,11 @@
  */
 
 import { congelarProduto } from '../packages/shared/src/esquemas/produto.ts';
+import {
+  dataLocal,
+  semanaDe,
+  somarDias,
+} from '../packages/shared/src/semana.ts';
 import { normalizarParaBusca } from '../packages/shared/src/texto.ts';
 import { CATALOGO_FICTICIO } from './dados-ficticios/catalogo-produtos.ts';
 import {
@@ -46,6 +51,59 @@ const HOST_FIRESTORE = process.env.FIRESTORE_EMULATOR_HOST;
 const PROJETO = process.env.GCLOUD_PROJECT ?? 'demo-lexintegra';
 
 const SENHA = 'senha-de-desenvolvimento';
+
+/**
+ * O RELOGIO DA SEMENTE E O MESMO DO SERVIDOR (Etapa 10).
+ *
+ * As telas de reuniao dependem da data: a lista de horarios so mostra a semana
+ * corrente e a seguinte (ADR-06), e a agenda do advogado so mostra o futuro. Com
+ * a grade semeada num relogio e a API lendo outro, o cliente abriria o seletor e
+ * veria "nenhum horario disponivel" — sem erro nenhum e sem nada que dissesse
+ * por que.
+ *
+ * `RELOGIO_FIXO` e a MESMA variavel que a API le (`apps/api/src/relogio.ts`), e
+ * quem a passa aqui e o arnes das jornadas, junto com o `page.clock` do
+ * navegador. Ausente — o caso de `pnpm semear` e de `pnpm dev` —, vale o relogio
+ * de verdade e a grade sai relativa a hoje. E o que mantem a demonstracao manual
+ * funcionando em qualquer dia do ano, sem a semente ter de escolher entre ser
+ * deterministica e ser util.
+ *
+ * TODO CARIMBO DA SEMENTE SAI DESTE INSTANTE, `criadoEm` de pedido incluido: a
+ * tela do cliente mostra ate quando as reunioes valem, e essa data e
+ * `criadoEm + prazo`. Com o relogio de verdade ali, a imagem de referencia da
+ * regressao visual mudaria de um dia para o outro — e um baseline que precisa
+ * ser regravado por calendario treina a equipe a regravar sem olhar, que e como
+ * uma suite de regressao visual morre.
+ */
+const RELOGIO = process.env.RELOGIO_FIXO;
+const AGORA =
+  RELOGIO === undefined || RELOGIO === '' ? new Date() : new Date(RELOGIO);
+
+/**
+ * Tres horarios de atendimento, a tres e quatro dias do relogio: quinta as 14h e
+ * sexta as 10h e 14h, quando o relogio cai numa segunda.
+ *
+ * TRES E QUATRO DIAS, e nao "amanha": a antecedencia minima para marcar e de 24
+ * horas (ADR-21, decisao F), e um slot mais perto seria recusado pelo servidor —
+ * a lista sairia vazia e pareceria defeito de tela.
+ *
+ * Nunca escapam das duas semanas editaveis, qualquer que seja o dia de partida:
+ * o pior caso e um domingo, e quatro dias dali ainda caem na semana seguinte.
+ *
+ * O FUSO E FIXO EM -03:00 (ver `semana.ts` e o ADR-21): 14h em Sao Paulo e 17h
+ * em UTC, sempre. E por isso que da para montar o instante concatenando a data
+ * civil com a hora, sem nenhuma conversao.
+ */
+function slotsDaGrade(base) {
+  const dia = (quantos) => somarDias(dataLocal(base), quantos);
+
+  return [
+    { inicio: `${dia(3)}T17:00:00.000Z`, fim: `${dia(3)}T18:00:00.000Z` },
+    { inicio: `${dia(4)}T13:00:00.000Z`, fim: `${dia(4)}T14:00:00.000Z` },
+    { inicio: `${dia(4)}T17:00:00.000Z`, fim: `${dia(4)}T18:00:00.000Z` },
+  ];
+}
+
 const CONTAS = [
   {
     email: 'cliente@exemplo.test',
@@ -94,6 +152,13 @@ if (!PROJETO.startsWith('demo-')) {
     `Projeto "${PROJETO}" nao tem o prefixo demo-. Este script so semeia ` +
       'emulador; recusando.',
   );
+}
+
+/* Sem esta guarda, um valor mal escrito viraria `Invalid Date` e a semente
+ * gravaria carimbos nulos — que e o tipo de dado que so denuncia a origem tres
+ * telas adiante. A API recusa subir pelo mesmo motivo. */
+if (Number.isNaN(AGORA.getTime())) {
+  abortar(`RELOGIO_FIXO invalido: "${RELOGIO}". Use um instante ISO 8601.`);
 }
 
 const base = `http://${HOST}/identitytoolkit.googleapis.com/v1`;
@@ -162,7 +227,7 @@ async function semear({ email, nome, perfil }) {
  * origem do dado a quem abrir o banco procurando entender de onde saiu um produto.
  */
 async function semearCatalogo() {
-  const agora = new Date();
+  const agora = AGORA;
   const ids = [];
 
   for (const [indice, produto] of CATALOGO_FICTICIO.entries()) {
@@ -196,7 +261,7 @@ async function semearCatalogo() {
  * advogado suspenso continua sendo advogado, mas nao recebe demanda nova.
  */
 async function semearAdvogados(uidPorEmail) {
-  const agora = new Date();
+  const agora = AGORA;
 
   for (const conta of CONTAS.filter((atual) => atual.perfil === 'advogado')) {
     const uid = uidPorEmail.get(conta.email);
@@ -211,6 +276,47 @@ async function semearAdvogados(uidPorEmail) {
 
     console.log(`  advogado  ${conta.nome}`);
   }
+}
+
+/**
+ * A grade de disponibilidade do advogado (Etapa 10, ADR-06).
+ *
+ * Sem ela a jornada de reuniao nao tem o que escolher e a tela do cliente mostra
+ * "nenhum horario disponivel" — que e um estado legitimo, mas nao o que se quer
+ * exercitar. Os instantes saem do relogio da semente: ver a nota em `AGORA`.
+ *
+ * A SEMANA E CALCULADA POR SLOT, e nao uma so para os tres. Quando o relogio cai
+ * perto do fim de semana, os slots caem na semana SEGUINTE — e um campo `semana`
+ * que nao case com o `inicio` faria o slot sumir da consulta sem sumir do banco.
+ *
+ * `reserva: null` SEMPRE ESCRITO, como o servico faz: consulta por igualdade
+ * ignora documento sem o campo, e um slot semeado sem ele cairia fora de
+ * qualquer filtro de "livre".
+ */
+async function semearDisponibilidade(uidPorEmail) {
+  const advogado = CONTAS.find((conta) => conta.perfil === 'advogado');
+  const uid = uidPorEmail.get(advogado.email);
+  const slots = slotsDaGrade(AGORA);
+
+  for (const slot of slots) {
+    await gravarDocumento(
+      HOST_FIRESTORE,
+      PROJETO,
+      `disponibilidades/${uid}_${slot.inicio}`,
+      {
+        advogadoId: uid,
+        inicio: slot.inicio,
+        fim: slot.fim,
+        semana: semanaDe(new Date(slot.inicio)),
+        reserva: null,
+        criadoEm: AGORA,
+      },
+    );
+  }
+
+  console.log(
+    `  grade     ${slots.length} slots a partir de ${slots[0].inicio}`,
+  );
 }
 
 /**
@@ -229,7 +335,7 @@ async function semearAdvogados(uidPorEmail) {
  * contra o mesmo emulador.
  */
 async function semearClientesEPedidos(idsDeProduto, uidPorEmail) {
-  const agora = new Date();
+  const agora = AGORA;
   const uidDoCliente = new Map();
 
   for (const cliente of CLIENTES_FICTICIOS) {
@@ -361,6 +467,7 @@ const idsDeProduto = await semearCatalogo();
 
 console.log('\nAdvogados, clientes e pedidos ficticios\n');
 await semearAdvogados(uidPorEmail);
+await semearDisponibilidade(uidPorEmail);
 await semearClientesEPedidos(idsDeProduto, uidPorEmail);
 
 console.log(

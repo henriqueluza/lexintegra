@@ -9,7 +9,11 @@ describe('ZodPipe', () => {
   it('devolve o valor ANALISADO, com as normalizacoes aplicadas', () => {
     expect(
       pipe.transform({ nome: '  Ana Souza ', email: 'ANA@X.TEST' }),
-    ).toEqual({ nome: 'Ana Souza', email: 'ana@x.test' });
+    ).toEqual({
+      nome: 'Ana Souza',
+      email: 'ana@x.test',
+      usuarioTeams: null,
+    });
   });
 
   it('recusa entrada invalida com 400', () => {

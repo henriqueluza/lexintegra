@@ -103,7 +103,7 @@ describe('navegacao da shell', () => {
    * administrativas, sem menu o administrador so chegaria as demais digitando a
    * URL.
    */
-  it('oferece as seis secoes administrativas ao admin', () => {
+  it('oferece as sete secoes administrativas ao admin', () => {
     const { fixture } = montar(
       { nome: 'Marcos', email: 'admin@x.test' },
       'admin',
@@ -119,13 +119,19 @@ describe('navegacao da shell', () => {
       'Produtos',
       /* Etapa 8: as devolucoes feitas por fora do gateway. */
       'Estornos',
-      /* Por ultimo: tela de diagnostico, visitada quando algo deu errado. */
+      /* As duas ultimas sao diagnostico, visitadas quando algo deu errado. */
       'Entregas',
+      /* Etapa 10, arquitetura 7.2: a fila de reunioes sem sala. */
+      'Reunioes',
     ]);
   });
 
-  /** O advogado ganhou duas telas na Etapa 9: as demandas e a grade semanal. */
-  it('oferece as duas secoes do advogado', () => {
+  /**
+   * O advogado ganhou duas telas na Etapa 9 — demandas e grade semanal — e a
+   * agenda na Etapa 10. Ela fica ENTRE as duas: e o que ele olha todo dia,
+   * enquanto a grade e o que ele publica toda segunda.
+   */
+  it('oferece as tres secoes do advogado', () => {
     const { fixture } = montar(
       { nome: 'Ana', email: 'ana@x.test' },
       'advogado',
@@ -136,6 +142,7 @@ describe('navegacao da shell', () => {
 
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/advogado/demandas',
+      '/advogado/agenda',
       '/advogado/disponibilidade',
     ]);
   });
@@ -181,6 +188,7 @@ describe('navegacao da shell', () => {
       '/admin/produtos',
       '/admin/estornos',
       '/admin/entregas',
+      '/admin/reunioes',
     ]);
   });
 });

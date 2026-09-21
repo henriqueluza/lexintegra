@@ -7,6 +7,14 @@ import { ConsultaPedidosService } from './consulta.service.js';
 import { PedidosService } from './pedidos.service.js';
 import { ProdutosService } from '../produtos/produtos.service.js';
 import { comSnapshot } from '../arnes-pedidos.js';
+import type { ConfiguracaoReunioes } from '../reunioes/sala/modo.js';
+
+/**
+ * O agendamento NO AR. `desligado` e o estado de producao enquanto a integracao
+ * com o Teams nao existir, e o cartao diz isso ao cliente em vez de oferecer um
+ * botao que responde 503 — ver `CartaoPedido.agendamentoDisponivel`.
+ */
+const LIGADO: ConfiguracaoReunioes = { modo: 'falso', graph: null };
 
 const ADMIN = 'uid-admin';
 const CLARA = 'uid-clara';
@@ -101,9 +109,11 @@ async function montar(): Promise<Arranjo> {
 
   return {
     banco,
+    clientes,
     consulta: new ConsultaPedidosService(
       banco as unknown as Firestore,
       clientes,
+      LIGADO,
     ),
   };
 }
@@ -169,6 +179,35 @@ describe('ConsultaPedidosService', () => {
 
       expect(cartao.distribuido).toBe(true);
       expect(JSON.stringify(cartao)).not.toContain(ANA);
+    });
+
+    /**
+     * `agendamentoDisponivel` E CONFIGURACAO DE PROCESSO, e por isso e a mesma
+     * resposta para todo cartao — mas precisa VIAJAR no cartao, porque a tela
+     * nao tem como saber. Com `REUNIOES_MODO=desligado`, que e o estado de
+     * producao enquanto a integracao com o Teams nao existir, o cartao diz que o
+     * agendamento esta indisponivel; sem este campo, ele ofereceria o botao de
+     * marcar e o clique responderia 503.
+     */
+    it('o cartao carrega se o agendamento esta no ar', async () => {
+      const { banco, clientes } = await montar();
+      const ligado = new ConsultaPedidosService(
+        banco as unknown as Firestore,
+        clientes,
+        LIGADO,
+      );
+      const desligado = new ConsultaPedidosService(
+        banco as unknown as Firestore,
+        clientes,
+        { modo: 'desligado', graph: null },
+      );
+
+      expect(
+        (await ligado.obterCartao('p-clara-1', CLARA)).agendamentoDisponivel,
+      ).toBe(true);
+      expect(
+        (await desligado.obterCartao('p-clara-1', CLARA)).agendamentoDisponivel,
+      ).toBe(false);
     });
   });
 

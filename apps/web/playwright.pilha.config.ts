@@ -28,6 +28,14 @@ import { defineConfig, devices } from '@playwright/test';
  * FIRESTORE_EMULATOR_HOST e FIREBASE_AUTH_EMULATOR_HOST no ambiente. O
  * `webServer` aqui sobe API e web, que os herdam.
  */
+/**
+ * O instante que o servidor, o navegador e a semente compartilham.
+ *
+ * Cai DENTRO da semana `2026-09-21`, que e a semana dos slots fixos da semente,
+ * e a alguns dias deles — longe o bastante da antecedencia minima de 24 horas.
+ */
+export const RELOGIO_DA_PILHA = '2026-09-21T12:00:00.000Z';
+
 export default defineConfig({
   testDir: './e2e',
   testMatch: ['jornadas/**/*.spec.ts', 'paineis/**/*.spec.ts'],
@@ -116,6 +124,18 @@ export default defineConfig({
         PORT: '8090',
         ARMAZENAMENTO_FALSO_PORTA: '9299',
         LOG_FORMATO: 'texto',
+        /*
+         * O RELOGIO DO SERVIDOR, FIXO (Etapa 10). As telas de reuniao dependem
+         * da data: a lista de horarios so mostra a semana corrente e a seguinte
+         * (ADR-06), e a agenda do advogado so mostra o futuro. Sem fixar os
+         * dois lados, a jornada e a imagem de regressao mudariam de resultado
+         * todo dia. O navegador fixa o dele com `page.clock.setFixedTime`, em
+         * `jornadas/pilha.ts`; a semente usa a mesma semana.
+         *
+         * A variavel so e aceita sob emulador — fora dele o boot cai (ver
+         * `apps/api/src/relogio.ts`).
+         */
+        RELOGIO_FIXO: RELOGIO_DA_PILHA,
       },
     },
     {

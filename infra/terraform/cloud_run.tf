@@ -187,6 +187,29 @@ resource "google_cloud_run_v2_service" "api" {
         value = "desligado"
       }
 
+      # Etapa 10. Obrigatoria em producao pelo mesmo motivo de `PAGAMENTOS_MODO`:
+      # ausente, a API RECUSA SUBIR (ver `reunioes/sala/modo.ts`). Faltava aqui, e
+      # o efeito seria o pior possivel — a revisao nova nao passaria no startup
+      # probe, o recurso ficaria tainted, e `deletion_protection = true` na API
+      # transforma isso em impasse (ver "Notas de plataforma" no CLAUDE.md).
+      #
+      # `desligado` e decisao, e nao esquecimento: marcar reuniao responde 503 ate
+      # o aplicativo estar registrado no Entra ID, a application access policy
+      # propagada e uma chamada de teste manual feita ("So voce — Etapa 10"). O
+      # cartao do cliente le esse estado e diz que o agendamento esta
+      # indisponivel, em vez de oferecer um botao que falha.
+      #
+      # OS DOIS OUTROS VALORES SAO RECUSADOS EM PRODUCAO, e trocar a string aqui
+      # derruba o deploy em vez de ligar coisa nenhuma: `graph` porque a
+      # integracao real exige os passos manuais acima, e `falso` porque a sala
+      # falsa devolve SUCESSO com um link `teams.microsoft.test` — a reuniao
+      # viraria `confirmada` e o convite sairia para o cliente com um link que
+      # nao existe.
+      env {
+        name  = "REUNIOES_MODO"
+        value = "desligado"
+      }
+
       # A chave chega por referencia ao Secret Manager, nunca como valor no
       # Terraform: um `env { value = ... }` com a chave a colocaria no state, que
       # fica no bucket, e no plan comentado no PR (regra inviolavel 9).

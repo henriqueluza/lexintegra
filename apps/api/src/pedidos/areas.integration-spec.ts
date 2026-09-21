@@ -13,9 +13,18 @@ import { ObservacoesService } from '../observacoes/observacoes.service.js';
 import { ProdutosService } from '../produtos/produtos.service.js';
 import { AcessoPedidoService } from './acesso.service.js';
 import { ConsultaPedidosService } from './consulta.service.js';
+import { ConsultaReunioesService } from '../reunioes/consulta.service.js';
 import { DistribuicaoService } from './distribuicao.service.js';
 import { PedidosService, type NovoPedido } from './pedidos.service.js';
 import { comSnapshot } from '../arnes-pedidos.js';
+import type { ConfiguracaoReunioes } from '../reunioes/sala/modo.js';
+
+/**
+ * O agendamento NO AR. `desligado` e o estado de producao enquanto a integracao
+ * com o Teams nao existir, e o cartao diz isso ao cliente em vez de oferecer um
+ * botao que responde 503 — ver `CartaoPedido.agendamentoDisponivel`.
+ */
+const LIGADO: ConfiguracaoReunioes = { modo: 'falso', graph: null };
 
 const ADMIN = 'uid-admin';
 const CLARA = 'uid-clara';
@@ -45,8 +54,12 @@ beforeEach(async () => {
   produtos = new ProdutosService(banco);
   pedidos = new PedidosService(banco);
   clientes = new ClientesService(banco);
-  consulta = new ConsultaPedidosService(banco, clientes);
-  distribuicao = new DistribuicaoService(banco, clientes);
+  consulta = new ConsultaPedidosService(banco, clientes, LIGADO);
+  distribuicao = new DistribuicaoService(
+    banco,
+    clientes,
+    new ConsultaReunioesService(banco),
+  );
   entregaveis = new EntregaveisService(banco);
 
   const acesso = new AcessoPedidoService(banco);

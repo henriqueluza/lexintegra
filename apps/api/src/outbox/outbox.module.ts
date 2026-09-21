@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { ConvitesModule } from '../reunioes/convites.module.js';
 import { EmailModule } from '../email/email.module.js';
 import { criarFila } from '../tarefas/criar-fila.js';
 import { DespachanteOutbox } from './despachante.service.js';
@@ -74,7 +75,7 @@ export function criarFilaDeEventos(
  */
 @Global()
 @Module({
-  imports: [EmailModule],
+  imports: [EmailModule, ConvitesModule],
   controllers: [OutboxController, OutboxAdminController],
   providers: [
     OutboxService,

@@ -4,6 +4,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { NOME_CLAIM_PERFIL } from 'shared';
 import type { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
+import type { ConsultaReunioesService } from '../reunioes/consulta.service.js';
 import { AdvogadosService } from './advogados.service.js';
 
 /* -------------------------------------------------------------------------- */
@@ -190,7 +191,22 @@ class AuthFalso {
 /* Cenario                                                                     */
 /* -------------------------------------------------------------------------- */
 
-function montar(): {
+/**
+ * O dublê da consulta de reunioes.
+ *
+ * DUBLADO E NAO REAL porque o `FirestoreFalso` deste arquivo e local e nao
+ * implementa `collectionGroup` — e implementa-lo aqui so para esta chamada seria
+ * construir metade de um Firestore para provar uma regra que tem suite propria
+ * (`consulta.service.spec.ts`). O que este arquivo testa e a SUSPENSAO: que ela
+ * pergunta, e que recusa quando a resposta e sim.
+ */
+function montarComReuniaoFutura(temReuniao: boolean): ConsultaReunioesService {
+  return {
+    futuraAtivaDoAdvogado: () => Promise.resolve(temReuniao),
+  } as unknown as ConsultaReunioesService;
+}
+
+function montar(opcoes: { comReuniaoFutura?: boolean } = {}): {
   servico: AdvogadosService;
   auth: AuthFalso;
   banco: FirestoreFalso;
@@ -220,6 +236,7 @@ function montar(): {
       banco as unknown as Firestore,
       outbox,
       enfileirador,
+      montarComReuniaoFutura(opcoes.comReuniaoFutura === true),
     ),
     auth,
     banco,
@@ -243,6 +260,7 @@ describe('AdvogadosService.criar', () => {
       email: 'ana@escritorio.test',
       status: 'ativo',
       criadoEm: null,
+      usuarioTeams: null,
     });
     expect(banco.documentos.get('advogados/uid-1')).toMatchObject({
       nome: 'Ana Souza',
@@ -372,6 +390,7 @@ describe('AdvogadosService.listar', () => {
     await expect(servico.listar()).resolves.toEqual([
       {
         uid: 'uid-9',
+        usuarioTeams: null,
         nome: 'Bruno Lima',
         email: 'bruno@escritorio.test',
         status: 'suspenso',
@@ -453,6 +472,51 @@ describe('AdvogadosService.suspender', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(auth.eventos).toEqual([]);
     expect(auth.usuarios.get('uid-admin')?.disabled).toBeUndefined();
+  });
+});
+
+/**
+ * ADR-21, decisao D (Etapa 10). Suspender derruba a sessao e barra o login: com
+ * um compromisso marcado, o cliente apareceria numa sala que o advogado nao
+ * consegue mais abrir — e ninguem descobriria antes da hora.
+ */
+describe('AdvogadosService.suspender com reuniao futura', () => {
+  it('recusa com 409', async () => {
+    const { servico, auth } = montar({ comReuniaoFutura: true });
+    await servico.criar(NOVO, 'uid-admin');
+
+    await expect(servico.suspender('uid-1', 'uid-admin')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(auth.usuarios.get('uid-1')?.disabled).toBeFalsy();
+  });
+
+  /**
+   * A CONFERENCIA VEM ANTES DOS TRES EFEITOS. Desabilitar a conta e revogar os
+   * tokens nao se desfazem com um `throw` — se a recusa viesse depois, o
+   * advogado ficaria sem acesso e o pedido ainda com reuniao marcada.
+   */
+  it('nao revoga token nem grava status quando recusa', async () => {
+    const { servico, auth, banco } = montar({ comReuniaoFutura: true });
+    await servico.criar(NOVO, 'uid-admin');
+    auth.eventos.length = 0;
+
+    await expect(servico.suspender('uid-1', 'uid-admin')).rejects.toThrow();
+
+    expect(auth.eventos).toEqual([]);
+    expect(banco.documentos.get('advogados/uid-1')).toMatchObject({
+      status: 'ativo',
+    });
+  });
+
+  /** Devolver acesso nunca e o que cria o problema: a reativacao nao confere. */
+  it('a reativacao nao e barrada por reuniao futura', async () => {
+    const { servico } = montar({ comReuniaoFutura: true });
+    await servico.criar(NOVO, 'uid-admin');
+
+    await expect(
+      servico.reativar('uid-1', 'uid-admin'),
+    ).resolves.toMatchObject({ status: 'ativo' });
   });
 });
 

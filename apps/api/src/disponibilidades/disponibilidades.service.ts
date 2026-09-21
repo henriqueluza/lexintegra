@@ -1,10 +1,5 @@
 import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
-import {
-  FieldValue,
-  type FieldValue as TipoFieldValue,
-  type Firestore,
-  type Timestamp,
-} from 'firebase-admin/firestore';
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import {
   idDoSlot,
   semanaDe,
@@ -13,15 +8,41 @@ import {
   type SlotResumo,
 } from 'shared';
 import { FIRESTORE } from '../firebase/firebase.module.js';
+import { agora } from '../relogio.js';
+import {
+  COLECAO_DISPONIBILIDADES,
+  reservaDoSlot,
+  type DocumentoSlot,
+  type ReservaDoSlot,
+} from './slot.js';
 
-export const COLECAO_DISPONIBILIDADES = 'disponibilidades';
+export { COLECAO_DISPONIBILIDADES } from './slot.js';
 
-interface DocumentoSlot {
-  advogadoId: string;
-  inicio: string;
-  fim: string;
-  semana: string;
-  criadoEm: Timestamp | TipoFieldValue;
+/**
+ * O horario que o advogado ve na grade, a partir do id do slot.
+ *
+ * O id e `{advogadoId}_{inicioISO}` (regra inviolavel 4), entao o instante sai
+ * dele sem uma segunda leitura — e e por isso que a recusa consegue nomear os
+ * horarios sem ler documento nenhum a mais.
+ *
+ * O FUSO E EXPLICITO, pela razao de `semana.ts`: o Cloud Run roda em UTC, e uma
+ * mensagem de erro que dissesse "17h" para uma reuniao das 14h mandaria o
+ * advogado procurar um horario que ele nunca marcou.
+ */
+const formatadorDeHorario = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: 'America/Sao_Paulo',
+  weekday: 'short',
+  day: '2-digit',
+  month: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+function horarioLegivel(slotId: string): string {
+  const inicio = slotId.slice(slotId.indexOf('_') + 1);
+  const ms = Date.parse(inicio);
+
+  return Number.isNaN(ms) ? slotId : formatadorDeHorario.format(new Date(ms));
 }
 
 /**
@@ -37,11 +58,12 @@ interface DocumentoSlot {
  * a mesma grade duas vezes nao produz slots duplicados: produz os mesmos
  * documentos.
  *
- * ATENCAO PARA A ETAPA 10. Publicar a semana APAGA os slots que sairam da grade,
- * e hoje isso e seguro porque nada reserva slot ainda. Quando a reserva existir,
- * este servico precisa recusar a remocao de slot ja reservado — senao o advogado
- * desmarca sem querer uma reuniao que o cliente ja agendou, e o cliente descobre
- * pelo convite que nao chega.
+ * PUBLICAR APAGA OS SLOTS QUE SAIRAM DA GRADE, e desde a Etapa 10 isso tem duas
+ * travas. Slot RESERVADO nao pode sair: `exigirSlotsLivres` recusa a semana
+ * inteira com 409, dizendo quais horarios — senao o advogado desmarcaria sem
+ * querer uma reuniao que o cliente ja agendou, e o cliente descobriria pela sala
+ * vazia. E slot reservado que CONTINUA na grade mantem a reserva: o `set` e
+ * substituicao, e sem carregar o campo adiante ele voltaria a parecer livre.
  */
 @Injectable()
 export class DisponibilidadesService {
@@ -49,9 +71,16 @@ export class DisponibilidadesService {
 
   constructor(@Inject(FIRESTORE) private readonly db: Firestore) {}
 
-  /** A grade de uma semana. Sem `semana`, a corrente — calculada, nao guardada. */
+  /**
+   * A grade de uma semana. Sem `semana`, a corrente — calculada, nao guardada.
+   *
+   * O RELOGIO VEM DE `relogio.ts`, e nao de `new Date()` direto (Etapa 10). E o
+   * mesmo que a lista de horarios do cliente le: com metade do servidor num
+   * relogio e metade noutro, o advogado publicaria a grade de uma semana
+   * enquanto o cliente escolheria horarios de outra, e nada falharia.
+   */
   async obter(advogadoId: string, semana?: string): Promise<SlotResumo[]> {
-    const alvo = semana ?? semanaDe(new Date());
+    const alvo = semana ?? semanaDe(new Date(agora()));
 
     const pagina = await this.db
       .collection(COLECAO_DISPONIBILIDADES)
@@ -97,6 +126,30 @@ export class DisponibilidadesService {
           .where('semana', '==', corpo.semana),
       );
 
+      /*
+       * AS RESERVAS SAO CARREGADAS ADIANTE (Etapa 10). O `set` abaixo e
+       * SUBSTITUICAO, nao merge: sem ler a reserva aqui e escreve-la de volta,
+       * republicar a semana — o que o advogado faz toda segunda — apagaria o
+       * campo de um slot ja reservado. O slot voltaria a parecer livre, um
+       * segundo cliente o reservaria, e dois clientes teriam o mesmo horario com
+       * o mesmo advogado. Nada falharia.
+       */
+      const reservas = new Map(
+        existentes.docs.map((documento) => [
+          documento.id,
+          reservaDoSlot(documento.data() as DocumentoSlot),
+        ]),
+      );
+
+      /*
+       * A CONFERENCIA VEM ANTES DE QUALQUER ESCRITA, e nao dentro do laco que
+       * apaga: o primeiro `delete` ja e uma escrita, e uma recusa depois dele
+       * dependeria de o Firestore desfazer a transacao para nao deixar meia
+       * grade. Depende mesmo — mas "a transacao desfaz" nao e o que se quer
+       * confiar quando a alternativa e conferir antes.
+       */
+      this.exigirSlotsLivres(existentes.docs, desejados, reservas);
+
       for (const documento of existentes.docs) {
         if (!desejados.has(documento.id)) {
           transacao.delete(documento.ref);
@@ -108,6 +161,8 @@ export class DisponibilidadesService {
           advogadoId,
           inicio: slot.inicio,
           fim: slot.fim,
+          /* Sempre escrito, inclusive nulo. Ver a nota em `slot.ts`. */
+          reserva: reservas.get(id) ?? null,
           semana: corpo.semana,
           criadoEm: FieldValue.serverTimestamp(),
         } satisfies DocumentoSlot);
@@ -127,6 +182,44 @@ export class DisponibilidadesService {
   }
 
   /**
+   * RESOLVE O AVISO "ATENCAO PARA A ETAPA 10" que estava no topo deste arquivo.
+   *
+   * Publicar a semana APAGA os slots que sairam da grade. Ate a Etapa 9 isso era
+   * inofensivo porque nada reservava slot; agora, apagar um slot reservado
+   * desmarcaria uma reuniao que o cliente ja agendou — e ele descobriria pelo
+   * convite que nao chega, ou pior, pela sala vazia no horario.
+   *
+   * A MENSAGEM DIZ QUAIS HORARIOS, e nao so que houve conflito. O advogado esta
+   * olhando uma grade de ate quarenta caixinhas; "ha horario reservado nesta
+   * semana" o obrigaria a caçar qual. O formato e o que ele ve na tela: dia e
+   * hora no fuso do escritorio.
+   *
+   * RECUSA A SEMANA INTEIRA, e nao so os slots livres. Publicar parcialmente
+   * deixaria a grade num estado que o advogado nao pediu e nao consegue ver — ele
+   * mandou uma semana, e o que ficou gravado foi outra.
+   */
+  private exigirSlotsLivres(
+    existentes: readonly { id: string }[],
+    desejados: ReadonlyMap<string, unknown>,
+    reservas: ReadonlyMap<string, ReservaDoSlot | null>,
+  ): void {
+    const reservadosQueSairiam = existentes
+      .filter(
+        (documento) =>
+          !desejados.has(documento.id) &&
+          (reservas.get(documento.id) ?? null) !== null,
+      )
+      .map((documento) => horarioLegivel(documento.id));
+
+    if (reservadosQueSairiam.length === 0) return;
+
+    throw new ConflictException(
+      `Ha reuniao marcada em ${reservadosQueSairiam.join(', ')}. ` +
+        'Cancele a reuniao com o cliente antes de tirar o horario da grade.',
+    );
+  }
+
+  /**
    * So a semana corrente e a seguinte (ver `semanasEditaveis`).
    *
    * O limite existe dos dois lados: publicar no PASSADO seria reescrever uma
@@ -135,7 +228,7 @@ export class DisponibilidadesService {
    * a data chegar.
    */
   private exigirSemanaEditavel(semana: string): void {
-    if (!semanasEditaveis(new Date()).includes(semana)) {
+    if (!semanasEditaveis(new Date(agora())).includes(semana)) {
       throw new ConflictException(
         'So e possivel publicar a semana corrente ou a seguinte.',
       );

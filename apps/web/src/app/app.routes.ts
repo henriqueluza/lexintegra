@@ -201,6 +201,20 @@ export const routes: Routes = [
           ),
         title: 'Disponibilidade — LexIntegra',
       },
+      /*
+       * Etapa 10. A agenda atravessa os pedidos, entao e tela de topo — e o
+       * motivo de o CLIENTE nao poder ter uma assim nao se aplica: o advogado
+       * nao debita saldo nenhum, e nao ha ambiguidade sobre de qual pedido a
+       * reuniao sai (ADR-12, arquitetura 5.4). Ver `app.routes.spec.ts`.
+       */
+      {
+        path: 'agenda',
+        loadComponent: () =>
+          import('./paginas/advogado-agenda/advogado-agenda').then(
+            (m) => m.AdvogadoAgenda,
+          ),
+        title: 'Minha agenda — LexIntegra',
+      },
     ],
   },
   {
@@ -262,6 +276,15 @@ export const routes: Routes = [
             (m) => m.AdminEntregas,
           ),
         title: 'Entregas — LexIntegra',
+      },
+      /* Etapa 10, arquitetura 7.2: a fila de reunioes sem sala. */
+      {
+        path: 'reunioes',
+        loadComponent: () =>
+          import('./paginas/admin-reunioes/admin-reunioes').then(
+            (m) => m.AdminReunioes,
+          ),
+        title: 'Reunioes sem sala — LexIntegra',
       },
     ],
   },

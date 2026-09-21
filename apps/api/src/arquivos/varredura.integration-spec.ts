@@ -11,6 +11,7 @@ import {
   AcessoPedidoService,
   type QuemAcessa,
 } from '../pedidos/acesso.service.js';
+import { ConsultaReunioesService } from '../reunioes/consulta.service.js';
 import { DistribuicaoService } from '../pedidos/distribuicao.service.js';
 import { PedidosService } from '../pedidos/pedidos.service.js';
 import { ClientesService } from '../clientes/clientes.service.js';
@@ -105,7 +106,11 @@ beforeEach(async () => {
     produtosContratados: [],
   });
 
-  await new DistribuicaoService(banco, new ClientesService(banco)).atribuir(
+  await new DistribuicaoService(
+    banco,
+    new ClientesService(banco),
+    new ConsultaReunioesService(banco),
+  ).atribuir(
     'pedido-1',
     ADVOGADO.uid,
     ADMIN,

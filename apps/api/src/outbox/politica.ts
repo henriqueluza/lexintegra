@@ -50,6 +50,28 @@ export const POLITICA: Readonly<Record<TipoEvento, PoliticaDeEvento>> = {
    * alerta e registro no painel — e o administrador reenvia ou devolve a mao.
    */
   'estorno-integral': { criticidade: 'critico', maxTentativas: 10 },
+  /*
+   * A SALA DO TEAMS (Etapa 10). Critico, e o orcamento de dez tentativas nao e
+   * generosidade: a falha mais provavel e a application access policy ainda
+   * propagando, que o ADR-05 registra levando ATE 48 HORAS. Desistir cedo
+   * transformaria uma espera conhecida em reuniao sem link para sempre.
+   *
+   * Abandonado, vira alerta e linha no painel do administrador — que e o que a
+   * arquitetura 7.2 exige: "estado visivel e acionavel, nao erro silencioso".
+   */
+  'criar-sala-reuniao': { criticidade: 'critico', maxTentativas: 10 },
+  /*
+   * O convite. Critico porque o cliente marcou uma reuniao e precisa saber
+   * quando ela e — e porque o advogado precisa dela na agenda para comparecer.
+   */
+  'convite-reuniao': { criticidade: 'critico', maxTentativas: 10 },
+  /*
+   * O cancelamento. Critico pelo motivo MENOS obvio dos tres: um convite que
+   * nao e cancelado deixa o compromisso na agenda dos dois, e alguem aparece
+   * numa sala vazia. O e-mail que falta aqui nao e informacao perdida, e uma
+   * reuniao fantasma.
+   */
+  'cancelamento-reuniao': { criticidade: 'critico', maxTentativas: 10 },
 };
 
 export interface ConfiguracaoDoOutbox {

@@ -3,6 +3,7 @@ import type { Firestore, Transaction } from 'firebase-admin/firestore';
 import type { NovoProduto } from 'shared';
 import { ClientesService } from '../clientes/clientes.service.js';
 import { FirestoreFalso } from '../firestore-falso.js';
+import { ConsultaReunioesService } from '../reunioes/consulta.service.js';
 import { DistribuicaoService } from './distribuicao.service.js';
 import { PedidosService } from './pedidos.service.js';
 import { ProdutosService } from '../produtos/produtos.service.js';
@@ -81,6 +82,7 @@ async function montar(): Promise<Arranjo> {
     distribuicao: new DistribuicaoService(
       banco as unknown as Firestore,
       clientes,
+      new ConsultaReunioesService(banco as unknown as Firestore),
     ),
   };
 }
@@ -174,9 +176,16 @@ describe('DistribuicaoService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    /** Le as duas pontas ANTES de escrever: e a restricao da transacao do
-     * Firestore, e o dublê registra a ordem justamente para isto. */
-    it('le pedido e advogado antes de qualquer escrita', async () => {
+    /**
+     * Le as TRES pontas ANTES de escrever: e a restricao da transacao do
+     * Firestore, e o dublê registra a ordem justamente para isto.
+     *
+     * A terceira leitura entrou na Etapa 10 (ADR-21, decisao D): as reunioes do
+     * pedido, para recusar a troca de advogado com compromisso marcado. Ela e a
+     * ULTIMA, e tem de continuar sendo — uma leitura depois da primeira escrita
+     * e recusada pelo proprio SDK.
+     */
+    it('le pedido, advogado e reunioes antes de qualquer escrita', async () => {
       const { banco, distribuicao } = await montar();
       banco.ordemDeEscrita.length = 0;
 
@@ -190,6 +199,7 @@ describe('DistribuicaoService', () => {
       expect(leituras).toEqual([
         'get pedidos/pedido-1',
         `get advogados/${ANA}`,
+        'get pedidos/pedido-1/reunioes',
       ]);
     });
 
@@ -202,6 +212,100 @@ describe('DistribuicaoService', () => {
       ).rejects.toThrow();
 
       expect(banco.escritas).toHaveLength(antes);
+    });
+  });
+
+  /* ---------------------------------------------------------------------- */
+  /* Reuniao futura (Etapa 10, ADR-21 decisao D)                             */
+  /* ---------------------------------------------------------------------- */
+
+  describe('com reuniao marcada', () => {
+    const DAQUI_A_UM_MES = new Date(
+      Date.now() + 30 * 86_400_000,
+    ).toISOString();
+    const HA_UM_MES = new Date(Date.now() - 30 * 86_400_000).toISOString();
+
+    function marcar(
+      banco: FirestoreFalso,
+      inicio: string,
+      estado = 'confirmada',
+    ): void {
+      banco.documentos.set('pedidos/pedido-1/reunioes/r001', {
+        inicio,
+        estado,
+        advogadoId: ANA,
+        clienteId: CLIENTE,
+      });
+    }
+
+    /**
+     * Trocar o advogado com reuniao marcada deixaria o compromisso na agenda de
+     * quem nao atende mais o caso — e a sala do Teams ja criada em nome dele.
+     */
+    it('recusa trocar o advogado', async () => {
+      const { banco, distribuicao } = await montar();
+      marcar(banco, DAQUI_A_UM_MES);
+
+      await expect(
+        distribuicao.atribuir('pedido-1', ANA, ADMIN),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('recusa devolver o pedido a caixa de entrada', async () => {
+      const { banco, distribuicao } = await montar();
+      await distribuicao.atribuir('pedido-1', ANA, ADMIN);
+      marcar(banco, DAQUI_A_UM_MES);
+
+      await expect(distribuicao.remover('pedido-1', ADMIN)).rejects.toThrow(
+        /reuniao marcada/,
+      );
+    });
+
+    it('nao escreve nada quando recusa', async () => {
+      const { banco, distribuicao } = await montar();
+      marcar(banco, DAQUI_A_UM_MES);
+      const antes = banco.escritas.length;
+
+      await expect(
+        distribuicao.atribuir('pedido-1', ANA, ADMIN),
+      ).rejects.toThrow();
+
+      expect(banco.escritas).toHaveLength(antes);
+    });
+
+    /**
+     * Reuniao PASSADA nao impede nada: ela aconteceu, e o historico dela nao e
+     * motivo para travar uma decisao administrativa de hoje.
+     */
+    it('reuniao ja realizada nao impede', async () => {
+      const { banco, distribuicao } = await montar();
+      marcar(banco, HA_UM_MES);
+
+      await expect(
+        distribuicao.atribuir('pedido-1', ANA, ADMIN),
+      ).resolves.toMatchObject({ advogadoId: ANA });
+    });
+
+    it.each(['cancelada_com_devolucao', 'cancelada_sem_devolucao'])(
+      'reuniao %s nao impede',
+      async (estado) => {
+        const { banco, distribuicao } = await montar();
+        marcar(banco, DAQUI_A_UM_MES, estado);
+
+        await expect(
+          distribuicao.atribuir('pedido-1', ANA, ADMIN),
+        ).resolves.toMatchObject({ advogadoId: ANA });
+      },
+    );
+
+    /** `reservada_sem_link` E ativa: o slot esta reservado e o compromisso vale. */
+    it('reuniao ainda sem sala impede', async () => {
+      const { banco, distribuicao } = await montar();
+      marcar(banco, DAQUI_A_UM_MES, 'reservada_sem_link');
+
+      await expect(
+        distribuicao.atribuir('pedido-1', ANA, ADMIN),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
   });
 

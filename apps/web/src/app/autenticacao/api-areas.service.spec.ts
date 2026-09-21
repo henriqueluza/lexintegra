@@ -138,6 +138,25 @@ describe('contrato HTTP das areas autenticadas', () => {
     });
 
     /** O link vem do PORTAO da API; a tela nunca o monta. */
+    /**
+     * A LISTA DE HORARIOS E A MESMA ROTA PARA MARCAR E PARA REMARCAR, e o que as
+     * distingue e `?reuniao=`. Sem o parametro, o servidor conta a reuniao que
+     * esta sendo movida contra o proprio intervalo minimo e contra o proprio
+     * saldo, e devolve lista vazia — a tela diria "nenhum horario disponivel"
+     * em todo pedido, sem erro nenhum.
+     */
+    it('pede os horarios sem parametro ao marcar', async () => {
+      const promessa = cliente.horariosDeReuniao('pedido-1');
+      esperar('GET', '/api/pedidos/pedido-1/horarios');
+      await promessa;
+    });
+
+    it('identifica a reuniao movida ao remarcar', async () => {
+      const promessa = cliente.horariosDeReuniao('pedido-1', 'r001');
+      esperar('GET', '/api/pedidos/pedido-1/horarios?reuniao=r001');
+      await promessa;
+    });
+
     it('pede o link de download a API', async () => {
       const promessa = cliente.baixarEntregavel('p1', '001');
       esperar('GET', '/api/pedidos/p1/entregaveis/001/download', {});

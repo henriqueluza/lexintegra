@@ -50,14 +50,40 @@ export default {
     'src/estado-entregavel.ts',
     'src/situacao-pedido.ts',
     'src/perfil.ts',
+    /*
+     * Etapa 10. E o "calculo de saldo e intervalo de reunioes" que a
+     * arquitetura, secao 10, lista como alvo desde o comeco — e que o
+     * comentario de `apps/api/stryker.config.mjs` reservava como "uma linha
+     * nesta lista". As bordas sao de milissegundo (24h, 24h menos 1 ms,
+     * intervalo exatamente igual ao minimo), que e onde um `>=` virado em `>`
+     * nao quebra nenhum teste obvio.
+     */
+    'src/regras-reuniao.ts',
+    'src/estado-reuniao.ts',
   ],
 
   /*
    * MEDIDO, e nao chutado. A primeira corrida deu 98.46% (64 mutantes mortos, um
-   * sobrevivente equivalente em `ehPerfil`, documentado la). `break` e o piso
-   * observado menos dois pontos, a mesma folga que os limiares de cobertura
-   * usam: apertar ate 98 faria um refactor legitimo quebrar a build. Subir este
-   * numero e decisao deliberada, nunca automatica.
+   * sobrevivente equivalente em `ehPerfil`, documentado la); a Etapa 10 deu
+   * 98.15% com `regras-reuniao.ts` e `estado-reuniao.ts` dentro (212 de 216).
+   * `break` e o piso observado menos dois pontos, a mesma folga que os limiares
+   * de cobertura usam: apertar ate 98 faria um refactor legitimo quebrar a
+   * build. Subir este numero e decisao deliberada, nunca automatica.
+   *
+   * OS TRES SOBREVIVENTES DE `regras-reuniao.ts` SAO REAIS, e ficam. Todos sao a
+   * mesma guarda — `inicioMs !== null &&`, que fecha a regra quando o instante
+   * gravado e ilegivel — trocada por `true`. Com a guarda solta, `null` entra na
+   * aritmetica e vira zero, e o unico input que distingue os dois codigos e um
+   * `agora` NEGATIVO: um instante anterior a 1970. Escrever esse teste nao
+   * defenderia nada que possa acontecer; defenderia o numero. A analise de
+   * mutacao e boa em apontar onde olhar, e esta e uma das vezes em que a
+   * resposta certa e olhar e nao mexer — como o sobrevivente de `ehPerfil`.
+   *
+   * Os cinco sobreviventes ARITMETICOS que a primeira corrida da Etapa 10 achou
+   * nas duas constantes de 24 horas foram mortos, e valiam: todo teste de borda
+   * monta o instante a partir da propria constante, entao a suite inteira
+   * continuava verde com a janela valendo 24 SEGUNDOS. O valor passou a ser
+   * afirmado uma vez, em milissegundos, contra o que o ADR-12 diz em portugues.
    */
   thresholds: { high: 95, low: 85, break: 96 },
 
