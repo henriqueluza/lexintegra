@@ -47,8 +47,6 @@ const VITRINE = [
 ];
 
 async function interceptar(page: Page): Promise<void> {
-  await page.addInitScript(() => localStorage.clear());
-
   await page.route('**/api/vitrine', (rota) =>
     rota.fulfill({
       status: 200,
@@ -86,14 +84,15 @@ test.describe('regressao visual das telas publicas', () => {
   });
 
   /** O estado que so existe depois do pre-cadastro: precos e cartoes na tela. */
-  test('home destravada', async ({ page }) => {
-    await page.goto('/');
+  test('catalogo liberado', async ({ page }) => {
+    await page.goto('/cadastro');
     await esperarHidratacao(page);
 
     await page.getByLabel('Nome completo').fill('Ana Teste de Souza');
     await page.getByLabel('E-mail').fill('ana@exemplo.test');
     await page.getByLabel('Telefone').fill('61990000000');
-    await page.getByRole('button', { name: 'Criar acesso' }).click();
+    await page.getByRole('button', { name: 'Liberar catálogo' }).click();
+    await page.getByRole('link', { name: 'Explorar os serviços' }).click();
     await expect(page.getByText('Revisão de contrato comercial')).toBeVisible();
 
     await expect(page).toHaveScreenshot('home-destravada.png', {
@@ -155,3 +154,18 @@ test.describe('regressao visual das telas publicas', () => {
     });
   });
 });
+
+for (const [nome, caminho] of [
+  ['landing-todas-imagens', '/todas-as-imagens'],
+  ['cadastro', '/cadastro'],
+  ['carrinho-vazio', '/carrinho'],
+  ['privacidade', '/privacidade'],
+  ['termos', '/termos'],
+]) {
+  test(nome, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(caminho);
+    await assentar(page);
+    await expect(page).toHaveScreenshot(nome + '.png', { fullPage: true });
+  });
+}

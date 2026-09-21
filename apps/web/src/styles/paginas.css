@@ -1,0 +1,18 @@
+[data-direcao='pauta'] main > * > section > h1 {
+  font-size: var(--t-t1);
+  font-weight: var(--peso-forte);
+  letter-spacing: var(--letra-titulo);
+  margin-bottom: var(--s3);
+}
+.pagina-descricao {
+  color: var(--texto-2);
+  font-size: var(--t-menor);
+  line-height: var(--altura-corpo);
+  margin-bottom: var(--s6);
+  max-width: var(--medida-texto);
+}
+[data-direcao='pauta'] main > * > section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}

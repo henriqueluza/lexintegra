@@ -1,19 +1,4 @@
-/**
- * TODO-TEXTO-INSTITUCIONAL — TODO O TEXTO DESTA PAGINA ESTA NESTE ARQUIVO.
- *
- * A redacao definitiva e do CONTRATADO (ADR-10: a identidade visual deriva do
- * portfolio da B&C, os textos sao originais), e a validacao final e dele, nao da
- * CONTRATANTE. O que esta aqui e provisorio, herdado do prototipo da Etapa 1.
- *
- * POR QUE UM ARQUIVO SO, e nao marcadores espalhados pelos templates: reescrever
- * a copy vira a edicao de um arquivo revisavel de uma vez, em vez de uma cacada
- * por trinta trechos em HTML. E a pagina continua renderizavel enquanto isso —
- * um template cheio de `{{TODO}}` nao passaria pelo axe nem pelo Lighthouse, e os
- * dois sao entregaveis desta etapa.
- *
- * Ha teste que confere que nenhuma entrada some.
- */
-
+/** Conteúdo institucional original. Minutas jurídicas: docs/revisao-frontend.md. */
 export const TEXTOS = {
   marca: 'LexIntegra',
 
@@ -23,18 +8,13 @@ export const TEXTOS = {
   ],
 
   hero: {
-    titulo: 'O trabalho jurídico da sua empresa, com prazo e preço na mesa.',
+    titulo: 'O jurídico da sua empresa. Mais claro, mais próximo.',
     apoio:
-      'Você contrata um serviço de escopo fechado, envia o contexto uma única vez e acompanha cada entregável até a assinatura. As reuniões com o advogado ficam dentro do próprio pedido.',
+      'Escolha serviços com escopo definido e acompanhe o trabalho jurídico em um só lugar. Da primeira informação ao documento entregue, cada etapa fica mais fácil de entender.',
     acaoPrincipal: 'Ver serviços e preços',
     acaoSecundaria: 'Entender o processo',
   },
 
-  /*
-   * Fatos do produto, nao metricas de vaidade: os quatro estados vem do ADR-11, a
-   * validade de doze meses do item 2.7.2, e o limite de tres arquivos da regra de
-   * upload do cliente. Numero que a plataforma nao possa cumprir sai daqui.
-   */
   numeros: [
     { valor: '4', rotulo: 'estados por entregável, do pedido à confirmação' },
     {
@@ -46,21 +26,16 @@ export const TEXTOS = {
 
   como: {
     titulo: 'Como funciona',
-    /*
-     * Numerados porque sao uma SEQUENCIA de verdade — cada passo depende do
-     * anterior. Numeral como recurso de hierarquia e elemento proprio da Direcao
-     * A (design.md).
-     */
     passos: [
       {
-        titulo: 'Crie seu acesso',
+        titulo: 'Conheça os serviços',
         texto:
-          'Nome, e-mail e telefone. É o que libera a lista de serviços com os preços.',
+          'Faça o cadastro inicial e consulte os escopos, os valores e as condições de cada serviço.',
       },
       {
-        titulo: 'Escolha o serviço',
+        titulo: 'Contrate no seu tempo',
         texto:
-          'Cada serviço mostra o que entra, quantas reuniões inclui e quantas revisões você tem.',
+          'Revise o carrinho e escolha a forma de pagamento. Cada serviço terá seu próprio pedido.',
       },
       {
         titulo: 'Descreva o caso',
@@ -81,13 +56,7 @@ export const TEXTOS = {
       titulo: 'Os preços aparecem depois do cadastro',
       texto:
         'Leva menos de um minuto: nome, e-mail e telefone. Não pedimos documento nem cartão nesta etapa.',
-      acao: 'Criar acesso',
-      /*
-       * Textura, nao conteudo: sao os cartoes borrados atras do aviso de cadeado,
-       * marcados `aria-hidden` porque nao ha nada ali para ler. Os nomes sao
-       * genericos de proposito — anunciar um servico que o escritorio talvez nao
-       * ofereca seria promessa falsa mesmo desfocada.
-       */
+      acao: 'Liberar catálogo',
       exemplos: [
         'Revisão de contrato comercial',
         'Parecer de risco trabalhista',
@@ -101,11 +70,6 @@ export const TEXTOS = {
     revisoes: 'revisões por entregável',
     falha:
       'Não foi possível carregar os serviços agora. Tente novamente em instantes.',
-    /*
-     * O total do resumo e INDICATIVO e diz isso: quem congela o preco e o
-     * servidor, no checkout (regra inviolavel 5). O navegador pode estar mostrando
-     * o valor de ontem.
-     */
     carrinho: {
       adicionar: 'Adicionar ao carrinho',
       titulo: 'Seu carrinho',
@@ -122,12 +86,12 @@ export const TEXTOS = {
   cadastro: {
     titulo: 'Comece pelo cadastro.',
     apoio:
-      'São três campos. Depois deles você vê a lista completa de serviços, com o que cada um entrega e quanto custa.',
-    acao: 'Criar acesso',
+      'Preencha seus dados para liberar o catálogo. A senha da área de acompanhamento é definida após sua primeira contratação.',
+    acao: 'Liberar catálogo',
     concluido: {
       titulo: 'Pronto. Os serviços estão liberados.',
       texto:
-        'A lista completa aparece acima, com preços e o que cada um inclui.',
+        'Continue para o catálogo e veja os serviços disponíveis, seus preços e o que cada um inclui.',
     },
     falhaGenerica:
       'Não foi possível concluir o cadastro agora. Tente novamente em instantes.',
@@ -135,19 +99,12 @@ export const TEXTOS = {
       'Muitas tentativas em pouco tempo. Espere alguns minutos e tente de novo.',
   },
 
-  /*
-   * TODO-TEXTO-PRIVACIDADE-JURIDICO — o `juridico` abaixo e o placeholder, e sai
-   * literal na tela de proposito.
-   *
-   * E peca juridica, nao copy: quem aprova e o escritorio, fora do codigo (Etapa
-   * 6, "So voce"). O `resumo` NAO e o aviso legal — e a frase em linguagem
-   * simples que a pessoa le antes de digitar, e essa o CONTRATADO escreve.
-   */
   privacidade: {
     resumo:
-      'Usamos nome, e-mail e telefone só para liberar seu acesso e falar sobre o seu pedido. Você pode pedir a exclusão a qualquer momento.',
+      'Usamos seus dados para liberar o catálogo e conduzir seu atendimento. Consulte abaixo como funciona o tratamento dos seus dados.',
     rotulo: 'Aviso de privacidade',
-    juridico: '{{TODO-TEXTO-PRIVACIDADE-JURIDICO}}',
+    juridico:
+      'Nome, e-mail e telefone são usados para liberar o catálogo e conduzir o atendimento. Quando há contratação, também tratamos as informações necessárias à execução do serviço, à comunicação sobre pedidos e ao cumprimento de obrigações legais. Documentos e respostas da ficha inicial ficam disponíveis à equipe autorizada. Prestadores de infraestrutura, pagamento e comunicação recebem os dados necessários às suas funções. Você pode solicitar acesso, correção e eliminação de dados ao responsável pelo atendimento, observadas as hipóteses legais de conservação. Não envie dados de terceiros que não sejam necessários ao serviço. Os dados não são mantidos por prazo ilimitado: a conservação considera a finalidade do tratamento e as obrigações aplicáveis.',
   },
 
   rodape: {

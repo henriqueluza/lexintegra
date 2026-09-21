@@ -545,7 +545,7 @@ describe('ClientePedidos', () => {
       fixture.detectChanges();
       expect(textoDe(fixture)).toContain('não devolve o valor pago');
       expect(textoDe(fixture)).toContain(
-        '{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}',
+        'Esta ação não gera devolução automática',
       );
 
       botaoCom(fixture, 'Confirmar cancelamento')?.click();

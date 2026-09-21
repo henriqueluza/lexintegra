@@ -16,7 +16,7 @@ export const COLECAO_ACEITES = 'aceites-de-termos';
  * continuam sendo prova do que foi aceito NAQUELE texto. Sem versao, uma revisao
  * do termo reescreveria retroativamente o que todo mundo concordou.
  */
-export const VERSAO_DO_TERMO = 'v1-nao-aprovado';
+export const VERSAO_DO_TERMO = 'v2-minuta-2026-09';
 
 interface DocumentoAceite {
   usuarioUid: string;

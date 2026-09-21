@@ -23,7 +23,7 @@ export default tseslint.config(
       'infra/**',
       'public/**',
       /*
-       * Fora do alcance da sessao de agente por politica (ver CLAUDE.md, "Scripts
+       * Fora do alcance da sessao de agente por politica (ver AGENTS.md, "Scripts
        * de execucao manual apenas"): sao os scripts de elevacao de privilegio, e
        * quem os edita e o desenvolvedor, a mao. Reportar violacao em arquivo que
        * o agente nao pode abrir para corrigir so produz um `pnpm lint` vermelho

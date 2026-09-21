@@ -22,11 +22,9 @@ import { Campo } from '../../ui/campo/campo';
 import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
 import { mensagemDoErro } from '../erros';
 
-/**
- * Marcador literal na tela, como os `{{TODO-...}}` da home e dos termos: a ficha
- * que o cliente ve e PROVISORIA, e ha teste que cai quando o marcador sair.
- */
-export const AVISO_FICHA_PROVISORIA = '{{TODO-FICHA-ANAMNESE-DA-CONTRATANTE}}';
+/** Redação da interface; decisões de aprovação estão em docs/revisao-frontend.md. */
+export const AVISO_FICHA_PROVISORIA =
+  'Descreva sua necessidade, os fatos relevantes e o resultado que espera do atendimento. Compartilhe apenas informações necessárias. O advogado poderá solicitar esclarecimentos durante a análise.';
 
 /**
  * ⚠️ STUB TEMPORÁRIO — a ficha inicial do cliente (item 2.2.5), com as perguntas

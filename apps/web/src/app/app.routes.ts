@@ -22,15 +22,69 @@ export const ROTAS_PUBLICAS = [
   'recuperar-senha',
   'definir-senha',
   'checkout',
+  'cadastro',
+  'servicos',
+  'carrinho',
+  'todas-as-imagens',
+  'com-movimento',
+  'privacidade',
+  'termos',
 ];
 
 export const routes: Routes = [
+  {
+    path: 'com-movimento',
+    redirectTo: '',
+    pathMatch: 'full',
+    title: 'LexIntegra',
+  },
   /*
    * O catalogo de componentes so existe em desenvolvimento: em producao o
    * angular.json troca `catalogo.routes.ts` por um arquivo que exporta lista
    * vazia, e o empacotador remove o catalogo do pacote publicado.
    */
   ...catalogoRoutes,
+  {
+    path: 'cadastro',
+    loadComponent: () =>
+      import('./paginas/cadastro/pagina-cadastro').then(
+        (m) => m.PaginaCadastro,
+      ),
+    title: 'Cadastre-se — LexIntegra',
+  },
+  {
+    path: 'servicos',
+    loadComponent: () =>
+      import('./paginas/servicos/pagina-servicos').then(
+        (m) => m.PaginaServicos,
+      ),
+    title: 'Serviços — LexIntegra',
+  },
+  {
+    path: 'carrinho',
+    loadComponent: () =>
+      import('./paginas/carrinho/carrinho').then((m) => m.Carrinho),
+    title: 'Seu carrinho — LexIntegra',
+  },
+  {
+    path: 'todas-as-imagens',
+    loadComponent: () =>
+      import('./paginas/landing/landing').then((m) => m.Landing),
+    title: 'LexIntegra — Todas as imagens',
+    data: { todasImagens: true },
+  },
+  {
+    path: 'privacidade',
+    loadComponent: () => import('./paginas/legal/legal').then((m) => m.Legal),
+    title: 'Privacidade — LexIntegra',
+  },
+  {
+    path: 'termos',
+    loadComponent: () => import('./paginas/legal/legal').then((m) => m.Legal),
+    title: 'Termos de contratação — LexIntegra',
+    data: { termos: true },
+  },
+
   {
     path: '',
     loadComponent: () =>

@@ -20,7 +20,7 @@ let app: INestApplication;
  * Os testes de unidade provam cada guard isolado; nenhum deles prova que os tres
  * estao registrados, na ordem certa, e que o prefixo global esta no lugar. Sao
  * exatamente as coisas que quebram producao continuando a passar no resto da
- * suite — o prefixo `/api` ja fez isso uma vez (CLAUDE.md, notas de plataforma).
+ * suite — o prefixo `/api` ja fez isso uma vez (AGENTS.md, notas de plataforma).
  *
  * Aplicacao NOVA A CADA TESTE porque o contador do limitador vive na instancia:
  * reaproveitar deixaria um teste gastando a cota do proximo, e a suite passaria

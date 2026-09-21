@@ -70,10 +70,9 @@ describe('textos da home', () => {
    * deixar de ser um marcador, este teste cai — que e o lembrete de que a peca
    * juridica chegou e o item saiu da lista de pendencias.
    */
-  it('ainda esta com o aviso de privacidade pendente', () => {
-    expect(TEXTOS.privacidade.juridico).toBe(
-      '{{TODO-TEXTO-PRIVACIDADE-JURIDICO}}',
-    );
+  it('explica a finalidade e os direitos sobre dados', () => {
+    expect(TEXTOS.privacidade.juridico).not.toContain('TODO');
+    expect(TEXTOS.privacidade.juridico).toContain('eliminação');
   });
 
   it('navega so por ancoras internas', () => {

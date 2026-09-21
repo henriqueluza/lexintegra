@@ -1,5 +1,8 @@
 # LexIntegra — Plano de Execução
 
+> **Atualização de setembro de 2026:** o redesign solicitado nesta sessão está registrado em [revisao-frontend.md](revisao-frontend.md). A landing, o cadastro e a compra agora são páginas distintas; existe uma variante autorizada com martelo animado. Textos visíveis foram redigidos como minutas. As referências anteriores a placeholders e formulário dentro da home são históricas.
+
+
 Complemento ao rascunho de arquitetura. Cada etapa tem um entregável verificável — algo que pode ser demonstrado, não apenas declarado como pronto — e uma lista explícita do que **só você pode fazer**, porque envolve credencial, dinheiro, identidade jurídica ou risco de destruição.
 
 **Regra estrutural.** A Etapa 0 é pré-contagem. O prazo de 1 mês da cláusula 5.1 só começa quando os itens 3.1 a 3.3 forem integralmente recebidos. Enquanto a Etapa 0 não fechar, o relógio não corre.
@@ -9,7 +12,7 @@ Complemento ao rascunho de arquitetura. Cada etapa tem um entregável verificáv
 **Como ler a seção manual.** Cada etapa tem um bloco **"Só você"** com duas categorias:
 
 - **Impossível delegar** — envolve credencial, cartão, aceite de termos ou identidade jurídica.
-- **Bloquear ativamente** — o agente *consegue* fazer, e é justamente por isso que precisa de hook de `PreToolUse` barrando. Nada de confiar em instrução no CLAUDE.md para isso: a própria documentação do Claude Code diz que ele trata memória como contexto, não como configuração imposta.
+- **Bloquear ativamente** — o agente *consegue* fazer, e é justamente por isso que precisa de hook de `PreToolUse` barrando. Nada de confiar em instrução no AGENTS.md para isso: instruções em Markdown são contexto; os controles efetivos dependem das permissões e ferramentas do ambiente de cada agente.
 
 ---
 
@@ -106,7 +109,7 @@ Diferente da verificação do Google, não há revisão pública nem espera de s
 4. Escolher uma e derivar dela os tokens: paleta completa com variações de estado, escala tipográfica, escala de espaçamento, raios, sombras, e os componentes base.
 5. Aplicar a direção escolhida às demais telas.
 
-**Onde fazer.** Pode ser aqui na conversa, com as telas renderizadas inline para comparação lado a lado, ou no Claude Design. A diferença prática: o Claude Design mantém a conversa e o canvas sincronizados e tem handoff empacotado para o Claude Code; aqui, você leva o resultado como especificação e deixa a implementação para a Etapa 3.
+**Onde fazer.** Pode ser aqui na conversa, com as telas renderizadas inline para comparação lado a lado, ou no Claude Design. A diferença prática: o Claude Design mantém a conversa e o canvas sincronizados e tem handoff que pode ser usado como referência pelos agentes de código; aqui, você leva o resultado como especificação e deixa a implementação para a Etapa 3.
 
 **Entregável.** Um documento de sistema de design com os tokens definidos, os componentes base especificados, e as telas principais desenhadas na direção escolhida. As duas direções descartadas ficam registradas — elas viram argumento se a escolha for questionada depois.
 
@@ -593,7 +596,7 @@ real como fixture.
 
 **O hook de bloqueio nunca tinha funcionado.** `.claude/hooks/block-dangerous.sh`
 estava commitado sem bit de execução (`100644`), e o `grep` que extraía o comando
-do JSON era contornável com aspas. Nada do que o `CLAUDE.md` dizia estar barrado
+do JSON era contornável com aspas. Nada do que o `AGENTS.md` dizia estar barrado
 por ele estava. Corrigido no primeiro commit da branch, com o padrão novo
 `abc_prod_`. Efeito colateral conhecido: o padrão `.env` agora casa com qualquer
 comando que contenha a substring (`process.env`, `this.enviando`).
@@ -932,6 +935,6 @@ quebra dois pontos abaixo do piso observado. O sobrevivente que valia matar era
 
 **Etapas fora da cláusula 2ª.** Carrinho na Etapa 8 e upload inteiro na Etapa 11 dependem do aditivo previsto em 0.3. A troca de Meet por Teams na Etapa 10 depende do registro escrito de desvio do 2.7.3 — é substituição, não simplificação: tecnicamente mais robusta que o que o contrato pede, mas ainda assim diferente do texto assinado.
 
-**Uso com Claude Code.** Cada etapa fecha com seus testes passando antes de a seguinte começar. Trabalhar com um agente sobre base sem rede de testes acumula erro silencioso — é por isso que a Etapa 2 inclui o pipeline com limiares desde o primeiro commit, e não depois. Comece cada etapa em plan mode, com o escopo e o critério de aceite colados no prompt, e revise o plano antes de deixar executar.
+**Uso com agentes de código (Codex e Claude Code).** Cada etapa fecha com seus testes passando antes de a seguinte começar. Trabalhar com um agente sobre base sem rede de testes acumula erro silencioso — é por isso que a Etapa 2 inclui o pipeline com limiares desde o primeiro commit, e não depois. Comece cada etapa em plan mode, com o escopo e o critério de aceite colados no prompt, e revise o plano antes de deixar executar.
 
-**Convenção de nome de branch.** Uma etapa por branch, uma etapa por PR (ver CLAUDE.md). O nome da branch usa o prefixo de tipo de mudança, sem número de etapa — `feat/nome-descritivo`, por exemplo `feat/fundacao-infraestrutura` para a Etapa 2. O número da etapa fica registrado no PR e no commit, não no nome da branch.
+**Convenção de nome de branch.** Uma etapa por branch, uma etapa por PR (ver AGENTS.md). O nome da branch usa o prefixo de tipo de mudança, sem número de etapa — `feat/nome-descritivo`, por exemplo `feat/fundacao-infraestrutura` para a Etapa 2. O número da etapa fica registrado no PR e no commit, não no nome da branch.

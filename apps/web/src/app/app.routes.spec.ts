@@ -91,7 +91,9 @@ describe('rotas', () => {
       (r): r is Routes[number] & { loadComponent: CarregaComponente } =>
         typeof r.loadComponent === 'function',
     );
-    expect(comLazy.length).toBe(routes.length);
+    expect(comLazy.length).toBe(
+      routes.filter((r) => r.redirectTo === undefined).length,
+    );
 
     for (const rota of comLazy) {
       await expect(

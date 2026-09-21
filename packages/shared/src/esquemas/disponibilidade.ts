@@ -24,7 +24,7 @@ import { dentroDaSemana, semanaDe } from '../semana.js';
  * calendario pura, sem dependencia; um `import { z }` la faria o zod entrar junto
  * com ele em qualquer arquivo que so quisesse somar dias — e o pacote inicial do
  * Angular ja teve o problema de crescer 466 kB por um import de barril que
- * arrastava o zod (ver CLAUDE.md, notas de plataforma).
+ * arrastava o zod (ver AGENTS.md, notas de plataforma).
  *
  * O `refine` recusa qualquer data que nao seja segunda. Sem ele, publicar a
  * "semana de 2026-09-09" gravaria uma grade cuja identidade nenhuma leitura

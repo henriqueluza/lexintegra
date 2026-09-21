@@ -1,5 +1,8 @@
 # LexIntegra — Rascunho de Arquitetura
 
+> **Atualização de setembro de 2026:** o redesign solicitado nesta sessão está registrado em [revisao-frontend.md](revisao-frontend.md). A landing, o cadastro e a compra agora são páginas distintas; existe uma variante autorizada com martelo animado. Textos visíveis foram redigidos como minutas. As referências anteriores a placeholders e formulário dentro da home são históricas.
+
+
 **Plataforma jurídica inteligente**
 Contrato de prestação de serviços de desenvolvimento de software — Marcos Paulo Nascimento Franco (CONTRATANTE) / Henrique Luza dos Santos (CONTRATADO)
 Cliente final: Bastos & Colomba Advogados
@@ -40,7 +43,7 @@ O objetivo de custo é operar dentro das cotas gratuitas, com um piso estimado e
 - Teto de custo operacional: aproximadamente R$ 60/mês, pagos pela CONTRATANTE.
 - Sem Redis, sem RabbitMQ, sem BullMQ (que é uma camada sobre Redis).
 - Escala esperada: centenas de clientes finais no primeiro ano.
-- Construção assistida por Claude Code.
+- Construção assistida por agentes de código (Codex e Claude Code).
 - Envio de e-mail via Resend.
 - Gateway: AbacatePay.
 - Fluxo de senha inicial substituído por token com link de redefinição.
@@ -537,7 +540,7 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 - **Não há exclusão.** O sink `_Default` só tem o filtro padrão (tira os logs de auditoria que vão para `_Required`), sem exclusão nenhuma; o bucket `_Default` não tem campo restrito (`restrictedFields` vazio) e retém **30 dias**. Não existe recurso `google_logging_*` no Terraform.
 - **Quem lê esse log, pelo IAM do projeto** (sem organização acima dele, então sem herança):
   - a conta humana com `roles/owner` — que já lê o Secret Manager, então o log não amplia nada para ela;
-  - a **SA padrão do Compute** (`616781378293-compute@…`), com `roles/editor` — a concessão legada que o `CLAUDE.md` já marca para sair. **Aqui o log amplia o acesso:** `roles/editor` tem `logging.logEntries.list` e **não** tem `secretmanager.versions.access`. Hoje essa SA não lê o segredo; com ele na URL, leria.
+  - a **SA padrão do Compute** (`616781378293-compute@…`), com `roles/editor` — a concessão legada que o `AGENTS.md` já marca para sair. **Aqui o log amplia o acesso:** `roles/editor` tem `logging.logEntries.list` e **não** tem `secretmanager.versions.access`. Hoje essa SA não lê o segredo; com ele na URL, leria.
   - indiretamente, quem consegue emitir token para essa SA: `api-lexintegra-run` e `firebase-adminsdk-fbsvc`, que têm `roles/iam.serviceAccountTokenCreator` **no projeto inteiro**. Esse alcance é um problema em si, anterior a esta etapa, e está registrado à parte — ele já dá caminho até SAs com acesso ao Secret Manager, então o log não é a pior porta aberta.
 - **Hoje a exposição é zero**, porque não há webhook configurado nem segredo de webhook em produção (`PAGAMENTOS_MODO=desligado`). O risco nasce no dia em que o webhook for cadastrado no painel.
 
@@ -1245,7 +1248,7 @@ Boa parte do que travava o cronograma foi resolvido na reunião com o Marcos. O 
 
 ## 16. Ordem sugerida de construção
 
-Pensada para uso com Claude Code, priorizando o que destrava o resto e o que tem maior risco de descoberta tardia.
+Pensada para uso com agentes de código, priorizando o que destrava o resto e o que tem maior risco de descoberta tardia.
 
 1. Nome definitivo da plataforma e compra do domínio, que travam a verificação do Resend e o mapeamento do Hosting.
 2. Terraform do esqueleto: projeto, Firestore, buckets, Cloud Run vazio, IAM.

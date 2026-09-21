@@ -1,34 +1,6 @@
-/**
- * ⚠️ TEXTO PENDENTE — AGUARDANDO TEXTO JURIDICO DO ADR-12 ⚠️
- *
- * O ADR-12 exige que a regra de estorno conste "explicitamente nos termos de
- * servico aceitos no checkout, nao so no codigo". Redigir e aprovar esse trecho e
- * trabalho juridico, listado em "So voce — Etapa 8" do plano de execucao — e o
- * cliente e um escritorio de advocacia.
- *
- * O marcador sai LITERAL na tela do checkout, como o
- * `{{TODO-TEXTO-PRIVACIDADE-JURIDICO}}` da Etapa 6, e ha teste que cai quando ele
- * for substituido: a substituicao tem que ser um ATO, e nao uma distracao.
- *
- * ESTE ARQUIVO NAO IMPORTA ZOD: a tela de checkout e publica e o importa direto.
- *
- * Quando o texto aprovado chegar:
- *   1. Troque `TEXTO_TERMOS_CHECKOUT`.
- *   2. Troque `VERSAO_TERMOS_CHECKOUT`. O servidor so aceita a versao corrente,
- *      e o pagamento grava a versao aceita — os pagamentos antigos continuam
- *      apontando para o texto que estava no ar quando foram feitos.
- *   3. Ajuste `termos-checkout.spec.ts`, que hoje afirma a presenca do marcador.
- */
-
-export const VERSAO_TERMOS_CHECKOUT = 'checkout-v0-pendente-adr-12';
-
-export const TEXTO_TERMOS_CHECKOUT = '{{TODO-TEXTO-REGRA-ESTORNO-ADR-12}}';
-
-/**
- * O resumo em linguagem simples, que o CONTRATADO escreve — como o `resumo` do
- * aviso de privacidade. NAO e o termo: e a frase que a pessoa le antes de marcar
- * a caixa, e ela so repete o que o ADR-12 decidiu.
- */
+/** Minuta operacional redigida no redesign. Revisão jurídica antes de produção. */
+export const VERSAO_TERMOS_CHECKOUT = 'checkout-v1-minuta-2026-09';
+export const TEXTO_TERMOS_CHECKOUT =
+  'Ao contratar, confira o escopo, os entregáveis, as reuniões, as revisões incluídas e o valor de cada serviço. Cada item pago gera um pedido independente, com as condições registradas no momento da contratação. O início do trabalho depende da confirmação do pagamento e das informações necessárias ao atendimento. No fluxo da plataforma, o cancelamento e a solicitação de estorno estão disponíveis antes de começar a elaboração; cancelar o pedido não devolve automaticamente o valor. O estorno é analisado e processado pelo escritório responsável. Serviços já em execução exigem avaliação individual do atendimento. Estas condições não afastam direitos assegurados pela legislação aplicável, inclusive o direito de arrependimento quando cabível. A contratação não representa garantia de resultado jurídico.';
 export const RESUMO_TERMOS_CHECKOUT =
-  'O estorno só é possível enquanto o pedido ainda não começou a ser elaborado. ' +
-  'Depois disso, o serviço é considerado personalizado e em execução.';
+  'Confira o escopo e as condições de cada serviço. No fluxo da plataforma, o estorno é solicitado antes de o pedido começar a ser elaborado. Os direitos legais aplicáveis são preservados.';

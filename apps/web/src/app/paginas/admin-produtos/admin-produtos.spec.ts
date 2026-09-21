@@ -487,7 +487,7 @@ describe('AdminProdutos', () => {
 
     it('explica que a edicao nao retroage a pedidos ja feitos', async () => {
       const { fixture } = await montar({ lista: [PARECER] });
-      expect(textoDaTela(fixture)).toContain('congelada no momento da compra');
+      expect(textoDaTela(fixture)).toContain('mantêm as condições contratadas');
     });
   });
 });

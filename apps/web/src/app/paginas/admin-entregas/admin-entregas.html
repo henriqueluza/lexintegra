@@ -1,9 +1,12 @@
 <section class="entregas">
   <h1 class="entregas__titulo">Entregas</h1>
+  <p class="pagina-descricao">
+    Acompanhe as notificações e identifique entregas que precisam de atenção.
+  </p>
 
   <p class="entregas__nota">
-    Cada linha e um e-mail que o sistema se comprometeu a entregar. O que falha e
-    tentado de novo sozinho; o reenvio manual serve para o que ja parou.
+    Cada linha e um e-mail que o sistema se comprometeu a entregar. O que falha
+    e tentado de novo sozinho; o reenvio manual serve para o que ja parou.
   </p>
 
   <app-selecao
@@ -44,9 +47,9 @@
       } @case ('tentativas') { {{ comoEntrega(linha).tentativas }} } @case
       ('quando') { {{ quando(comoEntrega(linha).ultimaTentativaEm) }} } @case
       ('erro') {
-      <span class="entregas__motivo">{{
-        comoEntrega(linha).ultimoErro ?? '—'
-      }}</span>
+      <span class="entregas__motivo"
+        >{{ comoEntrega(linha).ultimoErro ?? '—' }}</span
+      >
       } @case ('acoes') { @if (podeReenviar(comoEntrega(linha))) {
       <app-botao
         variante="primario"

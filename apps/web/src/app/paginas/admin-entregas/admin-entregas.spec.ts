@@ -178,7 +178,9 @@ describe('AdminEntregas', () => {
 
     const texto = fixture.nativeElement.textContent as string;
     expect(texto).toContain('Redefinicao de senha');
-    expect(fixture.nativeElement.querySelector('app-mensagem-erro')).toBeTruthy();
+    expect(
+      fixture.nativeElement.querySelector('app-mensagem-erro'),
+    ).toBeTruthy();
   });
 
   it('avisa quando a lista nao carrega', async () => {

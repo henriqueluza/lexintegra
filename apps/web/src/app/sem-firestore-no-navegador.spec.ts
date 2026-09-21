@@ -5,7 +5,7 @@ import { join } from 'node:path';
  * A REGRA INVIOLAVEL 7, defendida por um teste que de fato roda.
  *
  * "O SDK do Firebase no frontend serve so para autenticacao. Nenhuma leitura ou
- * escrita direta no Firestore pelo browser." O CLAUDE.md diz que isso e
+ * escrita direta no Firestore pelo browser." O AGENTS.md diz que isso e
  * verificado em duas frentes: a suite de `packages/regras-firestore`, que prova
  * que o acesso seria negado, e uma regra de dependency-cruiser que impediria o
  * import de existir.

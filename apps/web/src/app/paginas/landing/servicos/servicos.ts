@@ -79,10 +79,6 @@ export class Servicos {
     this.carrinho.adicionar(produto);
   }
 
-  protected remover(indice: number): void {
-    this.carrinho.remover(indice);
-  }
-
   protected async buscar(): Promise<void> {
     this.tentado.set(true);
     this.carregando.set(true);

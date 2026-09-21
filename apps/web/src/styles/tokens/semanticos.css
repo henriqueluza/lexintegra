@@ -102,7 +102,7 @@
   --campo-borda-largura: 0 0 var(--borda-fina) 0;
   --campo-borda-cor: var(--limite-controle);
   --campo-preenchimento: var(--s3) 0;
-  --campo-rotulo-cor: var(--acento);
+  --campo-rotulo-cor: var(--acento-forte);
   --campo-rotulo-caixa-alta: uppercase;
   --campo-rotulo-espaco: var(--letra-rotulo);
   --campo-rotulo-tamanho: var(--t-micro);

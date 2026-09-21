@@ -93,7 +93,7 @@ describe('Servicos', () => {
       expect(texto(fixture)).toContain(TEXTOS.servicos.travado.titulo);
       expect(
         (fixture.nativeElement as HTMLElement).querySelector(
-          'a[href="#cadastro"]',
+          'a[href="/cadastro"]',
         ),
       ).not.toBeNull();
     });
@@ -280,7 +280,7 @@ describe('Servicos', () => {
       expect(pedidos).toBe(1);
     });
 
-    it('leva ao checkout', async () => {
+    it('leva ao carrinho separado', async () => {
       const fixture = montar();
       await liberar(fixture);
 
@@ -288,20 +288,9 @@ describe('Servicos', () => {
 
       expect(
         (fixture.nativeElement as HTMLElement).querySelector(
-          '.carrinho a[href="/checkout"]',
+          '.carrinho a[href="/carrinho"]',
         ),
       ).not.toBeNull();
-    });
-
-    it('remove o item escolhido', async () => {
-      const fixture = montar();
-      await liberar(fixture);
-      await clicarAdicionar(fixture, 2);
-
-      botoes(fixture, '.carrinho__item button')[0].click();
-      fixture.detectChanges();
-
-      expect(botoes(fixture, '.carrinho__item')).toHaveLength(1);
     });
 
     it('desabilita o botao e avisa quando o carrinho enche', async () => {
