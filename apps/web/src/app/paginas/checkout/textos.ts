@@ -17,13 +17,13 @@ export const TEXTOS_CHECKOUT = {
   semLiberacao: {
     titulo: 'Conclua o cadastro para continuar',
     texto:
-      'O checkout fica disponível depois do cadastro rápido na página inicial.',
+      'O checkout fica disponível depois do cadastro inicial, em sua página própria.',
     acao: 'Ir para o cadastro',
   },
 
   vazio: {
     titulo: 'Seu carrinho está vazio',
-    texto: 'Escolha os serviços na página inicial e volte para pagar.',
+    texto: 'Escolha os serviços no catálogo de serviços e volte para pagar.',
     acao: 'Ver serviços',
   },
 
@@ -95,7 +95,6 @@ export const TEXTOS_CHECKOUT = {
       'O pagamento está indisponível no momento. Tente novamente mais tarde.',
     excesso:
       'Muitas tentativas em pouco tempo. Espere alguns minutos e tente de novo.',
-    liberacaoVencida:
-      'Seu acesso expirou. Refaça o cadastro na página inicial para continuar.',
+    liberacaoVencida: 'Seu acesso expirou. Refaça o cadastro para continuar.',
   },
 } as const;

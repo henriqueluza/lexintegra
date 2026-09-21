@@ -4,7 +4,7 @@
  * de pagar, e duas colunas espalhariam o que precisa ser lido junto.
  */
 .checkout {
-  min-height: 100svh;
+  min-height: 75svh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -25,7 +25,7 @@
   margin: 0;
   font-family: var(--fonte-display);
   font-weight: var(--peso-titulo);
-  font-size: var(--t-t2);
+  font-size: var(--t-editorial);
   color: var(--texto);
 }
 
@@ -123,4 +123,26 @@
   display: inline-block;
   margin-top: var(--s4);
   color: var(--acento-forte);
+}
+
+.checkout__caixa:has(.checkout__formulario) {
+  max-width: var(--largura-conteudo);
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: var(--s7);
+  align-items: start;
+}
+.checkout__resumo {
+  background: var(--superficie-elevada);
+  --acento: var(--acento-em-elevada);
+}
+.checkout__formulario {
+  border: var(--borda-fina) solid var(--divisor);
+  padding: var(--s6);
+}
+@media (max-width: 800px) {
+  .checkout__caixa:has(.checkout__formulario) {
+    grid-template-columns: 1fr;
+    gap: var(--s5);
+  }
 }

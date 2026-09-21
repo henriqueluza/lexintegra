@@ -203,7 +203,8 @@ describe('Checkout', () => {
       const conteudo = texto(cenario.fixture).replace(/\s/g, ' ');
       expect(conteudo).toContain('Servico 0');
       expect(conteudo).toContain('R$ 2.000,00');
-      expect(conteudo).toContain('{{TODO-TEXTO-REGRA-ESTORNO-ADR-12}}');
+      expect(conteudo).toContain('Ao contratar, confira o escopo');
+      expect(conteudo).not.toContain('TODO');
     });
 
     it('formulario invalido nao envia e pede o aceite', async () => {

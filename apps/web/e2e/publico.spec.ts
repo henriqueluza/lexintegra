@@ -90,7 +90,7 @@ async function preencherEEnviar(page: Page): Promise<void> {
   await page.getByLabel('Nome completo').fill('Ana Ribeiro Salgado');
   await page.getByLabel('E-mail').fill('ana@empresa.com.br');
   await page.getByLabel('Telefone').fill('(61) 99000-0000');
-  await page.getByRole('button', { name: 'Criar acesso' }).click();
+  await page.getByRole('button', { name: 'Liberar catálogo' }).click();
 }
 
 /*
@@ -111,8 +111,13 @@ test.describe('area publica', () => {
 
     await page.goto('/');
     await percorrerAPaginaInteira(page);
-    await page.getByRole('link', { name: 'Ver serviços e preços' }).click();
-    await page.getByRole('link', { name: 'Entender o processo' }).click();
+    await page
+      .getByRole('link', { name: 'Como funciona', exact: true })
+      .last()
+      .click();
+    await page
+      .getByRole('link', { name: 'Explorar serviços e escopos' })
+      .click();
     await page.waitForTimeout(500);
 
     expect(chamadas).toEqual([]);
@@ -133,7 +138,9 @@ test.describe('area publica', () => {
     await interceptar(page);
 
     await page.goto('/');
-    await esperarHidratacao(page);
+    await page
+      .getByRole('link', { name: 'Conhecer os serviços', exact: true })
+      .waitFor();
     await page.evaluate(() => {
       setTimeout(() => {
         throw new Error('erro de teste na home');
@@ -146,7 +153,7 @@ test.describe('area publica', () => {
 
   test('o catalogo nao aparece antes do cadastro', async ({ page }) => {
     await interceptar(page);
-    await page.goto('/');
+    await page.goto('/servicos');
 
     await expect(
       page.getByText('Os preços aparecem depois do cadastro'),
@@ -163,8 +170,9 @@ test.describe('area publica', () => {
     const chamadas = espiarApi(page);
     await interceptar(page);
 
-    await page.goto('/');
+    await page.goto('/cadastro');
     await preencherEEnviar(page);
+    await page.getByRole('link', { name: 'Explorar os serviços' }).click();
 
     await expect(page.getByText('Due diligence societária')).toBeVisible();
     /*
@@ -183,8 +191,9 @@ test.describe('area publica', () => {
    */
   test('a liberacao sobrevive ao recarregamento', async ({ page }) => {
     await interceptar(page);
-    await page.goto('/');
+    await page.goto('/cadastro');
     await preencherEEnviar(page);
+    await page.getByRole('link', { name: 'Explorar os serviços' }).click();
     await expect(page.getByText('Due diligence societária')).toBeVisible();
 
     await page.reload();
@@ -201,13 +210,13 @@ test.describe('area publica', () => {
     const chamadas = espiarApi(page);
     await interceptar(page);
 
-    await page.goto('/');
+    await page.goto('/cadastro');
     await esperarHidratacao(page);
 
     await page.getByLabel('Nome completo').fill('An');
     await page.getByLabel('E-mail').fill('nao-e-email');
     await page.getByLabel('Telefone').fill('123');
-    await page.getByRole('button', { name: 'Criar acesso' }).click();
+    await page.getByRole('button', { name: 'Liberar catálogo' }).click();
 
     await expect(page.getByText('Informe um telefone com DDD.')).toBeVisible();
     expect(chamadas).toEqual([]);
@@ -220,11 +229,11 @@ test.describe('area publica', () => {
   test('mostra o aviso de privacidade junto do formulario', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/cadastro');
 
-    const formulario = page.locator('#cadastro form');
+    const formulario = page.locator('app-cadastro form');
     await expect(
-      formulario.getByText('Você pode pedir a exclusão a qualquer momento.'),
+      formulario.getByText('Usamos seus dados para liberar o catálogo'),
     ).toBeVisible();
 
     /*
@@ -236,4 +245,33 @@ test.describe('area publica', () => {
       formulario.getByText('Aviso de privacidade', { exact: true }),
     ).toBeVisible();
   });
+});
+
+test('compra separada de login e landing, com carrinho editável', async ({
+  page,
+}) => {
+  await interceptar(page);
+  await page.goto('/cadastro');
+  await preencherEEnviar(page);
+  await page.getByRole('link', { name: 'Explorar os serviços' }).click();
+  await page.getByRole('button', { name: 'Adicionar ao carrinho' }).click();
+  await page.getByRole('link', { name: 'Revisar carrinho' }).click();
+  await expect(page).toHaveURL(/\/carrinho$/);
+  await expect(
+    page.getByRole('heading', { name: 'Due diligence societária' }),
+  ).toBeVisible();
+  await page.getByRole('link', { name: 'Continuar para o pagamento' }).click();
+  await expect(page).toHaveURL(/\/checkout$/);
+  await expect(page.getByLabel('Nome completo')).toBeVisible();
+  await page.getByRole('link', { name: 'Voltar ao carrinho' }).click();
+  await page
+    .getByRole('button', { name: 'Remover Due diligence societária' })
+    .click();
+  await expect(
+    page.getByText('Você ainda não adicionou serviços.'),
+  ).toBeVisible();
+  const chamadas = espiarApi(page);
+  await page.goto('/');
+  await percorrerAPaginaInteira(page);
+  expect(chamadas).toEqual([]);
 });

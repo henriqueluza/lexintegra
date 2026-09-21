@@ -30,7 +30,6 @@ async function violacoes(
 
 test.describe('acessibilidade da area publica', () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => localStorage.clear());
     await page.route('**/api/vitrine', (rota) =>
       rota.fulfill({
         status: 200,
@@ -68,14 +67,15 @@ test.describe('acessibilidade da area publica', () => {
   });
 
   test('com a vitrine liberada', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/cadastro');
 
     await esperarHidratacao(page);
 
     await page.getByLabel('Nome completo').fill('Ana Ribeiro Salgado');
     await page.getByLabel('E-mail').fill('ana@empresa.com.br');
     await page.getByLabel('Telefone').fill('(61) 99000-0000');
-    await page.getByRole('button', { name: 'Criar acesso' }).click();
+    await page.getByRole('button', { name: 'Liberar catálogo' }).click();
+    await page.getByRole('link', { name: 'Explorar os serviços' }).click();
     await expect(page.getByText('Revisão de contrato comercial')).toBeVisible();
 
     expect(await violacoes(page)).toEqual([]);

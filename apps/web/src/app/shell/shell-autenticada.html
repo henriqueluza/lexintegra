@@ -1,7 +1,12 @@
-<div class="shell" data-direcao="pauta">
+<div
+  class="shell"
+  [class.shell--cliente]="navegacao().length === 0"
+  data-direcao="pauta"
+>
   <header class="shell__topo">
     <div class="shell__identidade">
-      <span class="shell__marca">LexIntegra</span>
+      <a class="shell__marca" routerLink="/">LexIntegra</a
+      ><span class="shell__ambiente">Área de trabalho</span>
       <span class="shell__usuario">{{ descricaoDoUsuario() }}</span>
     </div>
 
@@ -18,6 +23,7 @@
     </nav>
     }
 
+    <a class="shell__servicos" routerLink="/servicos">Conhecer serviços</a>
     <app-botao variante="secundario" tamanho="p" (click)="sair()">
       Sair
     </app-botao>

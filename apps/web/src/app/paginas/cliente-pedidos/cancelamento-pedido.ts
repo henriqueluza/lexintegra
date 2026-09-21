@@ -14,12 +14,9 @@ import { Botao } from '../../ui/botao/botao';
 import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
 import { mensagemDoErro } from '../erros';
 
-/**
- * ⚠️ TEXTO PENDENTE — AGUARDANDO TEXTO JURIDICO DO ADR-12. Sai literal na tela,
- * como os outros `{{TODO-...}}`, e ha teste que cai quando for substituido.
- */
+/** Redação da interface; decisões de aprovação estão em docs/revisao-frontend.md. */
 export const TEXTO_CANCELAMENTO_JURIDICO =
-  '{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}';
+  'Ao confirmar, este pedido será cancelado e não seguirá para elaboração. Esta ação não gera devolução automática do pagamento. Para solicitar estorno, procure o atendimento do escritório responsável. Permanecem preservados os direitos previstos na legislação aplicável.';
 
 /**
  * O cancelamento de um pedido pelo cliente (ADR-12), dentro do cartao dele.

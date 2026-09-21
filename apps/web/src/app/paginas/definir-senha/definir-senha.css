@@ -1,7 +1,7 @@
 /* Direcao A (Catedra), como as demais telas de acesso: quem chega aqui nao esta
  * autenticado. */
 .definir {
-  min-height: 100svh;
+  min-height: 75svh;
   display: flex;
   flex-direction: column;
   justify-content: center;

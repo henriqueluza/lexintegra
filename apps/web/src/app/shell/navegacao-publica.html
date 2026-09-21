@@ -1,0 +1,50 @@
+<header class="topo">
+  <a class="marca" routerLink="/" aria-label="LexIntegra — início"
+    ><span class="marca__simbolo" aria-hidden="true">L<span>i</span></span
+    >LexIntegra</a
+  >
+  <button
+    class="menu"
+    type="button"
+    [attr.aria-expanded]="aberto()"
+    aria-controls="navegacao-publica"
+    (click)="aberto.set(!aberto())"
+  >
+    {{ aberto() ? 'Fechar menu' : 'Menu' }}
+  </button>
+  <nav
+    id="navegacao-publica"
+    [class.aberto]="aberto()"
+    aria-label="Navegação principal"
+  >
+    <a routerLink="/" fragment="como" (click)="aberto.set(false)"
+      >Como funciona</a
+    >
+    <a
+      routerLink="/servicos"
+      routerLinkActive="ativo"
+      (click)="aberto.set(false)"
+      >Serviços</a
+    >
+    <a
+      routerLink="/carrinho"
+      routerLinkActive="ativo"
+      (click)="aberto.set(false)"
+      >Carrinho <span class="contador">{{ carrinho.quantidade() }}</span></a
+    >
+    <a
+      class="acesso"
+      routerLink="/entrar"
+      routerLinkActive="ativo"
+      (click)="aberto.set(false)"
+      >Entrar</a
+    >
+    <a
+      class="cadastre"
+      routerLink="/cadastro"
+      routerLinkActive="ativo"
+      (click)="aberto.set(false)"
+      >Cadastre-se</a
+    >
+  </nav>
+</header>

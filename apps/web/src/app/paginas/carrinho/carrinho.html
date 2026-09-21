@@ -1,0 +1,56 @@
+<main class="pagina">
+  <header class="abertura">
+    <p class="contexto">Sua contratação</p>
+    <h1>Seu carrinho</h1>
+    <p>Confira os serviços escolhidos antes de seguir para o pagamento.</p>
+  </header>
+  @if (carrinho.quantidade() === 0) {
+  <section class="vazio">
+    <h2>Seu próximo passo começa com uma escolha.</h2>
+    <p>
+      Você ainda não adicionou serviços. Conheça o catálogo e veja os escopos
+      disponíveis.
+    </p>
+    <app-link-acao destino="/servicos" variante="primario"
+      >Conhecer os serviços</app-link-acao
+    >
+  </section>
+  } @else {
+  <div class="compra">
+    <section aria-label="Serviços escolhidos">
+      <ul class="itens">
+        @for (item of carrinho.itens(); track $index) {
+        <li>
+          <div>
+            <h2>{{ item.nome }}</h2>
+            <p>Um pedido individual para este serviço.</p>
+          </div>
+          <strong>{{ preco(item.precoCentavos) }}</strong
+          ><app-botao
+            variante="texto"
+            [rotuloAcessivel]="'Remover ' + item.nome"
+            (click)="carrinho.remover($index)"
+            >Remover</app-botao
+          >
+        </li>
+        }
+      </ul>
+      <a href="/servicos">Continuar escolhendo</a>
+    </section>
+    <aside class="resumo">
+      <h2>Resumo da contratação</h2>
+      <p>{{ carrinho.quantidade() }} serviço(s)</p>
+      <strong class="total" aria-live="polite"
+        >{{ preco(carrinho.totalIndicativoCentavos()) }}</strong
+      >
+      <p>
+        Valor estimado. O preço final será confirmado no checkout. Cada serviço
+        terá seu próprio acompanhamento.
+      </p>
+      <app-link-acao destino="/checkout" variante="primario"
+        >Continuar para o pagamento</app-link-acao
+      >
+    </aside>
+  </div>
+  }
+</main>

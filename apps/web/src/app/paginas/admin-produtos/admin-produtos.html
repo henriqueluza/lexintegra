@@ -1,9 +1,13 @@
 <section class="produtos">
   <h1 class="produtos__titulo">Produtos</h1>
+  <p class="pagina-descricao">
+    Organize os serviços oferecidos, seus escopos e suas condições de
+    contratação.
+  </p>
 
   <app-cartao
     [titulo]="tituloDoCartao()"
-    descricao="O que for salvo aqui vale para compras novas. Pedidos ja feitos carregam a versao congelada no momento da compra."
+    descricao="O que for salvo aqui vale para compras novas. Pedidos anteriores mantêm as condições contratadas."
   >
     <form
       class="produtos__formulario"
@@ -20,7 +24,7 @@
           rotulo="Preco"
           formControlName="preco"
           marcador="3.200,00"
-          dica="Em reais. A API guarda em centavos."
+          dica="Informe o valor em reais."
           [obrigatorio]="true"
         />
       </div>
@@ -50,7 +54,7 @@
         <app-campo
           rotulo="Revisoes permitidas"
           formControlName="numeroRevisoesPermitidas"
-          dica="Unico parametro da maquina de estados."
+          dica="Número de revisões incluídas para cada entregável."
         />
       </div>
 

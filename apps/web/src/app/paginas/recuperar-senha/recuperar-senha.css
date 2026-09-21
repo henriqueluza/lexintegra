@@ -1,7 +1,7 @@
 /* Direcao A (Catedra), como a tela de entrada: quem chega aqui nao esta
  * autenticado. */
 .recuperar {
-  min-height: 100svh;
+  min-height: 75svh;
   display: flex;
   flex-direction: column;
   justify-content: center;

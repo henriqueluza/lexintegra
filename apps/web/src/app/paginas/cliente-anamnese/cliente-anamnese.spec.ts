@@ -64,9 +64,7 @@ describe('ClienteAnamnese (stub temporario)', () => {
   it('mostra o marcador de ficha provisoria', () => {
     const { fixture } = montar();
 
-    expect(AVISO_FICHA_PROVISORIA).toBe(
-      '{{TODO-FICHA-ANAMNESE-DA-CONTRATANTE}}',
-    );
+    expect(AVISO_FICHA_PROVISORIA).toContain('Descreva sua necessidade');
     expect(texto(fixture)).toContain(AVISO_FICHA_PROVISORIA);
   });
 

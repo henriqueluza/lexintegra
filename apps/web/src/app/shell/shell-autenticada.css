@@ -1,93 +1,140 @@
-/*
- * A shell e o ponto onde a Direcao B (Pauta) comeca. O `data-direcao="pauta"` no
- * elemento raiz deste componente reescopa os tokens semanticos para tudo abaixo
- * dele — nenhum componente daqui para baixo sabe em qual direcao esta.
- *
- * O ANINHAMENTO E DE PROPOSITO e tem teste proprio: o <html> continua sendo
- * `catedra` (rotas publicas), entao todo componente da area autenticada e, ao
- * mesmo tempo, descendente de um `[data-direcao='catedra']`. E por esse caminho
- * que o primeiro desvio de escopo da Etapa 3 vazou o dourado da Catedra para
- * dentro da area do cliente; ver `apps/web/e2e/direcao.spec.ts`.
- */
 .shell {
   min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+  font-family: var(--fonte-interface);
+  font-size: var(--texto-base);
+  display: grid;
+  grid-template-columns: var(--largura-sidebar) minmax(0, 1fr);
   background: var(--superficie);
   color: var(--texto);
 }
-
 .shell__topo {
+  position: sticky;
+  top: 0;
+  height: 100svh;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s4);
-  padding: var(--s3) var(--s4);
-  border-bottom: var(--borda-fina) solid var(--divisor);
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--s6);
+  padding: var(--s6) var(--s5);
+  border-right: var(--borda-fina) solid var(--divisor);
   background: var(--superficie-elevada);
 }
-
 .shell__identidade {
   display: flex;
   flex-direction: column;
+  gap: var(--s2);
 }
-
 .shell__marca {
   font-family: var(--fonte-interface);
-  font-size: var(--t-mini);
-  letter-spacing: var(--letra-caixa-alta);
-  text-transform: uppercase;
+  font-size: var(--t-t3);
+  font-weight: var(--peso-forte);
   color: var(--acento);
+  text-decoration: none;
 }
-
+.shell__ambiente {
+  color: var(--texto-3);
+  font-size: var(--t-mini);
+  padding-bottom: var(--s5);
+  border-bottom: var(--borda-fina) solid var(--divisor);
+}
 .shell__usuario {
   font-size: var(--t-menor);
   color: var(--texto-2);
+  overflow-wrap: anywhere;
 }
-
 .shell__conteudo {
-  flex: 1;
   width: 100%;
+  min-width: 0;
   max-width: var(--largura-conteudo);
   margin: 0 auto;
-  padding: var(--s5) var(--s4);
+  padding: var(--s7) var(--s6);
 }
-
-/*
- * A navegacao fica entre a identidade e o botao de sair, e some por completo
- * quando nao ha itens — nao vira uma barra vazia para cliente e advogado.
- */
 .shell__nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--s4);
-  margin-inline-start: auto;
-  margin-inline-end: var(--s4);
+  flex-direction: column;
+  gap: var(--s2);
 }
-
 .shell__link {
   color: var(--texto-2);
   font-size: var(--t-menor);
   text-decoration: none;
-  padding-block: var(--s2);
-  border-bottom: var(--borda-grossa) solid transparent;
+  padding: var(--s3) var(--s4);
+  border-left: var(--borda-grossa) solid transparent;
 }
-
 .shell__link:hover {
+  background: var(--superficie-sutil);
   color: var(--texto);
 }
-
-/*
- * O item ativo se distingue por SUBLINHADO e cor, nunca so por cor: a diferenca
- * precisa sobreviver a quem nao distingue o acento do texto secundario (o mesmo
- * criterio do selo de estado, que sempre carrega rotulo textual).
- */
 .shell__link--ativo {
   color: var(--acento);
-  border-bottom-color: var(--acento);
+  border-left-color: var(--acento);
+  background: var(--acento-fundo);
+  font-weight: var(--peso-forte);
 }
-
+.shell__servicos {
+  margin-top: auto;
+  font-size: var(--t-menor);
+  color: var(--acento);
+}
 .shell__link:focus-visible {
   outline: var(--borda-grossa) solid var(--foco);
-  outline-offset: var(--s2);
+  outline-offset: var(--s1);
+}
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+  .shell__topo {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: var(--s4);
+    gap: var(--s4);
+    border-right: 0;
+    border-bottom: var(--borda-fina) solid var(--divisor);
+  }
+  .shell__nav {
+    order: 2;
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .shell__ambiente {
+    display: none;
+  }
+  .shell__servicos {
+    margin-top: 0;
+    margin-left: auto;
+  }
+  .shell__conteudo {
+    padding: var(--s6) var(--s4);
+  }
+}
+
+/* O cliente tem uma tela principal: a barra superior preserva espaço para os pedidos. */
+.shell--cliente {
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
+}
+.shell--cliente .shell__topo {
+  position: static;
+  height: auto;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  border-right: 0;
+  border-bottom: var(--borda-fina) solid var(--divisor);
+}
+.shell--cliente .shell__ambiente {
+  display: none;
+}
+.shell--cliente .shell__servicos {
+  margin-top: 0;
+  margin-left: auto;
+}
+@media (max-width: 900px) {
+  .shell__topo {
+    position: static;
+    height: auto;
+  }
 }

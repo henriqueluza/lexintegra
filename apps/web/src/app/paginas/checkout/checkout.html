@@ -1,5 +1,6 @@
 <main class="checkout">
-  <a class="checkout__marca" routerLink="/">LexIntegra</a>
+  <a class="checkout__marca" routerLink="/carrinho">Voltar ao carrinho</a>
+  <p class="checkout__auxiliar">Carrinho / Checkout / Confirmação</p>
   <h1 class="checkout__titulo">{{ textos.titulo }}</h1>
 
   <div class="checkout__caixa">
@@ -9,7 +10,7 @@
     <section class="checkout__aviso">
       <h2>{{ textos.semLiberacao.titulo }}</h2>
       <p>{{ textos.semLiberacao.texto }}</p>
-      <a class="checkout__link" routerLink="/" fragment="cadastro">
+      <a class="checkout__link" routerLink="/cadastro">
         {{ textos.semLiberacao.acao }}
       </a>
     </section>
@@ -17,7 +18,7 @@
     <section class="checkout__aviso">
       <h2>{{ textos.vazio.titulo }}</h2>
       <p>{{ textos.vazio.texto }}</p>
-      <a class="checkout__link" routerLink="/" fragment="servicos">
+      <a class="checkout__link" routerLink="/servicos">
         {{ textos.vazio.acao }}
       </a>
     </section>

@@ -26,7 +26,7 @@ import { ehDuplicata } from '../outbox/evento.js';
  * formato gravado: pares rotulo/valor em `clientes/{uid}/anamnese`, que a tela do
  * advogado ja le.
  *
- * O CONTEUDO NAO ENTRA EM LOG, nem aqui nem em quem chama (CLAUDE.md, LGPD). A
+ * O CONTEUDO NAO ENTRA EM LOG, nem aqui nem em quem chama (AGENTS.md, LGPD). A
  * anamnese pode conter dado sensivel; o log registra so que houve envio.
  *
  * UMA FICHA POR CLIENTE, com id deterministico. Um segundo envio e 409: a ficha e

@@ -1,0 +1,108 @@
+.pagina {
+  max-width: var(--largura-conteudo);
+  margin: 0 auto;
+  padding: var(--s8) var(--s5);
+  min-height: 75svh;
+}
+.abertura {
+  margin-bottom: var(--s7);
+  max-width: 700px;
+}
+.contexto {
+  color: var(--acento-forte);
+  font-size: var(--t-menor);
+  margin-bottom: var(--s4);
+}
+h1 {
+  font-family: var(--fonte-display);
+  font-size: var(--t-hero);
+  font-weight: var(--peso-titulo);
+  line-height: var(--altura-apertada);
+  letter-spacing: var(--letra-titulo);
+}
+h2 {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t3);
+  font-weight: var(--peso-titulo);
+}
+p {
+  color: var(--texto-2);
+  line-height: var(--altura-solta);
+  margin: var(--s4) 0;
+}
+a {
+  color: var(--acento-forte);
+  text-underline-offset: var(--s1);
+}
+.auxiliar {
+  font-size: var(--t-menor);
+}
+.pagina--cadastro {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s8);
+}
+.formulario {
+  border: var(--borda-fina) solid var(--divisor);
+  background: var(--superficie-elevada);
+  padding: var(--s6);
+  --acento: var(--acento-em-elevada);
+}
+.compra {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: var(--s7);
+  align-items: start;
+}
+.itens {
+  list-style: none;
+  margin: 0 0 var(--s6);
+  padding: 0;
+}
+.itens li {
+  display: flex;
+  align-items: center;
+  gap: var(--s5);
+  padding: var(--s5) 0;
+  border-bottom: var(--borda-fina) solid var(--divisor);
+}
+.itens li div {
+  flex: 1;
+}
+.itens li p {
+  font-size: var(--t-menor);
+}
+.resumo,
+.vazio {
+  padding: var(--s6);
+  background: var(--superficie-elevada);
+  border: var(--borda-fina) solid var(--divisor);
+  --acento: var(--acento-em-elevada);
+}
+.total {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t1);
+  font-weight: var(--peso-titulo);
+}
+.legal {
+  max-width: 760px;
+}
+.legal p {
+  white-space: pre-line;
+}
+@media (max-width: 800px) {
+  .pagina--cadastro,
+  .compra {
+    grid-template-columns: 1fr;
+    gap: var(--s6);
+  }
+  .pagina {
+    padding: var(--s7) var(--s4);
+  }
+  .itens li {
+    flex-wrap: wrap;
+  }
+  .formulario {
+    padding: var(--s5);
+  }
+}

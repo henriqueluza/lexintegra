@@ -31,7 +31,7 @@ import { expect, type Page } from '@playwright/test';
  * "nenhuma chamada a API" verificam logo depois.
  */
 export async function esperarHidratacao(page: Page): Promise<void> {
-  const botao = page.getByRole('button', { name: 'Criar acesso' });
+  const botao = page.getByRole('button', { name: 'Liberar catálogo' });
   const aviso = page.getByText('Campo obrigatório.').first();
 
   await expect(async () => {

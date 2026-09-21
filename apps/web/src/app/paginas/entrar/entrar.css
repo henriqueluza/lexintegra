@@ -5,13 +5,14 @@
  * (docs/design.md).
  */
 .entrada {
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  min-height: 75svh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   align-items: center;
-  gap: var(--s5);
-  padding: var(--s7) var(--s4);
+  gap: var(--s9);
+  max-width: var(--largura-conteudo);
+  margin: 0 auto;
+  padding: var(--s8) var(--s5);
 }
 
 .entrada__marca {
@@ -44,4 +45,35 @@
   text-align: center;
   font-size: var(--t-menor);
   color: var(--texto-2);
+}
+
+.entrada__apresentacao h1 {
+  font-family: var(--fonte-display);
+  font-size: var(--t-editorial);
+  font-weight: var(--peso-titulo);
+  line-height: var(--altura-titulo);
+  margin: var(--s5) 0;
+}
+.entrada__apresentacao p {
+  color: var(--texto-2);
+  line-height: var(--altura-solta);
+}
+.entrada__apresentacao a {
+  display: inline-block;
+  color: var(--acento-forte);
+  margin-top: var(--s5);
+  font-size: var(--t-menor);
+}
+.entrada__caixa {
+  max-width: 100%;
+}
+.entrada__auxiliar {
+  margin-top: var(--s4);
+}
+@media (max-width: 800px) {
+  .entrada {
+    grid-template-columns: 1fr;
+    gap: var(--s6);
+    padding: var(--s7) var(--s4);
+  }
 }

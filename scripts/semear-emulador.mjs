@@ -18,7 +18,7 @@
  * como emulador antes de escrever qualquer coisa.
  *
  * Elevacao de privilegio em PRODUCAO continua sendo operacao manual, por script
- * auditavel, fora de qualquer sessao de agente (item 2.4.2 e CLAUDE.md).
+ * auditavel, fora de qualquer sessao de agente (item 2.4.2 e AGENTS.md).
  *
  * Uso:
  *   scripts/emuladores.sh 'node scripts/semear-emulador.mjs'

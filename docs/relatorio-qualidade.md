@@ -1,6 +1,6 @@
 # Relatorio de qualidade
 
-Gerado por `pnpm relatorio:qualidade` em 2026-09-18.
+Gerado por `pnpm relatorio:qualidade` em 2026-09-21.
 
 Este relatorio LE o que as ferramentas ja produziram; ele nao reprova nada. Quem
 reprova e o limiar de cada uma, no lugar dela — cobertura no `jest.config.mjs`,
@@ -10,10 +10,10 @@ mutacao no `stryker.config.mjs`, complexidade e fronteiras no `pnpm lint`.
 
 | Pacote | Statements | Branches | Functions | Lines |
 |---|---|---|---|---|
-| API (NestJS) | 93.27% | 84.59% | 92.73% | 94.59% |
-| Web (Angular) | 96.28% | 89.92% | 91.78% | 97.2% |
+| API (NestJS) | 91.58% | 83.48% | 91.06% | 92.86% |
+| Web (Angular) | 95.9% | 89.33% | 91.26% | 96.82% |
 | Scanner (ClamAV) | 100% | 90.47% | 100% | 100% |
-| shared | 99.48% | 100% | 100% | 99.44% |
+| shared | 97.5% | 100% | 100% | 97.29% |
 
 Rode `pnpm test:coverage` para atualizar.
 
@@ -25,14 +25,14 @@ reunioes entra quando a Etapa 10 existir.
 
 | Alvo | Escore | Mortos | Sobreviventes | Limiar de quebra |
 |---|---|---|---|---|
-| shared | 98.46% | 64 | 1 | 96 |
-| API | 89.62% | 354 | 41 | 86 |
+| shared | 98.15% | 212 | 4 | 96 |
+| API | 88.77% | 506 | 64 | 86 |
 
 Rode `pnpm mutacao` para atualizar.
 
 ## Complexidade ciclomatica
 
-Funcoes analisadas: **4847**. Limite do lint: **10**.
+Funcoes analisadas: **4855**. Limite do lint: **10**.
 
 | Complexidade | Funcao | Arquivo |
 |---|---|---|
@@ -49,7 +49,7 @@ Funcoes analisadas: **4847**. Limite do lint: **10**.
 
 ## Dependencias
 
-- Modulos no grafo: **517**
-- Dependencias: **2134**
+- Modulos no grafo: **525**
+- Dependencias: **2162**
 - Ciclos: **0**
 - Violacoes de fronteira: **0** erro(s), 0 aviso(s)

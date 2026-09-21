@@ -29,9 +29,15 @@ test.describe('pre-renderizacao da area publica', () => {
   test('serve o conteudo sem JavaScript', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.locator('h1')).toContainText('O trabalho jurídico');
-    await expect(page.getByText('Como funciona')).toBeVisible();
-    await expect(page.getByText('Crie seu acesso')).toBeVisible();
+    await expect(page.locator('h1')).toContainText('O jurídico da sua empresa');
+    await expect(
+      page.getByRole('heading', {
+        name: 'Um caminho claro. Do início à entrega.',
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Conheça os serviços' }),
+    ).toBeVisible();
   });
 
   /**
@@ -40,7 +46,7 @@ test.describe('pre-renderizacao da area publica', () => {
    * cadastrou — inclusive ao rastreador.
    */
   test('serve a vitrine travada, nunca o catalogo', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/servicos');
 
     await expect(
       page.getByText('Os preços aparecem depois do cadastro'),
@@ -48,12 +54,12 @@ test.describe('pre-renderizacao da area publica', () => {
   });
 
   test('serve o formulario e o aviso de privacidade', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/cadastro');
 
     await expect(page.getByLabel('Nome completo')).toBeVisible();
     await expect(page.getByLabel('Telefone')).toBeVisible();
     await expect(
-      page.getByText('Você pode pedir a exclusão a qualquer momento.'),
+      page.getByText('Usamos seus dados para liberar o catálogo'),
     ).toBeVisible();
   });
 

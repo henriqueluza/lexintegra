@@ -8,4 +8,6 @@
 @import './tokens/primitivos-catedra.css';
 @import './tokens/primitivos-pauta.css';
 @import './tokens/semanticos.css';
+@import './tokens/redesign.css';
 @import './base.css';
+@import './paginas.css';
