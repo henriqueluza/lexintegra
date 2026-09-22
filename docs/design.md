@@ -1,6 +1,6 @@
 # Design — LexIntegra
 
-> **Atualização de setembro de 2026:** landing única com quatro fotografias, identidade LexIntegra, navbar por sessão, FAQ com transições e páginas legais ampliadas. Ver [identidade-navegacao.md](identidade-navegacao.md). Cadastro e compra permanecem separados. As referências anteriores a variantes, placeholders e formulário dentro da home são históricas.
+> **Atualização de setembro de 2026:** landing única com três fotografias, identidade LexIntegra, navbar por sessão, FAQ com transições e páginas legais ampliadas. Ver [identidade-navegacao.md](identidade-navegacao.md). Cadastro e compra permanecem separados. As referências anteriores a variantes, placeholders e formulário dentro da home são históricas.
 
 
 Registro da decisão de direção visual (Etapa 1) e o que ela implica para o desenvolvimento. Este documento não substitui `LexIntegra-arquitetura.md` nem `LexIntegra-plano-de-execucao.md` — só fixa a decisão de UI para que ela não precise ser retomada a cada tela nova.

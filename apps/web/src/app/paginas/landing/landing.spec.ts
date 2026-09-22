@@ -31,9 +31,9 @@ describe('Landing institucional', () => {
       'confianca-lexintegra.jpg',
     );
   });
-  it('mostra as quatro fotografias e não oferece alternância de versão', async () => {
+  it('mostra as três fotografias e não oferece alternância de versão', async () => {
     const pagina = await montar();
-    expect(pagina.querySelectorAll('main img')).toHaveLength(4);
+    expect(pagina.querySelectorAll('main img')).toHaveLength(3);
     expect(pagina.textContent).not.toContain('Ver todas as imagens');
   });
   it('abre e fecha cada resposta por botão acessível', async () => {

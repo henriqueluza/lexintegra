@@ -2,10 +2,6 @@
   grid-template-columns: 1fr 1.2fr;
   gap: var(--s6);
 }
-.hero__foto {
-  aspect-ratio: 1 / 1;
-  clip-path: polygon(12% 0, 100% 0, 100% 100%, 0 100%);
-}
 .foto__legenda {
   border-bottom: var(--borda-fina) solid var(--divisor);
 }
@@ -35,14 +31,51 @@
   .hero {
     grid-template-columns: 1fr;
   }
-  .hero__foto {
-    aspect-ratio: 3 / 2;
-    clip-path: none;
-  }
   .convite > div {
     max-width: 100%;
   }
 }
 :host .fundo-profundo {
   background: var(--superficie-sutil);
+}
+
+.hero,
+.acompanhamento {
+  align-items: stretch;
+}
+.hero__visual,
+.duvidas__visual {
+  display: flex;
+  flex-direction: column;
+}
+.hero__enquadramento,
+.acompanhamento__imagem,
+.duvidas__imagem {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+}
+.duvidas__imagem {
+  margin-top: var(--s6);
+}
+.hero__foto,
+.acompanhamento img,
+.duvidas .imagem-editorial {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  aspect-ratio: auto;
+  object-fit: cover;
+  clip-path: polygon(12% 0, 100% 0, 100% 100%, 0 100%);
+}
+@media (max-width: 800px) {
+  .hero__foto,
+  .acompanhamento img,
+  .duvidas .imagem-editorial {
+    position: relative;
+    height: auto;
+    aspect-ratio: 3 / 2;
+  }
 }

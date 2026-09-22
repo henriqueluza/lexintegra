@@ -12,14 +12,16 @@
       <p class="hero__nota">Da contratação à entrega, tudo no mesmo lugar.</p>
     </div>
     <div class="hero__visual">
-      <img
-        class="hero__foto"
-        src="/imagens/confianca-lexintegra.jpg"
-        alt="Balança de bronze sobre uma mesa, com um aperto de mãos ao fundo"
-        width="1200"
-        height="800"
-        fetchpriority="high"
-      />
+      <div class="hero__enquadramento">
+        <img
+          class="hero__foto"
+          src="/imagens/confianca-lexintegra.jpg"
+          alt="Balança de bronze sobre uma mesa, com um aperto de mãos ao fundo"
+          width="1200"
+          height="800"
+          fetchpriority="high"
+        />
+      </div>
       <div class="foto__legenda">
         <span>Estrutura para seguir.</span><span>Clareza para decidir.</span>
       </div>
@@ -69,14 +71,6 @@
         <app-link-acao destino="/servicos" variante="secundario"
           >Explorar serviços e escopos</app-link-acao
         >
-        <img
-          class="imagem-editorial"
-          src="/imagens/assinatura-lexintegra.jpg"
-          alt="Profissional assina um documento com uma caneta sobre uma mesa de madeira"
-          width="1200"
-          height="800"
-          loading="lazy"
-        />
       </div>
       <div class="beneficios">
         <article>
@@ -141,16 +135,18 @@
   </section>
   <section class="fundo-profundo">
     <div class="secao faixa duvidas">
-      <div>
+      <div class="duvidas__visual">
         <h2>Antes de começar</h2>
-        <img
-          class="imagem-editorial"
-          src="/imagens/criterio-lexintegra.jpg"
-          alt="Martelo de madeira em repouso sobre sua base, com análise de documentos ao fundo"
-          width="1200"
-          height="800"
-          loading="lazy"
-        />
+        <div class="duvidas__imagem">
+          <img
+            class="imagem-editorial"
+            src="/imagens/criterio-lexintegra.jpg"
+            alt="Martelo de madeira em repouso sobre sua base, com análise de documentos ao fundo"
+            width="1200"
+            height="800"
+            loading="lazy"
+          />
+        </div>
       </div>
       <div>
         <article class="pergunta">

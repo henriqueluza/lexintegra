@@ -1,6 +1,6 @@
 # Identidade, navegação e conteúdo — revisão após PR #27
 
-Branch: `codex/identidade-navegacao-footer`. A home passa a ser exclusivamente a versão com as quatro fotografias. Os endereços antigos redirecionam para `/`; o seletor de versão foi removido.
+Branch: `codex/identidade-navegacao-footer`. A home passa a ser exclusivamente a versão com as três fotografias. Os endereços antigos redirecionam para `/`; o seletor de versão foi removido.
 
 ## Direção visual
 
@@ -8,7 +8,7 @@ Mantidos Cátedra (vinho #340106, superfície #26050A, creme #F2EEE7, ouro #A878
 
 ```
 Logo | Como funciona | Serviços | [usuário + carrinho OU entrar + cadastro]
-Hero e quatro fotos preservadas
+Hero e três fotos com recorte diagonal
 FAQ: quatro botões com abertura e fechamento suaves
 Rodapé: marca/proposta | navegação | atendimento | privacidade/termos
 ```
@@ -43,7 +43,7 @@ Em 21/09, o usuário forneceu seu projeto local em `Downloads/netlify` como
 referência visual. A leitura estática do HTML orientou o recorte diagonal da
 fotografia principal, a composição da seção do processo
 e os divisores das aberturas públicas. Mantivemos as fontes da LexIntegra,
-as quatro fotografias e a redação própria; nenhum script, nome ou texto comercial
+as três fotografias e a redação própria; nenhum script, nome ou texto comercial
 da referência foi incorporado.
 
 As quatro anotações foram aplicadas: chamada de cadastro ampliada, informações
@@ -56,3 +56,10 @@ Em 22/09, a revisão do usuário removeu a superfície clara. A landing alterna
 vinho escuro e vinho profundo, ambos existentes na Cátedra: hero, processo,
 acompanhamento e convite usam a base; manifesto, proposta, dúvidas e rodapé
 usam a superfície mais escura, sempre em faixas de largura total.
+
+
+Revisão das fotografias: a imagem de assinatura foi retirada da seção de
+proposta a pedido do usuário. As três fotografias restantes usam recorte diagonal;
+no desktop, seus enquadramentos acompanham a altura do conteúdo adjacente
+(incluindo o crescimento do FAQ). Em telas estreitas, usam proporção 3:2.
+Logos e QR de pagamento mantêm sua geometria funcional.
