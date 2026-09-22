@@ -43,3 +43,6 @@
     max-width: 100%;
   }
 }
+:host .fundo-profundo {
+  background: var(--superficie-sutil);
+}

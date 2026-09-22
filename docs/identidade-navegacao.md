@@ -41,7 +41,7 @@ Prompt do favicon: “Create the browser favicon asset from this exact brand log
 
 Em 21/09, o usuário forneceu seu projeto local em `Downloads/netlify` como
 referência visual. A leitura estática do HTML orientou o recorte diagonal da
-fotografia principal, o contraste entre vinho e papel claro na seção do processo
+fotografia principal, a composição da seção do processo
 e os divisores das aberturas públicas. Mantivemos as fontes da LexIntegra,
 as quatro fotografias e a redação própria; nenhum script, nome ou texto comercial
 da referência foi incorporado.
@@ -50,3 +50,9 @@ As quatro anotações foram aplicadas: chamada de cadastro ampliada, informaçõ
 de atendimento realocadas para acompanhamento, aviso de limites contratuais
 concentrado nos termos e logo branca sem fundo na navegação e no rodapé.
 A logo permanece PNG transparente com filtro CSS monocromático, não um SVG.
+
+
+Em 22/09, a revisão do usuário removeu a superfície clara. A landing alterna
+vinho escuro e vinho profundo, ambos existentes na Cátedra: hero, processo,
+acompanhamento e convite usam a base; manifesto, proposta, dúvidas e rodapé
+usam a superfície mais escura, sempre em faixas de largura total.
