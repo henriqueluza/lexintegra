@@ -26,6 +26,16 @@ contornar uma restrição de seu ambiente.
 
 ## Estado atual do projeto
 
+**Bloco A — LGPD do titular (branch `feat/lgpd-titular`):** mapa canonico em
+`apps/api/src/lgpd/mapa.ts`, exportacao TAR (JSON + arquivos atuais limpos),
+simulacao e protocolo de eliminacao retomavel, somente para admin. Rotas sob
+`/api/admin/lgpd/{clientes|pre-cadastros}/{id}`. Runbook:
+`docs/runbooks/lgpd-titular.md`. **Nao ha executor destrutivo liberado**: o
+controlador ainda precisa definir prazos e excecoes de guarda. Sete dias de
+aviso apos envio confirmado foram aceitos como base; nao enviar aviso nem
+eliminar enquanto faltar a politica. A constante `aprovada` nao e uma chave
+para habilitar exclusao. Auan ficou fora do escopo, a pedido do solicitante.
+
 *Seção transitória — atualizar ou remover conforme o projeto avança. Não é fonte de verdade permanente; é o que uma sessão nova precisa saber para não repetir trabalho ou perguntas já resolvidas.*
 
 **Concluído:**

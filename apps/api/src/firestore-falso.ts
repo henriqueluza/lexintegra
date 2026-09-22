@@ -51,6 +51,10 @@ export class ReferenciaFalsa {
     readonly caminho: string,
   ) {}
 
+  get path(): string {
+    return this.caminho;
+  }
+
   get id(): string {
     return this.caminho.slice(this.caminho.lastIndexOf('/') + 1);
   }
@@ -254,6 +258,10 @@ export class ConsultaFalsa {
     );
   }
 
+  async *stream(): AsyncGenerator<DocumentoFalso> {
+    for (const documento of (await this.get()).docs) yield documento;
+  }
+
   get(): Promise<{ docs: DocumentoFalso[]; size: number }> {
     /*
      * A LEITURA POR CONSULTA TAMBEM ENTRA NA TRILHA. Ela ficou de fora ate a
@@ -421,6 +429,10 @@ export class FirestoreFalso {
   readonly documentos = new Map<string, Dados>();
   readonly ordemDeEscrita: string[] = [];
   private sequencia = 0;
+
+  doc(caminho: string): ReferenciaFalsa {
+    return new ReferenciaFalsa(this, caminho);
+  }
 
   collection(caminho: string): ColecaoFalsa {
     return new ColecaoFalsa(this, caminho);

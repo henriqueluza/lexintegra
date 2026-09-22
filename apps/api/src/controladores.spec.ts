@@ -73,6 +73,7 @@ import { WebhookController } from './pagamentos/webhook/webhook.controller.js';
 import { PreCadastroGuard } from './vitrine/pre-cadastro.guard.js';
 import { VitrineController } from './vitrine/vitrine.controller.js';
 import type { VitrineService } from './vitrine/vitrine.service.js';
+import { LgpdController } from './lgpd/lgpd.controller.js';
 
 const reflector = new Reflector();
 
@@ -113,6 +114,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['pre-cadastros', PreCadastrosAdminController],
     ['distribuicao de pedidos', PedidosAdminController],
     ['clientes', ClientesAdminController],
+    ['LGPD do titular', LgpdController],
     ['entregas do outbox', OutboxAdminController],
     ['estornos (Etapa 8)', EstornosAdminController],
     ['reunioes sem sala (Etapa 10)', ReunioesAdminController],

@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Firestore } from 'firebase-admin/firestore';
-import { podeSerServido, type EstadoArquivo } from 'shared';
+import { podeSerServido, POLITICA_UPLOAD, type EstadoArquivo } from 'shared';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import {
   SUBCOLECAO_ENTREGAVEIS,
@@ -62,6 +62,47 @@ export class PortaoDeArquivos {
     private readonly termos: TermosService,
     private readonly emissor: EmissorDeLinkDeLeitura,
   ) {}
+
+  /** Exportacao sob demanda do titular, autorizada por administrador.
+   * Rele propriedade e estado no momento da leitura; inventario nao autoriza bytes.
+   * O aceite comercial de download nao condiciona o atendimento ao titular.
+   */
+  async exportar(
+    caminhoDocumento: string,
+    titularUid: string,
+    quem: QuemAcessa,
+  ): Promise<Buffer> {
+    if (quem.perfil !== 'admin')
+      throw new NotFoundException('Arquivo nao encontrado.');
+    const partes = caminhoDocumento.split('/');
+    if (
+      partes.length !== 4 ||
+      partes[0] !== COLECAO_PEDIDOS ||
+      ![SUBCOLECAO_ENTREGAVEIS, SUBCOLECAO_ANEXOS].includes(partes[2])
+    ) {
+      throw new NotFoundException('Arquivo nao encontrado.');
+    }
+    const { pedido } = await this.acesso.exigir(partes[1], quem);
+    if (pedido.clienteId !== titularUid)
+      throw new NotFoundException('Arquivo nao encontrado.');
+    const documento = await this.db.doc(caminhoDocumento).get();
+    const arquivo = arquivoParaExportar(documento.data(), partes[2]);
+    const prefixo =
+      partes[2] === SUBCOLECAO_ENTREGAVEIS
+        ? `entregaveis/${partes[1]}/${partes[3]}/`
+        : `anexos/${partes[1]}/`;
+    if (!arquivo.caminho.startsWith(prefixo))
+      throw new NotFoundException('Arquivo nao encontrado.');
+    this.exigirLimpo(arquivo.estado);
+    const fluxo =
+      partes[2] === SUBCOLECAO_ENTREGAVEIS
+        ? 'entregavel-advogado'
+        : 'anexo-cliente';
+    return this.emissor.bytesParaExportacao(
+      arquivo.caminho,
+      POLITICA_UPLOAD[fluxo].tamanhoMaximoBytes,
+    );
+  }
 
   /**
    * Link para o ENTREGAVEL, com gate de termos.
@@ -128,6 +169,19 @@ export class PortaoDeArquivos {
     caminho: string,
     nome: string,
   ): Promise<{ url: string; validoPorSegundos: number }> {
+    this.exigirLimpo(estado);
+
+    const url = await this.emissor.emitir({
+      balde: baldeDoEstado(estado),
+      caminho,
+      nomeParaBaixar: nome,
+      validadeSegundos: VALIDADE_SEGUNDOS,
+    });
+
+    return { url, validoPorSegundos: VALIDADE_SEGUNDOS };
+  }
+
+  private exigirLimpo(estado: EstadoArquivo): void {
     if (!podeSerServido(estado)) {
       /*
        * A mensagem nao diz QUAL estado. Quem depura tem o log e o painel; para
@@ -139,15 +193,6 @@ export class PortaoDeArquivos {
         'Este arquivo ainda nao esta disponivel para download.',
       );
     }
-
-    const url = await this.emissor.emitir({
-      balde: baldeDoEstado(estado),
-      caminho,
-      nomeParaBaixar: nome,
-      validadeSegundos: VALIDADE_SEGUNDOS,
-    });
-
-    return { url, validoPorSegundos: VALIDADE_SEGUNDOS };
   }
 
   /** Le o `arquivoAtual` do entregavel, ja conferido o acesso ao pedido. */
@@ -185,4 +230,16 @@ export class PortaoDeArquivos {
       versao: arquivo.versao,
     };
   }
+}
+
+function arquivoParaExportar(
+  dados: Record<string, unknown> | undefined,
+  colecao: string,
+): DocumentoArquivo {
+  const arquivo = (
+    colecao === SUBCOLECAO_ENTREGAVEIS ? dados?.['arquivoAtual'] : dados
+  ) as DocumentoArquivo | undefined;
+  if (arquivo === undefined || arquivo === null)
+    throw new NotFoundException('Arquivo nao encontrado.');
+  return arquivo;
 }

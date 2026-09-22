@@ -1,6 +1,6 @@
 # Relatorio de qualidade
 
-Gerado por `pnpm relatorio:qualidade` em 2026-09-21.
+Gerado por `pnpm relatorio:qualidade` em 2026-09-22.
 
 Este relatorio LE o que as ferramentas ja produziram; ele nao reprova nada. Quem
 reprova e o limiar de cada uma, no lugar dela — cobertura no `jest.config.mjs`,
@@ -10,8 +10,8 @@ mutacao no `stryker.config.mjs`, complexidade e fronteiras no `pnpm lint`.
 
 | Pacote | Statements | Branches | Functions | Lines |
 |---|---|---|---|---|
-| API (NestJS) | 91.28% | 82.23% | 90.47% | 92.45% |
-| Web (Angular) | 95.28% | 88.47% | 90.12% | 96.33% |
+| API (NestJS) | 91.81% | 82.7% | 91.16% | 92.91% |
+| Web (Angular) | 95.29% | 88.47% | 90.12% | 96.34% |
 | Scanner (ClamAV) | 100% | 90.47% | 100% | 100% |
 | shared | 98.13% | 100% | 100% | 97.95% |
 
@@ -32,7 +32,7 @@ Rode `pnpm mutacao` para atualizar.
 
 ## Complexidade ciclomatica
 
-Funcoes analisadas: **5617**. Limite do lint: **10**.
+Funcoes analisadas: **5716**. Limite do lint: **10**.
 
 | Complexidade | Funcao | Arquivo |
 |---|---|---|
@@ -42,14 +42,14 @@ Funcoes analisadas: **5617**. Limite do lint: **10**.
 | 10 | `traduzirFalha` | apps/web/src/app/autenticacao/sessao.service.ts:167 |
 | 10 | `traduzirFalha` | apps/web/src/app/paginas/checkout/falhas.ts:27 |
 | 10 | `mensagemDoErro` | apps/web/src/app/paginas/erros.ts:19 |
+| 9 | `exportar` | apps/api/src/arquivos/portao.ts:70 |
 | 9 | `conferirGuardas` | apps/api/src/entregaveis/entregaveis.service.ts:244 |
 | 9 | `chamar` | apps/api/src/pagamentos/gateway/abacatepay.gateway.ts:249 |
 | 9 | `conferir` | apps/api/src/reunioes/alteracoes.service.ts:190 |
-| 9 | `carregarConfiguracaoAppCheck` | apps/web/src/app/autenticacao/app-check.ts:67 |
 
 ## Dependencias
 
-- Modulos no grafo: **575**
-- Dependencias: **2451**
+- Modulos no grafo: **589**
+- Dependencias: **2526**
 - Ciclos: **0**
 - Violacoes de fronteira: **0** erro(s), 0 aviso(s)

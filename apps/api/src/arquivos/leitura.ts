@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, PayloadTooLargeException } from '@nestjs/common';
 import {
   ARMAZENAMENTO,
   type Armazenamento,
@@ -26,6 +26,19 @@ export class EmissorDeLinkDeLeitura {
   constructor(
     @Inject(ARMAZENAMENTO) private readonly armazenamento: Armazenamento,
   ) {}
+
+  /** Exportacao administrativa passa pelo mesmo portao; nunca le quarentena. */
+  async bytesParaExportacao(caminho: string, limite: number): Promise<Buffer> {
+    const bytes = await this.armazenamento.lerPrimeirosBytes(
+      { balde: 'arquivos', caminho },
+      limite + 1,
+    );
+    if (bytes.length > limite)
+      throw new PayloadTooLargeException(
+        'Arquivo excede o limite da exportacao.',
+      );
+    return Buffer.from(bytes);
+  }
 
   emitir(pedido: {
     balde: 'quarentena' | 'arquivos';
