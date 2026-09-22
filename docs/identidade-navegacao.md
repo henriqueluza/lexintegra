@@ -69,3 +69,7 @@ A fotografia de assinatura agora acompanha o convite final ao cadastro, com o
 botão abaixo dela. A coluna visual acompanha a altura do texto no desktop e
 empilha no celular; a seção de proposta continua sem fotografia. São novamente
 quatro fotografias na landing, todas com recorte diagonal.
+
+
+O rodapé é compartilhado pelo componente `RodapePublico` entre landing,
+login, cadastro e serviços, com conteúdo e responsividade únicos.

@@ -1,3 +1,4 @@
+import { RodapePublico } from '../../shell/rodape-publico/rodape-publico';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -29,6 +30,7 @@ import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
 @Component({
   selector: 'app-entrar',
   imports: [
+    RodapePublico,
     ReactiveFormsModule,
     RouterLink,
     Botao,

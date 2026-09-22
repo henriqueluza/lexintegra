@@ -1,9 +1,10 @@
+import { RodapePublico } from '../../shell/rodape-publico/rodape-publico';
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { LinkAcao } from '../../ui/link-acao/link-acao';
 import { TEXTOS } from './textos';
 @Component({
   selector: 'app-landing',
-  imports: [LinkAcao],
+  imports: [RodapePublico, LinkAcao],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './landing.html',
   styleUrls: ['./landing.css', './rodape-faq.css', './editorial.css'],
