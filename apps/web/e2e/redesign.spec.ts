@@ -41,10 +41,10 @@ test('as duas versões carregam fotografias e a antiga animação redireciona', 
 }) => {
   await page.goto('/com-movimento');
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator('main img')).toHaveCount(3);
+  await expect(page.locator('main img')).toHaveCount(4);
   await page.goto('/todas-as-imagens');
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator('main img')).toHaveCount(3);
+  await expect(page.locator('main img')).toHaveCount(4);
   for (const foto of await page.locator('main img').all()) {
     await foto.scrollIntoViewIfNeeded();
     await expect(foto).toBeVisible();

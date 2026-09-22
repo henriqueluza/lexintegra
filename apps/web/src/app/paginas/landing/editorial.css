@@ -21,8 +21,17 @@
 .acompanhamento__contexto p + p {
   margin-top: var(--s4);
 }
-.convite > div {
-  max-width: 65%;
+.convite {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  align-items: stretch;
+  gap: var(--s8);
+}
+.convite__visual {
+  gap: var(--s5);
+}
+.convite__visual app-link-acao {
+  align-self: flex-end;
 }
 .convite app-link-acao {
   flex-shrink: 0;
@@ -31,8 +40,12 @@
   .hero {
     grid-template-columns: 1fr;
   }
-  .convite > div {
-    max-width: 100%;
+  .convite {
+    grid-template-columns: 1fr;
+    gap: var(--s6);
+  }
+  .convite__visual app-link-acao {
+    align-self: flex-start;
   }
 }
 :host .fundo-profundo {
@@ -44,13 +57,15 @@
   align-items: stretch;
 }
 .hero__visual,
-.duvidas__visual {
+.duvidas__visual,
+.convite__visual {
   display: flex;
   flex-direction: column;
 }
 .hero__enquadramento,
 .acompanhamento__imagem,
-.duvidas__imagem {
+.duvidas__imagem,
+.convite__imagem {
   position: relative;
   min-height: 0;
   flex: 1;
@@ -60,7 +75,8 @@
 }
 .hero__foto,
 .acompanhamento img,
-.duvidas .imagem-editorial {
+.duvidas .imagem-editorial,
+.convite__imagem img {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -73,7 +89,8 @@
 @media (max-width: 800px) {
   .hero__foto,
   .acompanhamento img,
-  .duvidas .imagem-editorial {
+  .duvidas .imagem-editorial,
+  .convite__imagem img {
     position: relative;
     height: auto;
     aspect-ratio: 3 / 2;

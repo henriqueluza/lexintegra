@@ -16,7 +16,7 @@ contornar uma restrição de seu ambiente.
 ## Redesign do frontend — setembro de 2026
 
 - Branch da revisão de identidade: `codex/identidade-navegacao-footer`. Redesign anterior mesclado pelo PR #27. Escopo, decisões e revisão: `docs/revisao-frontend.md`.
-- Landing única com três fotografias em `/`; `/todas-as-imagens` e `/com-movimento` redirecionam para `/`. Logo adaptada e favicon em `apps/web/public/`. Ver `docs/identidade-navegacao.md`.
+- Landing única com quatro fotografias em `/`; `/todas-as-imagens` e `/com-movimento` redirecionam para `/`. Logo adaptada e favicon em `apps/web/public/`. Ver `docs/identidade-navegacao.md`.
 - Cadastro inicial em `/cadastro`, catálogo em `/servicos`, carrinho em `/carrinho` e checkout em `/checkout`. Login em `/entrar`.
 - Cadastro inicial continua sendo liberação do catálogo, não criação de conta Firebase. A senha nasce após a primeira compra, conforme o backend existente.
 - Cátedra nas páginas públicas; Pauta em todos os painéis, com nova navegação lateral responsiva.

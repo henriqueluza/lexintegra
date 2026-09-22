@@ -1,6 +1,6 @@
 # Identidade, navegação e conteúdo — revisão após PR #27
 
-Branch: `codex/identidade-navegacao-footer`. A home passa a ser exclusivamente a versão com as três fotografias. Os endereços antigos redirecionam para `/`; o seletor de versão foi removido.
+Branch: `codex/identidade-navegacao-footer`. A home passa a ser exclusivamente a versão com as quatro fotografias. Os endereços antigos redirecionam para `/`; o seletor de versão foi removido.
 
 ## Direção visual
 
@@ -8,7 +8,7 @@ Mantidos Cátedra (vinho #340106, superfície #26050A, creme #F2EEE7, ouro #A878
 
 ```
 Logo | Como funciona | Serviços | [usuário + carrinho OU entrar + cadastro]
-Hero e três fotos com recorte diagonal
+Hero e quatro fotos com recorte diagonal
 FAQ: quatro botões com abertura e fechamento suaves
 Rodapé: marca/proposta | navegação | atendimento | privacidade/termos
 ```
@@ -63,3 +63,9 @@ proposta a pedido do usuário. As três fotografias restantes usam recorte diago
 no desktop, seus enquadramentos acompanham a altura do conteúdo adjacente
 (incluindo o crescimento do FAQ). Em telas estreitas, usam proporção 3:2.
 Logos e QR de pagamento mantêm sua geometria funcional.
+
+
+A fotografia de assinatura agora acompanha o convite final ao cadastro, com o
+botão abaixo dela. A coluna visual acompanha a altura do texto no desktop e
+empilha no celular; a seção de proposta continua sem fotografia. São novamente
+quatro fotografias na landing, todas com recorte diagonal.
