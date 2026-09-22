@@ -1,0 +1,45 @@
+.hero {
+  grid-template-columns: 1fr 1.2fr;
+  gap: var(--s6);
+}
+.hero__foto {
+  aspect-ratio: 1 / 1;
+  clip-path: polygon(12% 0, 100% 0, 100% 100%, 0 100%);
+}
+.foto__legenda {
+  border-bottom: var(--borda-fina) solid var(--divisor);
+}
+.acompanhamento__contexto {
+  padding: var(--s5) 0;
+  margin-bottom: var(--s5);
+  border-top: var(--borda-fina) solid var(--divisor);
+  border-bottom: var(--borda-fina) solid var(--divisor);
+}
+.acompanhamento__contexto p,
+.convite__nota {
+  color: var(--texto-2);
+  font-size: var(--t-menor);
+  line-height: var(--altura-solta);
+  max-width: var(--medida-texto);
+}
+.acompanhamento__contexto p + p {
+  margin-top: var(--s4);
+}
+.convite > div {
+  max-width: 65%;
+}
+.convite app-link-acao {
+  flex-shrink: 0;
+}
+@media (max-width: 800px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+  .hero__foto {
+    aspect-ratio: 3 / 2;
+    clip-path: none;
+  }
+  .convite > div {
+    max-width: 100%;
+  }
+}

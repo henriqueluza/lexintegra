@@ -6,3 +6,14 @@
   --t-editorial: clamp(2rem, 3.1vw, 2.8rem);
   --largura-sidebar: 232px;
 }
+
+/* Superfície institucional clara, inspirada na referência da contratante. */
+.editorial-clara {
+  --superficie: #f6f3ef;
+  --texto: #341016;
+  --texto-2: #55494b;
+  --acento-forte: #754b27;
+  --divisor: #d3c8bc;
+  color: var(--texto);
+  background: var(--superficie);
+}

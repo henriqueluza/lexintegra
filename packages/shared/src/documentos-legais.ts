@@ -63,7 +63,7 @@ export const SECOES_TERMOS = [
   {
     titulo: 'Limites do serviço e resultado jurídico',
     texto:
-      'O trabalho jurídico envolve avaliação técnica e circunstâncias que podem depender de documentos, terceiros, autoridades e mudanças de contexto. A contratação não representa garantia de resultado jurídico, decisão favorável ou êxito econômico. A plataforma não é canal de plantão: situações urgentes ou com prazo próximo devem ser informadas diretamente ao profissional responsável, sem presumir leitura imediata de uma mensagem.',
+      'A contratação depende do escopo escolhido. A prestação de serviços jurídicos não representa garantia de resultado. O trabalho jurídico envolve avaliação técnica e circunstâncias que podem depender de documentos, terceiros, autoridades e mudanças de contexto. A contratação não representa garantia de resultado jurídico, decisão favorável ou êxito econômico. A plataforma não é canal de plantão: situações urgentes ou com prazo próximo devem ser informadas diretamente ao profissional responsável, sem presumir leitura imediata de uma mensagem.',
   },
   {
     titulo: 'Atualizações, dúvidas e documentos da contratação',

@@ -48,12 +48,11 @@
 }
 .rodape__grade {
   display: grid;
-  grid-template-columns: 1.6fr 1fr 1.3fr 1fr;
+  grid-template-columns: 1.6fr 1fr 1fr;
   gap: var(--s7);
 }
 .rodape img {
-  background: var(--marca-fundo);
-  padding: var(--s2);
+  filter: brightness(0) invert(1);
   width: 112px;
   height: 112px;
   object-fit: contain;

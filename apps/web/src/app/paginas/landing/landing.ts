@@ -6,7 +6,7 @@ import { TEXTOS } from './textos';
   imports: [LinkAcao],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './landing.html',
-  styleUrls: ['./landing.css', './rodape-faq.css'],
+  styleUrls: ['./landing.css', './rodape-faq.css', './editorial.css'],
 })
 export class Landing {
   protected readonly textos = TEXTOS;

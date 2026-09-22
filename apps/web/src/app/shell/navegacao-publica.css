@@ -20,8 +20,7 @@
   width: 104px;
   height: 104px;
   object-fit: contain;
-  background: var(--marca-fundo);
-  padding: var(--s2);
+  filter: brightness(0) invert(1);
 }
 nav {
   display: flex;
