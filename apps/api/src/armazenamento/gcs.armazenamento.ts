@@ -29,6 +29,26 @@ export type Baldes = Readonly<Record<Balde, Bucket>>;
 export class GcsArmazenamento implements Armazenamento {
   constructor(private readonly baldes: Baldes) {}
 
+  async listar(
+    balde: Balde,
+    prefixo: string,
+    limite: number,
+  ): Promise<string[]> {
+    const caminhos: string[] = [];
+    let pageToken: string | undefined;
+    do {
+      const [arquivos, proxima] = await this.baldes[balde].getFiles({
+        prefix: prefixo,
+        maxResults: limite - caminhos.length,
+        autoPaginate: false,
+        ...(pageToken === undefined ? {} : { pageToken }),
+      });
+      caminhos.push(...arquivos.map((arquivo) => arquivo.name));
+      pageToken = proxima?.pageToken;
+    } while (pageToken !== undefined && caminhos.length < limite);
+    return caminhos;
+  }
+
   async urlDeEscrita(pedido: PedidoDeUrlDeEscrita): Promise<string> {
     const [url] = await this.arquivo(pedido.objeto).getSignedUrl({
       version: 'v4',

@@ -29,6 +29,7 @@ import { TermosModule } from './termos/termos.module.js';
 import { VarreduraModule } from './varredura/varredura.module.js';
 import { ProdutosModule } from './produtos/produtos.module.js';
 import { VitrineModule } from './vitrine/vitrine.module.js';
+import { LgpdModule } from './lgpd/lgpd.module.js';
 
 @Module({
   imports: [
@@ -97,6 +98,7 @@ import { VitrineModule } from './vitrine/vitrine.module.js';
     TermosModule,
     ArquivosModule,
     RetencaoModule,
+    LgpdModule,
   ],
 })
 export class AppModule {}

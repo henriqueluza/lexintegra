@@ -1182,6 +1182,23 @@ Essa planilha (`LexIntegra-custos-mensais.xlsx`) já foi preparada como artefato
 
 **Ponto operacional.** Apagar um titular no Firestore é varredura manual entre coleções, não `ON DELETE CASCADE`. Isso precisa ser uma rotina implementada e testada, não um procedimento improvisado quando o pedido chegar.
 
+**Bloco A — preparacao sob demanda (setembro de 2026).** O mapa canonico em
+`apps/api/src/lgpd/mapa.ts` alimenta inventario, exportacao administrativa e
+simulacao. O pacote TAR contem JSON e bytes dos arquivos atuais limpos, passando
+pelo portao de arquivos; objetos antigos sem metadados de liberacao e quarentena
+entram apenas no inventario. A exportacao e uma operacao administrativa de
+atendimento ao titular, sem exigir o aceite comercial de download. Nao cria
+bucket, Scheduler nem URL de acesso persistida.
+
+A solicitacao de eliminacao fica em `solicitacoes-lgpd`, com autor e protocolo
+retomavel. A execucao responde 409 enquanto a politica de guarda estiver
+pendente; o executor destrutivo ainda nao foi implementado. A proposta aceita
+como base e aviso com sete dias corridos apos envio confirmado, exclusao do que
+nao tiver finalidade e conservacao minima justificada pelo controlador, com
+prazo por categoria. Preservar evidencia identificavel nao e anonimizacao.
+Nao sai aviso anunciando exclusao antes de a politica ser aprovada. O caminho
+de retomada, as limitacoes e os criterios estao em `docs/runbooks/lgpd-titular.md`.
+
 **Governança de contas, definida na reunião.** O Marcos vai orientar o escritório a criar todas as contas de serviço (Resend, AbacatePay, e demais) usando e-mails no domínio próprio da B&C, não e-mails pessoais dos sócios. Isso facilita a transferência de titularidade na Etapa 13 e reduz a chance de uma conta crítica ficar amarrada à saída de uma pessoa específica do escritório.
 
 ---

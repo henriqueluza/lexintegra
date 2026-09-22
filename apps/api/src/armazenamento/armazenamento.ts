@@ -50,6 +50,8 @@ export interface PedidoDeUrlDeLeitura {
 }
 
 export interface Armazenamento {
+  /** Inventario LGPD: inclui versoes antigas, sem ler bytes de quarentena. */
+  listar(balde: Balde, prefixo: string, limite: number): Promise<string[]>;
   /** URL assinada para o navegador escrever DIRETO no bucket. O arquivo nunca
    * passa pela API — e o que economiza o recurso que o Cloud Run cobra
    * (arquitetura 7.3). */

@@ -902,6 +902,36 @@ quebra dois pontos abaixo do piso observado. O sobrevivente que valia matar era
 
 ---
 
+## Bloco A — LGPD do titular (setembro de 2026)
+
+Branch `feat/lgpd-titular`, a partir da `main` em `d985df2` (PR #28).
+
+**Escopo ajustado por decisao do solicitante.** Mapa unico de dados por titular,
+exportacao administrativa (JSON e arquivos limpos), simulacao e solicitacao
+retomavel de eliminacao. Politica provisoria com sete dias de antecedencia apos
+envio confirmado; prazos e excecoes de guarda ainda a definir pelo controlador.
+**Eliminacao efetiva bloqueada**: nao presumir anonimização quando a evidencia
+precisar permanecer identificavel. `ajustes.md` foi dispensado pelo solicitante.
+
+**Criterios de aceite desta parte:** isolamento entre titulares no emulador;
+pacote TAR legivel com bytes de arquivos limpos e inventario de objetos nao
+serviveis; ausencia de credenciais no pacote; superficie exclusivamente admin;
+404 para titular inexistente; registro do ator; identificacao de pedido em
+andamento e reuniao futura; repeticao concorrente com um protocolo; nenhuma
+exclusao ou notificacao indevida com a politica pendente. Sem novo Scheduler,
+sem papel de CI novo e sem alteracao de imagens de regressao.
+
+**Nao fecha a eliminacao do escopo original.** Executor destrutivo,
+anonimizacao/conservacao conforme politica aprovada, aviso por solicitacao e
+trava contra escritas concorrentes entram depois da definicao do controlador.
+Nao ha variavel que habilite essa parte. Operacao e limites em
+`docs/runbooks/lgpd-titular.md`; mapa canonico em `apps/api/src/lgpd/mapa.ts`.
+
+Os demais blocos continuam separados: B (`fix/residuos-checkout`), C
+(`chore/limpeza-infra`) e D (`docs/entrega-etapa-13`). Iniciar o seguinte apenas
+apos revisao/merge do PR anterior. E–H nao foram detalhados no pedido recebido.
+Provisionamento do administrador Auan foi retirado do escopo pelo solicitante.
+
 ## Etapa 13 — Entrega e transferência
 
 **Objetivo.** Cumprir a cláusula 4.3 e iniciar a garantia do 4.4.

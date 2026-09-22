@@ -7,6 +7,7 @@ import {
 import { Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 import type {
   Armazenamento,
+  Balde,
   Objeto,
   PedidoDeUrlDeEscrita,
   PedidoDeUrlDeLeitura,
@@ -48,6 +49,16 @@ export class ArmazenamentoFalso implements Armazenamento, OnModuleDestroy {
   /** Trilha das operacoes, para os testes afirmarem ORDEM — o mesmo papel de
    * `ordemDeEscrita` no `FirestoreFalso`. */
   readonly operacoes: string[] = [];
+
+  listar(balde: Balde, prefixo: string, limite: number): Promise<string[]> {
+    const inicio = `${balde}:${prefixo}`;
+    return Promise.resolve(
+      this.caminhos
+        .filter((c) => c.startsWith(inicio))
+        .slice(0, limite)
+        .map((c) => c.slice(balde.length + 1)),
+    );
+  }
 
   urlDeEscrita(pedido: PedidoDeUrlDeEscrita): Promise<string> {
     const chave = chaveDe(pedido.objeto);
