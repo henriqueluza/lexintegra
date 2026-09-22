@@ -15,13 +15,13 @@ contornar uma restrição de seu ambiente.
 
 ## Redesign do frontend — setembro de 2026
 
-- Branch de trabalho: `codex/redesign-frontend`. Escopo, decisões e revisão: `docs/revisao-frontend.md`.
-- Landings estáticas: seleção de duas fotos em `/`; quatro fotos em `/todas-as-imagens`. `/com-movimento` redireciona para `/`. Ver `docs/imagens-landing.md`.
+- Branch da revisão de identidade: `codex/identidade-navegacao-footer`. Redesign anterior mesclado pelo PR #27. Escopo, decisões e revisão: `docs/revisao-frontend.md`.
+- Landing única com quatro fotografias em `/`; `/todas-as-imagens` e `/com-movimento` redirecionam para `/`. Logo adaptada e favicon em `apps/web/public/`. Ver `docs/identidade-navegacao.md`.
 - Cadastro inicial em `/cadastro`, catálogo em `/servicos`, carrinho em `/carrinho` e checkout em `/checkout`. Login em `/entrar`.
 - Cadastro inicial continua sendo liberação do catálogo, não criação de conta Firebase. A senha nasce após a primeira compra, conforme o backend existente.
 - Cátedra nas páginas públicas; Pauta em todos os painéis, com nova navegação lateral responsiva.
 - Os marcadores de texto visíveis foram substituídos por redação. Termos são minutas versionadas, ainda sujeitos à revisão jurídica antes de produção. A ficha definitiva da contratante continua pendente; não foi inventada aprovação nem alterado seu schema.
-- O usuário decidiu seguir sem animação. O componente animado foi removido; nenhuma landing acessa a API.
+- Sem animação na hero. Underline da navbar e respostas do FAQ têm transições com respeito a movimento reduzido. Nenhuma landing acessa a API. A navbar restaura a sessão Firebase: visitante vê Entrar/Cadastre-se, autenticado vê usuário/carrinho.
 - As notas por etapa abaixo são históricas. Onde mencionarem formulário dentro da home, texto literal pendente ou ausência de imagens, prevalece este registro do redesign.
 
 ## Estado atual do projeto

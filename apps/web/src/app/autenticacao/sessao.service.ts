@@ -71,7 +71,7 @@ export class SessaoService {
     this.pronta = new Promise<void>((resolver) => {
       this.resolverPronta = resolver;
     });
-    void this.iniciar();
+    void this.iniciar().catch(() => this.concluir());
   }
 
   private async iniciar(): Promise<void> {

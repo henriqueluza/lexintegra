@@ -1,4 +1,7 @@
 :root {
+  --marca-fundo: #f8f5ee;
+  --duracao-interacao: 220ms;
+  --duracao-acordeao: 280ms;
   --t-hero: clamp(2.75rem, 4.8vw, 4.375rem);
   --t-editorial: clamp(2rem, 3.1vw, 2.8rem);
   --largura-sidebar: 232px;

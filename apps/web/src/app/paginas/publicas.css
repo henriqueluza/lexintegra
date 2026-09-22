@@ -106,3 +106,8 @@ a {
     padding: var(--s5);
   }
 }
+
+.abertura {
+  padding-bottom: var(--s6);
+  border-bottom: var(--borda-fina) solid var(--divisor);
+}

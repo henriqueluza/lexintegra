@@ -1,17 +1,14 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { TEXTO_TERMOS_CHECKOUT } from 'shared/termos-checkout';
-import { TEXTOS } from '../landing/textos';
+import { SECOES_TERMOS, SECOES_PRIVACIDADE } from 'shared/documentos-legais';
 @Component({
   selector: 'app-legal',
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './legal.html',
-  styleUrl: '../publicas.css',
+  styleUrls: ['../publicas.css', './legal.css'],
 })
 export class Legal {
   protected readonly termos =
     inject(ActivatedRoute).snapshot.data['termos'] === true;
-  protected readonly texto = this.termos
-    ? TEXTO_TERMOS_CHECKOUT
-    : TEXTOS.privacidade.juridico;
+  protected readonly secoes = this.termos ? SECOES_TERMOS : SECOES_PRIVACIDADE;
 }

@@ -1,0 +1,48 @@
+.pergunta {
+  padding: var(--s5) 0;
+  border-bottom: var(--borda-fina) solid var(--divisor);
+}
+.pergunta h3 {
+  margin: 0;
+}
+.pergunta button {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s4);
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pergunta button span {
+  color: var(--acento-forte);
+}
+.resposta {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--duracao-acordeao) ease,
+    opacity var(--duracao-acordeao) ease;
+}
+.resposta--aberta {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.resposta > div {
+  overflow: hidden;
+}
+.resposta p {
+  margin-top: var(--s4);
+  color: var(--texto-2);
+  line-height: var(--altura-solta);
+}
+@media (prefers-reduced-motion: reduce) {
+  .resposta {
+    transition: none;
+  }
+}
