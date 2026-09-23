@@ -7,6 +7,7 @@ import { resourceFromAttributes } from '@opentelemetry/resources';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { type AuthClient, GoogleAuth } from 'google-auth-library';
 import { amostrador, razaoDeAmostragem } from './amostragem.js';
+import { opcoesDaInstrumentacaoHttp } from './instrumentacao-http.js';
 
 /** O endpoint OTLP do Google (Telemetry API). Ver `cabecalhosAutenticados`. */
 const DESTINO = 'https://telemetry.googleapis.com/v1/traces';
@@ -92,15 +93,8 @@ function iniciar(): NodeSDK | undefined {
       headers: cabecalhosAutenticados,
     }),
     instrumentations: [
-      /*
-       * `ignoreIncomingRequestHook` tira do trace o que e ruido puro: o health
-       * do Cloud Run e o uptime check batem nele a cada poucos segundos, e cada
-       * um viraria um trace identico ao anterior.
-       */
-      new HttpInstrumentation({
-        ignoreIncomingRequestHook: (requisicao) =>
-          (requisicao.url ?? '').startsWith('/api/health'),
-      }),
+      // O health fica de fora e o `webhookSecret` sai redigido do `url.query`.
+      new HttpInstrumentation(opcoesDaInstrumentacaoHttp()),
       new ExpressInstrumentation(),
       // O Resend fala por `fetch` global; o `gaxios` cai em `node-fetch`, que ja
       // e coberto pela instrumentacao de `http`.

@@ -277,18 +277,36 @@ guarda os códigos: pegue o `oobCode` mais recente de
 
 Entre como `admin@exemplo.test` (senha do seed) em `/admin/distribuicao`.
 
-1. **Recusa com trabalho iniciado — estorno E cancelamento.** Distribua um pedido a um
-   advogado, entre como ele e **inicie o trabalho** de um entregável (o entregável vai
-   para `em_elaboracao`). Então:
+1. **Recusa com trabalho iniciado — estorno E cancelamento.** Use uma compra PIX
+   de **um produto só**, paga no sandbox (seção 3). Com um pedido na cobrança, um
+   estorno que escapasse da recusa sairia pelo gateway, e o painel mostraria — com
+   dois, ficaria manual e nada apareceria lá. Distribua o pedido a um advogado,
+   entre como ele e **inicie o trabalho** do entregável (vai para `em_elaboracao`).
+   Então:
    - como administrador, tente **estornar** esse pedido: o painel deve mostrar a recusa
      do servidor (**409**);
    - como o cliente dono do pedido, tente **cancelar** esse mesmo pedido pelo cartão:
      a tela deve mostrar a recusa do servidor (**409**).
 
-   Nos dois casos, **nada muda no emulador**: `situacao` do pedido continua `ativo`,
-   o entregável continua `em_elaboracao`, e não nasce documento em `estornos`.
-   (⏳ Não exercitado na rodada de 16/09/2026, por sequenciamento — é o item 2 de "Para
-   a próxima rodada".)
+   **No emulador, nada muda:** `situacao` do pedido continua `ativo`, o entregável
+   continua no estado em que estava, não nasce documento em `estornos` nem registro
+   `estorno-integral_*` em `outbox`.
+
+   **No painel do AbacatePay (conta da rodada, modo dev):**
+   - a cobrança continua **paga** — não `REFUNDED`, sem registro de estorno;
+   - em **Webhook Logs**, nenhum `transparent.refunded` para essa cobrança;
+   - no log da API (terminal B), nenhuma chamada a `/transparents/refund`.
+
+   **Repita com o entregável em `em_revisao` e em `entregue`** — o servidor recusa
+   igual nos três, porque a regra é "todos os entregáveis em `solicitado`". Para
+   chegar lá sem o fluxo de upload inteiro, o advogado envia o PDF pela tela dele
+   (Etapa 11), e o cliente pede revisão (`em_revisao`) ou confirma a entrega
+   (`entregue`) pelo cartão. Cada estado precisa de uma compra nova: `entregue` é
+   terminal, e `em_revisao` consome o saldo de revisões.
+
+   A mesma sequência roda automatizada contra o emulador e o gateway falso em
+   `apps/api/src/estornos/trabalho-iniciado.integration-spec.ts` (Bloco B). O que
+   só este passo prova é o painel do gateway.
 2. **Manual.** Numa compra de dois pedidos sem trabalho iniciado, estorne **um**:
    aparece em `/admin/estornos` como pendente de devolução manual. Nenhuma chamada
    ao gateway.
@@ -428,11 +446,12 @@ pelo **próprio** gateway continua não observada (linha 5).
    cartão não funciona em ambiente nenhum. Quando sair, refazer a seção 4 inteira; é
    ela que confirma o nome do evento de conclusão do cartão (linha 1) e fecha as
    linhas 8, 9, 11 e a parte de cartão das 7 e 12.
-2. **409 com trabalho iniciado — ⏳ sem bloqueio, só não foi feito.** Distribuir um
-   pedido a um advogado, **iniciar o trabalho** de um entregável pela tela do
-   advogado, e então tentar **estornar** esse pedido pelo painel do administrador e
-   **cancelar** pelo cartão do cliente. Esperado: **409 nos dois**, e nenhuma mudança
-   de estado no emulador (situação do pedido, entregáveis, estornos).
+2. **409 com trabalho iniciado — ⏳ sem bloqueio, só não foi feito.** Seguir a seção
+   5, passo 1, nos três estados (`em_elaboracao`, `em_revisao`, `entregue`), com uma
+   compra de um produto só por estado. Esperado: **409 nos dois**, nenhuma mudança
+   no emulador e, no painel do AbacatePay, a cobrança ainda paga e nenhum
+   `transparent.refunded`. A prova automatizada contra o emulador já existe
+   (Bloco B); falta o painel do gateway.
 3. **Sem bloqueio, se houver tempo:** o segundo estorno da mesma cobrança (linha 10) e
    acento na descrição (linha 9.1).
 

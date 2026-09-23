@@ -136,6 +136,11 @@ module.exports = {
         path: '^apps/api',
         pathNot: [
           '^apps/api/src/observabilidade/(instrumentacao|amostragem)\\.ts$',
+          // Bloco B: as opcoes do `HttpInstrumentation` (so o TIPO do pacote),
+          // separadas para teste, e o processo filho que as exercita. Nenhum
+          // dos dois e importado por modulo do Nest.
+          '^apps/api/src/observabilidade/instrumentacao-http\\.ts$',
+          '^apps/api/src/observabilidade/span-de-requisicao\\.fixture\\.mjs$',
           // O teste do amostrador precisa do `SamplingDecision` do SDK para
           // afirmar a decisao; ele nao sobe provedor nenhum.
           '\\.spec\\.ts$',

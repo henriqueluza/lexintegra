@@ -539,7 +539,7 @@ sem pedido.
 |---|---|
 | Mesmo webhook 3× → 1 pagamento e 2 pedidos | `pagamentos/webhook/confirmacao.integration-spec.ts` (sequencial e `Promise.all`) |
 | Assinatura inválida rejeitada | `pagamentos/webhook/webhook.integration-spec.ts` e o unitário do guard — 401 e zero documentos |
-| Estorno em `em_elaboracao` recusado no servidor | `estornos/estornos.integration-spec.ts` — 409, estado inalterado |
+| Estorno em `em_elaboracao` recusado no servidor | `estornos/estornos.integration-spec.ts` — 409, estado inalterado; **de ponta a ponta nos três estados com trabalho iniciado** em `estornos/trabalho-iniciado.integration-spec.ts` (Bloco B) |
 | Compra de ponta a ponta | `compra.integration-spec.ts` — da vitrine à ficha preenchida e aos dois cartões |
 | Cancelar não afeta a conta nem os outros pedidos | `pedidos/cancelamento.integration-spec.ts` — retrato antes e depois, campo a campo |
 
@@ -608,6 +608,41 @@ exclusão conta como escrita, no volume de carrinhos abandonados.
 `packages/shared` 99/100/100/99. Integração: 384 asserções de regras, 145 testes
 da API.
 
+### Registro — Bloco B, resíduos do checkout (setembro de 2026)
+
+Branch `fix/residuos-checkout`. Fecha o que a Etapa 8 deixou aberto **do lado do
+código**, e é pré-requisito para cadastrar o webhook de produção.
+
+- **B.1 — o `webhookSecret` não chega a log nenhum.** O inventário (ADR-19) achou o
+  segredo no log de requisição do Cloud Run e, **também**, nos spans do
+  OpenTelemetry (`url.query`) — este segundo não estava no registro da Etapa 8. E
+  achou uma errata: a chave do HMAC é pública, então o segredo da URL é a única
+  autenticação real do webhook. Tirar o segredo da URL é inviável (a documentação
+  o exige). Feito: exclusão no Cloud Logging pelo nome do parâmetro, redação nos
+  spans, teste de log da aplicação e linha `webhook.recebido` no lugar do log de
+  plataforma. **Nenhum papel novo** para o `terraform-ci`.
+- **B.2 — 409 com trabalho iniciado, provado de ponta a ponta** nos três estados
+  (`em_elaboracao`, `em_revisao`, `entregue`), com retrato do banco, gateway falso
+  sem estorno e outbox sem evento. Nenhum dos três desmentiu o ADR-12. O passo do
+  sandbox ganhou o que conferir no painel do AbacatePay.
+- **B.3 — a TTL de `checkouts` cobre todo caminho de escrita.** Não havia lacuna:
+  os cinco caminhos deixam `apagarApos`, e agora um teste de integração o prova. A
+  seção 13 da arquitetura passou a registrar a TTL e o PITR (versão apagada
+  recuperável por 7 dias).
+
+**O que ainda depende do escritório, e nada disto é código:** aprovação final da
+conta do AbacatePay e a chave `abc_prod_`; o **segredo de produção do webhook —
+gerado só depois deste bloco mesclado e da exclusão aplicada**; o cadastro do
+webhook no painel com os seis eventos; a homologação de cartão; e os roteiros
+manuais do PR (conferência de log, TTL em produção, passo 5.1 do sandbox).
+
+**Ficou em aberto, fora deste bloco:** a confirmação consultar a cobrança no
+gateway (tira do segredo o papel de trava única; depende de observar
+`/transparents/check` e `/checkouts/get` no sandbox); tirar `roles/editor` da SA
+do Compute; a busca de clientes (`?busca=`) pôr nome e e-mail na query, que chega
+ao log de requisição e aos spans; e a retenção de `pre-cadastros`, que a seção 13
+não decide.
+
 ### Só você — Etapa 8
 
 **Impossível delegar**
@@ -652,7 +687,7 @@ afetado e foi validado de ponta a ponta.
 - Executar a rodada no sandbox, pelo roteiro `docs/runbooks/checkout-sandbox.md`, e corrigir o que ela desmentir antes de fechar a etapa.
 - Criar no Secret Manager o `ABACATEPAY_WEBHOOK_SECRET` (definido por nós ao cadastrar o webhook) e referenciá-lo no Terraform, junto com `ABACATEPAY_WEBHOOK_CHAVE_HMAC`. Pela documentação de segurança de webhooks, a chave do HMAC é **pública e fixa**, publicada pelo AbacatePay — se a rodada no sandbox confirmar, ela pode ser variável comum em vez de secret. Com a chave de API configurada e sem os dois, a API recusa subir — de propósito.
 - Ao cadastrar o webhook no painel, **assinar os seis eventos** que a API trata: `transparent.completed`, `checkout.completed`, `transparent.refunded`, `checkout.refunded`, `transparent.disputed` e `checkout.disputed`. Evento não assinado não chega, e o sintoma é pagamento sem pedido.
-- **Antes de cadastrar o webhook de produção, decidir o que fazer com o `webhookSecret` no log de requisição do Cloud Run** — checado na revisão do PR #21 e **não mitigado**: sem exclusão, retido 30 dias, e legível pela SA padrão do Compute, que não lê o Secret Manager. As três saídas (exclusão só da rota, limpeza do IAM, ou aceite consciente) estão no ADR-19.
+- ~~Decidir o que fazer com o `webhookSecret` no log de requisição do Cloud Run~~ — **resolvido no Bloco B** (exclusão no Cloud Logging e redação nos spans; ver o ADR-19). **Gerar o segredo de produção só depois do Bloco B mesclado e da exclusão aplicada**, e conferir a exclusão pelo roteiro do PR. Segue pendente, e independente: tirar `roles/editor` da SA padrão do Compute.
 - Comunicar à CONTRATANTE o desvio do cartão: o pagamento com cartão sai da plataforma e volta (ADR-19).
 - Obter os outros dois textos jurídicos: o do cancelamento (`{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}`) e o do e-mail de acesso do cliente.
 - Definir o processo operacional de quem devolve o dinheiro no estorno manual, e de quem resolve um pagamento `orfao`, `divergente` ou `conflito_de_conta` — nos três houve dinheiro e não há pedido.

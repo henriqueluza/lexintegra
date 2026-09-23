@@ -30,7 +30,10 @@
  */
 
 import { createHmac } from 'node:crypto';
-import { eventoNoFormatoReal } from '../apps/api/src/arnes-webhook.ts';
+import {
+  caminhoDoWebhook,
+  eventoNoFormatoReal,
+} from '../apps/api/src/arnes-webhook.ts';
 import {
   CHAVE_HMAC_DESENVOLVIMENTO,
   SEGREDO_WEBHOOK_DESENVOLVIMENTO,
@@ -123,8 +126,8 @@ async function principal() {
     }),
   );
 
-  const destino = new URL('/api/pagamentos/webhook', API);
-  destino.searchParams.set('webhookSecret', SEGREDO_WEBHOOK_DESENVOLVIMENTO);
+  /* A URL sai do mesmo lugar que a dos testes; o log abaixo nao a repete. */
+  const destino = new URL(caminhoDoWebhook(SEGREDO_WEBHOOK_DESENVOLVIMENTO), API);
   const resposta = await fetch(destino, {
     method: 'POST',
     headers: {

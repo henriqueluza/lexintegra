@@ -11,7 +11,11 @@ import {
   CONFIGURACAO_PAGAMENTOS,
   type ConfiguracaoPagamentos,
 } from '../gateway/modo.js';
-import { assinaturaConfere, segredoConfere } from './assinatura.js';
+import {
+  assinaturaConfere,
+  PARAMETRO_SEGREDO_WEBHOOK,
+  segredoConfere,
+} from './assinatura.js';
 
 /** Minusculo: o Node normaliza os nomes de cabecalho para caixa baixa. */
 export const CABECALHO_ASSINATURA = 'x-webhook-signature';
@@ -32,7 +36,9 @@ interface RequisicaoDoWebhook {
  * 401 IGUAL PARA TODA RECUSA. Segredo ausente, segredo errado, assinatura ausente,
  * assinatura errada e corpo alterado depois de assinado recebem a mesma resposta:
  * distinguir os casos daria a quem forja um mapa do que ja acertou. O motivo vai
- * para o log, e so o motivo — nem o segredo, nem a assinatura, nem o corpo.
+ * para o log, e so o motivo — nem o segredo, nem a assinatura, nem o corpo, nem
+ * a URL: a query E o segredo, e ha teste que falha se ela aparecer em qualquer
+ * linha de log (`webhook-sem-segredo-no-log.integration-spec.ts`).
  *
  * Guard de CONTROLADOR, e nao global: e a unica rota do sistema com esta forma de
  * autenticacao, como o `PreCadastroGuard` da vitrine.
@@ -58,7 +64,7 @@ export class AssinaturaWebhookGuard implements CanActivate {
     const requisicao = contexto
       .switchToHttp()
       .getRequest<RequisicaoDoWebhook>();
-    const segredo = texto(requisicao.query['webhookSecret']);
+    const segredo = texto(requisicao.query[PARAMETRO_SEGREDO_WEBHOOK]);
     const assinatura = texto(requisicao.headers[CABECALHO_ASSINATURA]);
 
     if (!segredoConfere(segredo, this.configuracao.segredoWebhook)) {

@@ -3,7 +3,10 @@ import type { INestApplication } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { AppModule } from '../../app.module.js';
-import { TRANSPARENTE_COMPLETED_REAL } from '../../arnes-webhook.js';
+import {
+  caminhoDoWebhook,
+  TRANSPARENTE_COMPLETED_REAL,
+} from '../../arnes-webhook.js';
 import { configurar, OPCOES_DA_APLICACAO } from '../../configurar.js';
 import { firestoreDeTeste, limparEmuladores } from '../../emulador.js';
 import {
@@ -68,7 +71,7 @@ function enviar(
   const caminho =
     segredo === null
       ? '/api/pagamentos/webhook'
-      : `/api/pagamentos/webhook?webhookSecret=${encodeURIComponent(segredo)}`;
+      : caminhoDoWebhook(segredo);
   const requisicao = request(app.getHttpServer())
     .post(caminho)
     .set('Content-Type', 'application/json');

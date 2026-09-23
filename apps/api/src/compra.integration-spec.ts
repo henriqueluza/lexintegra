@@ -4,7 +4,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { VERSAO_TERMOS_CHECKOUT, type NovoProduto } from 'shared';
 import { AppModule } from './app.module.js';
-import { eventoNoFormatoReal } from './arnes-webhook.js';
+import { caminhoDoWebhook, eventoNoFormatoReal } from './arnes-webhook.js';
 import { COLECAO_CHECKOUTS } from './checkout/checkout.js';
 import { configurar, OPCOES_DA_APLICACAO } from './configurar.js';
 import { EmailFalsoTransport } from './email/email-falso.transport.js';
@@ -136,7 +136,7 @@ describe('compra completa (criterio de aceite da Etapa 8)', () => {
     );
     const { body: webhook } = await http()
       .post(
-        `/api/pagamentos/webhook?webhookSecret=${SEGREDO_WEBHOOK_DESENVOLVIMENTO}`,
+        caminhoDoWebhook(SEGREDO_WEBHOOK_DESENVOLVIMENTO),
       )
       .set('Content-Type', 'application/json')
       .set('X-Webhook-Signature', assinar(evento, CHAVE_HMAC_DESENVOLVIMENTO))

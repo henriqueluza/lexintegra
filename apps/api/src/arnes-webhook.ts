@@ -102,3 +102,15 @@ export function eventoNoFormatoReal(
     },
   };
 }
+
+/**
+ * O caminho do webhook com o segredo na query, como o AbacatePay o chama.
+ *
+ * UM LUGAR SO para os testes e o simulador montarem a URL. O nome do parametro
+ * esta escrito aqui, e nao importado de `assinatura.ts`, porque este arquivo nao
+ * pode ter import (o simulador o le com `node` puro); `assinatura.spec.ts` confere
+ * que os dois nomes sao o mesmo.
+ */
+export function caminhoDoWebhook(segredo: string): string {
+  return `/api/pagamentos/webhook?${new URLSearchParams({ webhookSecret: segredo }).toString()}`;
+}

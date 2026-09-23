@@ -1,13 +1,22 @@
 import { NestFactory } from '@nestjs/core';
 import type { INestApplication } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { Timestamp } from 'firebase-admin/firestore';
 import request from 'supertest';
 import { VERSAO_TERMOS_CHECKOUT, type NovoProduto } from 'shared';
 import { AppModule } from '../app.module.js';
 import { configurar, OPCOES_DA_APLICACAO } from '../configurar.js';
 import { firestoreDeTeste, limparEmuladores } from '../emulador.js';
 import { ProdutosService } from '../produtos/produtos.service.js';
-import { COLECAO_CHECKOUTS } from './checkout.js';
+import { caminhoDoWebhook, eventoNoFormatoReal } from '../arnes-webhook.js';
+import { GatewayPagamentoFalso } from '../pagamentos/gateway/gateway-falso.js';
+import { GATEWAY_PAGAMENTO } from '../pagamentos/gateway/gateway.js';
+import {
+  CHAVE_HMAC_DESENVOLVIMENTO,
+  SEGREDO_WEBHOOK_DESENVOLVIMENTO,
+} from '../pagamentos/gateway/modo.js';
+import { assinar } from '../pagamentos/webhook/assinatura.js';
+import { COLECAO_CHECKOUTS, FOLGA_ANTES_DE_APAGAR_MS } from './checkout.js';
 
 const ANA = {
   nome: 'Ana Ribeiro Salgado',
@@ -219,17 +228,85 @@ describe('checkout sobre HTTP', () => {
     expect(segundo.body).toEqual(primeiro.body);
   });
 
-  it('o apagarApos e sempre gravado, para a TTL', async () => {
+  /**
+   * A TTL SO APAGA DOCUMENTO QUE TEM `apagarApos` (Bloco B, item B.3). Um checkout
+   * sem o campo guardaria nome e e-mail para sempre, sem nada falhar — o emulador
+   * nem executa TTL. Por isso o teste passa por TODO caminho que escreve em
+   * `checkouts` e confere o campo no fim, em todos os documentos:
+   *
+   * - `abrir` grava o documento inteiro (`set`), ja com prazo;
+   * - `registrar` regrava o prazo pelo vencimento real da cobranca;
+   * - `substituir`, `falhar` e a confirmacao do pagamento fazem `update` — e sao
+   *   eles que um campo esquecido num `set` futuro apagaria.
+   *
+   * Quando ha cobranca, o prazo e o vencimento dela mais a folga do webhook
+   * tardio. Sem cobranca (`falhou_cobranca`), e o prazo com que o documento nasceu.
+   */
+  it('todo documento de checkouts tem apagarApos, em todo caminho de escrita', async () => {
     const liberacao = await token();
-    const { id } = await produtos.criar(PARECER, 'uid-admin');
-    const { body } = await http()
+    const { id: a } = await produtos.criar(PARECER, 'uid-admin');
+    const { id: b } = await produtos.criar(
+      { ...PARECER, nome: 'Revisao de contrato', precoCentavos: 120_000 },
+      'uid-admin',
+    );
+
+    /* abrir + registrar, e depois substituir: o carrinho muda. */
+    await http()
       .post('/api/checkout')
       .set('x-pre-cadastro', liberacao)
-      .send(corpo([id]))
+      .send(corpo([a, b]))
+      .expect(201);
+    const { body: vigente } = await http()
+      .post('/api/checkout')
+      .set('x-pre-cadastro', liberacao)
+      .send(corpo([a]))
       .expect(201);
 
-    const gravado = await documento(body.checkoutId as string);
-    expect(gravado['apagarApos']).toBeDefined();
+    /* falhar: o gateway recusa a cobranca de outro carrinho. */
+    app.get<GatewayPagamentoFalso>(GATEWAY_PAGAMENTO).falharProximas(1);
+    await http()
+      .post('/api/checkout')
+      .set('x-pre-cadastro', liberacao)
+      .send(corpo([b], '5a1e9b3c-2d4f-4e6a-8b7c-9d0e1f2a3b4c'))
+      .expect(503);
+
+    /* a confirmacao do pagamento marca o vigente como pago. */
+    const checkoutId = vigente.checkoutId as string;
+    const cobrancaId = (
+      (await documento(checkoutId)) as { cobranca: { id: string } }
+    ).cobranca.id;
+    const evento = JSON.stringify(
+      eventoNoFormatoReal({
+        cobrancaId,
+        checkoutId,
+        valorCentavos: PARECER.precoCentavos,
+      }),
+    );
+    await http()
+      .post(caminhoDoWebhook(SEGREDO_WEBHOOK_DESENVOLVIMENTO))
+      .set('Content-Type', 'application/json')
+      .set('X-Webhook-Signature', assinar(evento, CHAVE_HMAC_DESENVOLVIMENTO))
+      .send(evento)
+      .expect(200);
+
+    const todos = await firestoreDeTeste().collection(COLECAO_CHECKOUTS).get();
+    const estados = todos.docs.map((d) => d.get('estado') as string).sort();
+    expect(estados).toEqual(['falhou_cobranca', 'pago', 'substituido']);
+
+    for (const checkout of todos.docs) {
+      const apagarApos = checkout.get('apagarApos') as unknown;
+      expect(apagarApos).toBeInstanceOf(Timestamp);
+      const expiraEm = checkout.get('expiraEm') as Timestamp | null;
+      if (expiraEm !== null) {
+        expect((apagarApos as Timestamp).toMillis()).toBe(
+          expiraEm.toMillis() + FOLGA_ANTES_DE_APAGAR_MS,
+        );
+      } else {
+        expect((apagarApos as Timestamp).toMillis()).toBeGreaterThan(
+          Date.now() + FOLGA_ANTES_DE_APAGAR_MS - 60_000,
+        );
+      }
+    }
   });
 
   it('recusa corpo invalido sem ecoar o comprador', async () => {

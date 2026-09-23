@@ -36,6 +36,16 @@ aviso apos envio confirmado foram aceitos como base; nao enviar aviso nem
 eliminar enquanto faltar a politica. A constante `aprovada` nao e uma chave
 para habilitar exclusao. Auan ficou fora do escopo, a pedido do solicitante.
 
+**Bloco B — resíduos do checkout (branch `fix/residuos-checkout`):** o
+`webhookSecret` saiu do log de requisição (exclusão no Cloud Logging pelo nome do
+parâmetro) e dos spans (redação em `observabilidade/instrumentacao-http.ts`). **A
+chave do HMAC do AbacatePay é pública: o segredo da URL é a única trava do
+webhook** (errata do ADR-19). O 409 de estorno e cancelamento com trabalho
+iniciado está provado de ponta a ponta nos três estados, e a TTL de `checkouts`
+tem teste sobre todo caminho de escrita. **O segredo de produção do webhook só
+nasce depois deste bloco mesclado e da exclusão aplicada.** Próximo passo de
+segurança registrado: a confirmação consultar a cobrança no gateway.
+
 *Seção transitória — atualizar ou remover conforme o projeto avança. Não é fonte de verdade permanente; é o que uma sessão nova precisa saber para não repetir trabalho ou perguntas já resolvidas.*
 
 **Concluído:**
@@ -188,7 +198,7 @@ para habilitar exclusao. Auan ficou fora do escopo, a pedido do solicitante.
 - **Rodada no sandbox (16/09, encerrada): PIX validado de ponta a ponta, e estorno manual, integral via outbox e idempotência da confirmação validados contra o gateway real; cartão BLOQUEADO por homologação de conta, não testado.** O 409 com trabalho iniciado ficou para a próxima rodada por sequenciamento, sem bloqueio. **O `abacatepay listen` mutila o corpo do evento — não use para validar formato**; use o evento do painel de Webhook Logs com a assinatura calculada à parte (método no roteiro). O AbacatePay recusou o checkout hospedado com `CARD is not available for this store` — não é defeito de código, e não se "corrige" aqui. O nome do evento de conclusão do cartão segue sem confirmação. **Não trate a seção de cartão do roteiro como pendência de execução**: ela só pode ser feita depois da homologação.
 - **O evento real do webhook NÃO tem `id` na raiz** (sandbox, 16/09), ao contrário da documentação, e a cobrança vem sob a chave do prefixo do evento (`data.transparent`). O parser exigia o `id` e todo pagamento real voltava 422. **Teste de webhook usa `eventoNoFormatoReal` de `apps/api/src/arnes-webhook.ts`** (o payload capturado, verbatim) — montar o corpo à mão no formato da documentação foi o que deixou o defeito passar.
 - **Evento assinado que não é pagamento nem estorno não some em silêncio.** Nome desconhecido e chargeback (`*.disputed`) respondem 200 `alertado` com alerta crítico; só `subscription.*`, `transfer.*` e `payout.*` são `ignorado`. A documentação não confirma que o cartão pago emite `checkout.completed` — é o item 1 do roteiro do sandbox. **Não devolva "evento desconhecido" para 200 silencioso.**
-- **O `webhookSecret` na URL entra no log de requisição do Cloud Run, e isso está NÃO mitigado** (checado na revisão do PR #21, ADR-19): decisão pendente antes de cadastrar o webhook de produção.
+- **O `webhookSecret` na URL é a ÚNICA trava do webhook, e foi tirado dos logs no Bloco B** (ADR-19): a chave do HMAC é pública, então quem autentica é o segredo. Exclusão no Cloud Logging pelo nome do parâmetro e redação nos spans, as duas amarradas por teste a `PARAMETRO_SEGREDO_WEBHOOK`. **Não logue URL nem query no caminho do webhook** — `webhook-sem-segredo-no-log.integration-spec.ts` falha.
 - **Corpo cru do webhook:** `rawBody: true` vive em `OPCOES_DA_APLICACAO` (`configurar.ts`), usada por `main.ts` **e por todo arnês HTTP de teste**. Arnês novo que crie a aplicação sem ela valida HMAC sobre um corpo que produção nunca veria.
 - **O hook de bloqueio não funcionava até aqui** — ver "Sobre os limites deste arquivo".
 - **Desenvolvimento:** sem chave, a API usa o gateway falso; `node scripts/simular-webhook.mjs <checkoutId>` faz o papel do AbacatePay (só loopback e emulador).
