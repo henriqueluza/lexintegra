@@ -36,6 +36,16 @@ aviso apos envio confirmado foram aceitos como base; nao enviar aviso nem
 eliminar enquanto faltar a politica. A constante `aprovada` nao e uma chave
 para habilitar exclusao. Auan ficou fora do escopo, a pedido do solicitante.
 
+**Bloco B — resíduos do checkout (branch `fix/residuos-checkout`):** o
+`webhookSecret` saiu do log de requisição (exclusão no Cloud Logging pelo nome do
+parâmetro) e dos spans (redação em `observabilidade/instrumentacao-http.ts`). **A
+chave do HMAC do AbacatePay é pública: o segredo da URL é a única trava do
+webhook** (errata do ADR-19). O 409 de estorno e cancelamento com trabalho
+iniciado está provado de ponta a ponta nos três estados, e a TTL de `checkouts`
+tem teste sobre todo caminho de escrita. **O segredo de produção do webhook só
+nasce depois deste bloco mesclado e da exclusão aplicada.** Próximo passo de
+segurança registrado: a confirmação consultar a cobrança no gateway.
+
 *Seção transitória — atualizar ou remover conforme o projeto avança. Não é fonte de verdade permanente; é o que uma sessão nova precisa saber para não repetir trabalho ou perguntas já resolvidas.*
 
 **Concluído:**

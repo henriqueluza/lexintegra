@@ -539,7 +539,7 @@ sem pedido.
 |---|---|
 | Mesmo webhook 3× → 1 pagamento e 2 pedidos | `pagamentos/webhook/confirmacao.integration-spec.ts` (sequencial e `Promise.all`) |
 | Assinatura inválida rejeitada | `pagamentos/webhook/webhook.integration-spec.ts` e o unitário do guard — 401 e zero documentos |
-| Estorno em `em_elaboracao` recusado no servidor | `estornos/estornos.integration-spec.ts` — 409, estado inalterado |
+| Estorno em `em_elaboracao` recusado no servidor | `estornos/estornos.integration-spec.ts` — 409, estado inalterado; **de ponta a ponta nos três estados com trabalho iniciado** em `estornos/trabalho-iniciado.integration-spec.ts` (Bloco B) |
 | Compra de ponta a ponta | `compra.integration-spec.ts` — da vitrine à ficha preenchida e aos dois cartões |
 | Cancelar não afeta a conta nem os outros pedidos | `pedidos/cancelamento.integration-spec.ts` — retrato antes e depois, campo a campo |
 
@@ -607,6 +607,41 @@ exclusão conta como escrita, no volume de carrinhos abandonados.
 **Cobertura:** `apps/api` 93/85/93/95, `apps/web` 96/91/92/97,
 `packages/shared` 99/100/100/99. Integração: 384 asserções de regras, 145 testes
 da API.
+
+### Registro — Bloco B, resíduos do checkout (setembro de 2026)
+
+Branch `fix/residuos-checkout`. Fecha o que a Etapa 8 deixou aberto **do lado do
+código**, e é pré-requisito para cadastrar o webhook de produção.
+
+- **B.1 — o `webhookSecret` não chega a log nenhum.** O inventário (ADR-19) achou o
+  segredo no log de requisição do Cloud Run e, **também**, nos spans do
+  OpenTelemetry (`url.query`) — este segundo não estava no registro da Etapa 8. E
+  achou uma errata: a chave do HMAC é pública, então o segredo da URL é a única
+  autenticação real do webhook. Tirar o segredo da URL é inviável (a documentação
+  o exige). Feito: exclusão no Cloud Logging pelo nome do parâmetro, redação nos
+  spans, teste de log da aplicação e linha `webhook.recebido` no lugar do log de
+  plataforma. **Nenhum papel novo** para o `terraform-ci`.
+- **B.2 — 409 com trabalho iniciado, provado de ponta a ponta** nos três estados
+  (`em_elaboracao`, `em_revisao`, `entregue`), com retrato do banco, gateway falso
+  sem estorno e outbox sem evento. Nenhum dos três desmentiu o ADR-12. O passo do
+  sandbox ganhou o que conferir no painel do AbacatePay.
+- **B.3 — a TTL de `checkouts` cobre todo caminho de escrita.** Não havia lacuna:
+  os cinco caminhos deixam `apagarApos`, e agora um teste de integração o prova. A
+  seção 13 da arquitetura passou a registrar a TTL e o PITR (versão apagada
+  recuperável por 7 dias).
+
+**O que ainda depende do escritório, e nada disto é código:** aprovação final da
+conta do AbacatePay e a chave `abc_prod_`; o **segredo de produção do webhook —
+gerado só depois deste bloco mesclado e da exclusão aplicada**; o cadastro do
+webhook no painel com os seis eventos; a homologação de cartão; e os roteiros
+manuais do PR (conferência de log, TTL em produção, passo 5.1 do sandbox).
+
+**Ficou em aberto, fora deste bloco:** a confirmação consultar a cobrança no
+gateway (tira do segredo o papel de trava única; depende de observar
+`/transparents/check` e `/checkouts/get` no sandbox); tirar `roles/editor` da SA
+do Compute; a busca de clientes (`?busca=`) pôr nome e e-mail na query, que chega
+ao log de requisição e aos spans; e a retenção de `pre-cadastros`, que a seção 13
+não decide.
 
 ### Só você — Etapa 8
 
