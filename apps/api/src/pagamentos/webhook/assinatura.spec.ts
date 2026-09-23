@@ -1,11 +1,19 @@
 import { createHmac } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import type { ExecutionContext } from '@nestjs/common';
 import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { ConfiguracaoPagamentos } from '../gateway/modo.js';
-import { assinar, assinaturaConfere, segredoConfere } from './assinatura.js';
+import { caminhoDoWebhook } from '../../arnes-webhook.js';
+import {
+  assinar,
+  assinaturaConfere,
+  PARAMETRO_SEGREDO_WEBHOOK,
+  segredoConfere,
+} from './assinatura.js';
 import {
   AssinaturaWebhookGuard,
   CABECALHO_ASSINATURA,
@@ -121,5 +129,46 @@ describe('AssinaturaWebhookGuard', () => {
         modo: 'desligado',
       }).canActivate(contexto(valida)),
     ).toThrow(ServiceUnavailableException);
+  });
+});
+
+/**
+ * O NOME DO PARAMETRO E UM SO (Bloco B). O guard le o segredo por ele, os testes e
+ * o simulador montam a URL com ele, e a exclusao do Cloud Logging filtra por ele.
+ * Renomear num lugar sem acompanhar os outros nao quebraria nada — o segredo so
+ * voltaria ao log de requisicao, em silencio.
+ */
+describe('o parametro do segredo do webhook', () => {
+  it('e o mesmo que o arnes usa para montar a URL', () => {
+    const url = new URL(caminhoDoWebhook('x'), 'http://localhost');
+    expect(url.searchParams.get(PARAMETRO_SEGREDO_WEBHOOK)).toBe('x');
+  });
+
+  it('e o que a exclusao do Cloud Logging filtra', () => {
+    const terraform = readFileSync(
+      fileURLToPath(
+        new URL(
+          '../../../../../infra/terraform/observabilidade.tf',
+          import.meta.url,
+        ),
+      ),
+      'utf8',
+    );
+    const bloco =
+      /resource "google_logging_project_exclusion" "webhook_segredo_na_url" \{[\s\S]*?\n\}/.exec(
+        terraform,
+      );
+    if (bloco === null) {
+      throw new Error(
+        'Exclusao `webhook_segredo_na_url` nao encontrada em ' +
+          'infra/terraform/observabilidade.tf. Sem ela, o webhookSecret volta ao ' +
+          'log de requisicao do Cloud Run (ADR-19, Bloco B).',
+      );
+    }
+
+    const filtro = /filter\s*=\s*"((?:[^"\\]|\\.)*)"/.exec(bloco[0])?.[1];
+    expect(filtro).toBe(
+      `httpRequest.requestUrl:\\"${PARAMETRO_SEGREDO_WEBHOOK}=\\"`,
+    );
   });
 });

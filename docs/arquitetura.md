@@ -492,7 +492,7 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 - **cartão** existe só no checkout **hospedado**, que redireciona o cliente para a página do gateway e exige os produtos cadastrados antes no gateway;
 - o estorno é **só integral**, por cobrança (ver a errata do ADR-12);
 - sandbox e produção usam **a mesma URL** — o ambiente é decidido pela chave (`abc_dev_…` ou `abc_prod_…`);
-- o webhook se autentica por `?webhookSecret=` na URL **e** por `X-Webhook-Signature` (HMAC-SHA256 em base64 sobre o corpo cru), e o envelope traz `id` (do log), `event`, `devMode` e `data`.
+- o webhook se autentica por `?webhookSecret=` na URL **e** por `X-Webhook-Signature` (HMAC-SHA256 em base64 sobre o corpo cru), e o envelope traz `id` (do log), `event`, `devMode` e `data`. **Errata do Bloco B:** a chave do HMAC é pública; quem autentica é o segredo (ver abaixo).
 
 **Decisões.**
 
@@ -534,23 +534,41 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 
 **Não há coleção de eventos recebidos ("inbox").** A idempotência do pagamento é o próprio `pagamentos/{cobrancaId}` (errata do ADR-04), e a do estorno é o estado de `estornos` e `pagamentos.estornoGateway` — um `*.refunded` reentregue encontra `gateway_confirmado` e responde 200 sem escrita.
 
-**O `webhookSecret` na URL e o log de requisição — checado, NÃO mitigado.** É assim que o AbacatePay autentica ("cada webhook tem um secret único, que vai na query string"), e não há como mudar do lado de cá. A trava de verdade é o HMAC; o segredo da URL é a segunda fechadura. A checagem, feita em 15/09/2026 com leitura na configuração do projeto `plataforma-juridica-36bda`:
+**O `webhookSecret` na URL e o log de requisição — mitigado no Bloco B (23/09/2026).**
 
-- **O log de requisição do Cloud Run guarda a query string.** Confirmado em entradas reais de `run.googleapis.com/requests` do serviço `api-lexintegra`: o `httpRequest.requestUrl` vem com a parte depois do `?`. O Firebase Hosting não grava log no Cloud Logging (nenhuma entrada `firebase_domain` em 30 dias), então o Cloud Run é o único lugar.
-- **Não há exclusão.** O sink `_Default` só tem o filtro padrão (tira os logs de auditoria que vão para `_Required`), sem exclusão nenhuma; o bucket `_Default` não tem campo restrito (`restrictedFields` vazio) e retém **30 dias**. Não existe recurso `google_logging_*` no Terraform.
-- **Quem lê esse log, pelo IAM do projeto** (sem organização acima dele, então sem herança):
-  - a conta humana com `roles/owner` — que já lê o Secret Manager, então o log não amplia nada para ela;
-  - a **SA padrão do Compute** (`616781378293-compute@…`), com `roles/editor` — a concessão legada que o `AGENTS.md` já marca para sair. **Aqui o log amplia o acesso:** `roles/editor` tem `logging.logEntries.list` e **não** tem `secretmanager.versions.access`. Hoje essa SA não lê o segredo; com ele na URL, leria.
-  - indiretamente, quem consegue emitir token para essa SA: `api-lexintegra-run` e `firebase-adminsdk-fbsvc`, que têm `roles/iam.serviceAccountTokenCreator` **no projeto inteiro**. Esse alcance é um problema em si, anterior a esta etapa, e está registrado à parte — ele já dá caminho até SAs com acesso ao Secret Manager, então o log não é a pior porta aberta.
-- **Hoje a exposição é zero**, porque não há webhook configurado nem segredo de webhook em produção (`PAGAMENTOS_MODO=desligado`). O risco nasce no dia em que o webhook for cadastrado no painel.
+*O problema.* O AbacatePay autentica o webhook pondo o segredo na query string ("cada webhook tem um secret único, que vai na query string"), e é a URL que a plataforma registra. A checagem de 15/09/2026, na configuração do projeto `plataforma-juridica-36bda`, achou:
 
-**Decisão pendente, e é de uma pessoa — antes de cadastrar o webhook de produção.** Três saídas, que se somam:
+- **o log de requisição do Cloud Run guarda a query.** O `httpRequest.requestUrl` de `run.googleapis.com/requests` vem com a parte depois do `?`. O Firebase Hosting não gravava log no Cloud Logging (nenhuma entrada `firebase_domain` em 30 dias);
+- **nenhuma exclusão.** O bucket `_Default` retém 30 dias, sem campo restrito;
+- **quem lê esse log.** A conta humana com `roles/owner`, que já lê o Secret Manager, e a **SA padrão do Compute**, com `roles/editor`: essa tem `logging.logEntries.list` e **não** tem `secretmanager.versions.access`, então o log ampliaria o acesso dela. Indiretamente, também quem emite token para essa SA (`api-lexintegra-run` e `firebase-adminsdk-fbsvc`, com `serviceAccountTokenCreator` no projeto inteiro).
 
-1. **Exclusão só desta rota:** `google_logging_project_exclusion` para `log_id("run.googleapis.com/requests")` com `httpRequest.requestUrl:"/api/pagamentos/webhook"`. Tira o segredo do log e perde só o log de requisição dessa rota (status e latência); os logs da aplicação — webhook recusado, alerta — continuam. **Exige conceder `roles/logging.configWriter` a `terraform-ci` à mão antes do apply**, pela mesma razão da Etapa 7.
-2. **Remover `roles/editor` da SA padrão do Compute**, que já estava planejado, e reduzir o `serviceAccountTokenCreator` da SA da API ao escopo dela mesma.
-3. **Aceitar conscientemente**, com o acesso ao Cloud Logging tratado como acesso a credencial e o segredo rotacionado se o log vazar.
+*O inventário completo do Bloco B* — todo lugar por onde a URL passa:
 
-Campo restrito no bucket (`httpRequest.requestUrl`) foi descartado: esconderia a URL de todas as rotas, e não só desta.
+| Lugar | O segredo aparecia? | Depois do Bloco B |
+|---|---|---|
+| Log de requisição do Cloud Run | sim | exclusão no Cloud Logging |
+| Log da aplicação | não — nenhum código loga URL, e o guard loga só o motivo | teste que falha se a query aparecer (`webhook-sem-segredo-no-log.integration-spec.ts`) |
+| Spans do OpenTelemetry (Cloud Trace) | **sim**, quando amostrado: o `instrumentation-http` grava `url.query`, e a lista de redação padrão dele não tem `webhookSecret` | `webhookSecret` redigido (`observabilidade/instrumentacao-http.ts`), com teste sobre a instrumentação de verdade |
+| Spans que o próprio Cloud Run gera | desconhecido — é da plataforma | roteiro de conferência manual |
+| Error Reporting | não — nossas entradas não levam `httpRequest` nem URL | roteiro de conferência manual |
+| Log do Firebase Hosting | não, integração desligada; gravaria a query se ligada | a mesma exclusão já cobre |
+| Painel do AbacatePay | sim — a configuração do webhook e os Webhook Logs | fora do nosso controle: **acesso ao painel equivale a acesso ao segredo** |
+
+*A errata que o inventário trouxe: o segredo é a trava, e o HMAC não autentica ninguém.* Este ADR dizia que "a trava de verdade é o HMAC; o segredo da URL é a segunda fechadura". Está invertido. A documentação de segurança de webhooks do AbacatePay (`docs.abacatepay.com/pages/webhooks/security`, lida em 23/09/2026) publica a chave do HMAC na própria página, **igual para todas as contas**: quem lê a página assina um evento válido. E a confirmação não consulta o gateway — lê a cobrança do próprio evento. Então o `webhookSecret` é a **única** autenticação real do webhook: sem ele, um comprador que conhece o próprio `checkoutId` (está no `?id=` da tela de checkout) e o total poderia forjar o `transparent.completed` e receber o serviço sem pagar.
+
+*As opções.*
+
+1. **Webhook sem o segredo na URL.** **Inviável.** A documentação trata o secret como campo obrigatório na criação do webhook e diz que ele vai sempre na query, sem alternativa por cabeçalho (`docs.abacatepay.com/pages/webhooks`). E mesmo que fosse possível, o HMAC de chave pública ficaria sozinho — nenhuma autenticação.
+2. **O segredo continua na URL e não chega a log nenhum.** **Escolhida.** `google_logging_project_exclusion` com filtro pelo **nome do parâmetro** (`httpRequest.requestUrl:"webhookSecret="`), e não pelo caminho: cobre o Cloud Run e, de antemão, o Hosting; não quebra se a rota mudar de nome; e `assinatura.spec.ts` lê o `.tf` para conferir que o filtro usa o mesmo nome que o guard (`PARAMETRO_SEGREDO_WEBHOOK`). Redação do mesmo nome nos spans. O que se perde: o log de plataforma de cada chamada ao webhook (status, latência, origem). A compensação é a linha `webhook.recebido` da própria aplicação — evento, id e resultado, sem URL —, somada ao WARNING do guard em cada recusa; as métricas de plataforma do Cloud Run não vêm de log e continuam. Nenhuma métrica nem alerta lia o log de requisição. O papel `roles/logging.configWriter` já tinha sido concedido a `terraform-ci` na Etapa 12.
+3. **Aceitar conscientemente**, tratando acesso ao Cloud Logging e ao Trace como acesso a credencial. Descartada: o log amplia o acesso da SA do Compute, e a opção 2 custa pouco.
+
+Campo restrito no bucket (`httpRequest.requestUrl`) continua descartado: esconderia a URL de todas as rotas.
+
+*Limites da opção 2, conhecidos.* A exclusão de projeto vale para o sink `_Default`: um sink novo não a herda e precisa repeti-la. O que foi gravado antes do apply fica até vencer os 30 dias — hoje não há segredo de produção, então não há o que limpar. O painel do AbacatePay continua mostrando o segredo.
+
+*O que fica para depois, e por quê.* A defesa que tira do segredo o papel de trava única é **a confirmação consultar a cobrança no gateway** (status pago e valor) antes de criar o pedido — um segredo vazado passaria a permitir só ruído, e não serviço grátis. Fica para o bloco seguinte: depende de `/transparents/check` e `/checkouts/get`, cujos formatos de resposta nunca foram observados no sandbox, e entraria no caminho crítico do pagamento. A limpeza do IAM (tirar `roles/editor` da SA do Compute e reduzir o `serviceAccountTokenCreator` ao escopo da própria SA) continua pendente e é independente.
+
+*Rotação.* O segredo de produção **só deve ser gerado depois deste bloco mesclado e da exclusão aplicada**. Os segredos das rodadas de sandbox eram descartáveis e locais (`openssl rand`, no roteiro), e o log local é apagado ao fim de cada rodada.
 
 **O texto que sai para o gateway passa por um filtro, e isso veio da rodada no
 sandbox (16/09/2026).** A descrição da cobrança PIX ia como `LexIntegra — 2

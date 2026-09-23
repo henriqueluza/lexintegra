@@ -8,6 +8,44 @@
 # COMO LER O ARQUIVO: primeiro as metricas (o que se mede), depois os canais
 # (quem recebe), depois as politicas (quando avisar) e por fim o painel.
 
+# --- O que NAO se guarda (Bloco B) -------------------------------------------
+#
+# O `?webhookSecret=` que o AbacatePay poe na URL do webhook e a credencial que
+# autentica o evento — a UNICA de verdade, porque a chave do HMAC e publica
+# (errata do ADR-19). O log de requisicao do Cloud Run grava a URL inteira em
+# `httpRequest.requestUrl`, e o bucket `_Default` o guarda por 30 dias, legivel
+# por quem tem `logging.logEntries.list` — inclusive quem nao le o Secret Manager.
+#
+# O FILTRO E PELO NOME DO PARAMETRO, e nao pelo caminho da rota:
+# - cobre o log de requisicao do Cloud Run e, de antemao, o do Firebase Hosting
+#   (`firebase_domain`), que tambem grava `httpRequest.requestUrl` e esta
+#   desligado hoje — ligar a integracao no console nao reabre o vazamento;
+# - nao quebra se a rota for renomeada;
+# - o nome e `PARAMETRO_SEGREDO_WEBHOOK` (`apps/api/src/pagamentos/webhook/
+#   assinatura.ts`), e `assinatura.spec.ts` le este arquivo para conferir.
+#
+# O QUE SE PERDE: o log de plataforma de cada chamada ao webhook (status,
+# latencia, IP de origem). Compensado pela linha `webhook.recebido` da propria
+# aplicacao, sem URL, e pelo WARNING do guard em toda recusa; as metricas de
+# plataforma do Cloud Run (`request_count`, latencia) nao vem de log e continuam.
+# Nenhuma metrica nem alerta deste arquivo le o log de requisicao.
+#
+# LIMITES, conhecidos:
+# - exclusao de projeto vale para o sink `_Default`. Um sink novo (exportacao
+#   para BigQuery, por exemplo) NAO herda o filtro e precisa repeti-lo;
+# - o que ja foi gravado antes do apply continua no bucket ate vencer os 30 dias.
+#   Hoje nao ha segredo de producao, entao nao ha o que limpar;
+# - o painel do AbacatePay mostra a URL com o segredo, e isso nao e nosso.
+#
+# Papel: `roles/logging.configWriter`, ja concedido a `terraform-ci` na Etapa 12
+# (`papeis-de-bootstrap.json`, prefixo `google_logging`).
+resource "google_logging_project_exclusion" "webhook_segredo_na_url" {
+  project     = var.project_id
+  name        = "webhook-segredo-na-url"
+  description = "Log de requisicao com o webhookSecret do AbacatePay na URL (Bloco B, ADR-19). O segredo e credencial: nao pode ser gravado."
+  filter      = "httpRequest.requestUrl:\"webhookSecret=\""
+}
+
 # --- Quem recebe --------------------------------------------------------------
 #
 # O canal de DESENVOLVIMENTO e provisorio e esta marcado como tal no

@@ -5,7 +5,7 @@ import request from 'supertest';
 import { NOME_CLAIM_PERFIL, type NovoProduto } from 'shared';
 import { AppModule } from '../app.module.js';
 import { comSnapshot } from '../arnes-pedidos.js';
-import { eventoNoFormatoReal } from '../arnes-webhook.js';
+import { caminhoDoWebhook, eventoNoFormatoReal } from '../arnes-webhook.js';
 import { configurar, OPCOES_DA_APLICACAO } from '../configurar.js';
 import {
   authDeTeste,
@@ -124,7 +124,7 @@ function webhookDeEstorno(): request.Test {
   );
   return request(app.getHttpServer())
     .post(
-      `/api/pagamentos/webhook?webhookSecret=${SEGREDO_WEBHOOK_DESENVOLVIMENTO}`,
+      caminhoDoWebhook(SEGREDO_WEBHOOK_DESENVOLVIMENTO),
     )
     .set('Content-Type', 'application/json')
     .set('X-Webhook-Signature', assinar(corpo, CHAVE_HMAC_DESENVOLVIMENTO))

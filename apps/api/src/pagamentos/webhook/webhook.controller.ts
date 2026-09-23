@@ -73,6 +73,19 @@ export class WebhookController {
     }
 
     const resultado = await this.processador.processar(evento);
+
+    /*
+     * A LINHA QUE SUBSTITUI O LOG DE REQUISICAO desta rota, que a exclusao do
+     * Cloud Logging tira por carregar o segredo na URL (Bloco B, ADR-19). Sem
+     * URL, sem corpo e sem cabecalho: so o que diz o que chegou e o que foi feito.
+     */
+    this.log.log({
+      message: `webhook ${evento.nome}: ${resultado}`,
+      sinal: 'webhook.recebido',
+      evento: evento.nome,
+      eventoId: evento.eventoId,
+      resultado,
+    });
     return { recebido: true, resultado };
   }
 

@@ -4,7 +4,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { VERSAO_TERMOS_CHECKOUT, type NovoProduto } from 'shared';
 import { AppModule } from '../../app.module.js';
-import { eventoNoFormatoReal } from '../../arnes-webhook.js';
+import { caminhoDoWebhook, eventoNoFormatoReal } from '../../arnes-webhook.js';
 import { COLECAO_CHECKOUTS } from '../../checkout/checkout.js';
 import { configurar, OPCOES_DA_APLICACAO } from '../../configurar.js';
 import {
@@ -138,7 +138,7 @@ function webhook(
   );
   return http()
     .post(
-      `/api/pagamentos/webhook?webhookSecret=${SEGREDO_WEBHOOK_DESENVOLVIMENTO}`,
+      caminhoDoWebhook(SEGREDO_WEBHOOK_DESENVOLVIMENTO),
     )
     .set('Content-Type', 'application/json')
     .set('X-Webhook-Signature', assinar(corpo, CHAVE_HMAC_DESENVOLVIMENTO))
