@@ -53,23 +53,3 @@ resource "google_secret_manager_secret_iam_member" "api_runtime" {
     google_secret_manager_secret.abacatepay_api_key_dev,
   ]
 }
-
-# --- Acesso da service account padrao do Compute (IMPORTADO) ------------------
-# Concedido no bootstrap, quando o Cloud Run ainda rodava na identidade padrao.
-# Mantido nesta rodada de proposito: remover no mesmo apply que troca a identidade
-# do servico abriria uma janela em que o servico em producao perde acesso antes de
-# a nova revisao estar servindo trafego. Sai num commit seguinte, depois de a
-# service account dedicada estar provada em producao.
-resource "google_secret_manager_secret_iam_member" "compute_default" {
-  for_each = local.secrets
-
-  project   = var.project_id
-  secret_id = each.value
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${var.project_number}-compute@developer.gserviceaccount.com"
-
-  depends_on = [
-    google_secret_manager_secret.resend_api_key,
-    google_secret_manager_secret.abacatepay_api_key_dev,
-  ]
-}
