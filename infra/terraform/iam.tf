@@ -144,9 +144,9 @@ resource "google_storage_bucket_iam_member" "api_arquivos" {
   member = "serviceAccount:${google_service_account.api_runtime.email}"
 }
 
-# Necessario para a API assinar URLs com a propria identidade sem baixar chave.
-resource "google_project_iam_member" "api_token_creator" {
-  project = var.project_id
-  role    = "roles/iam.serviceAccountTokenCreator"
-  member  = "serviceAccount:${google_service_account.api_runtime.email}"
-}
+# A assinatura de URL sem chave (`signBlob`) exige `serviceAccountTokenCreator`
+# da SA SOBRE SI MESMA, e essa concessao vive em `varredura.tf`
+# (`api_assina_urls`). Ate o Bloco D havia tambem uma concessao do mesmo papel NO
+# PROJETO, que deixava a API emitir token como qualquer SA — inclusive a padrao
+# do Compute e a do CI. Nao a devolva para "resolver" falha de assinatura: o
+# escopo certo e o da propria SA.

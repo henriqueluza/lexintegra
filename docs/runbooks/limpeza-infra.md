@@ -169,3 +169,119 @@ Decidido no Bloco D, e a decisão é **não gerir**.
 **Se um dia for preciso habilitar Cloud Build, Cloud Functions ou Compute Engine**,
 essa SA estará sem papel nenhum: crie uma identidade dedicada para o serviço novo,
 como a API, o scanner e o job já têm. Não devolva o `roles/editor`.
+
+---
+
+## 3. URL assinada depois da redução do `serviceAccountTokenCreator`
+
+**O que mudou no Bloco D.** `api-lexintegra-run` tinha
+`roles/iam.serviceAccountTokenCreator` em dois escopos: **no projeto**
+(`google_project_iam_member.api_token_creator`, de `iam.tf`) e **sobre si mesma**
+(`google_service_account_iam_member.api_assina_urls`, de `varredura.tf`, desde a
+Etapa 11). O do projeto a deixava emitir token como **qualquer** SA do projeto,
+incluindo a padrão do Compute e a do CI. Ele saiu; o que a assinatura de URL
+precisa (`signBlob` sobre a própria identidade, ADR-17) continua pela concessão
+sobre si mesma.
+
+**Por que isto é conferência manual.** O teste de URL assinada roda contra o
+armazenamento falso e o emulador, que não verificam IAM. Só produção prova que a
+concessão que ficou é a certa.
+
+### 3.1 Conferir que a concessão certa está lá
+
+```bash
+gcloud iam service-accounts get-iam-policy \
+  api-lexintegra-run@plataforma-juridica-36bda.iam.gserviceaccount.com \
+  --project=plataforma-juridica-36bda
+```
+
+Esperado: `roles/iam.serviceAccountTokenCreator` com
+`serviceAccount:api-lexintegra-run@…` entre os membros. E, na política do
+projeto, `api-lexintegra-run` **sem** `serviceAccountTokenCreator`:
+
+```bash
+gcloud projects get-iam-policy plataforma-juridica-36bda \
+  --flatten='bindings[].members' \
+  --filter='bindings.members:api-lexintegra-run@' \
+  --format='value(bindings.role)'
+```
+
+### 3.2 Gerar e usar uma URL de download em produção
+
+Depois do deploy que aplicou a remoção:
+
+1. Com uma conta de advogado a quem um pedido foi distribuído, abra a demanda que
+   tenha um arquivo em `limpo` (entregável enviado ou anexo de apoio do cliente)
+   e clique para baixar. Por baixo, é
+   `GET /api/advogado/pedidos/{pedidoId}/entregaveis/{entregavelId}/download` (ou
+   `/anexos/{anexoId}/download`), que devolve `{ url, validoPorSegundos }`.
+2. **O arquivo abre.** A URL aponta para `storage.googleapis.com` e traz
+   `X-Goog-Algorithm=GOOG4-RSA-SHA256` — foi assinada pela API de IAM.
+3. **A escrita também assina.** Um upload de arquivo de apoio pelo cliente pede
+   uma URL de escrita pelo mesmo caminho; ele chegar à quarentena e depois a
+   `limpo` prova a outra metade.
+
+**Se ainda não houver pedido em produção**, a conferência fica para o primeiro
+pedido real — marque-a no PR como pendente, não como feita.
+
+**Sintoma de falha:** a rota de download (ou o pedido de URL de upload) devolve
+erro em vez de `{ url }`, e o log da API tem `iam.serviceAccounts.signBlob` com
+`PERMISSION_DENIED`.
+
+### 3.3 Voltar atrás
+
+`git revert` do commit do Bloco D que removeu `api_token_creator` e deploy pelo
+pipeline. Não conceda à mão: o próximo apply removeria de novo.
+
+---
+
+## 4. Confirmar a exportação por OTLP — libera a remoção de `roles/cloudtrace.agent`
+
+**Por que.** `roles/cloudtrace.agent` era o papel do exportador antigo do Cloud
+Trace. A Etapa 12 trocou para OTLP na Telemetry API (ADR-20), que exige
+`roles/telemetry.tracesWriter`, e manteve o antigo como caminho de volta até a
+exportação nova ser **vista** em produção. O commit que o remove está pronto na
+branch `chore/remover-cloudtrace-agent` e só entra depois desta conferência.
+
+### 4.1 Pegar o trace de uma requisição real
+
+A amostragem é de 10% (`RASTREIO_AMOSTRAGEM`), e só requisição amostrada vira
+trace. Faça algumas requisições que passem pela API — navegar pelas áreas
+autenticadas serve — e procure no Logs Explorer uma entrada da API **com trace
+amostrado**:
+
+```
+resource.type="cloud_run_revision"
+resource.labels.service_name="api-lexintegra"
+jsonPayload."logging.googleapis.com/trace_sampled"=true
+```
+
+O Cloud Logging promove esses campos para o topo da entrada: o que interessa é o
+campo `trace`, no formato `projects/plataforma-juridica-36bda/traces/<traceId>`.
+Guarde o `<traceId>`.
+
+### 4.2 Achar o mesmo trace no Cloud Trace
+
+Trace Explorer (`console.cloud.google.com/traces/explorer?project=plataforma-juridica-36bda`),
+busca pelo `<traceId>`. Confira:
+
+1. **O trace existe** e é recente (dos últimos minutos).
+2. **O span raiz é do serviço `api-lexintegra`**, com os atributos da
+   instrumentação HTTP do OpenTelemetry (`http.request.method`, `url.path`,
+   `http.response.status_code`) — é isso que distingue o span da nossa
+   exportação dos spans que o próprio Cloud Run gera.
+3. **O `traceId` bate** com o da entrada de log da 4.1.
+
+Se o trace aparecer só com spans da plataforma, e nenhum da aplicação, a
+exportação OTLP **não** está funcionando: não libere a remoção.
+
+### 4.3 Liberar
+
+Comente no PR do Bloco D que a exportação foi confirmada, com a data e o
+`traceId`. O commit de `chore/remover-cloudtrace-agent` entra então num PR
+próprio; o plano esperado é um único `destroy`, de
+`google_project_iam_member.api_runtime["roles/cloudtrace.agent"]`.
+
+**Voltar atrás, se o trace sumir depois:** `git revert` daquele commit e deploy.
+O rastreio perdido nesse intervalo não volta, mas a aplicação não é afetada — o
+exportador não derruba requisição.
