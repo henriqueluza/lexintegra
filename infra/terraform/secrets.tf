@@ -29,9 +29,10 @@ resource "google_secret_manager_secret" "abacatepay_api_key_dev" {
 }
 
 locals {
-  # Literais, nao referencias a atributo de recurso: o `for_each` de um bloco de
-  # import precisa ser resolvivel em tempo de plan. A ordem que a referencia dava
-  # de graca vira `depends_on` explicito abaixo.
+  # Literais, nao referencias a atributo de recurso: nasceram assim porque o
+  # `for_each` do bloco de import da Etapa 2 precisava ser resolvivel em tempo de
+  # plan (ver "Armadilhas conhecidas" no README). A ordem que a referencia daria
+  # de graca e o `depends_on` explicito abaixo.
   secrets = {
     resend     = "resend-api-key"
     abacatepay = "abacatepay-api-key-dev"

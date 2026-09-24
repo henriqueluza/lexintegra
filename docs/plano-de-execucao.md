@@ -191,7 +191,7 @@ Diferente da verificação do Google, não há revisão pública nem espera de s
 1. **`pnpm install --frozen-lockfile` falhava em máquina limpa.** A chave correta no pnpm 11 é `allowBuilds`, em forma de mapa; o `onlyBuiltDependencies` em lista, do pnpm 10, é aceito por `pnpm config get` mas ignorado pelo install. Localmente passava só porque o install era no-op sobre `node_modules` já populado.
 2. **O Terraform 1.16 honra apenas o primeiro bloco `import` de um recurso com `for_each`**, descartando os demais em silêncio — sem erro e sem warning, com o recurso aparecendo como `will be created`. Foi o critério de revisão ("nenhum importado pode aparecer como create") que pegou isso; sem ele, o apply teria falhado por conflito num binding que já existia. A forma correta é um único bloco `import` com `for_each`. Detalhado em `infra/terraform/README.md`.
 
-**Pendente para fechar a etapa:** abrir o PR, revisar o `terraform plan` que o CI comenta — critério: **nenhum recurso de `imports.tf` pode aparecer como "will be created"** —, fazer o merge, e conferir o smoke test. Depois do primeiro apply verde, remover `infra/terraform/imports.tf`.
+**Pendente para fechar a etapa:** abrir o PR, revisar o `terraform plan` que o CI comenta — critério: **nenhum recurso de `imports.tf` pode aparecer como "will be created"** —, fazer o merge, e conferir o smoke test. Depois do primeiro apply verde, remover `infra/terraform/imports.tf`. *(Feito no Bloco D, `chore/limpeza-infra`.)*
 
 ### Só você — Etapa 2
 
