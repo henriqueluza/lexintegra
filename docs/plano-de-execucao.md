@@ -639,7 +639,7 @@ manuais do PR (conferência de log, TTL em produção, passo 5.1 do sandbox).
 **Ficou em aberto, fora deste bloco:** a confirmação consultar a cobrança no
 gateway (tira do segredo o papel de trava única; depende de observar
 `/transparents/check` e `/checkouts/get` no sandbox); tirar `roles/editor` da SA
-do Compute; a busca de clientes (`?busca=`) pôr nome e e-mail na query, que chega
+do Compute (roteiro em `docs/runbooks/limpeza-infra.md`, Bloco D); a busca de clientes (`?busca=`) pôr nome e e-mail na query, que chega
 ao log de requisição e aos spans; e a retenção de `pre-cadastros`, que a seção 13
 não decide.
 
@@ -687,7 +687,7 @@ afetado e foi validado de ponta a ponta.
 - Executar a rodada no sandbox, pelo roteiro `docs/runbooks/checkout-sandbox.md`, e corrigir o que ela desmentir antes de fechar a etapa.
 - Criar no Secret Manager o `ABACATEPAY_WEBHOOK_SECRET` (definido por nós ao cadastrar o webhook) e referenciá-lo no Terraform, junto com `ABACATEPAY_WEBHOOK_CHAVE_HMAC`. Pela documentação de segurança de webhooks, a chave do HMAC é **pública e fixa**, publicada pelo AbacatePay — se a rodada no sandbox confirmar, ela pode ser variável comum em vez de secret. Com a chave de API configurada e sem os dois, a API recusa subir — de propósito.
 - Ao cadastrar o webhook no painel, **assinar os seis eventos** que a API trata: `transparent.completed`, `checkout.completed`, `transparent.refunded`, `checkout.refunded`, `transparent.disputed` e `checkout.disputed`. Evento não assinado não chega, e o sintoma é pagamento sem pedido.
-- ~~Decidir o que fazer com o `webhookSecret` no log de requisição do Cloud Run~~ — **resolvido no Bloco B** (exclusão no Cloud Logging e redação nos spans; ver o ADR-19). **Gerar o segredo de produção só depois do Bloco B mesclado e da exclusão aplicada**, e conferir a exclusão pelo roteiro do PR. Segue pendente, e independente: tirar `roles/editor` da SA padrão do Compute.
+- ~~Decidir o que fazer com o `webhookSecret` no log de requisição do Cloud Run~~ — **resolvido no Bloco B** (exclusão no Cloud Logging e redação nos spans; ver o ADR-19). **Gerar o segredo de produção só depois do Bloco B mesclado e da exclusão aplicada**, e conferir a exclusão pelo roteiro do PR. Segue pendente, e independente: tirar `roles/editor` da SA padrão do Compute — operação humana, roteiro em `docs/runbooks/limpeza-infra.md`, seção 2 (Bloco D).
 - Comunicar à CONTRATANTE o desvio do cartão: o pagamento com cartão sai da plataforma e volta (ADR-19).
 - Obter os outros dois textos jurídicos: o do cancelamento (`{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}`) e o do e-mail de acesso do cliente.
 - Definir o processo operacional de quem devolve o dinheiro no estorno manual, e de quem resolve um pagamento `orfao`, `divergente` ou `conflito_de_conta` — nos três houve dinheiro e não há pedido.

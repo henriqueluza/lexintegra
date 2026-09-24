@@ -74,3 +74,98 @@ Esperado: o `plan` roda até o fim, sem `Error: Failed to get existing workspace
 nem `storage: bucket doesn't exist`. O conteúdo do plano não importa aqui — sem os
 `TF_VAR_*` do pipeline ele propõe trocar imagens, e isso é esperado —, o que se
 confere é que o backend responde.
+
+---
+
+## 2. `roles/editor` da service account padrão do Compute
+
+`616781378293-compute@developer.gserviceaccount.com` ganhou `roles/editor` no
+projeto inteiro **do próprio Google**, na ativação da API. Nunca esteve no
+Terraform. O ADR-19 registra o custo: ela lê o Cloud Logging, e o log já carregou
+dado sensível. Desde a troca de identidade da Etapa 2 ela não roda nada.
+
+### 2.1 Conferir que o binding ainda existe
+
+```bash
+gcloud projects get-iam-policy plataforma-juridica-36bda \
+  --flatten='bindings[].members' \
+  --filter='bindings.members:616781378293-compute@developer.gserviceaccount.com' \
+  --format='value(bindings.role)'
+```
+
+Esperado **antes** da remoção: `roles/editor`, e mais nada. (No Bloco D a
+concessão de `secretAccessor` nos dois secrets saiu pelo Terraform, e não aparece
+aqui porque é política do secret, não do projeto.) Se voltar vazio, a remoção já
+foi feita: pule para a 2.4.
+
+### 2.2 Conferir que nada depende dela
+
+Cada item abaixo é leitura. Todos precisam dar o resultado esperado; **se um não
+der, pare** — há dependência real e a remoção quebraria algo.
+
+| O que usaria a SA padrão | Comando | Esperado (conferido no Bloco D, 24/09/2026) |
+|---|---|---|
+| Serviço do Cloud Run sem identidade própria | `gcloud run services list --region=southamerica-east1 --project=plataforma-juridica-36bda --format='table(metadata.name,spec.template.spec.serviceAccountName)'` | `api-lexintegra` → `api-lexintegra-run@…`, `scanner-lexintegra` → `scanner-clamav@…` |
+| Job do Cloud Run sem identidade própria | `gcloud run jobs list --region=southamerica-east1 --project=plataforma-juridica-36bda --format='value(metadata.name)'` e, para cada um, `gcloud run jobs describe <job> --region=southamerica-east1 --project=plataforma-juridica-36bda --format='value(spec.template.spec.template.spec.serviceAccountName)'` | `clamav-atualizar-base` → `clamav-atualizador@…` |
+| Cloud Build, Cloud Functions, Compute Engine | `gcloud services list --enabled --project=plataforma-juridica-36bda --format='value(config.name)' \| grep -E 'cloudbuild\|cloudfunctions\|compute\.googleapis'` | nada — as três APIs estão desabilitadas |
+| App Engine | `gcloud app describe --project=plataforma-juridica-36bda` | "does not contain an App Engine application" (a API está habilitada, sem aplicação) |
+| Scheduler e Tasks | `gcloud scheduler jobs list --location=southamerica-east1 --project=plataforma-juridica-36bda --format='table(name.basename(),httpTarget.oidcToken.serviceAccountEmail,httpTarget.oauthToken.serviceAccountEmail)'` | os quatro com `tarefas-lexintegra@…` |
+| Alguém se passando por ela | `gcloud iam service-accounts get-iam-policy 616781378293-compute@developer.gserviceaccount.com --project=plataforma-juridica-36bda` | só `etag`, sem `bindings` |
+| Pipeline | `.github/workflows/deploy.yml` | builda com `docker` no runner e autentica como `terraform-ci` por Workload Identity; não há Cloud Build |
+
+### 2.3 Remover
+
+```bash
+gcloud projects remove-iam-policy-binding plataforma-juridica-36bda \
+  --member=serviceAccount:616781378293-compute@developer.gserviceaccount.com \
+  --role=roles/editor \
+  --condition=None
+```
+
+`--condition=None` remove só o binding sem condição, que é o que existe; sem a
+flag o `gcloud` pergunta interativamente.
+
+### 2.4 Conferir depois
+
+1. A 2.1 volta **vazia**.
+2. **O deploy seguinte fica verde**, com o smoke test confirmando o commit em
+   `https://lexintegra.com.br/api/health`. O próximo push na `main` serve; se não
+   houver, reexecute o workflow *Deploy* pelo GitHub (é reexecutável no mesmo
+   commit).
+3. **A API responde** (`/api/health` com `status` ok) e **a varredura funciona**:
+   um upload de arquivo de apoio num pedido de teste chega a `limpo`. Se ainda
+   não houver pedido em produção, confira o scanner pelo log: nenhuma entrada de
+   `PERMISSION_DENIED` do `scanner-lexintegra` ou da `api-lexintegra` nas horas
+   seguintes.
+
+### 2.5 Voltar atrás, se algo quebrar
+
+```bash
+gcloud projects add-iam-policy-binding plataforma-juridica-36bda \
+  --member=serviceAccount:616781378293-compute@developer.gserviceaccount.com \
+  --role=roles/editor \
+  --condition=None
+```
+
+Depois disso, descubra **o que** usava a SA padrão — o log de auditoria de
+`PERMISSION_DENIED` com `principalEmail` igual a ela aponta o serviço — e dê a
+esse serviço uma identidade própria antes de tentar de novo.
+
+### Por que isto não está no Terraform
+
+Decidido no Bloco D, e a decisão é **não gerir**.
+
+- **É uma remoção única de algo que o Terraform nunca criou.** Não há estado
+  desejado a manter: depois de removido, o binding não volta sozinho — a
+  concessão automática do Google acontece na criação da SA padrão, e ela já
+  existe.
+- **O recurso que faria isso é novo** (`google_project_iam_member_remove`), e o
+  Bloco D é só remoção.
+- **O Terraform lutaria contra o caminho de volta.** Se a remoção quebrar algo em
+  produção, a correção de emergência é o comando da 2.5. Com a remoção declarada
+  no Terraform, o próximo deploy desfaria essa correção em silêncio — o pipeline
+  aplicaria a remoção de novo, e o serviço cairia de novo.
+
+**Se um dia for preciso habilitar Cloud Build, Cloud Functions ou Compute Engine**,
+essa SA estará sem papel nenhum: crie uma identidade dedicada para o serviço novo,
+como a API, o scanner e o job já têm. Não devolva o `roles/editor`.
