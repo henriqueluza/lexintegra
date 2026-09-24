@@ -159,7 +159,7 @@ Diferente da verificação do Google, não há revisão pública nem espera de s
 **Correções ao registro anterior, apuradas por auditoria `gcloud` read-only:**
 
 - **O Firestore não existia.** `gcloud firestore databases describe "(default)"` devolvia `NOT_FOUND`. Ele é **criado** pelo Terraform (`firestore.tf`), não importado — a premissa de que tudo da Etapa 2 seria import estava errada nesse ponto.
-- **`gs://lexintegra-tfstate` (sem sufixo) existe neste projeto**, vazio, com acesso uniforme ligado. O registro acima dizia que o nome estava em uso globalmente por terceiros; não está — é um bucket do próprio projeto, sobra do bootstrap. Não entra no Terraform. Convém removê-lo à mão para não haver dois buckets de state parecidos convidando a erro.
+- **`gs://lexintegra-tfstate` (sem sufixo) existe neste projeto**, vazio, com acesso uniforme ligado. O registro acima dizia que o nome estava em uso globalmente por terceiros; não está — é um bucket do próprio projeto, sobra do bootstrap. Não entra no Terraform. Convém removê-lo à mão para não haver dois buckets de state parecidos convidando a erro. *(Removido à mão em 03/09/2026; conferência em `docs/runbooks/limpeza-infra.md`, seção 1.)*
 - **A `terraform-ci` não tinha permissão suficiente** para o escopo da etapa. Faltavam `iam.serviceAccountAdmin`, `resourcemanager.projectIamAdmin`, `serviceusage.serviceUsageAdmin` e `firebasehosting.admin`. Concedidos manualmente — é IAM de produção, fora do alcance do agente.
 - O versionamento do bucket de state **está mesmo ligado**, como o registro dizia.
 
@@ -191,7 +191,7 @@ Diferente da verificação do Google, não há revisão pública nem espera de s
 1. **`pnpm install --frozen-lockfile` falhava em máquina limpa.** A chave correta no pnpm 11 é `allowBuilds`, em forma de mapa; o `onlyBuiltDependencies` em lista, do pnpm 10, é aceito por `pnpm config get` mas ignorado pelo install. Localmente passava só porque o install era no-op sobre `node_modules` já populado.
 2. **O Terraform 1.16 honra apenas o primeiro bloco `import` de um recurso com `for_each`**, descartando os demais em silêncio — sem erro e sem warning, com o recurso aparecendo como `will be created`. Foi o critério de revisão ("nenhum importado pode aparecer como create") que pegou isso; sem ele, o apply teria falhado por conflito num binding que já existia. A forma correta é um único bloco `import` com `for_each`. Detalhado em `infra/terraform/README.md`.
 
-**Pendente para fechar a etapa:** abrir o PR, revisar o `terraform plan` que o CI comenta — critério: **nenhum recurso de `imports.tf` pode aparecer como "will be created"** —, fazer o merge, e conferir o smoke test. Depois do primeiro apply verde, remover `infra/terraform/imports.tf`.
+**Pendente para fechar a etapa:** abrir o PR, revisar o `terraform plan` que o CI comenta — critério: **nenhum recurso de `imports.tf` pode aparecer como "will be created"** —, fazer o merge, e conferir o smoke test. Depois do primeiro apply verde, remover `infra/terraform/imports.tf`. *(Feito no Bloco D, `chore/limpeza-infra`.)*
 
 ### Só você — Etapa 2
 
@@ -639,7 +639,7 @@ manuais do PR (conferência de log, TTL em produção, passo 5.1 do sandbox).
 **Ficou em aberto, fora deste bloco:** a confirmação consultar a cobrança no
 gateway (tira do segredo o papel de trava única; depende de observar
 `/transparents/check` e `/checkouts/get` no sandbox); tirar `roles/editor` da SA
-do Compute; a busca de clientes (`?busca=`) pôr nome e e-mail na query, que chega
+do Compute (roteiro em `docs/runbooks/limpeza-infra.md`, Bloco D); a busca de clientes (`?busca=`) pôr nome e e-mail na query, que chega
 ao log de requisição e aos spans; e a retenção de `pre-cadastros`, que a seção 13
 não decide.
 
@@ -687,7 +687,7 @@ afetado e foi validado de ponta a ponta.
 - Executar a rodada no sandbox, pelo roteiro `docs/runbooks/checkout-sandbox.md`, e corrigir o que ela desmentir antes de fechar a etapa.
 - Criar no Secret Manager o `ABACATEPAY_WEBHOOK_SECRET` (definido por nós ao cadastrar o webhook) e referenciá-lo no Terraform, junto com `ABACATEPAY_WEBHOOK_CHAVE_HMAC`. Pela documentação de segurança de webhooks, a chave do HMAC é **pública e fixa**, publicada pelo AbacatePay — se a rodada no sandbox confirmar, ela pode ser variável comum em vez de secret. Com a chave de API configurada e sem os dois, a API recusa subir — de propósito.
 - Ao cadastrar o webhook no painel, **assinar os seis eventos** que a API trata: `transparent.completed`, `checkout.completed`, `transparent.refunded`, `checkout.refunded`, `transparent.disputed` e `checkout.disputed`. Evento não assinado não chega, e o sintoma é pagamento sem pedido.
-- ~~Decidir o que fazer com o `webhookSecret` no log de requisição do Cloud Run~~ — **resolvido no Bloco B** (exclusão no Cloud Logging e redação nos spans; ver o ADR-19). **Gerar o segredo de produção só depois do Bloco B mesclado e da exclusão aplicada**, e conferir a exclusão pelo roteiro do PR. Segue pendente, e independente: tirar `roles/editor` da SA padrão do Compute.
+- ~~Decidir o que fazer com o `webhookSecret` no log de requisição do Cloud Run~~ — **resolvido no Bloco B** (exclusão no Cloud Logging e redação nos spans; ver o ADR-19). **Gerar o segredo de produção só depois do Bloco B mesclado e da exclusão aplicada**, e conferir a exclusão pelo roteiro do PR. Segue pendente, e independente: tirar `roles/editor` da SA padrão do Compute — operação humana, roteiro em `docs/runbooks/limpeza-infra.md`, seção 2 (Bloco D).
 - Comunicar à CONTRATANTE o desvio do cartão: o pagamento com cartão sai da plataforma e volta (ADR-19).
 - Obter os outros dois textos jurídicos: o do cancelamento (`{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}`) e o do e-mail de acesso do cliente.
 - Definir o processo operacional de quem devolve o dinheiro no estorno manual, e de quem resolve um pagamento `orfao`, `divergente` ou `conflito_de_conta` — nos três houve dinheiro e não há pedido.

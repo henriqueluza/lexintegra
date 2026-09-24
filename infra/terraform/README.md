@@ -9,8 +9,10 @@ Infraestrutura do projeto `plataforma-juridica-36bda`, região `southamerica-eas
 ## O que é bootstrap manual e por que não está aqui
 
 Alguns recursos foram criados à mão antes de o Terraform existir, porque **o
-Terraform não pode se autoprovisionar**. Eles são _importados_ (ver `imports.tf`),
-não recriados — um `apply` que tentasse criá-los falharia por conflito.
+Terraform não pode se autoprovisionar**. Eles foram _importados_ por blocos
+`import` no primeiro apply da Etapa 2, e não recriados — um `apply` que tentasse
+criá-los falharia por conflito. Cumprido o import, os blocos saíram no Bloco D
+(`imports.tf` não existe mais); os recursos seguem no state.
 
 O que fica **fora** do Terraform, deliberadamente:
 
@@ -74,7 +76,6 @@ duração existe em lugar nenhum — não há segredo de GCP cadastrado no GitHu
 | `versions.tf`          | Versões fixadas do Terraform e do provider google           |
 | `backend.tf`           | State em `gs://lexintegra-tfstate-36bda`, prefixo `etapa-2` |
 | `variables.tf`         | Projeto, região, repositório autorizado, imagem e commit    |
-| `imports.tf`           | **Temporário** — ver abaixo                                 |
 | `services.tf`          | APIs habilitadas                                            |
 | `firestore.tf`         | Base `(default)` e os índices compostos                     |
 | `kms.tf`               | Keyring e chave CMEK dos buckets                            |
@@ -84,32 +85,41 @@ duração existe em lugar nenhum — não há segredo de GCP cadastrado no GitHu
 | `secrets.tf`           | Containers dos secrets e as concessões de leitura           |
 | `cloud_run.tf`         | Serviço `api-lexintegra`                                    |
 
-## Armadilha do `import` com `for_each`
+## Armadilhas conhecidas
+
+### Bloco `import` num recurso com `for_each`
 
 Quando o recurso usa `for_each`, o Terraform 1.16 honra **apenas o primeiro** bloco
 `import` daquele endereço. O segundo é descartado **em silêncio** — sem erro, sem
 warning — e o recurso aparece no plan como `will be created`.
 
-Isso aconteceu de verdade aqui com `google_secret_manager_secret_iam_member.compute_default`:
-o binding de `resend` importava e o de `abacatepay` planejava criar um binding que já
-existia. Comprovado invertendo a ordem dos blocos — o ignorado passou a ser o outro —
-e um `id` propositalmente inválido no segundo bloco também não gerava erro nenhum.
+Aconteceu no import da Etapa 2, com o acesso da SA padrão do Compute aos dois
+secrets (`google_secret_manager_secret_iam_member.compute_default`, removido no
+Bloco D): o binding de `resend` importava e o de `abacatepay` planejava criar um
+binding que já existia. Comprovado invertendo a ordem dos blocos — o ignorado
+passou a ser o outro — e um `id` propositalmente inválido no segundo bloco também
+não gerava erro nenhum, o que mostra que ele nem chega a ser avaliado.
 
 **Forma correta:** um único bloco com `for_each`, cobrindo todas as instâncias.
 
 ```hcl
 import {
-  for_each = local.secrets
-  to       = google_secret_manager_secret_iam_member.compute_default[each.key]
-  id       = "projects/${var.project_id}/secrets/${each.value} roles/... serviceAccount:..."
+  for_each = local.mapa_de_literais
+  to       = tipo_do_recurso.nome[each.key]
+  id       = "projects/${var.project_id}/.../${each.value} roles/... serviceAccount:..."
 }
 ```
 
-O `for_each` de um bloco de import precisa ser resolvível em tempo de plan, então
-`local.secrets` é um mapa de **literais**, não de referências a atributo de recurso;
-a ordenação que a referência dava de graça virou `depends_on` explícito.
+O `for_each` de um bloco de import precisa ser resolvível em tempo de plan, então o
+mapa é de **literais**, não de referências a atributo de recurso; a ordenação que a
+referência daria de graça vira `depends_on` explícito.
 
-## Armadilha do apply parcial: variável sem `default`
+**Critério de revisão de qualquer import futuro:** nenhum recurso importado pode
+aparecer no plan como `will be created`. Um create ali significa `id` errado ou
+bloco descartado, e o apply falha por conflito. Cumprido o import, os blocos saem
+num commit seguinte — o state é que guarda o recurso, não o bloco.
+
+### Apply parcial com variável sem `default`
 
 O deploy tem um apply **parcial** logo no começo — o passo "Garantir o Artifact
 Registry" roda:
@@ -142,15 +152,6 @@ obviamente inválido é recusado na hora pelo Cloud Run, enquanto um placeholder
 plausível pode ser aplicado e publicar o contêiner errado. No caso do scanner,
 isso seria trocar o antivírus por algo que não varre nada.
 
-## `imports.tf` é temporário
-
-Contém os blocos `import` dos recursos do bootstrap. **Remover num commit seguinte,
-depois do primeiro apply verde** — cumprido o import, os blocos viram ruído.
-
-Critério de revisão do plan enquanto eles existirem: **nenhum recurso listado em
-`imports.tf` pode aparecer como "will be created"**. Um create ali significa que o
-ID de import está errado, e um apply nesse estado falha por conflito.
-
 ## Rodar um plan localmente
 
 ```bash
@@ -180,9 +181,11 @@ cd infra/terraform && terraform init && terraform plan
 - **PITR do Firestore** é uma SKU cobrada que não consta na tabela de custos da
   arquitetura (seção 12). No volume previsto é fração de centavo, mas está
   registrado aqui para não virar surpresa na fatura.
-- **`gs://lexintegra-tfstate` (sem sufixo)** existe no projeto, vazio e sem uso —
-  sobra do bootstrap. Não é gerido por este Terraform. Convém remover à mão para
-  não haver dois buckets de state parecidos convidando a erro.
+- **`gs://lexintegra-tfstate` (sem sufixo) não existe mais.** Era sobra do
+  bootstrap, vazia e fora deste Terraform, com nome quase igual ao do bucket de
+  state verdadeiro (`lexintegra-tfstate-36bda`, em `backend.tf`). Foi removido à
+  mão em 03/09/2026. A conferência de que sumiu — e o que fazer se reaparecer —
+  está em `docs/runbooks/limpeza-infra.md`, seção 1.
 
 ## Observabilidade (Etapa 12)
 

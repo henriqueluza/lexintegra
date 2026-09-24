@@ -17,10 +17,10 @@ export type Baldes = Readonly<Record<Balde, Bucket>>;
  * ASSINATURA SEM CHAVE JSON. O Cloud Run usa credencial de ambiente, sem chave
  * privada em disco — entao `getSignedUrl` assina pela API de IAM
  * (`signBlob`), o que exige `roles/iam.serviceAccountTokenCreator` da service
- * account SOBRE SI MESMA. A concessao esta em `infra/terraform/iam.tf`; sem ela
- * a emissao falha em producao e funciona na maquina do desenvolvedor, que tem
- * credencial de usuario. E o modo de falha mais confuso deste modulo, e por isso
- * esta escrito aqui.
+ * account SOBRE SI MESMA. A concessao esta em `infra/terraform/varredura.tf`
+ * (`api_assina_urls`); sem ela a emissao falha em producao e funciona na maquina
+ * do desenvolvedor, que tem credencial de usuario. E o modo de falha mais
+ * confuso deste modulo, e por isso esta escrito aqui.
  *
  * `version: 'v4'` em tudo: a v2 nao suporta o cabecalho de tamanho maximo, que e
  * o que impede uma URL de escrita de virar upload ilimitado.

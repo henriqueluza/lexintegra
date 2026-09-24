@@ -349,9 +349,9 @@ jobs:
             const corpo = [
               '### Terraform plan',
               '',
-              'Revisar antes do merge. Enquanto os blocos de `import` existirem em',
-              '`imports.tf`, o criterio e: **nenhum recurso importado pode aparecer',
-              'como "will be created"** — um create ali significa import errado.',
+              'Revisar antes do merge. Se o PR trouxer bloco de `import`, o criterio',
+              'e: **nenhum recurso importado pode aparecer como "will be created"** —',
+              'um create ali significa import errado (ver `infra/terraform/README.md`).',
               '',
               '<details><summary>Plano completo</summary>',
               '',
