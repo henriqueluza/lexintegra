@@ -1106,7 +1106,7 @@ São o mesmo padrão, e vale enunciá-lo: **estado derivável do tempo se calcul
 
 **Decisão.** Exportar por OTLP para `https://telemetry.googleapis.com/v1/traces`, com `@opentelemetry/exporter-trace-otlp-proto` e credencial do ambiente (ADC). Entregar a um terceiro um componente que morre em semanas seria transferir o problema junto com o sistema.
 
-**Custo da decisão.** Duas mudanças de infraestrutura: a API `telemetry.googleapis.com` habilitada e o papel `roles/telemetry.tracesWriter` na conta de runtime. O papel `roles/cloudtrace.agent` fica até a primeira exportação ser confirmada em produção — remover os dois de uma vez deixaria a etapa sem caminho de volta.
+**Custo da decisão.** Duas mudanças de infraestrutura: a API `telemetry.googleapis.com` habilitada e o papel `roles/telemetry.tracesWriter` na conta de runtime. O papel `roles/cloudtrace.agent` ficou até a primeira exportação ser confirmada em produção — remover os dois de uma vez deixaria a etapa sem caminho de volta. Saiu no Bloco D, depois da conferência de `docs/runbooks/limpeza-infra.md`, seção 4.
 
 **Armadilha que o desenho evita.** O token do Google expira em uma hora. O exportador OTLP aceita callback assíncrono de cabeçalho exatamente por isso; fixar o token na criação faria o rastreio funcionar por sessenta minutos e parar depois, sem erro nenhum — a instância continuaria de pé, só sem trace.
 

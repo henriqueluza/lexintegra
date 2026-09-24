@@ -207,7 +207,7 @@ segurança registrado: a confirmação consultar a cobrança no gateway.
 **Etapa 12 — observabilidade, qualidade e endurecimento (branch `feat/observabilidade`):**
 
 - **O log estruturado e um `LoggerService` proprio** (`observabilidade/logger-estruturado.ts`). O `json: true` do Nest escreve `level` e `timestamp` numerico; o Cloud Logging le `severity`. Ate aqui o alerta critico chegava como `textPayload` e **nenhuma politica casaria com ele**.
-- **Trace por OTLP para a Telemetry API, nao pelo exportador do Cloud Trace** (ADR-20): aquele sera arquivado em 30/10/2026. Exige `telemetry.googleapis.com` habilitada e `roles/telemetry.tracesWriter`; `cloudtrace.agent` fica ate a primeira exportacao ser confirmada em producao.
+- **Trace por OTLP para a Telemetry API, nao pelo exportador do Cloud Trace** (ADR-20): aquele sera arquivado em 30/10/2026. Exige `telemetry.googleapis.com` habilitada e `roles/telemetry.tracesWriter`; `cloudtrace.agent`, do exportador antigo, saiu depois de a exportacao por OTLP ser confirmada em producao (Bloco D).
 - **Sem gancho de ESM**, e nao por acaso: o Express 5 e CommonJS, entao o gancho de `require` da conta. Ele fica atras de `RASTREIO_HOOK_ESM`, desligado. `instrumentation-nestjs-core` nao entra — declara `>=4 <12`.
 - **A amostragem NAO usa as variaveis padrao do OpenTelemetry**: `parentbased_traceidratio` deixa `remoteParentNotSampled` em `AlwaysOff`, que e o caso comum no Cloud Run — nenhum trace nosso existiria.
 - **O registro do outbox guarda `rastreio`**, o traceparent de origem, e a entrega loga o trace id dele. A entrega quase sempre roda noutro trace.

@@ -927,7 +927,7 @@ quebra dois pontos abaixo do piso observado. O sobrevivente que valia matar era
 - Definir quais alertas acordam alguém e quais só registram. É decisão operacional que depende de quem vai atender. A estrutura está pronta: `infra/terraform/alertas-roteamento.json`, hoje com os oito alertas em `pendente`.
 - Confirmar com a CONTRATANTE quem receberá os alertas depois da entrega, já que a operação passa a ser dela. Hoje o destinatário é provisório e vem da variável `ALERTAS_EMAIL_DESENVOLVIMENTO` do GitHub — sem ela, nenhum canal é criado.
 - **Disparar o alerta artificial e confirmar que ele chega** — é o critério de aceite da etapa, e não há como automatizá-lo. Roteiro em `docs/runbooks/alerta-artificial.md`.
-- Conferir em produção, depois do primeiro deploy: o `traceparent` sobrevivendo ao rewrite do Hosting e ao Cloud Tasks (nenhuma documentação promete isso), e a primeira exportação por OTLP chegando ao Cloud Trace — só depois disso o papel `roles/cloudtrace.agent` pode sair.
+- Conferir em produção, depois do primeiro deploy: o `traceparent` sobrevivendo ao rewrite do Hosting e ao Cloud Tasks (nenhuma documentação promete isso), e a primeira exportação por OTLP chegando ao Cloud Trace — só depois disso o papel `roles/cloudtrace.agent` pode sair. *(Confirmado e removido no Bloco D; roteiro em `docs/runbooks/limpeza-infra.md`, seção 4.)*
 - Medir o custo de `verifyIdToken(checkRevoked)` com o trace agora disponível (pendência aberta desde a Etapa 4).
 - Aprovar as imagens de referência da regressão visual antes de elas entrarem.
 
