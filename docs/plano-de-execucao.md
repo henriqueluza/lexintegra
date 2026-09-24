@@ -159,7 +159,7 @@ Diferente da verificação do Google, não há revisão pública nem espera de s
 **Correções ao registro anterior, apuradas por auditoria `gcloud` read-only:**
 
 - **O Firestore não existia.** `gcloud firestore databases describe "(default)"` devolvia `NOT_FOUND`. Ele é **criado** pelo Terraform (`firestore.tf`), não importado — a premissa de que tudo da Etapa 2 seria import estava errada nesse ponto.
-- **`gs://lexintegra-tfstate` (sem sufixo) existe neste projeto**, vazio, com acesso uniforme ligado. O registro acima dizia que o nome estava em uso globalmente por terceiros; não está — é um bucket do próprio projeto, sobra do bootstrap. Não entra no Terraform. Convém removê-lo à mão para não haver dois buckets de state parecidos convidando a erro.
+- **`gs://lexintegra-tfstate` (sem sufixo) existe neste projeto**, vazio, com acesso uniforme ligado. O registro acima dizia que o nome estava em uso globalmente por terceiros; não está — é um bucket do próprio projeto, sobra do bootstrap. Não entra no Terraform. Convém removê-lo à mão para não haver dois buckets de state parecidos convidando a erro. *(Removido à mão em 03/09/2026; conferência em `docs/runbooks/limpeza-infra.md`, seção 1.)*
 - **A `terraform-ci` não tinha permissão suficiente** para o escopo da etapa. Faltavam `iam.serviceAccountAdmin`, `resourcemanager.projectIamAdmin`, `serviceusage.serviceUsageAdmin` e `firebasehosting.admin`. Concedidos manualmente — é IAM de produção, fora do alcance do agente.
 - O versionamento do bucket de state **está mesmo ligado**, como o registro dizia.
 

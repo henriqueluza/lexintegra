@@ -181,9 +181,11 @@ cd infra/terraform && terraform init && terraform plan
 - **PITR do Firestore** é uma SKU cobrada que não consta na tabela de custos da
   arquitetura (seção 12). No volume previsto é fração de centavo, mas está
   registrado aqui para não virar surpresa na fatura.
-- **`gs://lexintegra-tfstate` (sem sufixo)** existe no projeto, vazio e sem uso —
-  sobra do bootstrap. Não é gerido por este Terraform. Convém remover à mão para
-  não haver dois buckets de state parecidos convidando a erro.
+- **`gs://lexintegra-tfstate` (sem sufixo) não existe mais.** Era sobra do
+  bootstrap, vazia e fora deste Terraform, com nome quase igual ao do bucket de
+  state verdadeiro (`lexintegra-tfstate-36bda`, em `backend.tf`). Foi removido à
+  mão em 03/09/2026. A conferência de que sumiu — e o que fazer se reaparecer —
+  está em `docs/runbooks/limpeza-infra.md`, seção 1.
 
 ## Observabilidade (Etapa 12)
 
