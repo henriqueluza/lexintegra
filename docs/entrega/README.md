@@ -34,6 +34,7 @@ com teste que cai quando for substituído.
 | [Operação](operacao.md) | Quem mantém o sistema no ar | Do push à produção. Todas as variáveis de ambiente. Modos travados. Como ligar Resend, AbacatePay e Teams. Rotinas, buckets, alertas e tarefas do administrador |
 | [LGPD](lgpd.md) | Encarregado, escritório e quem opera | O que está pronto (exportação) e o que está **bloqueado** (aviso e eliminação). O que a política de retenção precisa decidir |
 | [Credenciais](credenciais.md) | Quem assume as contas | Inventário de toda credencial, sem valores. Como trocar cada uma e confirmar a troca. Ordem da rotação. Acessos pessoais do desenvolvedor |
+| [Transferência](transferencia.md) | Desenvolvedor e escritório, juntos | A ordem em que repositório, projeto, terceiros e alertas mudam de mãos sem derrubar nada. Inclui o risco da federação do GitHub |
 
 ## Runbooks (incidentes)
 
