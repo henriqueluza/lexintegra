@@ -1,25 +1,33 @@
 # Runbook — reunião sem link do Teams
 
-**Alertas que levam aqui:**
+**Alertas que levam aqui** (todos em `infra/terraform/observabilidade.tf`):
 
-- *Disponibilidade publicada sem link de reuniao* (`disponibilidade_sem_link`,
-  em `infra/terraform/observabilidade.tf`).
+- *Reuniao marcada sem sala do Teams* (`reuniao_sem_sala`): há reunião em
+  `reservada_sem_link` há mais de `limite_reuniao_sem_sala_minutos` (60). É o
+  incidente: o cliente marcou e a sala não nasceu. Continua disparando enquanto
+  a reunião estiver sem sala.
+- *Disponibilidade publicada sem link de reuniao* (`disponibilidade_sem_link`):
+  há advogado ativo, com horário publicado na semana corrente ou seguinte, e
+  **sem `usuarioTeams`**. É o preventivo: ainda não há reunião quebrada, mas um
+  cliente pode marcar com ele. O log da sonda traz o `advogadoId`
+  (`jsonPayload.sinal="disponibilidade.sem-link"`).
 - *Alerta critico da aplicacao* com `outbox.abandonado` de um registro
-  `criar-sala-reuniao`.
+  `criar-sala-reuniao`. Avisa uma vez, depois de 10 tentativas.
 
-> **Estado de hoje: esta situação não acontece, e o alerta não dispara.**
+Os dois primeiros vêm da sonda `sinais-operacionais`, a cada 5 minutos
+(`apps/api/src/sinais/reunioes.ts`).
+
+> **Com o Teams desligado, nenhum dos três dispara, e isso é o correto.**
+> Com `REUNIOES_MODO=desligado` (`infra/terraform/cloud_run.tf`), ninguém marca
+> reunião, e a sonda **não emite** o sinal de disponibilidade: todo advogado
+> estaria "sem link" por uma integração desligada de propósito.
 >
-> - Com `REUNIOES_MODO=desligado` (`infra/terraform/cloud_run.tf`), nenhuma
->   reunião é marcada: o cartão do pedido diz que o agendamento está
->   indisponível.
-> - **Nenhum código emite o sinal `disponibilidade.sem-link`** que a política
->   mede. Ela foi criada na Etapa 12 esperando a Etapa 10, e a Etapa 10 não
->   ligou a emissão. Enquanto isso não for feito, **esta política nunca
->   dispara**, e o único aviso de reunião sem sala é o `outbox.abandonado`
->   depois de 10 tentativas.
->
-> Este runbook vale a partir de quando o Teams for ligado
-> ([`operacao.md`](../entrega/operacao.md), seção 4.3).
+> **Com o Teams ligado, espere o alerta de disponibilidade para os advogados
+> criados antes de o `usuarioTeams` existir.** A API não edita advogado já
+> criado (achado 4.3, aguarda decisão de escopo), então eles não têm como
+> receber o campo pela aplicação. **É comportamento esperado, não falha.** O
+> alerta some quando o campo for preenchido ou quando o advogado deixar de ter
+> horário publicado.
 
 **Como funciona** (ADR-21, regra 13):
 

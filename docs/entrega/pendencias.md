@@ -56,7 +56,7 @@ risque-o aqui e atualize o documento que ele cita.
 | Nome do repositório de destino | [`transferencia.md`](transferencia.md) 2.1 | E |
 | Processo de contestação (chargeback) | [`runbooks/alerta-critico.md`](../runbooks/alerta-critico.md) | E |
 | Quem decide um pagamento sem pedido, e em quanto tempo | [`runbooks/pagamento-orfao.md`](../runbooks/pagamento-orfao.md) | E |
-| Destinatários e roteamento dos oito alertas | [`transferencia.md`](transferencia.md), Fases 0 e 4 | E |
+| Destinatários e roteamento de cada alerta | [`transferencia.md`](transferencia.md), Fases 0 e 4 | E |
 
 Para listar o que ainda está aberto:
 

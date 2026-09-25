@@ -197,15 +197,15 @@ resource "google_logging_metric" "clamav_base_idade" {
   }
 }
 
-# SEM EMISSOR ATE A ETAPA 10, e isso e deliberado.
+# Advogado ATIVO, com horario publicado na semana corrente ou na seguinte, e sem
+# `usuarioTeams` — o preventivo: um cliente pode marcar com ele e a sala nunca
+# nasceria (ADR-21, decisao B). A sonda emite UMA LINHA POR ADVOGADO
+# (`sinais/reunioes.ts`), e a metrica conta linhas.
 #
-# A arquitetura (secao 9) lista "advogados com disponibilidade publicada e sem
-# link de reuniao" entre as metricas de negocio. O modelo nao tem campo de
-# reuniao — a Etapa 10 esta bloqueada por dependencia externa (Entra ID/Teams) —,
-# entao NADA emite este sinal hoje. A metrica e a politica existem para que a
-# Etapa 10 so precise emitir a linha; a politica dispara com `> 0` e, sem dado,
-# nao dispara nunca. Emitir `0` daqui seria fingir medicao de algo que nao
-# existe.
+# SO E EMITIDO COM O TEAMS LIGADO. Com `REUNIOES_MODO=desligado` a sonda nao
+# emite, e a metrica fica sem ponto: todo advogado estaria "sem link" por uma
+# integracao desligada de proposito (achado 4.2 do Bloco E). Ate o Bloco E
+# nada emitia este sinal, e a politica nunca disparava.
 resource "google_logging_metric" "disponibilidade_sem_link" {
   project = var.project_id
   name    = "disponibilidade-sem-link"
@@ -214,6 +214,31 @@ resource "google_logging_metric" "disponibilidade_sem_link" {
   metric_descriptor {
     metric_kind = "DELTA"
     value_type  = "INT64"
+  }
+}
+
+# Idade da reuniao em `reservada_sem_link` criada ha mais tempo, na MESMA linha
+# `sinais` da sonda — como as idades do outbox e da quarentena. Sai sempre,
+# inclusive zerada; com o Teams desligado nenhuma reuniao nasce, e o valor e 0.
+# Complementa o `outbox.abandonado`, que avisa uma vez so: este continua medindo
+# enquanto a reuniao estiver sem sala (achado 4.2 do Bloco E).
+resource "google_logging_metric" "reuniao_sem_sala" {
+  project         = var.project_id
+  name            = "reuniao-sem-sala-segundos"
+  filter          = "resource.type=\"cloud_run_revision\" AND jsonPayload.sinal=\"sinais\""
+  value_extractor = "EXTRACT(jsonPayload.reuniaoSemSalaSegundos)"
+  bucket_options {
+    linear_buckets {
+      num_finite_buckets = 48
+      width              = 900
+      offset             = 0
+    }
+  }
+
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "DISTRIBUTION"
+    unit        = "s"
   }
 }
 
@@ -483,7 +508,6 @@ resource "google_monitoring_alert_policy" "clamav_base_sem_publicacao" {
   }
 }
 
-# SEM TRAFEGO ATE A ETAPA 10 — ver o comentario da metrica.
 resource "google_monitoring_alert_policy" "disponibilidade_sem_link" {
   project               = var.project_id
   display_name          = "Disponibilidade publicada sem link de reuniao"
@@ -492,14 +516,14 @@ resource "google_monitoring_alert_policy" "disponibilidade_sem_link" {
 
   documentation {
     content = <<-EOT
-      Ha reuniao marcada sem link do Teams (regra inviolavel 13: o link nunca e
-      inventado nem reaproveitado; a reuniao fica em estado "sem link").
+      Ha advogado ativo, com horario publicado na semana corrente ou na seguinte, e
+      sem `usuarioTeams` (o object ID do Entra). Um cliente pode marcar com ele, e a
+      sala do Teams nunca seria criada: a reuniao ficaria em "reservada_sem_link"
+      (regra inviolavel 13). O log da sonda traz o `advogadoId` de cada um.
 
-      ESTA POLITICA NASCE SEM TRAFEGO. O modelo ainda nao tem campo de reuniao — a
-      Etapa 10 depende de configuracao no Entra ID —, entao nenhum codigo emite o sinal
-      `disponibilidade.sem-link`. Ela existe para a Etapa 10 so precisar emitir a linha,
-      e enquanto isso nao dispara: sem dado, `> 0` nunca e verdadeiro. Se aparecer
-      incidente aqui antes da Etapa 10, e defeito de filtro, nao de negocio.
+      So dispara com o Teams ligado: com REUNIOES_MODO=desligado a sonda nao emite
+      este sinal. Enquanto a edicao de advogado nao existir, advogados criados antes
+      de o campo existir disparam este alerta — comportamento esperado.
 
       Runbook: docs/runbooks/reuniao-sem-link.md
     EOT
@@ -517,6 +541,41 @@ resource "google_monitoring_alert_policy" "disponibilidade_sem_link" {
       aggregations {
         alignment_period   = "600s"
         per_series_aligner = "ALIGN_SUM"
+      }
+    }
+  }
+}
+
+resource "google_monitoring_alert_policy" "reuniao_sem_sala" {
+  project               = var.project_id
+  display_name          = "Reuniao marcada sem sala do Teams"
+  combiner              = "OR"
+  notification_channels = local.canais_por_alerta["reuniao-sem-sala"]
+
+  documentation {
+    content = <<-EOT
+      Ha reuniao em "reservada_sem_link" ha mais de ${var.limite_reuniao_sem_sala_minutos} minutos: o
+      cliente marcou, o slot e o saldo estao reservados, e a sala do Teams nao
+      nasceu. O `outbox.abandonado` avisa uma vez, depois de 10 tentativas; este
+      continua enquanto a reuniao estiver sem sala. Com o Teams desligado nenhuma
+      reuniao nasce, e este alerta nao dispara.
+
+      Runbook: docs/runbooks/reuniao-sem-link.md
+    EOT
+  }
+
+  conditions {
+    display_name = "idade da mais antiga acima do limite"
+
+    condition_threshold {
+      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.reuniao_sem_sala.name}\" AND resource.type=\"cloud_run_revision\""
+      comparison      = "COMPARISON_GT"
+      threshold_value = var.limite_reuniao_sem_sala_minutos * 60
+      duration        = "0s"
+
+      aggregations {
+        alignment_period   = "600s"
+        per_series_aligner = "ALIGN_PERCENTILE_99"
       }
     }
   }

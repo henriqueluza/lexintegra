@@ -223,6 +223,18 @@ variable "limite_quarentena_minutos" {
   default     = 60
 }
 
+variable "limite_reuniao_sem_sala_minutos" {
+  description = <<-EOT
+    A partir de quantos minutos uma reuniao em `reservada_sem_link` vira alerta.
+
+    A criacao da sala passa pelo outbox, que reentrega com backoff por ate uma
+    hora antes de abandonar. 60 minutos deixa a fila trabalhar e avisa quando ela
+    ja desistiu ou esta perto disso.
+  EOT
+  type        = number
+  default     = 60
+}
+
 variable "limite_base_clamav_horas" {
   description = <<-EOT
     A partir de quantas horas a base de assinaturas e considerada velha.

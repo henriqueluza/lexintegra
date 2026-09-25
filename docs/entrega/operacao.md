@@ -393,14 +393,15 @@ continua recuperável por até 7 dias. A única coleção com TTL é `checkouts`
 | Arquivo parado em quarentena | Arquivo sem veredito há mais de 60 min | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
 | Base do ClamAV velha | Base publicada com mais de 48 h | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
 | Base do ClamAV sem publicacao | Nenhuma publicação em 23 h | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
-| Disponibilidade publicada sem link de reuniao | Sinal `disponibilidade.sem-link` > 0. **Nenhum código emite esse sinal hoje** | [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
+| Disponibilidade publicada sem link de reuniao | Advogado ativo, com horário publicado e sem `usuarioTeams`. **Só com o Teams ligado**: com `REUNIOES_MODO=desligado`, a sonda não emite o sinal | [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
+| Reuniao marcada sem sala do Teams | Reunião em `reservada_sem_link` há mais de 60 min | [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
 | API fora do ar | O uptime check de `https://lexintegra.com.br/api/health` falha | [`api-fora-do-ar.md`](../runbooks/api-fora-do-ar.md) |
 
 **Quem recebe.** Um canal de e-mail, *Desenvolvimento (PROVISORIO)*, criado só
 quando `ALERTAS_EMAIL_DESENVOLVIMENTO` existe no GitHub. Hoje o valor está
 numa *variable* do repositório, e não num *secret*. O roteamento está em
 [`alertas-roteamento.json`](../../infra/terraform/alertas-roteamento.json), e
-os oito alertas estão em `pendente` (só o canal provisório recebe). Trocar o
+todos os alertas estão em `pendente` (só o canal provisório recebe). Trocar o
 destino e decidir o roteamento faz parte da transferência
 ([`transferencia.md`](transferencia.md)). Depois de qualquer troca, siga
 [`runbooks/alerta-artificial.md`](../runbooks/alerta-artificial.md).

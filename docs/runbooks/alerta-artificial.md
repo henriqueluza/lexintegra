@@ -23,7 +23,7 @@ inclusive na Etapa 13, quando a operação passar para a CONTRATANTE.
    comportamento certo, mas não fecha o critério de aceite.
 
 2. **O deploy já aplicou as políticas?** Confirme no console:
-   Monitoring → Alerting → Policies. Devem existir oito, entre elas
+   Monitoring → Alerting → Policies. Devem existir todas as de `observabilidade.tf`, entre elas
    *Alerta critico da aplicacao*.
 
 ---

@@ -95,8 +95,8 @@ Tudo em `observabilidade.tf`, salvo indicação.
 
 | Item | Quantidade |
 |---|---|
-| Métricas personalizadas por log | **6**: `alertas-criticos`, `outbox-atraso-segundos`, `quarentena-atraso-segundos`, `outbox-entregas`, `clamav-base-idade-horas`, `disponibilidade-sem-link` |
-| Políticas de alerta | **8**, todas com condição sobre métrica. A arquitetura, seção 12, registra que o Monitoring passa a cobrar alertas a partir de 01/09/2027 |
+| Métricas personalizadas por log | **7**: `alertas-criticos`, `outbox-atraso-segundos`, `quarentena-atraso-segundos`, `outbox-entregas`, `clamav-base-idade-horas`, `disponibilidade-sem-link`, `reuniao-sem-sala-segundos` |
+| Políticas de alerta | **9**, todas com condição sobre métrica. A arquitetura, seção 12, registra que o Monitoring passa a cobrar alertas a partir de 01/09/2027 |
 | Uptime check | **1**, `API LexIntegra (/api/health)`, a cada **300 s**, a partir de várias regiões |
 | Painel | 1 (`paineis/operacao.json`) |
 | Canal de notificação | 1 e-mail, e só existe com a variável do GitHub definida |
