@@ -108,6 +108,7 @@ bloco.
 | **PITR do Firestore** | Ligado (`infra/terraform/firestore.tf`). Um documento apagado é recuperável por até **7 dias**. A política precisa dizer se isso é aceitável e o que fazer se um backup for restaurado depois de uma eliminação |
 | **Backups agendados** | Nenhum. Não há `backup schedule` no Terraform. Se o escritório criar um, a política precisa cobrir |
 | **Versões antigas no bucket de arquivos** | Ficam sem prazo (seção 3) |
+| **Soft delete do Cloud Storage** | Ligado com 7 dias nos cinco buckets, pelo padrão do Google, sem declaração no Terraform. Mesmo um objeto apagado de verdade é recuperável por 7 dias ([`inventario-custos.md`](inventario-custos.md), seção 3) |
 | **Logs** | Bucket `_Default` do Cloud Logging, com 30 dias. A aplicação não loga dado pessoal por regra, mas mensagens de terceiros podem conter. O motivo de falha de e-mail tem o endereço redigido |
 | **AbacatePay** | Guarda os dados de quem pagou com cartão, digitados na página hospedada, e o histórico das cobranças. O PIX sai sem `customer`. Eliminação é pedido ao AbacatePay |
 | **Resend** | Guarda endereço, assunto e registro das mensagens enviadas, fora do Brasil (arquitetura, seção 13). Eliminação é pedido ao Resend |
