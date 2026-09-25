@@ -30,6 +30,7 @@ com teste que cai quando for substituído.
 
 | Documento | Para quem | O que resolve |
 |---|---|---|
+| [Pendências](pendencias.md) | Todos | O que ficou em aberto na entrega, com o dono de cada item |
 | [Guia do código](guia-do-codigo.md) | Quem vai mexer no código | Mapa do repositório, módulo por módulo. Como rodar e testar localmente. O que o pipeline cobra |
 | [Operação](operacao.md) | Quem mantém o sistema no ar | Do push à produção. Todas as variáveis de ambiente. Modos travados. Como ligar Resend, AbacatePay e Teams. Rotinas, buckets, alertas e tarefas do administrador |
 | [LGPD](lgpd.md) | Encarregado, escritório e quem opera | O que está pronto (exportação) e o que está **bloqueado** (aviso e eliminação). O que a política de retenção precisa decidir |
