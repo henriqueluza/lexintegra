@@ -35,7 +35,25 @@ com teste que cai quando for substituído.
 
 ## Runbooks (incidentes)
 
-Ficam em [`docs/runbooks/`](../runbooks/).
+Ficam em `docs/runbooks/`. Todos seguem o mesmo roteiro: sintoma, como
+confirmar, o que fazer, o que nunca fazer e como saber que resolveu. Cada
+política de alerta traz o caminho do runbook no próprio texto do incidente.
+
+| Runbook | Quando abrir |
+|---|---|
+| [alerta-critico.md](../runbooks/alerta-critico.md) | Chegou *Alerta critico da aplicacao*. Triagem pelo `assunto` |
+| [pagamento-orfao.md](../runbooks/pagamento-orfao.md) | Houve pagamento e não há pedido (órfão, divergente, conflito de conta) |
+| [webhook-fora-do-ar.md](../runbooks/webhook-fora-do-ar.md) | O AbacatePay não consegue entregar eventos, ou o evento é desconhecido ou ilegível |
+| [outbox-parado.md](../runbooks/outbox-parado.md) | E-mail, sala ou estorno não saiu. Registro abandonado e reenvio manual |
+| [entrega-de-email-falhando.md](../runbooks/entrega-de-email-falhando.md) | O Resend recusa, inclusive pelo teto diário |
+| [scanner-indisponivel.md](../runbooks/scanner-indisponivel.md) | Arquivo parado em quarentena, base do ClamAV velha ou sem publicação |
+| [reuniao-sem-link.md](../runbooks/reuniao-sem-link.md) | Reunião marcada sem sala do Teams |
+| [api-fora-do-ar.md](../runbooks/api-fora-do-ar.md) | O uptime check falhou |
+| [deploy-recusado.md](../runbooks/deploy-recusado.md) | Pipeline vermelho, plano inesperado, revisão que não sobe |
+| [lgpd-titular.md](../runbooks/lgpd-titular.md) | Pedido de exportação ou de eliminação de um titular |
+| [alerta-artificial.md](../runbooks/alerta-artificial.md) | Depois de trocar o destinatário dos alertas |
+| [limpeza-infra.md](../runbooks/limpeza-infra.md) | Conferências e remoções manuais do Bloco D |
+| [checkout-sandbox.md](../runbooks/checkout-sandbox.md) | Rodada do checkout no sandbox, inclusive a parte de cartão pendente |
 
 ## Referências que já existiam
 

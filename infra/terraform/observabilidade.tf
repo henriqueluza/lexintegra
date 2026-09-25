@@ -260,6 +260,8 @@ resource "google_monitoring_alert_policy" "alertas_criticos" {
       tentativas; `pagamento.orfao`, `pagamento.divergente` e
       `pagamento.conflito_de_conta` sao casos em que houve dinheiro e nao ha pedido.
       Nenhum deles se resolve sozinho.
+
+      Runbook: docs/runbooks/alerta-critico.md
     EOT
   }
 
@@ -293,6 +295,8 @@ resource "google_monitoring_alert_policy" "outbox_parado" {
       segundos; o varredor fecha a janela de tarefa perdida em minutos. Acima disso,
       algo esta impedindo a entrega — provedor fora do ar, fila com backoff longo, ou
       registros abandonados acumulando.
+
+      Runbook: docs/runbooks/outbox-parado.md
     EOT
   }
 
@@ -330,6 +334,8 @@ resource "google_monitoring_alert_policy" "entrega_de_email_falhando" {
       Varias tentativas de entrega falharam na mesma janela. Uma falha isolada e o
       caso que a fila resolve sozinha; varias seguidas indicam provedor recusando —
       teto diario do Resend, dominio nao verificado, chave revogada.
+
+      Runbook: docs/runbooks/entrega-de-email-falhando.md
     EOT
   }
 
@@ -363,6 +369,8 @@ resource "google_monitoring_alert_policy" "quarentena_parada" {
       esgotou as tentativas e sumiu da fila. Nada falhou agora, ninguem foi avisado, e o
       arquivo fica parado — o cliente so ve "em verificacao de seguranca" (regra
       inviolavel 6).
+
+      Runbook: docs/runbooks/scanner-indisponivel.md
     EOT
   }
 
@@ -396,6 +404,8 @@ resource "google_monitoring_alert_policy" "clamav_base_velha" {
       limite de taxa e nao ha nada novo a aplicar, e o bucket recebe de volta os mesmos
       bytes. Um scanner que responde "limpo" com assinaturas velhas parece estar
       funcionando, e e esse o pior desfecho possivel.
+
+      Runbook: docs/runbooks/scanner-indisponivel.md
     EOT
   }
 
@@ -449,6 +459,8 @@ resource "google_monitoring_alert_policy" "clamav_base_sem_publicacao" {
       dia, entao isto significa pelo menos uma execucao perdida — e provavelmente duas.
       Sem esta politica, um job que simplesmente para de rodar nao dispara nada: o alerta
       de base velha depende de haver sinal para medir.
+
+      Runbook: docs/runbooks/scanner-indisponivel.md
     EOT
   }
 
@@ -488,6 +500,8 @@ resource "google_monitoring_alert_policy" "disponibilidade_sem_link" {
       `disponibilidade.sem-link`. Ela existe para a Etapa 10 so precisar emitir a linha,
       e enquanto isso nao dispara: sem dado, `> 0` nunca e verdadeiro. Se aparecer
       incidente aqui antes da Etapa 10, e defeito de filtro, nao de negocio.
+
+      Runbook: docs/runbooks/reuniao-sem-link.md
     EOT
   }
 
@@ -519,6 +533,8 @@ resource "google_monitoring_alert_policy" "api_fora_do_ar" {
       O uptime check falhou de mais de uma regiao. Como ele bate no dominio publico, a
       falha pode estar no Hosting, no rewrite (ADR-15) ou no Cloud Run — nesta ordem de
       probabilidade, porque o Cloud Run tem startup probe no mesmo endpoint.
+
+      Runbook: docs/runbooks/api-fora-do-ar.md
     EOT
   }
 
