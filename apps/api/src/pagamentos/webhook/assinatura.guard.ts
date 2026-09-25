@@ -68,7 +68,7 @@ export class AssinaturaWebhookGuard implements CanActivate {
     const assinatura = texto(requisicao.headers[CABECALHO_ASSINATURA]);
 
     if (!segredoConfere(segredo, this.configuracao.segredoWebhook)) {
-      return this.recusar('segredo da URL ausente ou diferente');
+      return this.recusar('segredo', 'segredo da URL ausente ou diferente');
     }
     if (
       !assinaturaConfere(
@@ -77,13 +77,24 @@ export class AssinaturaWebhookGuard implements CanActivate {
         this.configuracao.chaveHmacWebhook,
       )
     ) {
-      return this.recusar('assinatura ausente ou diferente do corpo');
+      return this.recusar(
+        'assinatura',
+        'assinatura ausente ou diferente do corpo',
+      );
     }
     return true;
   }
 
-  private recusar(motivo: string): never {
-    this.log.warn(`webhook recusado: ${motivo}`);
+  /**
+   * `sinal` e `motivo` sao o que a metrica `webhook-recusado` le (achado 4.5 do
+   * Bloco E). O motivo e o CODIGO curto, estavel; a frase fica so na mensagem.
+   * Renomear um dos dois desliga o alerta em silencio.
+   */
+  private recusar(motivo: 'segredo' | 'assinatura', frase: string): never {
+    this.log.warn(`webhook recusado: ${frase}`, {
+      sinal: 'webhook.recusado',
+      motivo,
+    });
     throw new UnauthorizedException('Assinatura invalida.');
   }
 }

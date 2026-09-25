@@ -91,15 +91,25 @@ quando]`.
 ### A rotina de 30 dias dos entregáveis é outra coisa
 
 `retencao-diaria` ([`operacao.md`](operacao.md), seções 5 e 6) avisa e exclui
-**arquivos de entregável** 30 dias depois de `entregue`. Ela não elimina o
-titular, e o prazo dela é provisório. Um detalhe que a política precisa
-conhecer: o bucket `lexintegra-arquivos-36bda` tem **versionamento ligado e
-nenhuma regra de ciclo de vida** (`infra/terraform/storage.tf`). A exclusão
-chama `delete()` sem geração (`apps/api/src/armazenamento/gcs.armazenamento.ts`).
-Num bucket versionado, isso torna o objeto *não atual*, e **os bytes continuam
-guardados**. Hoje, "excluído pela retenção" não quer dizer "apagado do
-armazenamento". Isso está registrado como achado, e não foi corrigido neste
-bloco.
+**arquivos de entregável** 30 dias depois de `entregue`: todas as versões do
+entregável, e não só a atual. Ela não elimina o titular, e o prazo dela é
+provisório.
+
+**Quanto tempo um arquivo sobrevive depois de excluído: até 7 dias.** Desde o
+Bloco E (achado 4.1), o bucket `lexintegra-arquivos-36bda` **não tem
+versionamento**, e a exclusão apaga o objeto de fato. O que sobra é o **soft
+delete de 7 dias** declarado em `infra/terraform/storage.tf`: a janela em que
+uma exclusão errada pode ser desfeita. Os dois números entram na política:
+
+- o prazo da retenção, hoje 30 dias;
+- esta sobrevida de até 7 dias depois da exclusão.
+
+Se o controlador quiser exclusão sem volta, o soft delete do bucket de arquivos
+vai a zero, por PR, sabendo que um erro de operador passa a não ter conserto.
+
+Até o Bloco E, o bucket era versionado e a exclusão só tornava o objeto não
+atual. Uma regra de ciclo de vida apaga essas versões antigas, em geral em até
+um dia depois do deploy que a aplicou.
 
 ## 4. O que a política precisa cobrir e o código não resolve
 
@@ -107,8 +117,8 @@ bloco.
 |---|---|
 | **PITR do Firestore** | Ligado (`infra/terraform/firestore.tf`). Um documento apagado é recuperável por até **7 dias**. A política precisa dizer se isso é aceitável e o que fazer se um backup for restaurado depois de uma eliminação |
 | **Backups agendados** | Nenhum. Não há `backup schedule` no Terraform. Se o escritório criar um, a política precisa cobrir |
-| **Versões antigas no bucket de arquivos** | Ficam sem prazo (seção 3) |
-| **Soft delete do Cloud Storage** | Ligado com 7 dias nos cinco buckets, pelo padrão do Google, sem declaração no Terraform. Mesmo um objeto apagado de verdade é recuperável por 7 dias ([`inventario-custos.md`](inventario-custos.md), seção 3) |
+| **Versões antigas no bucket de arquivos** | O versionamento saiu no Bloco E, e a regra de ciclo de vida apaga as versões não atuais que sobraram (seção 3) |
+| **Soft delete do Cloud Storage** | Declarado em `storage.tf`: **7 dias** no bucket de arquivos (a janela de recuperação) e no de state; **zero** na quarentena, nos source maps e na base do ClamAV. Um arquivo excluído é recuperável por até 7 dias ([`operacao.md`](operacao.md), seção 6) |
 | **Logs** | Bucket `_Default` do Cloud Logging, com 30 dias. A aplicação não loga dado pessoal por regra, mas mensagens de terceiros podem conter. O motivo de falha de e-mail tem o endereço redigido |
 | **AbacatePay** | Guarda os dados de quem pagou com cartão, digitados na página hospedada, e o histórico das cobranças. O PIX sai sem `customer`. Eliminação é pedido ao AbacatePay |
 | **Resend** | Guarda endereço, assunto e registro das mensagens enviadas, fora do Brasil (arquitetura, seção 13). Eliminação é pedido ao Resend |

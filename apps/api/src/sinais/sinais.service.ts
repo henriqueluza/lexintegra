@@ -2,6 +2,11 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Firestore, Timestamp } from 'firebase-admin/firestore';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import { COLECAO_OUTBOX } from '../outbox/outbox.service.js';
+import {
+  CONFIGURACAO_REUNIOES,
+  type ConfiguracaoReunioes,
+} from '../reunioes/sala/modo.js';
+import { advogadosSemLink, idadeDaReuniaoSemSala } from './reunioes.js';
 
 /**
  * O que a sonda mede, em segundos. Zero quando nao ha nada esperando.
@@ -13,6 +18,17 @@ import { COLECAO_OUTBOX } from '../outbox/outbox.service.js';
 export interface Sinais {
   readonly outboxSegundos: number;
   readonly quarentenaSegundos: number;
+  /** Reuniao em `reservada_sem_link` ha mais tempo (`sinais/reunioes.ts`). */
+  readonly reuniaoSemSalaSegundos: number;
+}
+
+/**
+ * O que a sonda devolve: os sinais da linha `sinais` e quantos advogados sairam
+ * como `disponibilidade.sem-link` — `null` com o Teams desligado, porque ai nada
+ * e medido (ver `medirDisponibilidadeSemLink`).
+ */
+export interface Medicao extends Sinais {
+  readonly advogadosSemLink: number | null;
 }
 
 /**
@@ -36,17 +52,52 @@ export interface Sinais {
 export class SinaisService {
   private readonly log = new Logger('Sinais');
 
-  constructor(@Inject(FIRESTORE) private readonly db: Firestore) {}
+  constructor(
+    @Inject(FIRESTORE) private readonly db: Firestore,
+    @Inject(CONFIGURACAO_REUNIOES)
+    private readonly reunioes: ConfiguracaoReunioes,
+  ) {}
 
-  async medir(agora: number = Date.now()): Promise<Sinais> {
+  async medir(agora: number = Date.now()): Promise<Medicao> {
     const sinais: Sinais = {
       outboxSegundos: await this.idadeDoOutbox(agora),
       quarentenaSegundos: await this.idadeDaQuarentena(agora),
+      reuniaoSemSalaSegundos: await idadeDaReuniaoSemSala(this.db, agora),
     };
 
     this.log.log('sinais operacionais', { sinal: 'sinais', ...sinais });
 
-    return sinais;
+    return {
+      ...sinais,
+      advogadosSemLink: await this.medirDisponibilidadeSemLink(agora),
+    };
+  }
+
+  /**
+   * Uma linha `disponibilidade.sem-link` POR ADVOGADO: a metrica e um contador de
+   * linhas, e a politica dispara com qualquer ocorrencia na janela.
+   *
+   * COM O TEAMS DESLIGADO, NAO EMITE NADA, e a escolha e esta — e nao "emitir e a
+   * politica ignorar". Com `REUNIOES_MODO=desligado` ninguem marca reuniao, e todo
+   * advogado estaria "sem link" por uma integracao desligada de proposito: a
+   * politica precisaria saber do modo para nao disparar para sempre, e o modo e
+   * configuracao da API, nao do Monitoring. Sem linha, a metrica fica sem ponto,
+   * `> 0` nunca e verdadeiro, e o silencio e o correto. Quem cobre "a sonda
+   * parou" e o alerta de sonda parada, que nao depende deste sinal.
+   */
+  private async medirDisponibilidadeSemLink(
+    agora: number,
+  ): Promise<number | null> {
+    if (this.reunioes.modo === 'desligado') return null;
+
+    const advogados = await advogadosSemLink(this.db, agora);
+    for (const advogadoId of advogados) {
+      this.log.log(
+        `advogado ${advogadoId} com horario publicado e sem usuarioTeams`,
+        { sinal: 'disponibilidade.sem-link', advogadoId },
+      );
+    }
+    return advogados.length;
   }
 
   /**

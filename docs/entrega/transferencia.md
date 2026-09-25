@@ -26,7 +26,7 @@ Estado conferido em 24/09/2026:
 | # | Passo | Quem | Conferir depois | Voltar atrás |
 |---|---|---|---|---|
 | 0.1 | O escritório escolhe as contas de destino: uma conta Google para dono do projeto, uma organização ou conta no GitHub, e e-mails no domínio do escritório para Resend e alertas (arquitetura, seção 13, "Governança de contas") | Escritório | Lista escrita das contas | — |
-| 0.2 | Decidir quem recebe alertas e o roteamento de cada um (`acordar`, `pendente` ou `registrar`) | Escritório | Decisão escrita para os oito alertas de `alertas-roteamento.json` | — |
+| 0.2 | Decidir quem recebe alertas e o roteamento de cada um (`acordar`, `pendente` ou `registrar`) | Escritório | Decisão escrita para cada alerta de `alertas-roteamento.json` | — |
 | 0.3 | Preencher a tabela de acessos que ficam durante a garantia, em [`credenciais.md`](credenciais.md), seção 4 | Dev | Tabela preenchida e aceita pelo escritório | — |
 | 0.4 | Rotação que não depende de ninguém: apagar a chave JSON da `firebase-adminsdk-fbsvc` e tirar `roles/editor` da SA padrão do Compute ([`credenciais.md`](credenciais.md), 3.1, item 1) | Dev | `gcloud iam service-accounts keys list --managed-by=user` vazio para ela. Seção 2.4 de [`limpeza-infra.md`](../runbooks/limpeza-infra.md) | Seção 2.5 de `limpeza-infra.md`. A chave apagada não volta: se algo depender dela, crie uma identidade nova |
 
@@ -115,7 +115,7 @@ Hoje:
   13)* (`google_monitoring_notification_channel.desenvolvimento`, em
   [`observabilidade.tf`](../../infra/terraform/observabilidade.tf)), com o
   e-mail que vem de `ALERTAS_EMAIL_DESENVOLVIMENTO`;
-- os oito alertas estão em `pendente` em
+- todos os alertas estão em `pendente` em
   [`alertas-roteamento.json`](../../infra/terraform/alertas-roteamento.json).
 
 | # | Passo | Quem | Onde se muda | Conferir depois | Voltar atrás |

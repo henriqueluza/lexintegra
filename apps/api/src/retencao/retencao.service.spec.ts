@@ -135,6 +135,39 @@ describe('RetencaoService', () => {
     });
   });
 
+  /**
+   * A POLITICA "RETENCAO PARADA" E DE AUSENCIA, e le esta linha (achado 4.5 do
+   * Bloco E): cada passagem que CHEGA AO FIM emite `retencao.passagem`. Uma
+   * passagem que quebra no meio nao emite, e e isso que o alerta precisa ver.
+   */
+  describe('a passagem concluida deixa rastro', () => {
+    it('emite uma linha estruturada com os totais', async () => {
+      const { retencao } = montar({ jaAvisado: true });
+      const linhas: { campos?: Record<string, unknown> }[] = [];
+      (retencao as unknown as { log: unknown }).log = {
+        log: (_mensagem: string, campos?: Record<string, unknown>) =>
+          linhas.push({ campos }),
+      };
+
+      await retencao.executarPassagem(dias(30));
+
+      expect(
+        linhas.filter(
+          (linha) => linha.campos?.['sinal'] === 'retencao.passagem',
+        ),
+      ).toEqual([
+        {
+          campos: {
+            sinal: 'retencao.passagem',
+            examinados: 1,
+            avisados: 0,
+            excluidos: 1,
+          },
+        },
+      ]);
+    });
+  });
+
   describe('o aviso nasce no outbox', () => {
     /**
      * Regra inviolavel 3: a notificacao nasce na MESMA transacao que produz o
@@ -186,6 +219,44 @@ describe('RetencaoService', () => {
       );
       expect(entregavel).toBeDefined();
       expect(entregavel?.['arquivoAtual']).toBeNull();
+    });
+
+    /**
+     * Cada revisao e um OBJETO NOVO (`.../v1`, `.../v2`), e nao sobrescrita
+     * (`upload.service.ts`). Apagar so o `arquivoAtual` deixava as versoes
+     * anteriores vivas no bucket, sem prazo — achado 4.1 do Bloco E. Os 30 dias
+     * sao do ENTREGAVEL, e as versoes anteriores sao o mesmo entregavel.
+     */
+    it('apaga tambem as versoes anteriores de um entregavel revisado', async () => {
+      const { banco, retencao, armazenamento } = montar({ jaAvisado: true });
+      const caminho = (versao: number): string =>
+        `entregaveis/pedido-1/001/v${String(versao)}`;
+      const entregavel = banco.documentos.get(
+        'pedidos/pedido-1/entregaveis/001',
+      ) as { arquivoAtual: Record<string, unknown> };
+      entregavel.arquivoAtual = {
+        ...entregavel.arquivoAtual,
+        versao: 3,
+        caminho: caminho(3),
+      };
+      armazenamento.semear(
+        { balde: 'arquivos', caminho: caminho(2) },
+        new Uint8Array([2]),
+      );
+      armazenamento.semear(
+        { balde: 'arquivos', caminho: caminho(3) },
+        new Uint8Array([3]),
+      );
+      // A v1 que o `montar` semeou continua em `arquivos`; uma versao recusada
+      // pela varredura teria ficado na quarentena, e tambem precisa sair.
+      armazenamento.semear(
+        { balde: 'quarentena', caminho: caminho(2) },
+        new Uint8Array([2]),
+      );
+
+      await retencao.executarPassagem(dias(30));
+
+      expect(armazenamento.caminhos).toEqual([]);
     });
 
     it('nao volta a excluir na passagem seguinte', async () => {

@@ -3,8 +3,12 @@
  * Semeia o emulador de Auth com um usuario de cada perfil, para desenvolvimento
  * local e para a demonstracao da Etapa 4.
  *
- * POR QUE ESTE SCRIPT PODE ESCREVER CUSTOM CLAIM E OS DE `scripts/manual-only/`
- * NAO PODEM SER TOCADOS
+ * POR QUE ESTE SCRIPT PODE ESCREVER CUSTOM CLAIM E A ELEVACAO EM PRODUCAO NAO
+ * PODE SER TOCADA POR SESSAO DE AGENTE
+ *
+ * (`scripts/manual-only/`, citado aqui ate o Bloco E, nunca existiu no
+ * repositorio: a claim `admin` de producao foi gravada a mao, fora dele. O
+ * caminho continua negado em `.claude/settings.json`.)
  *
  * Ele nao fala com o Firebase. Ele fala com o EMULADOR, pela API de
  * administracao que so o emulador expoe — `Authorization: Bearer owner` e um

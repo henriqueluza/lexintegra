@@ -52,7 +52,9 @@ falha, veja [`runbooks/deploy-recusado.md`](../runbooks/deploy-recusado.md).
 
 No PR, o [`ci.yml`](../../.github/workflows/ci.yml) roda lint, cobertura,
 integração, build, a imagem do scanner, regressão visual, jornadas, mutação e
-`terraform plan`, e publica o plano como comentário no PR.
+`terraform plan`, e publica o plano como comentário no PR. O plano usa os
+mesmos `TF_VAR_*` do deploy. Se um PR que não toca `infra/terraform` propuser
+destruir algo, o job falha.
 
 ---
 
@@ -313,8 +315,8 @@ Conferidas em 24/09/2026 com `gcloud scheduler jobs list` e
 |---|---|---|---|---|
 | `varredor-outbox` | Scheduler, em [`outbox.tf`](../../infra/terraform/outbox.tf) | a cada minuto | `POST /api/interno/outbox/varredura`: reenfileira o que ficou sem tarefa | Registro perdido entre gravar e enfileirar não é mais entregue. Alerta *Outbox parado* |
 | `clamav-base-diaria` | Scheduler, em [`varredura.tf`](../../infra/terraform/varredura.tf) | 4h e 16h | Executa o job `clamav-atualizar-base`, que publica a base no bucket | A base envelhece e o scanner continua dizendo "limpo". Alertas *Base do ClamAV velha* e *sem publicação* |
-| `retencao-diaria` | Scheduler, em `varredura.tf` | 5h | `POST /api/interno/retencao`: aviso no 23º dia e exclusão do entregável no 30º dia depois de `entregue` | Arquivos ficam além dos 30 dias. **Nenhum alerta cobre isso** |
-| `sinais-operacionais` | Scheduler, em [`sinais.tf`](../../infra/terraform/sinais.tf) | a cada 5 minutos | `POST /api/interno/sinais`: mede e grava em log a idade do outbox e da quarentena | As métricas ficam sem dado, e os alertas de outbox e quarentena **não disparam** |
+| `retencao-diaria` | Scheduler, em `varredura.tf` | 5h e 17h | `POST /api/interno/retencao`: aviso no 23º dia e exclusão de todas as versões do entregável no 30º dia depois de `entregue`. Duas vezes por dia por causa do alerta de ausência | Arquivos ficam além dos 30 dias. Alerta *Retencao parada* |
+| `sinais-operacionais` | Scheduler, em [`sinais.tf`](../../infra/terraform/sinais.tf) | a cada 5 minutos | `POST /api/interno/sinais`: mede e grava em log a idade do outbox, da quarentena e da reunião sem sala, e os advogados sem `usuarioTeams` | As métricas ficam sem dado, e os alertas que dependem delas **não disparam**. Alerta *Sonda de sinais parada* |
 | fila `eventos` | Cloud Tasks, em `outbox.tf` | sob demanda | Entrega o outbox em `POST /api/interno/outbox`. Até 12 tentativas em 1 hora, backoff de 10 a 300 s | E-mail, sala e estorno param. Alerta *Outbox parado* |
 | fila `varredura` | Cloud Tasks, em `varredura.tf` | sob demanda | Chama `POST /api/interno/varredura`, que chama o scanner. Até 10 tentativas em 1 hora | Arquivo parado em quarentena. Alerta *Arquivo parado em quarentena* |
 | `clamav-atualizar-base` | Job do Cloud Run, em `varredura.tf` | pelo Scheduler | `freshclam` e publicação em `gs://lexintegra-clamav-db-36bda` | Mesmo que `clamav-base-diaria` |
@@ -338,13 +340,26 @@ Em [`storage.tf`](../../infra/terraform/storage.tf). Todos ficam em
 `SOUTHAMERICA-EAST1`, classe `STANDARD`, com acesso uniforme e acesso público
 bloqueado.
 
-| Bucket | Guarda | Criptografia | Retenção |
-|---|---|---|---|
-| `lexintegra-quarentena-36bda` | Uploads antes do veredito | CMEK `storage-cmek` | Regra do bucket: apaga depois de **7 dias**. É rede de segurança; o normal é a varredura mover o arquivo em segundos |
-| `lexintegra-arquivos-36bda` | Arquivos `limpo` (entregáveis e anexos) | CMEK `storage-cmek` | Com versionamento, **sem regra de idade**. A exclusão é feita pela aplicação: rotina `retencao-diaria` |
-| `lexintegra-sourcemaps-36bda` | Source maps do Angular, por commit | Google | Apaga depois de **180 dias** |
-| `lexintegra-clamav-db-36bda` | Base de assinaturas do ClamAV | Google | Sem regra; o job sobrescreve |
-| `lexintegra-tfstate-36bda` | State do Terraform | Google | Versionado, com `prevent_destroy` |
+| Bucket | Guarda | Criptografia | Retenção | Soft delete |
+|---|---|---|---|---|
+| `lexintegra-quarentena-36bda` | Uploads antes do veredito | CMEK `storage-cmek` | Regra do bucket: apaga depois de **7 dias**. É rede de segurança; o normal é a varredura mover o arquivo em segundos | **nenhum** |
+| `lexintegra-arquivos-36bda` | Arquivos `limpo` (entregáveis e anexos) | CMEK `storage-cmek` | **Sem versionamento.** A exclusão é feita pela aplicação, na rotina `retencao-diaria`. Uma regra apaga as versões não atuais que o versionamento deixou até o Bloco E | **7 dias** |
+| `lexintegra-sourcemaps-36bda` | Source maps do Angular, por commit | Google | Apaga depois de **180 dias** | **nenhum** |
+| `lexintegra-clamav-db-36bda` | Base de assinaturas do ClamAV | Google | Sem regra; o job sobrescreve | **nenhum** |
+| `lexintegra-tfstate-36bda` | State do Terraform | Google | Versionado, com `prevent_destroy` | **7 dias** |
+
+**Quanto tempo um arquivo sobrevive depois de excluído: até 7 dias.** A
+exclusão pela aplicação (a retenção de hoje, a eliminação LGPD quando existir)
+apaga o objeto, e o que sobra é o soft delete de 7 dias do bucket de arquivos.
+É a janela para desfazer uma exclusão errada: nesse prazo, o objeto é
+restaurável no console do Cloud Storage. Os dois valores estão declarados em
+`storage.tf`: `soft_delete_policy` e o versionamento desligado. Esse número
+precisa entrar na política de retenção que o escritório aprovar
+([`lgpd.md`](lgpd.md)).
+
+**A retenção apaga todas as versões do entregável**, e não só a atual: cada
+revisão é um objeto próprio (`caminhoDaVersao`, em
+`apps/api/src/entregaveis/entregavel.ts`).
 
 **O prazo de retenção dos arquivos é provisório.** Hoje é 30 dias contados de
 quando o entregável chega a `entregue`, com aviso 7 dias antes
@@ -378,20 +393,24 @@ continua recuperável por até 7 dias. A única coleção com TTL é `checkouts`
 | Arquivo parado em quarentena | Arquivo sem veredito há mais de 60 min | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
 | Base do ClamAV velha | Base publicada com mais de 48 h | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
 | Base do ClamAV sem publicacao | Nenhuma publicação em 23 h | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
-| Disponibilidade publicada sem link de reuniao | Sinal `disponibilidade.sem-link` > 0. **Nenhum código emite esse sinal hoje** | [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
+| Disponibilidade publicada sem link de reuniao | Advogado ativo, com horário publicado e sem `usuarioTeams`. **Só com o Teams ligado**: com `REUNIOES_MODO=desligado`, a sonda não emite o sinal | [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
+| Reuniao marcada sem sala do Teams | Reunião em `reservada_sem_link` há mais de 60 min | [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
+| Webhook do gateway recusado | Mais de 5 recusas do webhook em 10 min, por segredo ou assinatura | [`webhook-recusado.md`](../runbooks/webhook-recusado.md) |
+| Retencao parada | Nenhuma passagem da retenção concluída em 23 h | [`retencao-parada.md`](../runbooks/retencao-parada.md) |
+| Sonda de sinais parada | A sonda não mede há 15 min. Quatro alertas ficam cegos | [`sonda-parada.md`](../runbooks/sonda-parada.md) |
 | API fora do ar | O uptime check de `https://lexintegra.com.br/api/health` falha | [`api-fora-do-ar.md`](../runbooks/api-fora-do-ar.md) |
 
 **Quem recebe.** Um canal de e-mail, *Desenvolvimento (PROVISORIO)*, criado só
 quando `ALERTAS_EMAIL_DESENVOLVIMENTO` existe no GitHub. Hoje o valor está
 numa *variable* do repositório, e não num *secret*. O roteamento está em
 [`alertas-roteamento.json`](../../infra/terraform/alertas-roteamento.json), e
-os oito alertas estão em `pendente` (só o canal provisório recebe). Trocar o
+todos os alertas estão em `pendente` (só o canal provisório recebe). Trocar o
 destino e decidir o roteamento faz parte da transferência
 ([`transferencia.md`](transferencia.md)). Depois de qualquer troca, siga
 [`runbooks/alerta-artificial.md`](../runbooks/alerta-artificial.md).
 
-**Webhook recusado não tem alerta próprio.** O `401` do guard do webhook é
-`WARNING`. Ver [`webhook-fora-do-ar.md`](../runbooks/webhook-fora-do-ar.md).
+**Webhook recusado tem alerta desde o Bloco E**, pela linha estruturada que o
+guard escreve a cada `401` (`jsonPayload.sinal="webhook.recusado"`).
 
 ---
 

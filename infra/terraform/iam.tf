@@ -132,6 +132,10 @@ resource "google_project_iam_member" "api_runtime" {
 
 # Acesso aos buckets concedido no recurso, nao no projeto: a API assina URLs de
 # leitura e escrita, nao administra o Cloud Storage.
+#
+# DECLARACAO UNICA destes dois bindings. `varredura.tf` tinha copias identicas
+# (`api_administra_*`), retiradas do state com `removed` no achado 4.7 — nao
+# declare de novo la.
 resource "google_storage_bucket_iam_member" "api_quarentena" {
   bucket = google_storage_bucket.quarentena.name
   role   = "roles/storage.objectAdmin"

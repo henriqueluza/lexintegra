@@ -22,5 +22,9 @@
   "clamav-base-velha": "pendente",
   "clamav-base-sem-publicacao": "pendente",
   "disponibilidade-sem-link": "pendente",
-  "api-fora-do-ar": "pendente"
+  "api-fora-do-ar": "pendente",
+  "reuniao-sem-sala": "pendente",
+  "webhook-recusado": "pendente",
+  "retencao-parada": "pendente",
+  "sonda-parada": "pendente"
 }

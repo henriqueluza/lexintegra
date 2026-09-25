@@ -28,7 +28,7 @@ quarentena, e o job lê o mirror público do ClamAV e escreve no bucket.
 |---|---|---|---|
 | Job `varredor-outbox` | `outbox.tf` / `google_cloud_scheduler_job.varredor_outbox` | `* * * * *` | cerca de 43.200 |
 | Job `clamav-base-diaria` | `varredura.tf` / `google_cloud_scheduler_job.clamav_base` | `0 4,16 * * *` | cerca de 60 |
-| Job `retencao-diaria` | `varredura.tf` / `google_cloud_scheduler_job.retencao` | `0 5 * * *` | cerca de 30 |
+| Job `retencao-diaria` | `varredura.tf` / `google_cloud_scheduler_job.retencao` | `0 5,17 * * *` | cerca de 60 |
 | Job `sinais-operacionais` | `sinais.tf` / `google_cloud_scheduler_job.sinais` | `*/5 * * * *` | cerca de 8.640 |
 
 **Total: 4 jobs** do Cloud Scheduler. A cobrança é por job e por conta de
@@ -46,18 +46,17 @@ requisição à API, e portanto tempo de CPU do Cloud Run.
 ## 3. Cloud Storage
 
 Todos em `SOUTHAMERICA-EAST1` (regional), classe `STANDARD`, com acesso
-uniforme e acesso público bloqueado (`storage.tf`). **Todos têm soft delete de
-7 dias**, o padrão do Cloud Storage, que não está declarado no Terraform. Objeto
-apagado continua cobrado por 7 dias (`gcloud storage buckets describe`,
-`softDeletePolicy.retentionDurationSeconds = 604800`).
+uniforme e acesso público bloqueado (`storage.tf`). O **soft delete** está
+declarado por bucket desde o Bloco E (`soft_delete_policy`). Objeto apagado
+continua cobrado durante o soft delete.
 
-| Bucket | Recurso | Criptografia | Versionamento | Regra de ciclo de vida |
-|---|---|---|---|---|
-| `lexintegra-quarentena-36bda` | `google_storage_bucket.quarentena` | CMEK `storage-cmek` | não | apaga com mais de 7 dias |
-| `lexintegra-arquivos-36bda` | `google_storage_bucket.arquivos` | CMEK `storage-cmek` | **sim** | **nenhuma**. Versões não atuais ficam sem prazo (ver [`lgpd.md`](lgpd.md)) |
-| `lexintegra-sourcemaps-36bda` | `google_storage_bucket.sourcemaps` | Google | não | apaga com mais de 180 dias. Recebe um conjunto de `.map` por deploy |
-| `lexintegra-clamav-db-36bda` | `google_storage_bucket.clamav_db` | Google | não | nenhuma. Cerca de 1 GB, sobrescrito 2 vezes por dia |
-| `lexintegra-tfstate-36bda` | `google_storage_bucket.tfstate` | Google | **sim** | nenhuma. Uma versão por apply |
+| Bucket | Recurso | Criptografia | Versionamento | Regra de ciclo de vida | Soft delete |
+|---|---|---|---|---|---|
+| `lexintegra-quarentena-36bda` | `google_storage_bucket.quarentena` | CMEK `storage-cmek` | não | apaga com mais de 7 dias | 0 |
+| `lexintegra-arquivos-36bda` | `google_storage_bucket.arquivos` | CMEK `storage-cmek` | **não** (desligado no Bloco E) | apaga versões não atuais 1 dia depois | 7 dias |
+| `lexintegra-sourcemaps-36bda` | `google_storage_bucket.sourcemaps` | Google | não | apaga com mais de 180 dias. Recebe um conjunto de `.map` por deploy | 0 |
+| `lexintegra-clamav-db-36bda` | `google_storage_bucket.clamav_db` | Google | não | nenhuma. Cerca de 1 GB, sobrescrito 2 vezes por dia | 0. Com 7 dias, cada sobrescrita deixava a cópia anterior cobrada |
+| `lexintegra-tfstate-36bda` | `google_storage_bucket.tfstate` | Google | **sim** | nenhuma. Uma versão por apply | 7 dias |
 
 Operações: cada upload gera uma URL assinada, um PUT do navegador, uma leitura
 por faixa (magic bytes), a leitura do scanner, uma cópia e uma exclusão. Cada
@@ -96,8 +95,8 @@ Tudo em `observabilidade.tf`, salvo indicação.
 
 | Item | Quantidade |
 |---|---|
-| Métricas personalizadas por log | **6**: `alertas-criticos`, `outbox-atraso-segundos`, `quarentena-atraso-segundos`, `outbox-entregas`, `clamav-base-idade-horas`, `disponibilidade-sem-link` |
-| Políticas de alerta | **8**, todas com condição sobre métrica. A arquitetura, seção 12, registra que o Monitoring passa a cobrar alertas a partir de 01/09/2027 |
+| Métricas personalizadas por log | **9**: `alertas-criticos`, `outbox-atraso-segundos`, `quarentena-atraso-segundos`, `outbox-entregas`, `clamav-base-idade-horas`, `disponibilidade-sem-link`, `reuniao-sem-sala-segundos`, `webhook-recusado`, `retencao-passagens` |
+| Políticas de alerta | **12**, todas com condição sobre métrica. A arquitetura, seção 12, registra que o Monitoring passa a cobrar alertas a partir de 01/09/2027 |
 | Uptime check | **1**, `API LexIntegra (/api/health)`, a cada **300 s**, a partir de várias regiões |
 | Painel | 1 (`paineis/operacao.json`) |
 | Canal de notificação | 1 e-mail, e só existe com a variável do GitHub definida |

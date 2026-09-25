@@ -11,9 +11,10 @@ export const APP_CHECK_EXIGIDO = Symbol('AppCheckExigido');
  * legitimo" e "nao verificar nada", e as duas sao decisoes grandes demais para
  * um valor omitido tomar sozinho.
  *
- * Enquanto as chaves do App Check nao existirem no console do Firebase, o valor
- * correto em producao e `false`, declarado de proposito. Ligar para `true` antes
- * de a chave existir no frontend faria a home parar de aceitar cadastro.
+ * Em producao o valor e `true` desde que o provedor passou a existir no console
+ * do Firebase e a site key a ser publicada pelo deploy (`app_check_enforce`, em
+ * `infra/terraform/variables.tf`). Sem o provedor ou sem a chave no frontend,
+ * `true` faz a home parar de aceitar cadastro — e `false` e o caminho de volta.
  *
  * Fora de producao o padrao e desligado: desenvolvimento e emulador nao devem
  * precisar de credencial nenhuma para rodar.

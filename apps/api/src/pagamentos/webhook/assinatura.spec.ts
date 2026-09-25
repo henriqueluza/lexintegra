@@ -121,6 +121,32 @@ describe('AssinaturaWebhookGuard', () => {
     ).toThrow(UnauthorizedException);
   });
 
+  /**
+   * A METRICA DO ALERTA LE ESTA LINHA (achado 4.5 do Bloco E): `sinal` estavel e
+   * o motivo curto como rotulo, para o runbook separar "segredo trocado de um
+   * lado so" (tudo recusado por segredo) de "alguem forjando" (assinatura). O
+   * segredo e a assinatura nunca entram na linha.
+   */
+  it.each([
+    ['segredo', { ...valida, query: { webhookSecret: 'outro' } }],
+    ['assinatura', { ...valida, headers: {} }],
+  ])('toda recusa por %s vira uma linha estruturada', (motivo, requisicao) => {
+    const guard = new AssinaturaWebhookGuard(CONFIGURACAO);
+    const linhas: { mensagem: string; campos: Record<string, unknown> }[] = [];
+    (guard as unknown as { log: unknown }).log = {
+      warn: (mensagem: string, campos: Record<string, unknown>) =>
+        linhas.push({ mensagem, campos }),
+    };
+
+    expect(() => guard.canActivate(contexto(requisicao))).toThrow(
+      UnauthorizedException,
+    );
+
+    expect(linhas).toHaveLength(1);
+    expect(linhas[0]?.campos).toEqual({ sinal: 'webhook.recusado', motivo });
+    expect(JSON.stringify(linhas)).not.toContain('outro');
+  });
+
   /** Desligado e 503: o gateway reentrega quando o modo mudar. */
   it('com pagamentos desligados, responde 503 antes de conferir', () => {
     expect(() =>

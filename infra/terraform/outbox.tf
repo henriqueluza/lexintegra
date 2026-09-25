@@ -7,8 +7,9 @@
 # (arquitetura, secao 8) — ele sempre foi o primeiro da lista, e so nao existia
 # porque a Etapa 7 nao tinha sido feita. Com os dois da Etapa 11 (base do ClamAV e
 # retencao), o total chega a tres, que e o limite gratuito por CONTA DE
-# FATURAMENTO. O quarto job, quando vier — a expiracao da janela de 12 meses, item
-# 2.7.2 —, custa US$ 0,10/mes.
+# FATURAMENTO. O quarto e a sonda de sinais (Etapa 12), US$ 0,10/mes. A expiracao
+# da janela de 12 meses (item 2.7.2), que esta conta previa como quarto job, nunca
+# foi criada: a janela e calculada na leitura (ADR-21).
 #
 # A fila cabe na cota gratuita do Cloud Tasks (1 milhao de operacoes/mes). O
 # volume aqui e uma tarefa por e-mail transacional, mais uma varredura por minuto

@@ -55,6 +55,9 @@ política de alerta traz o caminho do runbook no próprio texto do incidente.
 | [scanner-indisponivel.md](../runbooks/scanner-indisponivel.md) | Arquivo parado em quarentena, base do ClamAV velha ou sem publicação |
 | [reuniao-sem-link.md](../runbooks/reuniao-sem-link.md) | Reunião marcada sem sala do Teams |
 | [api-fora-do-ar.md](../runbooks/api-fora-do-ar.md) | O uptime check falhou |
+| [webhook-recusado.md](../runbooks/webhook-recusado.md) | Recusas do webhook em série: segredo trocado de um lado só, ou tentativa de forjar |
+| [retencao-parada.md](../runbooks/retencao-parada.md) | A retenção de 30 dias não concluiu passagem em 23 h |
+| [sonda-parada.md](../runbooks/sonda-parada.md) | A sonda de sinais parou, e os alertas que dependem dela estão cegos |
 | [deploy-recusado.md](../runbooks/deploy-recusado.md) | Pipeline vermelho, plano inesperado, revisão que não sobe |
 | [lgpd-titular.md](../runbooks/lgpd-titular.md) | Pedido de exportação ou de eliminação de um titular |
 | [alerta-artificial.md](../runbooks/alerta-artificial.md) | Depois de trocar o destinatário dos alertas |

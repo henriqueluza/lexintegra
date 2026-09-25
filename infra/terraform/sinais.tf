@@ -6,9 +6,11 @@
 # Firestore — entao alguem precisa olhar periodicamente e escrever a idade num
 # log estruturado, que e o que as metricas por log de `observabilidade.tf` leem.
 #
-# O QUINTO JOB DO SCHEDULER, e portanto US$ 0,10/mes (os tres gratuitos foram
-# ocupados nas Etapas 7 e 11, e a retencao ja e o quarto). Registrado como custo
-# no PR: a arquitetura pede que rotina nova seja sinal, nao detalhe.
+# O QUARTO JOB DO SCHEDULER, e portanto US$ 0,10/mes: os tres gratuitos por
+# conta de faturamento ficaram com o varredor do outbox (Etapa 7), a base do
+# ClamAV e a retencao (Etapa 11). O job de expiracao de 12 meses que contagens
+# antigas incluiam nunca foi criado (ADR-21). Registrado como custo: a
+# arquitetura pede que rotina nova seja sinal, nao detalhe.
 
 resource "google_cloud_scheduler_job" "sinais" {
   project = var.project_id

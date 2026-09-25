@@ -69,9 +69,11 @@ variable "app_check_enforce" {
     escolheria sozinho entre recusar todo trafego legitimo e nao verificar nada, e
     as duas sao decisoes grandes demais para um valor omitido tomar.
 
-    Fica "false" ate o provedor do App Check existir no console do Firebase e a
-    site key estar publicada no `configuracao-publica.json`. Ligar antes disso faz
-    a home parar de aceitar cadastro.
+    LIGADO ("true") desde o commit 67be0ca, com o provedor criado no console do
+    Firebase e a site key publicada pelo deploy (`vars.APP_CHECK_SITE_KEY`, em
+    `configuracao-publica.json`). Desligar e emergencia: se o provedor ou a site
+    key deixarem de existir, a home para de aceitar cadastro, e "false" por PR e o
+    caminho de volta.
   EOT
   type        = string
   default     = "true"
@@ -223,13 +225,37 @@ variable "limite_quarentena_minutos" {
   default     = 60
 }
 
+variable "limite_reuniao_sem_sala_minutos" {
+  description = <<-EOT
+    A partir de quantos minutos uma reuniao em `reservada_sem_link` vira alerta.
+
+    A criacao da sala passa pelo outbox, que reentrega com backoff por ate uma
+    hora antes de abandonar. 60 minutos deixa a fila trabalhar e avisa quando ela
+    ja desistiu ou esta perto disso.
+  EOT
+  type        = number
+  default     = 60
+}
+
+variable "limite_webhook_recusado" {
+  description = <<-EOT
+    Quantas recusas do webhook (segredo ou assinatura) em dez minutos viram alerta.
+
+    A URL do webhook e conhecida, e robo bate nela: uma recusa isolada e ruido.
+    Mais de cinco em dez minutos e ou o segredo trocado num lado so — todo evento
+    real sendo recusado — ou alguem insistindo. O runbook separa os dois.
+  EOT
+  type        = number
+  default     = 5
+}
+
 variable "limite_base_clamav_horas" {
   description = <<-EOT
     A partir de quantas horas a base de assinaturas e considerada velha.
 
-    O ClamAV publica base varias vezes ao dia e o job roda diariamente. 48 horas
-    tolera um dia de falha do mirror sem alarme falso, e ainda assim nao deixa a
-    base envelhecer em silencio.
+    O ClamAV publica base varias vezes ao dia e o job roda DUAS vezes por dia (4h e
+    16h, `varredura.tf`). 48 horas tolera um dia inteiro de falha do mirror sem
+    alarme falso, e ainda assim nao deixa a base envelhecer em silencio.
   EOT
   type        = number
   default     = 48

@@ -2,10 +2,11 @@
 # Etapa 11 — varredura de malware, fila e rotinas agendadas
 # ------------------------------------------------------------------------------
 # CUSTO RECORRENTE NOVO, aprovado antes de escrever isto (ver o PR da Etapa 11):
-#   - 4o job do Cloud Scheduler: ~US$ 0,10/mes. Os tres gratuitos ja estao
-#     prometidos (varredor do outbox, base do ClamAV, expiracao de 12 meses); a
-#     retencao de 30 dias e o quarto, e a arquitetura (secao 8) ja o previa como
-#     "a quarta rotina mais provavel de ser necessaria".
+#   - Job da retencao no Cloud Scheduler. Quando esta etapa foi escrita, os tres
+#     gratuitos estavam prometidos a varredor do outbox, base do ClamAV e
+#     expiracao de 12 meses, e a retencao seria o quarto (~US$ 0,10/mes). A
+#     expiracao nunca foi criada (ADR-21): hoje a retencao e o terceiro gratuito,
+#     e o quarto, pago, e a sonda de sinais (`sinais.tf`).
 #   - Servico do scanner no Cloud Run: min-instances = 0, 2 GiB de memoria por
 #     invocacao. Sem trafego, custa zero.
 #   - Fila do Cloud Tasks: dentro da cota gratuita (1 milhao de operacoes/mes).
@@ -259,11 +260,18 @@ resource "google_cloud_scheduler_job" "clamav_base" {
 }
 
 # O QUARTO JOB. Ver a nota de custo no topo do arquivo.
+#
+# DUAS VEZES POR DIA desde o Bloco E (achado 4.5), e a razao e o ALERTA, como na
+# base do ClamAV: a politica "Retencao parada" e de ausencia, e a ausencia tem
+# teto de 23h30m. Com uma execucao por dia, o intervalo normal (24h) estouraria
+# a janela todo dia. A passagem e idempotente — a segunda do dia so acha o que a
+# primeira ja fez —, e o Scheduler cobra por job, nao por execucao. O nome
+# `retencao-diaria` fica: renomear recriaria o job por um rotulo.
 resource "google_cloud_scheduler_job" "retencao" {
   project   = var.project_id
   name      = "retencao-diaria"
   region    = var.region
-  schedule  = "0 5 * * *"
+  schedule  = "0 5,17 * * *"
   time_zone = "America/Sao_Paulo"
 
   http_target {
@@ -295,14 +303,32 @@ resource "google_service_account_iam_member" "api_assina_urls" {
   member             = "serviceAccount:${google_service_account.api_runtime.email}"
 }
 
-resource "google_storage_bucket_iam_member" "api_administra_quarentena" {
-  bucket = google_storage_bucket.quarentena.name
-  role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_service_account.api_runtime.email}"
+# --- Duplicatas retiradas do state (Bloco E, achado 4.7) -----------------------
+# `api_administra_quarentena` e `api_administra_arquivos` concediam EXATAMENTE o
+# mesmo binding (bucket, papel e membro) que `api_quarentena` e `api_arquivos`
+# em `iam.tf`. Dois recursos para um binding real so esperam o dia em que um
+# for alterado e o outro nao.
+#
+# FICAM OS DE `iam.tf`, que e onde vivem todas as concessoes da identidade da
+# API — quem procura "o que a api-lexintegra-run pode fazer" procura la.
+#
+# `removed` com `destroy = false`, e NAO apagar o bloco: apagar faria o
+# Terraform remover o binding real, e a API perderia o acesso aos buckets ate
+# o apply seguinte recriar pelo outro recurso. Aqui o Terraform so esquece as
+# duas entradas do state; o binding continua, gerido por `iam.tf`. Os blocos
+# podem sair depois do primeiro apply, como os `import` saíram no Bloco D.
+removed {
+  from = google_storage_bucket_iam_member.api_administra_quarentena
+
+  lifecycle {
+    destroy = false
+  }
 }
 
-resource "google_storage_bucket_iam_member" "api_administra_arquivos" {
-  bucket = google_storage_bucket.arquivos.name
-  role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_service_account.api_runtime.email}"
+removed {
+  from = google_storage_bucket_iam_member.api_administra_arquivos
+
+  lifecycle {
+    destroy = false
+  }
 }

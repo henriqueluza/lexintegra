@@ -45,11 +45,18 @@ imagens já publicadas são reaproveitadas (*Re-run failed jobs* no GitHub, ou
 
 ## Plano do Terraform inesperado
 
-- **Ruído conhecido no PR.** O job de plan do CI não recebe
-  `TF_VAR_alertas_email_desenvolvimento`. Por isso todo plano de PR propõe
-  destruir o canal *Desenvolvimento (PROVISORIO)* e tirar os canais das
-  políticas. O deploy recebe a variável e **não** faz isso. Para conferir o
-  plano real, rode `terraform plan` local com a variável definida.
+- **CI vermelho em *Recusar destroy em PR sem mudança de infraestrutura*.** O
+  PR não toca `infra/terraform` e mesmo assim o plano propõe destruir algo. Há
+  duas causas prováveis:
+  - o plano do CI está lendo uma variável diferente da do deploy. Compare os
+    `TF_VAR_*` do job `terraform` em `ci.yml` com os do `deploy.yml`: eles
+    precisam ser os mesmos;
+  - alguém mudou a infraestrutura por fora do Terraform.
+
+  Explique o diff antes de qualquer merge. Até o Bloco E, todo PR mostrava o
+  canal de alertas sendo destruído, porque o plan não recebia
+  `TF_VAR_alertas_email_desenvolvimento`. Isso foi corrigido, e o passo existe
+  para não voltar.
 - **`will be created` em recurso que já existe:** import errado ou recurso
   criado fora do Terraform. Não aplique. Ver README do Terraform, "Armadilhas
   conhecidas".
