@@ -284,7 +284,8 @@ entregou e o que ficou pendente está em
 | `conferir-*.mjs` | As conferências do `pnpm lint:terraform` (seção 6) |
 | `dados-ficticios/` | Catálogo e clientes fictícios. **Trocar pelo real antes de produção** |
 
-**O repositório não tem o script de elevação a administrador.** O `AGENTS.md`
-cita `scripts/manual-only/`, e a pasta não existe aqui. A claim `admin` é
-concedida à mão, fora da aplicação (regra 17). Veja
+**O repositório não tem o script de elevação a administrador.** A pasta
+`scripts/manual-only/` nunca existiu. O caminho continua reservado e negado ao
+agente em `.claude/settings.json` (ver `AGENTS.md`). A claim `admin` é concedida
+à mão, fora da aplicação (regra 17). Veja
 [`operacao.md`](operacao.md#tarefas-do-administrador-global).

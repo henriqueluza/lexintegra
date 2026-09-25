@@ -2,10 +2,11 @@
 # Etapa 11 — varredura de malware, fila e rotinas agendadas
 # ------------------------------------------------------------------------------
 # CUSTO RECORRENTE NOVO, aprovado antes de escrever isto (ver o PR da Etapa 11):
-#   - 4o job do Cloud Scheduler: ~US$ 0,10/mes. Os tres gratuitos ja estao
-#     prometidos (varredor do outbox, base do ClamAV, expiracao de 12 meses); a
-#     retencao de 30 dias e o quarto, e a arquitetura (secao 8) ja o previa como
-#     "a quarta rotina mais provavel de ser necessaria".
+#   - Job da retencao no Cloud Scheduler. Quando esta etapa foi escrita, os tres
+#     gratuitos estavam prometidos a varredor do outbox, base do ClamAV e
+#     expiracao de 12 meses, e a retencao seria o quarto (~US$ 0,10/mes). A
+#     expiracao nunca foi criada (ADR-21): hoje a retencao e o terceiro gratuito,
+#     e o quarto, pago, e a sonda de sinais (`sinais.tf`).
 #   - Servico do scanner no Cloud Run: min-instances = 0, 2 GiB de memoria por
 #     invocacao. Sem trafego, custa zero.
 #   - Fila do Cloud Tasks: dentro da cota gratuita (1 milhao de operacoes/mes).
