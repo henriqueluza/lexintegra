@@ -11,7 +11,9 @@ import {
 } from '../armazenamento/armazenamento.js';
 import { baldeDoEstado } from '../arquivos/arquivo.js';
 import {
+  caminhoDaVersao,
   SUBCOLECAO_ENTREGAVEIS,
+  type ArquivoEntregavel,
   type DocumentoEntregavel,
 } from '../entregaveis/entregavel.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
@@ -148,10 +150,7 @@ export class RetencaoService {
       const arquivo = (documento.data() as DocumentoEntregavel).arquivoAtual;
       if (arquivo === null || arquivo === undefined) continue;
 
-      await this.armazenamento.excluir({
-        balde: baldeDoEstado(arquivo.estado),
-        caminho: arquivo.caminho,
-      });
+      await this.excluirTodasAsVersoes(pedidoId, documento.id, arquivo);
 
       await documento.ref.update({
         arquivoAtual: null,
@@ -165,6 +164,36 @@ export class RetencaoService {
     });
 
     this.log.log(`arquivos do pedido ${pedidoId} excluidos por retencao`);
+  }
+
+  /**
+   * TODAS as versoes do arquivo do entregavel, e nao so o `arquivoAtual`.
+   *
+   * Cada revisao e um objeto proprio (`caminhoDaVersao`). Apagar so a atual
+   * deixava `v1 ... v{n-1}` vivas no bucket, sem prazo nenhum (achado 4.1 do
+   * Bloco E). As duas passadas por balde existem porque uma versao recusada pela
+   * varredura, ou ainda nao varrida, ficou na quarentena. `excluir` ignora
+   * objeto ausente, entao a passagem e idempotente.
+   *
+   * O caminho atual e apagado pelo que esta gravado, alem do derivado: se um
+   * dia os dois divergirem, o que o documento aponta nao pode sobrar.
+   */
+  private async excluirTodasAsVersoes(
+    pedidoId: string,
+    entregavelId: string,
+    atual: ArquivoEntregavel,
+  ): Promise<void> {
+    await this.armazenamento.excluir({
+      balde: baldeDoEstado(atual.estado),
+      caminho: atual.caminho,
+    });
+
+    for (let versao = 1; versao <= atual.versao; versao += 1) {
+      const caminho = caminhoDaVersao({ pedidoId, entregavelId }, versao);
+      for (const balde of ['arquivos', 'quarentena'] as const) {
+        await this.armazenamento.excluir({ balde, caminho });
+      }
+    }
   }
 
   /**

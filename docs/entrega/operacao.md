@@ -340,13 +340,26 @@ Em [`storage.tf`](../../infra/terraform/storage.tf). Todos ficam em
 `SOUTHAMERICA-EAST1`, classe `STANDARD`, com acesso uniforme e acesso público
 bloqueado.
 
-| Bucket | Guarda | Criptografia | Retenção |
-|---|---|---|---|
-| `lexintegra-quarentena-36bda` | Uploads antes do veredito | CMEK `storage-cmek` | Regra do bucket: apaga depois de **7 dias**. É rede de segurança; o normal é a varredura mover o arquivo em segundos |
-| `lexintegra-arquivos-36bda` | Arquivos `limpo` (entregáveis e anexos) | CMEK `storage-cmek` | Com versionamento, **sem regra de idade**. A exclusão é feita pela aplicação: rotina `retencao-diaria` |
-| `lexintegra-sourcemaps-36bda` | Source maps do Angular, por commit | Google | Apaga depois de **180 dias** |
-| `lexintegra-clamav-db-36bda` | Base de assinaturas do ClamAV | Google | Sem regra; o job sobrescreve |
-| `lexintegra-tfstate-36bda` | State do Terraform | Google | Versionado, com `prevent_destroy` |
+| Bucket | Guarda | Criptografia | Retenção | Soft delete |
+|---|---|---|---|---|
+| `lexintegra-quarentena-36bda` | Uploads antes do veredito | CMEK `storage-cmek` | Regra do bucket: apaga depois de **7 dias**. É rede de segurança; o normal é a varredura mover o arquivo em segundos | **nenhum** |
+| `lexintegra-arquivos-36bda` | Arquivos `limpo` (entregáveis e anexos) | CMEK `storage-cmek` | **Sem versionamento.** A exclusão é feita pela aplicação, na rotina `retencao-diaria`. Uma regra apaga as versões não atuais que o versionamento deixou até o Bloco E | **7 dias** |
+| `lexintegra-sourcemaps-36bda` | Source maps do Angular, por commit | Google | Apaga depois de **180 dias** | **nenhum** |
+| `lexintegra-clamav-db-36bda` | Base de assinaturas do ClamAV | Google | Sem regra; o job sobrescreve | **nenhum** |
+| `lexintegra-tfstate-36bda` | State do Terraform | Google | Versionado, com `prevent_destroy` | **7 dias** |
+
+**Quanto tempo um arquivo sobrevive depois de excluído: até 7 dias.** A
+exclusão pela aplicação (a retenção de hoje, a eliminação LGPD quando existir)
+apaga o objeto, e o que sobra é o soft delete de 7 dias do bucket de arquivos.
+É a janela para desfazer uma exclusão errada: nesse prazo, o objeto é
+restaurável no console do Cloud Storage. Os dois valores estão declarados em
+`storage.tf`: `soft_delete_policy` e o versionamento desligado. Esse número
+precisa entrar na política de retenção que o escritório aprovar
+([`lgpd.md`](lgpd.md)).
+
+**A retenção apaga todas as versões do entregável**, e não só a atual: cada
+revisão é um objeto próprio (`caminhoDaVersao`, em
+`apps/api/src/entregaveis/entregavel.ts`).
 
 **O prazo de retenção dos arquivos é provisório.** Hoje é 30 dias contados de
 quando o entregável chega a `entregue`, com aviso 7 dias antes

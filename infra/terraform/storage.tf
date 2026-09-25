@@ -19,6 +19,12 @@ resource "google_storage_bucket" "tfstate" {
     enabled = true
   }
 
+  # Soft delete de 7 dias, o padrao do Cloud Storage, agora DECLARADO. E a
+  # protecao de recuperacao do state, junto com o versionamento: nao reduza.
+  soft_delete_policy {
+    retention_duration_seconds = 604800
+  }
+
   # Sem prevent_destroy, um destroy apagaria o bucket que guarda o proprio state.
   lifecycle {
     prevent_destroy = true
@@ -40,6 +46,14 @@ resource "google_storage_bucket" "quarentena" {
 
   encryption {
     default_kms_key_name = google_kms_crypto_key.storage.id
+  }
+
+  # SEM SOFT DELETE (Bloco E, achado 4.1). Nada daqui precisa ser recuperado: o
+  # arquivo limpo ja foi copiado para `arquivos`, e o recusado nao deve voltar.
+  # Com o padrao do Google (7 dias), todo upload — inclusive documento de
+  # identidade do cliente — sobrevivia uma semana depois de sair daqui.
+  soft_delete_policy {
+    retention_duration_seconds = 0
   }
 
   # Rede de seguranca, nao a politica de retencao: se um objeto ficou 7 dias em
@@ -73,11 +87,28 @@ resource "google_storage_bucket" "quarentena" {
   depends_on = [google_kms_crypto_key_iam_member.gcs_cmek]
 }
 
-# Arquivos com veredito "limpo". Sem expiracao automatica de proposito: a retencao
+# Arquivos com veredito "limpo". Objeto atual sem expiracao por idade, de proposito: a retencao
 # de 30 dias depende do estado do pedido (todos os entregaveis em "entregue",
 # arquitetura secoes 7.3 e 13), e a regra de ciclo de vida do Cloud Storage so
 # conhece a idade do objeto. A exclusao e dirigida pela aplicacao, com aviso previo
 # ao titular.
+#
+# QUANTO TEMPO UM BYTE SOBREVIVE DEPOIS DE EXCLUIDO (Bloco E, achado 4.1):
+# ATE 7 DIAS, e so pelo soft delete abaixo. E esse o numero que entra na
+# politica de retencao do controlador (`docs/entrega/lgpd.md`).
+#
+# - SEM VERSIONAMENTO. Nenhum caminho do codigo sobrescreve objeto: cada versao
+#   de entregavel e um objeto proprio (`caminhoDaVersao`) e cada anexo tem id
+#   proprio. Com versionamento, a exclusao (`delete()` sem geracao) so tornava o
+#   objeto NAO ATUAL, e a versao antiga ficava para sempre — a retencao de 30
+#   dias nao apagava byte nenhum. A recuperacao de erro de operador fica com o
+#   soft delete, que protege o objeto apagado do mesmo jeito.
+# - A regra de ciclo de vida limpa as versoes nao atuais que o versionamento
+#   deixou ate aqui. Com ele desligado, nao nascem novas; a regra fica como
+#   rede, e custa nada. O Google aplica ciclo de vida de forma assincrona, em
+#   geral em ate um dia.
+# - SOFT DELETE DE 7 DIAS, declarado: a janela para desfazer uma exclusao
+#   errada. Zero seria apagar sem volta.
 resource "google_storage_bucket" "arquivos" {
   project                     = var.project_id
   name                        = "lexintegra-arquivos-${local.bucket_suffix}"
@@ -87,7 +118,21 @@ resource "google_storage_bucket" "arquivos" {
   public_access_prevention    = "enforced"
 
   versioning {
-    enabled = true
+    enabled = false
+  }
+
+  lifecycle_rule {
+    condition {
+      with_state                 = "ARCHIVED"
+      days_since_noncurrent_time = 1
+    }
+    action {
+      type = "Delete"
+    }
+  }
+
+  soft_delete_policy {
+    retention_duration_seconds = 604800
   }
 
   encryption {
@@ -106,6 +151,12 @@ resource "google_storage_bucket" "sourcemaps" {
   storage_class               = "STANDARD"
   uniform_bucket_level_access = true
   public_access_prevention    = "enforced"
+
+  # Sem soft delete: nao ha dado pessoal nem valor em recuperar um source map
+  # apagado pela regra de 180 dias.
+  soft_delete_policy {
+    retention_duration_seconds = 0
+  }
 
   lifecycle_rule {
     condition {
@@ -126,4 +177,12 @@ resource "google_storage_bucket" "clamav_db" {
   storage_class               = "STANDARD"
   uniform_bucket_level_access = true
   public_access_prevention    = "enforced"
+
+  # SEM SOFT DELETE. O job sobrescreve ~1 GB duas vezes por dia; com o padrao
+  # de 7 dias, cada sobrescrita deixava a copia anterior cobrada por uma semana
+  # — perto de 14 copias guardadas o tempo todo, para uma base que o proprio job
+  # refaz em minutos.
+  soft_delete_policy {
+    retention_duration_seconds = 0
+  }
 }
