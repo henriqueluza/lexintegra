@@ -222,7 +222,7 @@ Duas armadilhas:
 | Toda variável do Terraform tem `default` | `scripts/conferir-defaults-terraform.mjs` | `pnpm lint:terraform` |
 | Toda política de alerta tem roteamento, e todo roteamento tem política | `scripts/conferir-roteamento-alertas.mjs` e `infra/terraform/alertas-roteamento.json` | `pnpm lint:terraform` |
 | Todo tipo de recurso Terraform tem papel de CI declarado | `scripts/conferir-papeis-de-bootstrap.mjs` e `infra/terraform/papeis-de-bootstrap.json` | `pnpm lint:terraform` |
-| A documentação de entrega acompanha o código | `scripts/conferir-docs-entrega.mjs` | `pnpm lint:terraform` |
+| A documentação de entrega acompanha o código: variáveis da API, runbook de cada alerta, secrets inventariados e links relativos | `scripts/conferir-docs-entrega.mjs` | `pnpm lint:docs` |
 | Escore de mutação mínimo | `thresholds.break` em `apps/api/stryker.config.mjs` (86) e `packages/shared/stryker.config.mjs` (96) | `pnpm mutacao` |
 | Formatação do Terraform | `terraform fmt -check -recursive` | job `terraform` do CI |
 | Build pré-renderizado, catálogo fora do pacote, `configuracao-publica.json` presente | passos do job `qualidade` em `ci.yml` | CI |
