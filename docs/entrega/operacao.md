@@ -52,7 +52,9 @@ falha, veja [`runbooks/deploy-recusado.md`](../runbooks/deploy-recusado.md).
 
 No PR, o [`ci.yml`](../../.github/workflows/ci.yml) roda lint, cobertura,
 integração, build, a imagem do scanner, regressão visual, jornadas, mutação e
-`terraform plan`, e publica o plano como comentário no PR.
+`terraform plan`, e publica o plano como comentário no PR. O plano usa os
+mesmos `TF_VAR_*` do deploy. Se um PR que não toca `infra/terraform` propuser
+destruir algo, o job falha.
 
 ---
 

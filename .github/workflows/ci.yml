@@ -304,7 +304,11 @@ jobs:
     name: Terraform (validate e plan)
     runs-on: ubuntu-latest
     steps:
+      # Historia inteira: o passo que recusa destroy compara o PR com a base
+      # para saber se ele toca a infraestrutura.
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Autenticar no Google Cloud (sem chave JSON)
         uses: google-github-actions/auth@v3
@@ -334,9 +338,45 @@ jobs:
           TF_VAR_api_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/api:${{ github.event.pull_request.head.sha }}
           TF_VAR_scanner_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/scanner:${{ github.event.pull_request.head.sha }}
           TF_VAR_commit_sha: ${{ github.event.pull_request.head.sha }}
-        run: terraform plan -input=false -no-color -lock-timeout=5m
+          # A MESMA EXPRESSAO DO `deploy.yml`, e pelo mesmo motivo (secret ou
+          # variable). Faltava aqui: o canal de alertas tem
+          # `count = var == "" ? 0 : 1`, entao todo plano de PR propunha destrui-lo
+          # e esvaziar os canais das oito politicas — um diff falso em todo PR,
+          # que treina quem revisa a ignorar diff de infraestrutura. A variavel e
+          # `sensitive`: o valor nao aparece no plano comentado.
+          TF_VAR_alertas_email_desenvolvimento: ${{ secrets.ALERTAS_EMAIL_DESENVOLVIMENTO || vars.ALERTAS_EMAIL_DESENVOLVIMENTO }}
+        run: terraform plan -input=false -no-color -lock-timeout=5m -out=plano.tfplan
         working-directory: infra/terraform
         continue-on-error: true
+
+      # PR QUE NAO TOCA `infra/` NAO PODE PROPOR DESTRUIR NADA. Se propoe, o plano
+      # esta lendo algo diferente do que o deploy vai aplicar (uma variavel que so
+      # o deploy recebe, como era o caso do canal de alertas), ou alguem mudou a
+      # infraestrutura por fora do Terraform. Nos dois casos o diff precisa ser
+      # explicado antes do merge, e nao ignorado. PR que toca `infra/` pode
+      # destruir — ai e a revisao humana do plano que decide.
+      #
+      # `forget` (bloco `removed` com `destroy = false`) nao e `delete` e passa.
+      # `terraform-bin` e o binario sem o wrapper do setup-terraform, que mistura
+      # texto na saida e quebraria o `jq`.
+      - name: Recusar destroy em PR sem mudanca de infraestrutura
+        if: github.event_name == 'pull_request' && steps.plan.outcome == 'success'
+        working-directory: infra/terraform
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          CABECA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if ! git diff --quiet "${BASE}...${CABECA}" -- . ; then
+            echo "O PR altera infra/terraform: destroy, se houver, fica para a revisao do plano."
+            exit 0
+          fi
+          destruidos=$(terraform-bin show -json plano.tfplan \
+            | jq -r '[.resource_changes[]? | select(.change.actions | index("delete")) | .address] | join(", ")')
+          if [ -n "${destruidos}" ]; then
+            echo "::error::PR sem mudanca em infra/terraform propoe destruir: ${destruidos}"
+            exit 1
+          fi
+          echo "Nenhum destroy proposto."
 
       - name: Publicar o plano no PR
         if: github.event_name == 'pull_request'
