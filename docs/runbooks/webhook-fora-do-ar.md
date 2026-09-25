@@ -2,9 +2,10 @@
 
 **Alerta que leva aqui:** *Alerta critico da aplicacao*, com assunto
 `pagamento.webhook-ilegivel` ou `pagamento.webhook-evento-desconhecido`.
-**Não existe alerta para recusa por segredo ou assinatura:** esses casos são
-log `WARNING`. O webhook parado também pode aparecer como *API fora do ar* ou
-como reclamação de cliente.
+A recusa por segredo ou assinatura tem alerta próprio, *Webhook do gateway
+recusado*, com triagem em [webhook-recusado.md](webhook-recusado.md). O
+webhook parado também pode aparecer como *API fora do ar* ou como reclamação
+de cliente.
 
 **Quem executa:** quem atende a operação. Trocar segredo exige acesso ao
 Secret Manager e ao painel do AbacatePay do escritório.

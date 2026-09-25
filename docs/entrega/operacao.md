@@ -315,8 +315,8 @@ Conferidas em 24/09/2026 com `gcloud scheduler jobs list` e
 |---|---|---|---|---|
 | `varredor-outbox` | Scheduler, em [`outbox.tf`](../../infra/terraform/outbox.tf) | a cada minuto | `POST /api/interno/outbox/varredura`: reenfileira o que ficou sem tarefa | Registro perdido entre gravar e enfileirar não é mais entregue. Alerta *Outbox parado* |
 | `clamav-base-diaria` | Scheduler, em [`varredura.tf`](../../infra/terraform/varredura.tf) | 4h e 16h | Executa o job `clamav-atualizar-base`, que publica a base no bucket | A base envelhece e o scanner continua dizendo "limpo". Alertas *Base do ClamAV velha* e *sem publicação* |
-| `retencao-diaria` | Scheduler, em `varredura.tf` | 5h | `POST /api/interno/retencao`: aviso no 23º dia e exclusão do entregável no 30º dia depois de `entregue` | Arquivos ficam além dos 30 dias. **Nenhum alerta cobre isso** |
-| `sinais-operacionais` | Scheduler, em [`sinais.tf`](../../infra/terraform/sinais.tf) | a cada 5 minutos | `POST /api/interno/sinais`: mede e grava em log a idade do outbox e da quarentena | As métricas ficam sem dado, e os alertas de outbox e quarentena **não disparam** |
+| `retencao-diaria` | Scheduler, em `varredura.tf` | 5h e 17h | `POST /api/interno/retencao`: aviso no 23º dia e exclusão de todas as versões do entregável no 30º dia depois de `entregue`. Duas vezes por dia por causa do alerta de ausência | Arquivos ficam além dos 30 dias. Alerta *Retencao parada* |
+| `sinais-operacionais` | Scheduler, em [`sinais.tf`](../../infra/terraform/sinais.tf) | a cada 5 minutos | `POST /api/interno/sinais`: mede e grava em log a idade do outbox, da quarentena e da reunião sem sala, e os advogados sem `usuarioTeams` | As métricas ficam sem dado, e os alertas que dependem delas **não disparam**. Alerta *Sonda de sinais parada* |
 | fila `eventos` | Cloud Tasks, em `outbox.tf` | sob demanda | Entrega o outbox em `POST /api/interno/outbox`. Até 12 tentativas em 1 hora, backoff de 10 a 300 s | E-mail, sala e estorno param. Alerta *Outbox parado* |
 | fila `varredura` | Cloud Tasks, em `varredura.tf` | sob demanda | Chama `POST /api/interno/varredura`, que chama o scanner. Até 10 tentativas em 1 hora | Arquivo parado em quarentena. Alerta *Arquivo parado em quarentena* |
 | `clamav-atualizar-base` | Job do Cloud Run, em `varredura.tf` | pelo Scheduler | `freshclam` e publicação em `gs://lexintegra-clamav-db-36bda` | Mesmo que `clamav-base-diaria` |
@@ -395,6 +395,9 @@ continua recuperável por até 7 dias. A única coleção com TTL é `checkouts`
 | Base do ClamAV sem publicacao | Nenhuma publicação em 23 h | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
 | Disponibilidade publicada sem link de reuniao | Advogado ativo, com horário publicado e sem `usuarioTeams`. **Só com o Teams ligado**: com `REUNIOES_MODO=desligado`, a sonda não emite o sinal | [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
 | Reuniao marcada sem sala do Teams | Reunião em `reservada_sem_link` há mais de 60 min | [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
+| Webhook do gateway recusado | Mais de 5 recusas do webhook em 10 min, por segredo ou assinatura | [`webhook-recusado.md`](../runbooks/webhook-recusado.md) |
+| Retencao parada | Nenhuma passagem da retenção concluída em 23 h | [`retencao-parada.md`](../runbooks/retencao-parada.md) |
+| Sonda de sinais parada | A sonda não mede há 15 min. Quatro alertas ficam cegos | [`sonda-parada.md`](../runbooks/sonda-parada.md) |
 | API fora do ar | O uptime check de `https://lexintegra.com.br/api/health` falha | [`api-fora-do-ar.md`](../runbooks/api-fora-do-ar.md) |
 
 **Quem recebe.** Um canal de e-mail, *Desenvolvimento (PROVISORIO)*, criado só
@@ -406,8 +409,8 @@ destino e decidir o roteamento faz parte da transferência
 ([`transferencia.md`](transferencia.md)). Depois de qualquer troca, siga
 [`runbooks/alerta-artificial.md`](../runbooks/alerta-artificial.md).
 
-**Webhook recusado não tem alerta próprio.** O `401` do guard do webhook é
-`WARNING`. Ver [`webhook-fora-do-ar.md`](../runbooks/webhook-fora-do-ar.md).
+**Webhook recusado tem alerta desde o Bloco E**, pela linha estruturada que o
+guard escreve a cada `401` (`jsonPayload.sinal="webhook.recusado"`).
 
 ---
 

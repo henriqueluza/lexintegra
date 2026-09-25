@@ -235,6 +235,18 @@ variable "limite_reuniao_sem_sala_minutos" {
   default     = 60
 }
 
+variable "limite_webhook_recusado" {
+  description = <<-EOT
+    Quantas recusas do webhook (segredo ou assinatura) em dez minutos viram alerta.
+
+    A URL do webhook e conhecida, e robo bate nela: uma recusa isolada e ruido.
+    Mais de cinco em dez minutos e ou o segredo trocado num lado so — todo evento
+    real sendo recusado — ou alguem insistindo. O runbook separa os dois.
+  EOT
+  type        = number
+  default     = 5
+}
+
 variable "limite_base_clamav_horas" {
   description = <<-EOT
     A partir de quantas horas a base de assinaturas e considerada velha.

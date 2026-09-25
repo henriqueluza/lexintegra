@@ -98,8 +98,19 @@ export class RetencaoService {
       }
     }
 
+    /*
+     * `sinal: 'retencao.passagem'` e o que a politica de AUSENCIA "Retencao
+     * parada" le (achado 4.5 do Bloco E). A linha so sai quando a passagem chega
+     * aqui: uma que quebra no meio nao emite, e o silencio e o sinal.
+     */
     this.log.log(
       `retencao: ${String(pagina.size)} examinado(s), ${String(avisados)} avisado(s), ${String(excluidos)} excluido(s)`,
+      {
+        sinal: 'retencao.passagem',
+        examinados: pagina.size,
+        avisados,
+        excluidos,
+      },
     );
 
     return { avisados, excluidos, examinados: pagina.size };

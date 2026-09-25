@@ -135,6 +135,39 @@ describe('RetencaoService', () => {
     });
   });
 
+  /**
+   * A POLITICA "RETENCAO PARADA" E DE AUSENCIA, e le esta linha (achado 4.5 do
+   * Bloco E): cada passagem que CHEGA AO FIM emite `retencao.passagem`. Uma
+   * passagem que quebra no meio nao emite, e e isso que o alerta precisa ver.
+   */
+  describe('a passagem concluida deixa rastro', () => {
+    it('emite uma linha estruturada com os totais', async () => {
+      const { retencao } = montar({ jaAvisado: true });
+      const linhas: { campos?: Record<string, unknown> }[] = [];
+      (retencao as unknown as { log: unknown }).log = {
+        log: (_mensagem: string, campos?: Record<string, unknown>) =>
+          linhas.push({ campos }),
+      };
+
+      await retencao.executarPassagem(dias(30));
+
+      expect(
+        linhas.filter(
+          (linha) => linha.campos?.['sinal'] === 'retencao.passagem',
+        ),
+      ).toEqual([
+        {
+          campos: {
+            sinal: 'retencao.passagem',
+            examinados: 1,
+            avisados: 0,
+            excluidos: 1,
+          },
+        },
+      ]);
+    });
+  });
+
   describe('o aviso nasce no outbox', () => {
     /**
      * Regra inviolavel 3: a notificacao nasce na MESMA transacao que produz o

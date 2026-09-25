@@ -28,7 +28,7 @@ quarentena, e o job lê o mirror público do ClamAV e escreve no bucket.
 |---|---|---|---|
 | Job `varredor-outbox` | `outbox.tf` / `google_cloud_scheduler_job.varredor_outbox` | `* * * * *` | cerca de 43.200 |
 | Job `clamav-base-diaria` | `varredura.tf` / `google_cloud_scheduler_job.clamav_base` | `0 4,16 * * *` | cerca de 60 |
-| Job `retencao-diaria` | `varredura.tf` / `google_cloud_scheduler_job.retencao` | `0 5 * * *` | cerca de 30 |
+| Job `retencao-diaria` | `varredura.tf` / `google_cloud_scheduler_job.retencao` | `0 5,17 * * *` | cerca de 60 |
 | Job `sinais-operacionais` | `sinais.tf` / `google_cloud_scheduler_job.sinais` | `*/5 * * * *` | cerca de 8.640 |
 
 **Total: 4 jobs** do Cloud Scheduler. A cobrança é por job e por conta de
@@ -95,8 +95,8 @@ Tudo em `observabilidade.tf`, salvo indicação.
 
 | Item | Quantidade |
 |---|---|
-| Métricas personalizadas por log | **7**: `alertas-criticos`, `outbox-atraso-segundos`, `quarentena-atraso-segundos`, `outbox-entregas`, `clamav-base-idade-horas`, `disponibilidade-sem-link`, `reuniao-sem-sala-segundos` |
-| Políticas de alerta | **9**, todas com condição sobre métrica. A arquitetura, seção 12, registra que o Monitoring passa a cobrar alertas a partir de 01/09/2027 |
+| Métricas personalizadas por log | **9**: `alertas-criticos`, `outbox-atraso-segundos`, `quarentena-atraso-segundos`, `outbox-entregas`, `clamav-base-idade-horas`, `disponibilidade-sem-link`, `reuniao-sem-sala-segundos`, `webhook-recusado`, `retencao-passagens` |
+| Políticas de alerta | **12**, todas com condição sobre métrica. A arquitetura, seção 12, registra que o Monitoring passa a cobrar alertas a partir de 01/09/2027 |
 | Uptime check | **1**, `API LexIntegra (/api/health)`, a cada **300 s**, a partir de várias regiões |
 | Painel | 1 (`paineis/operacao.json`) |
 | Canal de notificação | 1 e-mail, e só existe com a variável do GitHub definida |

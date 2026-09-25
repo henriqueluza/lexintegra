@@ -259,11 +259,18 @@ resource "google_cloud_scheduler_job" "clamav_base" {
 }
 
 # O QUARTO JOB. Ver a nota de custo no topo do arquivo.
+#
+# DUAS VEZES POR DIA desde o Bloco E (achado 4.5), e a razao e o ALERTA, como na
+# base do ClamAV: a politica "Retencao parada" e de ausencia, e a ausencia tem
+# teto de 23h30m. Com uma execucao por dia, o intervalo normal (24h) estouraria
+# a janela todo dia. A passagem e idempotente — a segunda do dia so acha o que a
+# primeira ja fez —, e o Scheduler cobra por job, nao por execucao. O nome
+# `retencao-diaria` fica: renomear recriaria o job por um rotulo.
 resource "google_cloud_scheduler_job" "retencao" {
   project   = var.project_id
   name      = "retencao-diaria"
   region    = var.region
-  schedule  = "0 5 * * *"
+  schedule  = "0 5,17 * * *"
   time_zone = "America/Sao_Paulo"
 
   http_target {
