@@ -194,9 +194,8 @@ Arquivos versionados em `apps/web/public/`:
 | `imagens/confianca-lexintegra.jpg`, `analise-…`, `criterio-…`, `assinatura-…` | Geradas com a ferramenta `imagegen` em 21/09/2026, com prompts originais. As referências de banco de imagens **não** foram incorporadas | [`docs/imagens-landing.md`](../imagens-landing.md) |
 | `imagens/logo-lexintegra.png` | Gerada com `imagegen` **a partir da logo enviada pela contratante**. É obra derivada da arte original, com o monograma da balança preservado | [`docs/identidade-navegacao.md`](../identidade-navegacao.md). Direitos da arte original: ADR-10 |
 | `favicon.png` | Idem, só o símbolo | `docs/identidade-navegacao.md` |
-| `favicon.ico` | **Sem origem registrada.** Veio no esqueleto da Etapa 2 (`0dfe53b`), com o tamanho do ícone padrão do Angular CLI. O `index.html` aponta para `favicon.png`, mas o arquivo continua publicado | — (ver Achados) |
-| `martelo-placeholder.svg` | **Sem origem registrada.** É espaço reservado (`TODO-FOTO-MARTELO`) e nenhum arquivo de `apps/web/src` o referencia | — (ver Achados) |
-| Ícones do sistema (`apps/web/src/app/ui/icone/`) | Traços desenhados inline, seguindo o padrão de `docs/design.md`. **O repositório não registra se o desenho é próprio ou se foi adaptado de um conjunto de ícones** | — (ver Achados) |
+| `favicon.ico` | Derivado de `favicon.png` no Bloco E (16, 32, 48 e 64 px). Substituiu o ícone padrão do Angular CLI que vinha do esqueleto da Etapa 2 | [`docs/imagens-landing.md`](../imagens-landing.md) |
+| Ícones do sistema (`apps/web/src/app/ui/icone/`) | Cópia literal dos traços do protótipo `docs/prototipos/direcao-B-pauta.html` (Etapa 1). **A origem do desenho no protótipo não está registrada**: nenhuma biblioteca é citada em lugar nenhum do repositório | [`docs/imagens-landing.md`](../imagens-landing.md) |
 
 Os arquivos `imagens/arquitetura-lexintegra.jpg` e `.png` existem na cópia de
 trabalho do desenvolvedor, mas **não estão versionados**, e por isso não entram

@@ -27,3 +27,27 @@ Use case: photorealistic-natural. Create an original premium editorial photograp
 ### assinatura-lexintegra.jpg
 
 Use case: photorealistic-natural. Create an original premium editorial photograph for Brazilian legal services platform LexIntegra, inspired by the subject matter of legal office stock photography. Landscape 3:2. Cohesive warm ivory, dark walnut, restrained deep burgundy and antique brass palette. Natural soft window light, realistic materials and anatomy, subtle photographic grain, understated and trustworthy. No text overlay, no branding, no watermark. Not a collage, not a website mockup. Subject: close-up of a business professional signing a document with a black and brass fountain pen at a dark walnut desk. Navy wool tailored suit, white cuff, natural realistic hand holding the pen correctly, second hand resting beside document. Cropped below face. A glass of water at far edge and soft warm window reflections, restrained dark burgundy background, authentic editorial photography, cream paper with indistinct lines only. Focus on pen and hands. Original composition.
+
+## Origem de toda mídia publicada em `apps/web/public/`
+
+Registro do Bloco E (achado 4.12, 25/09/2026). Todo arquivo de imagem servido
+pelo site tem a origem escrita aqui. Mídia nova entra nesta tabela no mesmo
+commit em que entra no repositório.
+
+| Arquivo | Origem |
+|---|---|
+| `imagens/confianca-lexintegra.jpg`, `analise-lexintegra.jpg`, `criterio-lexintegra.jpg`, `assinatura-lexintegra.jpg` | Geradas com `imagegen` em 21/09/2026, com os prompts desta página |
+| `imagens/logo-lexintegra.png` | Gerada com `imagegen` a partir da logo enviada pela contratante, com o wordmark trocado para LexIntegra. Prompt em [`identidade-navegacao.md`](identidade-navegacao.md). É obra derivada da arte original (ADR-10) |
+| `favicon.png` (64 px) | Gerado com `imagegen` a partir da mesma logo, só o símbolo. Prompt em [`identidade-navegacao.md`](identidade-navegacao.md) |
+| `favicon.ico` (16, 32, 48 e 64 px) | **Derivado de `favicon.png`** no Bloco E: redimensionado com `sips` (macOS) e empacotado como ICO com entradas PNG. Substitui o ícone padrão do Angular CLI, que veio no esqueleto da Etapa 2 (`0dfe53b`) e continuava publicado, porque navegadores pedem `/favicon.ico` sem precisar de `<link>` |
+| `martelo-placeholder.svg` | **Removido no Bloco E.** Era um espaço reservado (`TODO-FOTO-MARTELO`), sem origem registrada e sem nenhuma referência no código, nos testes ou nas imagens de referência |
+
+**Ícones da interface** (`apps/web/src/app/ui/icone/icone.ts`): os traços são
+cópia literal dos `<symbol>` de `docs/prototipos/direcao-B-pauta.html`, o
+protótipo da Etapa 1 (compare `i-doc`, `i-up`, `i-video`, `i-alert` e
+`i-lock` com `documento`, `enviar`, `video`, `alerta` e `cadeado`). O
+repositório **não registra** de onde o protótipo tirou esses desenhos: não há
+menção a biblioteca de ícones no protótipo, no `design.md` ou no histórico do
+git. São primitivas geométricas simples (retângulos, linhas e um arco), com
+terminação reta, o que não identifica nenhuma biblioteca conhecida. **A origem
+anterior ao protótipo segue indeterminada.**
