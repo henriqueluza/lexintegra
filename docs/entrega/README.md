@@ -36,6 +36,7 @@ com teste que cai quando for substituído.
 | [Credenciais](credenciais.md) | Quem assume as contas | Inventário de toda credencial, sem valores. Como trocar cada uma e confirmar a troca. Ordem da rotação. Acessos pessoais do desenvolvedor |
 | [Transferência](transferencia.md) | Desenvolvedor e escritório, juntos | A ordem em que repositório, projeto, terceiros e alertas mudam de mãos sem derrubar nada. Inclui o risco da federação do GitHub |
 | [Inventário de custos](inventario-custos.md) | Quem monta a planilha de custos | Tudo que é cobrado, com quantidade e configuração, **sem preço**. O que foi removido e em que commit |
+| [Licenças de terceiros](licencas-terceiros.md) | Quem redige o termo de cessão | O que o projeto usa e não é dele, gerado do lockfile. Não permissivas em destaque. O que foi produzido no projeto |
 
 ## Runbooks (incidentes)
 
