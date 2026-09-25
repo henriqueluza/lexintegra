@@ -295,14 +295,32 @@ resource "google_service_account_iam_member" "api_assina_urls" {
   member             = "serviceAccount:${google_service_account.api_runtime.email}"
 }
 
-resource "google_storage_bucket_iam_member" "api_administra_quarentena" {
-  bucket = google_storage_bucket.quarentena.name
-  role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_service_account.api_runtime.email}"
+# --- Duplicatas retiradas do state (Bloco E, achado 4.7) -----------------------
+# `api_administra_quarentena` e `api_administra_arquivos` concediam EXATAMENTE o
+# mesmo binding (bucket, papel e membro) que `api_quarentena` e `api_arquivos`
+# em `iam.tf`. Dois recursos para um binding real so esperam o dia em que um
+# for alterado e o outro nao.
+#
+# FICAM OS DE `iam.tf`, que e onde vivem todas as concessoes da identidade da
+# API — quem procura "o que a api-lexintegra-run pode fazer" procura la.
+#
+# `removed` com `destroy = false`, e NAO apagar o bloco: apagar faria o
+# Terraform remover o binding real, e a API perderia o acesso aos buckets ate
+# o apply seguinte recriar pelo outro recurso. Aqui o Terraform so esquece as
+# duas entradas do state; o binding continua, gerido por `iam.tf`. Os blocos
+# podem sair depois do primeiro apply, como os `import` saíram no Bloco D.
+removed {
+  from = google_storage_bucket_iam_member.api_administra_quarentena
+
+  lifecycle {
+    destroy = false
+  }
 }
 
-resource "google_storage_bucket_iam_member" "api_administra_arquivos" {
-  bucket = google_storage_bucket.arquivos.name
-  role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_service_account.api_runtime.email}"
+removed {
+  from = google_storage_bucket_iam_member.api_administra_arquivos
+
+  lifecycle {
+    destroy = false
+  }
 }
