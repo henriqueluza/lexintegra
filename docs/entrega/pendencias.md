@@ -12,6 +12,51 @@ risque-o aqui e atualize o documento que ele cita.
 
 ---
 
+## 0. O que depende do Henrique, em ordem
+
+Resumo das linhas marcadas **H** nas seções abaixo, na ordem em que convém
+fazer. O detalhe e o roteiro de cada uma estão no item citado.
+
+**Agora, sem esperar nada:**
+
+- [ ] Apagar a chave JSON da `firebase-adminsdk-fbsvc`, depois de confirmar que
+  nenhum script seu depende dela (2.1).
+- [ ] Tirar `roles/editor` da SA padrão do Compute (2.2).
+- [ ] Proteger a `main` no GitHub: PR com revisão e CI obrigatórios (2.3).
+- [ ] Mover `ALERTAS_EMAIL_DESENVOLVIMENTO` de *variable* para *secret* (2.4).
+
+**Logo depois do merge e do deploy dos achados do Bloco E (PR #33):**
+
+- [ ] Conferir as políticas e métricas novas no Monitoring (2.8).
+- [ ] Provar o alerta *Sonda de sinais parada*, pausando a sonda por 20 min (2.9).
+- [ ] Conferir que um arquivo excluído some em 7 dias e que não sobram versões
+  não atuais (2.10).
+- [ ] Abrir o PR que tira os dois blocos `removed` de `varredura.tf`, com
+  `No changes` (2.12).
+- [ ] Decidir se a regra `deny` de `scripts/manual-only/` fica no
+  `.claude/settings.json` (2.13).
+- [ ] Registrar a origem dos traços dos ícones, se souber de onde o protótipo
+  os tirou (2.14).
+
+**Com prazo ou evento próprio:**
+
+- [ ] Confirmar a exportação OTLP em produção e liberar a remoção de
+  `roles/cloudtrace.agent` (2.5).
+- [ ] Conferir a URL assinada no primeiro pedido real (2.6).
+- [ ] No faturamento de outubro, conferir a queda do armazenamento do
+  `clamav-db` (2.11).
+- [ ] Disparar o alerta artificial sempre que trocar o destinatário (2.7).
+
+**Marcadores seus nos documentos** (seção 3, linhas com **H**): tabela de
+acessos da garantia, conta de faturamento e o segundo `billing.admin`, nomes
+dos secrets do AbacatePay, Firebase Auth ou Identity Platform, termos da base
+do ClamAV, hash do commit final (com a lista de licenças gerada de novo),
+domínio do Resend, reentrega e reenvio de webhook no AbacatePay, titular do
+domínio, provisionamento do próximo administrador e o `usuarioTeams` dos
+advogados existentes.
+
+---
+
 ## 1. Decisão imediata
 
 | # | Pendência | Quem |
@@ -35,6 +80,7 @@ risque-o aqui e atualize o documento que ele cita.
 | 2.11 | Conferir, no faturamento de outubro, que o armazenamento do `lexintegra-clamav-db-36bda` caiu. As cópias apagadas deixam de ser cobradas com o soft delete em zero | [`inventario-custos.md`](inventario-custos.md), seção 3 | H |
 | 2.12 | Depois do primeiro apply, tirar de `varredura.tf` os dois blocos `removed`, como os `import` saíram no Bloco D. O `terraform plan` do PR precisa dar `No changes` | `infra/terraform/varredura.tf` | H |
 | 2.13 | Decidir se a regra `deny` de `Bash(*scripts/manual-only/*)` em `.claude/settings.json` continua. O caminho nunca existiu; a regra é inofensiva hoje, mas passa a valer se alguém criar a pasta | `.claude/settings.json` | H |
+| 2.14 | Registrar a origem dos traços dos ícones. Eles são cópia do protótipo `docs/prototipos/direcao-B-pauta.html` (Etapa 1), e o repositório não diz de onde o protótipo os tirou. Se foram desenhados para o protótipo, registrar isso; se vieram de uma biblioteca, registrar a biblioteca e a licença em `licencas-terceiros.md` | [`docs/imagens-landing.md`](../imagens-landing.md) | H |
 
 ## 3. Marcadores nos documentos
 
