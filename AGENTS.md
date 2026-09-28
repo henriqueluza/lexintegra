@@ -75,15 +75,9 @@ segurança registrado: a confirmação consultar a cobrança no gateway.
 - **Pipeline no GitHub Actions**: `.github/workflows/ci.yml` (lint, testes com limiar, build, `terraform plan` comentado no PR) e `deploy.yml` (push na `main` → imagem para o Artifact Registry, `terraform apply`, Hosting, smoke test contra `/api/health` comparando o `commitSha`). Autenticação por Workload Identity Federation; nenhum segredo de GCP cadastrado no GitHub.
 - **Bucket sobrando, já removido:** `gs://lexintegra-tfstate` (sem sufixo) existia no projeto, vazio e sem uso — o registro anterior dizia que o nome estava tomado por terceiros, e não estava. Foi apagado à mão em 03/09/2026; hoje responde 404. Conferência em `docs/runbooks/limpeza-infra.md`, seção 1.
 
-**Aguardando resposta externa, não bloqueiam Etapas 1 e 2:**
+**Pendências: a lista única é o [`CHECKLIST.md`](CHECKLIST.md), na raiz** (desde 28/09/2026). Ela absorveu `docs/entrega/pendencias.md` (apagado), as listas de espera que ficavam aqui e os blocos "Só você" ainda abertos do plano. Pendência nova entra lá, e em nenhum outro lugar — nem aqui.
 
-- Aprovação final da AbacatePay para modo de produção (chave `abc_prod_...`) — bloqueia o **fechamento** da Etapa 8; a parte que não depende dela está no PR de `feat/checkout-sandbox-abacatepay`.
-- **Homologação de cartão da conta pelo AbacatePay** — sem ela, o checkout hospedado responde `CARD is not available for this store` e **o cartão não funciona em ambiente nenhum, nem em produção**. Não há endpoint nem configuração no painel que resolva; é processo da conta, com prazo de terceiro. Confirmar com antecedência se a conta do escritório já tem cartão homologado. Ver o "Só você" da Etapa 8.
-- Verificação completa de domínio no Resend — confirmar status atual; bloqueia a Etapa 7, não antes.
-
-**Ainda faltam, do lado da CONTRATANTE:** ficha de anamnese, tipografia oficial (se houver manual além do PDF), confirmação de licenciamento Microsoft Teams dos advogados, aditivo da cláusula 7ª assinado.
-
-**Pendência conhecida na identidade visual:** a logo original enviada tem o wordmark do nome de trabalho anterior embutido na arte — precisa ser refeita com "LexIntegra" antes de uso público (ver ADR-10). As cores extraídas continuam válidas.
+**Logo resolvida:** a arte foi adaptada para "LexIntegra" no redesign (`docs/identidade-navegacao.md`); a pendência do wordmark antigo (ADR-10) está fechada.
 
 **Etapa 3 — sistema de design implementado (branch `feat/sistema-design`):**
 
@@ -243,7 +237,7 @@ segurança registrado: a confirmação consultar a cobrança no gateway.
 - **Imagens de referência:** nove novas, **não aprovadas**, e todas as existentes dos painéis mudaram porque o menu ganhou item. Revisão humana, uma a uma.
 - **Cobertura:** `apps/api` 91/82/90/92, `apps/web` 96/89/91/97, `shared` 99/100/100/99. **Mutação:** `shared` 98,15%, API 87,69%.
 
-**Próximo trabalho recomendado:** revisão humana dos PRs das Etapas 8 e 10, os dois parciais. **As duas travam no mesmo lugar — prazo de terceiro — e as duas precisam ser iniciadas AGORA, não quando o código estiver pronto:** a homologação de cartão com o AbacatePay (sem ela o cartão não funciona nem em produção) e o registro do aplicativo no Entra ID com a application access policy (propagação de até 48h). Quando a primeira sair, fazer a parte de cartão da rodada no sandbox — o nome do evento de conclusão do cartão é o item de maior risco ainda aberto. Quando a segunda sair, preencher `usuarioTeams` de cada advogado e ligar `REUNIOES_MODO=graph` em commit próprio, com uma chamada de teste manual antes. As imagens de referência da regressão visual esperam aprovação uma a uma. Do lado da CONTRATANTE seguem pendentes: catálogo real da B&C, ficha de anamnese, textos jurídicos do estorno e do cancelamento, domínio verificado no Resend, chave de produção, os destinatários dos alertas e a confirmação das oito decisões provisórias do ADR-21 — em especial a antecedência mínima de 24 horas para marcar e a devolução do crédito quando quem cancela é o escritório.
+**Próximo trabalho recomendado:** o que estiver aberto no [`CHECKLIST.md`](CHECKLIST.md), na ordem da seção 0 de lá.
 
 ## Stack
 

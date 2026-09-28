@@ -9,7 +9,7 @@ Complemento ao rascunho de arquitetura. Cada etapa tem um entregável verificáv
 
 **Cadência.** A cláusula 4.5 exige informe semanal de andamento. O fim de cada etapa é o momento natural desse informe, e a validação prevista no 3.5 deve ser pedida por escrito com prazo, para que o 5.3 e o 5.4 possam ser acionados se a resposta demorar.
 
-**Como ler a seção manual.** Cada etapa tem um bloco **"Só você"** com duas categorias:
+**Como ler a seção manual.** Cada etapa tem um bloco **"Só você"** com duas categorias. Os blocos são o registro do que cada etapa exigiu; **o que ainda está aberto é acompanhado só no [`CHECKLIST.md`](../CHECKLIST.md)**, na raiz.
 
 - **Impossível delegar** — envolve credencial, cartão, aceite de termos ou identidade jurídica.
 - **Bloquear ativamente** — o agente *consegue* fazer, e é justamente por isso que precisa de hook de `PreToolUse` barrando. Nada de confiar em instrução no AGENTS.md para isso: instruções em Markdown são contexto; os controles efetivos dependem das permissões e ferramentas do ambiente de cada agente.
