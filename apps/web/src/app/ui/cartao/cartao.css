@@ -5,7 +5,7 @@
 .cartao {
   background: var(--superficie-elevada);
   border: var(--borda-fina) solid var(--divisor);
-  border-radius: var(--raio);
+  border-radius: var(--raio-cartao);
   color: var(--texto);
   display: flex;
   flex-direction: column;

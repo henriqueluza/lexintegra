@@ -1,25 +1,65 @@
+/*
+ * Cadastro inicial (pre-cadastro). Vive dentro da moldura de acesso, na pagina
+ * `/cadastro`: o formulario ocupa a coluna branca, sem caixa propria.
+ */
 .cadastro {
   display: grid;
   gap: var(--s5);
 }
+
 .cadastro__texto p,
 .cadastro__pronto p {
-  color: var(--texto-2);
+  margin-top: var(--s3);
+  color: var(--texto-3);
   font-size: var(--t-menor);
-  line-height: var(--altura-solta);
+  line-height: var(--altura-corpo);
 }
+
 .cadastro__formulario {
   display: flex;
   flex-direction: column;
   gap: var(--s5);
 }
-.cadastro__pronto h3 {
-  font-family: var(--fonte-display);
-  font-size: var(--t-t2);
-  font-weight: var(--peso-titulo);
+
+.cadastro__formulario app-botao {
+  display: flex;
 }
-.cadastro__continuar {
-  display: inline-block;
-  color: var(--acento-forte);
+
+.cadastro__formulario p a {
+  color: var(--acento);
+  font-weight: var(--peso-forte);
+  text-underline-offset: var(--s1);
+}
+
+.cadastro__formulario > p {
+  font-size: var(--t-mini);
+}
+
+.cadastro__pronto {
   margin-top: var(--s5);
+  padding: var(--s5);
+  border-radius: var(--raio-cartao);
+  background: var(--acento-fundo);
+}
+
+.cadastro__pronto h3 {
+  font-size: var(--t-t3);
+  font-weight: var(--peso-maximo);
+  letter-spacing: var(--letra-titulo);
+}
+
+.cadastro__continuar {
+  display: inline-flex;
+  margin-top: var(--s4);
+  padding: var(--s3) var(--s5);
+  border-radius: var(--raio);
+  background: var(--acento);
+  color: var(--texto-sobre-acento);
+  font-size: var(--t-menor);
+  font-weight: var(--peso-forte);
+  text-decoration: none;
+}
+
+.cadastro__continuar:hover {
+  background: var(--acento-forte);
 }

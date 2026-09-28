@@ -1,0 +1,63 @@
+/*
+ * Lado do formulario das paginas de acesso (entrar, cadastro, recuperar e definir
+ * senha), dentro de `app-moldura-acesso` (ADR-22).
+ */
+h1 {
+  font-size: var(--t-t1);
+  font-weight: var(--peso-extra);
+  line-height: var(--altura-apertada);
+  letter-spacing: var(--letra-titulo);
+}
+
+.apoio {
+  margin: var(--s3) 0 var(--s6);
+  color: var(--texto-3);
+  font-size: var(--t-menor);
+  line-height: var(--altura-corpo);
+}
+
+form,
+.pilha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+form app-botao,
+.pilha app-botao {
+  display: flex;
+}
+
+.nota {
+  padding: var(--s3) var(--s4);
+  border-radius: var(--raio);
+  background: var(--estado-alerta-fundo);
+  color: var(--estado-alerta);
+  font-size: var(--t-micro);
+  line-height: var(--altura-densa);
+}
+
+.link {
+  align-self: flex-start;
+  color: var(--acento);
+  font-size: var(--t-mini);
+  font-weight: var(--peso-forte);
+  text-underline-offset: var(--s1);
+}
+
+.rodape {
+  margin-top: var(--s6);
+  padding-top: var(--s5);
+  border-top: var(--borda-fina) solid var(--divisor);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  font-size: var(--t-menor);
+  color: var(--texto-3);
+}
+
+.rodape a {
+  color: var(--acento);
+  font-weight: var(--peso-forte);
+  text-underline-offset: var(--s1);
+}

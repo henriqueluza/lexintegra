@@ -34,4 +34,6 @@ export class LinkAcao {
   readonly variante = input<VarianteBotao>('secundario');
   readonly tamanho = input<'md' | 'p'>('md');
   readonly icone = input<NomeIcone | null>(null);
+  /** Icone depois do rotulo — a seta de "seguir adiante" (ADR-22). */
+  readonly iconeFinal = input<NomeIcone | null>(null);
 }

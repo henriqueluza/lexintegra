@@ -15,7 +15,9 @@ describe('Landing institucional', () => {
   it('entrega conteúdo completo no primeiro render, com uma h1', async () => {
     const pagina = await montar();
     expect(pagina.querySelectorAll('h1')).toHaveLength(1);
-    expect(pagina.textContent).toContain(TEXTOS.hero.titulo);
+    for (const linha of TEXTOS.hero.titulo) {
+      expect(pagina.querySelector('h1')?.textContent).toContain(linha);
+    }
     expect(pagina.textContent).toContain(TEXTOS.como.passos[0].titulo);
   });
   it('mantém cadastro, catálogo e carrinho fora da landing', async () => {
@@ -24,17 +26,25 @@ describe('Landing institucional', () => {
     expect(pagina.querySelector('a[href="/cadastro"]')).not.toBeNull();
     expect(pagina.querySelector('a[href="/servicos"]')).not.toBeNull();
   });
-  it('a versão padrão não monta animação', async () => {
+  it('não monta animação e mostra uma fotografia só, com texto alternativo', async () => {
     const pagina = await montar();
     expect(pagina.querySelector('app-martelo')).toBeNull();
-    expect(pagina.querySelector('img')?.getAttribute('src')).toContain(
-      'confianca-lexintegra.jpg',
-    );
+    const fotos = pagina.querySelectorAll('main img');
+    expect(fotos).toHaveLength(1);
+    expect(fotos[0].getAttribute('src')).toContain('confianca-lexintegra.jpg');
+    expect(fotos[0].getAttribute('alt')?.length).toBeGreaterThan(10);
   });
-  it('mostra as quatro fotografias e não oferece alternância de versão', async () => {
+  it('ilustra o produto sem prometer preço', async () => {
     const pagina = await montar();
-    expect(pagina.querySelectorAll('main img')).toHaveLength(4);
-    expect(pagina.textContent).not.toContain('Ver todas as imagens');
+    expect(
+      pagina.querySelector('.janela[role="img"]')?.getAttribute('aria-label'),
+    ).toBeTruthy();
+    // O unico "preco" e o marcador borrado R$ 0.000, escondido do leitor de tela.
+    const semMarcador = (pagina.textContent ?? '').replaceAll('R$ 0.000', '');
+    expect(semMarcador).not.toMatch(/R\$ ?\d/);
+    for (const borrado of pagina.querySelectorAll('.plano__borrado')) {
+      expect(borrado.getAttribute('aria-hidden')).toBe('true');
+    }
   });
   it('abre e fecha cada resposta por botão acessível', async () => {
     const pagina = await montar();

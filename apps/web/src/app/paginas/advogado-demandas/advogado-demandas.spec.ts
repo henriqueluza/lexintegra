@@ -246,7 +246,7 @@ describe('AdvogadoDemandas', () => {
 
       expect(api.chamadas).toEqual(['listar']);
 
-      botaoCom(fixture, 'Anamnese e observacoes')?.click();
+      botaoCom(fixture, 'Anamnese e observações')?.click();
       await fixture.whenStable();
       fixture.detectChanges();
 
@@ -273,7 +273,7 @@ describe('AdvogadoDemandas', () => {
         ],
       });
 
-      botaoCom(fixture, 'Anamnese e observacoes')?.click();
+      botaoCom(fixture, 'Anamnese e observações')?.click();
       await fixture.whenStable();
       fixture.detectChanges();
 
@@ -287,12 +287,12 @@ describe('AdvogadoDemandas', () => {
         demandas: [demanda('p1', [SOLICITADO])],
       });
 
-      botaoCom(fixture, 'Anamnese e observacoes')?.click();
+      botaoCom(fixture, 'Anamnese e observações')?.click();
       await fixture.whenStable();
       fixture.detectChanges();
 
       expect(fixture.nativeElement.textContent).toContain(
-        'ainda nao preencheu',
+        'ainda não preencheu',
       );
     });
   });
@@ -308,7 +308,7 @@ describe('AdvogadoDemandas', () => {
     async function abrir(
       fixture: ComponentFixture<AdvogadoDemandas>,
     ): Promise<void> {
-      botaoCom(fixture, 'Anamnese e observacoes')?.click();
+      botaoCom(fixture, 'Anamnese e observações')?.click();
       await fixture.whenStable();
       fixture.detectChanges();
     }
@@ -407,7 +407,7 @@ describe('AdvogadoDemandas', () => {
       await fixture.whenStable();
       fixture.detectChanges();
 
-      expect(botaoCom(fixture, 'Anamnese e observacoes')).toBeDefined();
+      expect(botaoCom(fixture, 'Anamnese e observações')).toBeDefined();
     });
   });
 });

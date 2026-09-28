@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   OnInit,
   signal,
@@ -9,25 +10,49 @@ import type { CartaoPedido } from 'shared/esquemas/pedido';
 import { ApiClienteService } from '../../autenticacao/api-cliente.service';
 import { Carregando } from '../../ui/carregando/carregando';
 import { EstadoVazio } from '../../ui/estado-vazio/estado-vazio';
+import { Icone } from '../../ui/icone/icone';
+import { LinkAcao } from '../../ui/link-acao/link-acao';
 import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
+import { Resumo, type ItemDeResumo } from '../../ui/resumo/resumo';
 import { CartaoPedidoComponent } from './cartao-pedido';
 
+type Filtro = 'todos' | 'andamento' | 'concluidos';
+
+/** Um entregavel com arquivo servivel esperando a decisao do cliente. */
+interface Pendencia {
+  readonly pedidoId: string;
+  readonly servico: string;
+  readonly entregavel: string;
+}
+
+interface ProximaReuniao {
+  readonly id: string;
+  readonly servico: string;
+  readonly inicio: Date;
+  readonly semLink: boolean;
+}
+
+const ESTADO_CONCLUIDO = 'entregue';
+
 /**
- * A area do cliente (item 2.3.2): UM CARTAO POR PEDIDO.
+ * Area do cliente: um cartao por pedido (criterio de aceite da Etapa 9), com o
+ * resumo, o filtro e a coluna "Agora e com voce" do redesign (ADR-22).
  *
- * A pagina e uma lista e nada mais. Tudo que se faz com um pedido acontece
- * dentro do cartao dele — inclusive marcar reuniao (Etapa 10). Nao ha, e nao pode
- * passar a haver, uma tela de agendamento fora daqui: com dois pedidos ativos ela
- * nao teria como saber qual saldo debitar (ADR-12, arquitetura 5.4). O criterio
- * de aceite da etapa e literalmente sobre isso.
- *
- * A TELA NAO E A FRONTEIRA. `@Perfis('cliente')` no controlador da API e quem
- * decide, e `ConsultaPedidosService` filtra pelo uid do token — nenhuma chamada
- * daqui manda `clienteId`.
+ * Tudo abaixo do topo e DERIVADO da mesma lista que desenha os cartoes — nenhuma
+ * chamada nova. A coluna lateral aponta para o cartao; a acao continua dentro
+ * dele.
  */
 @Component({
   selector: 'app-cliente-pedidos',
-  imports: [CartaoPedidoComponent, Carregando, EstadoVazio, MensagemErro],
+  imports: [
+    CartaoPedidoComponent,
+    Carregando,
+    EstadoVazio,
+    Icone,
+    LinkAcao,
+    MensagemErro,
+    Resumo,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cliente-pedidos.html',
   styleUrl: './cliente-pedidos.css',
@@ -39,16 +64,107 @@ export class ClientePedidos implements OnInit {
   protected readonly carregando = signal(true);
   protected readonly falha = signal(false);
 
+  /** "Todos" por padrao: nenhum pedido some da tela sem a pessoa pedir. */
+  protected readonly filtro = signal<Filtro>('todos');
+  protected readonly filtros: readonly { valor: Filtro; rotulo: string }[] = [
+    { valor: 'todos', rotulo: 'Todos' },
+    { valor: 'andamento', rotulo: 'Em andamento' },
+    { valor: 'concluidos', rotulo: 'Concluídos' },
+  ];
+
+  protected readonly visiveis = computed(() => {
+    const filtro = this.filtro();
+    return this.pedidos().filter((pedido) => {
+      if (filtro === 'todos') return true;
+      const concluido = concluidoOuEncerrado(pedido);
+      return filtro === 'concluidos' ? concluido : !concluido;
+    });
+  });
+
+  protected readonly pendencias = computed((): readonly Pendencia[] =>
+    this.pedidos()
+      .filter((pedido) => pedido.situacao === 'ativo')
+      .flatMap((pedido) =>
+        pedido.entregaveis
+          .filter((e) => e.estado === 'em_revisao' && e.arquivoServivel)
+          .map((e) => ({
+            pedidoId: pedido.id,
+            servico: pedido.snapshot.nome,
+            entregavel: e.nome,
+          })),
+      ),
+  );
+
+  protected readonly proximasReunioes = computed(
+    (): readonly ProximaReuniao[] => {
+      const agora = Date.now();
+      return this.pedidos()
+        .flatMap((pedido) =>
+          pedido.reunioes
+            .filter(
+              (r) =>
+                (r.estado === 'confirmada' ||
+                  r.estado === 'reservada_sem_link') &&
+                Date.parse(r.inicio) >= agora,
+            )
+            .map((r) => ({
+              id: r.id + pedido.id,
+              servico: pedido.snapshot.nome,
+              inicio: new Date(r.inicio),
+              semLink: r.estado === 'reservada_sem_link',
+            })),
+        )
+        .sort((a, b) => a.inicio.getTime() - b.inicio.getTime())
+        .slice(0, 3);
+    },
+  );
+
+  protected readonly resumo = computed((): readonly ItemDeResumo[] => {
+    const pedidos = this.pedidos();
+    const concluidos = pedidos.filter(concluidoOuEncerrado).length;
+    return [
+      {
+        valor: pedidos.length - concluidos,
+        rotulo: 'Pedidos em andamento',
+        icone: 'pasta',
+      },
+      {
+        valor: this.pendencias().length,
+        rotulo: 'Documentos para você revisar',
+        icone: 'documento',
+      },
+      { valor: concluidos, rotulo: 'Pedidos concluídos', icone: 'confere' },
+    ];
+  });
+
   ngOnInit(): void {
     void this.recarregar();
   }
 
-  /**
-   * A LISTA INTEIRA E RECARREGADA quando um cartao age, e nao so o cartao que
-   * agiu. Parece desperdicio e nao e: uma confirmacao de entrega muda o estado
-   * daquele entregavel, e recarregar so aquele cartao deixaria os irmaos
-   * mostrando dados de antes da acao sem que nada indicasse isso na tela.
-   */
+  protected dia(data: Date): string {
+    return data.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      timeZone: 'America/Sao_Paulo',
+    });
+  }
+
+  protected mes(data: Date): string {
+    return data
+      .toLocaleDateString('pt-BR', {
+        month: 'short',
+        timeZone: 'America/Sao_Paulo',
+      })
+      .replace('.', '');
+  }
+
+  protected hora(data: Date): string {
+    return data.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'America/Sao_Paulo',
+    });
+  }
+
   protected async recarregar(): Promise<void> {
     this.carregando.set(true);
     this.falha.set(false);
@@ -60,4 +176,13 @@ export class ClientePedidos implements OnInit {
       this.carregando.set(false);
     }
   }
+}
+
+/** Entregue por inteiro, ou fora de `ativo` (cancelado, estornado). */
+function concluidoOuEncerrado(pedido: CartaoPedido): boolean {
+  if (pedido.situacao !== 'ativo') return true;
+  return (
+    pedido.entregaveis.length > 0 &&
+    pedido.entregaveis.every((e) => e.estado === ESTADO_CONCLUIDO)
+  );
 }

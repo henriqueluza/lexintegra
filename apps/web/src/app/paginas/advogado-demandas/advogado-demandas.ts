@@ -18,6 +18,7 @@ import { Cartao, CartaoRodape } from '../../ui/cartao/cartao';
 import { Carregando } from '../../ui/carregando/carregando';
 import { EstadoVazio } from '../../ui/estado-vazio/estado-vazio';
 import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
+import { Resumo, type ItemDeResumo } from '../../ui/resumo/resumo';
 import { SeloEstado } from '../../ui/selo-estado/selo-estado';
 import { mensagemDoErro } from '../erros';
 
@@ -36,6 +37,7 @@ import { mensagemDoErro } from '../erros';
 @Component({
   selector: 'app-advogado-demandas',
   imports: [
+    Resumo,
     ReactiveFormsModule,
     Botao,
     Campo,
@@ -56,6 +58,28 @@ export class AdvogadoDemandas implements OnInit {
   protected readonly demandas = signal<readonly DemandaResumo[]>([]);
   protected readonly carregando = signal(true);
   protected readonly falhaDaLista = signal(false);
+
+  /** Numeros do topo (ADR-22), derivados da lista que ja veio. */
+  protected readonly resumo = computed((): readonly ItemDeResumo[] => {
+    const entregaveis = this.demandas().flatMap((d) => d.entregaveis);
+    return [
+      {
+        valor: this.demandas().length,
+        rotulo: 'Demandas atribuídas',
+        icone: 'pasta',
+      },
+      {
+        valor: entregaveis.filter((e) => e.estado === 'solicitado').length,
+        rotulo: 'Entregáveis a iniciar',
+        icone: 'relogio',
+      },
+      {
+        valor: entregaveis.filter((e) => e.estado === 'em_elaboracao').length,
+        rotulo: 'Em elaboração',
+        icone: 'documento',
+      },
+    ];
+  });
 
   protected readonly abertaId = signal<string | null>(null);
   protected readonly anamnese = signal<readonly AnamneseResumo[]>([]);

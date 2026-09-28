@@ -163,7 +163,7 @@ describe('Entrar', () => {
 
   it.each([
     ['excesso-de-tentativas', 'Muitas tentativas'],
-    ['indisponivel', 'Nao foi possivel entrar'],
+    ['indisponivel', 'Não foi possível entrar'],
   ] as const)('mostra mensagem propria para %s', async (motivo, trecho) => {
     const { fixture } = montar({ falha: new ErroDeEntrada(motivo) });
     preencher(fixture, 'ana@escritorio.test', 'segredo');
@@ -184,7 +184,7 @@ describe('Entrar', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain(
-      'Nao foi possivel entrar',
+      'Não foi possível entrar',
     );
   });
 

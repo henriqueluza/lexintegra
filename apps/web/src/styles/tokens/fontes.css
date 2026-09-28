@@ -1,7 +1,7 @@
 /*
- * Familias tipograficas, hospedadas no proprio dominio.
+ * Familia tipografica, hospedada no proprio dominio.
  *
- * Por que nao o CDN do Google Fonts, que os prototipos usavam:
+ * Por que nao o CDN do Google Fonts:
  *
  * 1. LGPD. O CDN recebe o IP de todo visitante. Numa plataforma juridica, cujo
  *    publico chega para contratar servico sobre assunto sensivel, isso e um
@@ -12,46 +12,36 @@
  * 3. Determinismo. A regressao visual compara pixel; fonte que as vezes chega e
  *    as vezes cai no fallback produz falha intermitente.
  *
- * As tres familias sao SUBSTITUTAS ate o manual de marca da CONTRATANTE chegar
- * (Etapa 0, item 0.2.1). E por isso que nenhum componente escreve nome de fonte:
- * a troca acontece nos tokens `--fonte-*` de `semanticos.css`, num lugar so.
+ * Desde o redesign de setembro de 2026 (ADR-22 em `docs/design.md`) e UMA familia
+ * so, Plus Jakarta Sans, nas paginas publicas e nos paineis. Nenhum componente
+ * escreve nome de fonte: a troca acontece nos tokens `--fonte-*` de
+ * `semanticos.css`, num lugar so.
  *
- * Os arquivos variaveis trazem todos os subconjuntos (latin, latin-ext, grego,
- * cirilico). O `unicode-range` de cada `@font-face` faz o navegador baixar apenas
- * o que a pagina de fato usa — em pt-BR, latin e latin-ext.
+ * O arquivo variavel traz todos os subconjuntos. O `unicode-range` de cada
+ * `@font-face` faz o navegador baixar apenas o que a pagina de fato usa — em
+ * pt-BR, latin e latin-ext.
  */
-@import '@fontsource-variable/source-serif-4/wght.css';
-@import '@fontsource-variable/archivo/wght.css';
-@import '@fontsource/ibm-plex-sans/latin-400.css';
-@import '@fontsource/ibm-plex-sans/latin-500.css';
-@import '@fontsource/ibm-plex-sans/latin-600.css';
+@import '@fontsource-variable/plus-jakarta-sans/wght.css';
 
 /*
- * Fallback com METRICA CASADA para a fonte de display.
+ * Fallback com METRICA CASADA.
  *
- * O PROBLEMA QUE ELE RESOLVE, medido: Source Serif 4 e cerca de 7% mais larga que
- * Georgia no mesmo corpo. Enquanto o arquivo nao chega, o titulo do hero e
- * desenhado em Georgia e cabe em menos linhas; quando a fonte troca, o titulo
- * ganha uma linha e empurra a pagina inteira para baixo. O Lighthouse mediu isso
- * como CLS de 0,381 — quase quatro vezes o limite de 0,1 — e apontou justamente
- * `div.palco` e o paragrafo do hero como o que se desloca.
+ * Plus Jakarta Sans e mais larga que Arial no mesmo corpo: medido no navegador,
+ * 4,8% no titulo em peso 800 e 8,1% no corpo em peso 400. Enquanto o arquivo nao
+ * chega, o titulo do hero seria desenhado em Arial e caberia em menos linhas;
+ * quando a fonte troca, ganharia uma linha e empurraria a pagina (CLS). Foi o
+ * que o Lighthouse mediu na Etapa 6 com a fonte anterior.
  *
- * `size-adjust: 107%` faz o Georgia ocupar a mesma largura, entao a quebra de
- * linha e a mesma antes e depois da troca. O valor saiu de medicao no navegador,
- * nao de estimativa: largura de uma frase real em corpo 200px nas duas familias.
+ * Um unico `size-adjust` serve os dois pesos, entao o valor fica entre as duas
+ * medicoes: o erro residual e de ~2% para cada lado, pequeno demais para mudar
+ * uma quebra de linha na maioria das frases.
  *
- * SEM `ascent-override`/`descent-override` de proposito: a altura de linha vem de
- * `--altura-apertada`, que e um numero sem unidade, entao ela ja nao depende da
- * metrica vertical da fonte. Sobrescrever o que ja e estavel so acrescentaria
- * numero para alguem manter errado depois.
- *
- * `local('Georgia')` sem arquivo: em sistema que nao tem Georgia esta declaracao
- * simplesmente nao carrega e a pilha cai para a proxima familia, como caia antes.
- * O ganho e para quem tem, que e a maioria dos visitantes.
+ * `local('Arial')` sem arquivo: em sistema sem Arial esta declaracao nao carrega e
+ * a pilha cai para a proxima familia.
  */
 @font-face {
-  font-family: 'Source Serif 4 fallback';
-  src: local('Georgia');
-  size-adjust: 107%;
+  font-family: 'Plus Jakarta Sans fallback';
+  src: local('Arial');
+  size-adjust: 106%;
   font-display: swap;
 }

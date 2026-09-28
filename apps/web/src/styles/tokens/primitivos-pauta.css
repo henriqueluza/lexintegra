@@ -1,9 +1,9 @@
 /*
- * Camada 1 — primitivos da Direcao B (Pauta), registrados em docs/design.md.
+ * Camada 1 — a paleta clara, registrada em docs/design.md.
  *
- * Clara e operacional: prioriza densidade e leitura rapida de estado sobre
- * impacto visual. Vive atras da fronteira de autenticacao — tudo que roda logado
- * usa esta direcao.
+ * Nasceu como Direcao B (Pauta), a dos paineis. Desde o redesign de setembro de
+ * 2026 (ADR-22) ela e a paleta das DUAS areas: as paginas publicas tambem sao
+ * claras, e so acrescentam as superficies de marca de `primitivos-catedra.css`.
  *
  * Os nomes sao identicos aos de `docs/design.md` de proposito, para o documento
  * continuar sendo leitura valida do codigo.

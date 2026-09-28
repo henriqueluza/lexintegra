@@ -204,7 +204,7 @@ describe('AdminEntregas', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent as string).toContain(
-      'Nao foi possivel carregar as entregas',
+      'Não foi possível carregar as entregas',
     );
   });
 

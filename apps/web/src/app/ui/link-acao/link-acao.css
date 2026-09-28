@@ -51,14 +51,14 @@
 
 .link-acao--secundario {
   background: var(--botao-secundario-fundo);
-  /* `--limite-controle`, nao o divisor decorativo: a WCAG 1.4.11 pede 3:1. */
-  border-color: var(--limite-controle);
+  /* Borda clara: o rotulo identifica o controle (ver `botao.css`). */
+  border-color: var(--botao-secundario-borda);
   color: var(--botao-secundario-cor);
 }
 
 .link-acao--secundario:hover {
   background: var(--acento-fundo);
-  color: var(--texto);
+  color: var(--acento);
 }
 
 /* Sem borda, pelo mesmo motivo documentado em `botao.css`. */

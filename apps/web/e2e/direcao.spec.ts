@@ -64,7 +64,13 @@ test.describe('aninhamento das direcoes', () => {
     expect(acento.toLowerCase()).toBe('#6c0c0c');
   });
 
-  test('a superficie elevada da Catedra continua trocando o dourado', async ({
+  /*
+   * Desde o ADR-22 as duas areas apontam `--acento-em-elevada` para o mesmo vinho,
+   * e o dourado da Catedra saiu das superficies. O teste continua: ele prova que
+   * a indirecao existe e resolve no escopo certo, que e o que permite uma area
+   * futura ter um acento proprio sem mexer em componente.
+   */
+  test('a superficie elevada da area publica resolve o acento de elevada', async ({
     page,
   }) => {
     await abrirPeca(page, 'cartao');
@@ -75,8 +81,8 @@ test.describe('aninhamento das direcoes', () => {
       '--acento',
     );
 
-    // --ouro-400 (6,33:1 sobre --vinho-700), nao --ouro-500 (4,19:1).
-    expect(acento.toLowerCase()).toBe('#c39b5f');
+    // --vinho (12,39:1 sobre o branco).
+    expect(acento.toLowerCase()).toBe('#6c0c0c');
   });
 
   test('a tabela tambem declara a superficie elevada', async ({ page }) => {
@@ -88,6 +94,6 @@ test.describe('aninhamento das direcoes', () => {
       '--acento',
     );
 
-    expect(acento.toLowerCase()).toBe('#c39b5f');
+    expect(acento.toLowerCase()).toBe('#6c0c0c');
   });
 });

@@ -1,56 +1,45 @@
 /*
- * Camada 1 — primitivos da Direcao A (Catedra), registrados em docs/design.md.
+ * Camada 1 — primitivos da MARCA, usados nas paginas publicas.
  *
- * Sobria e institucional: vinho profundo, baixa densidade, serifada de peso 300
- * no hero. Feita para ser lida devagar e converter. Vale em tudo que roda SEM
- * autenticacao — a fronteira entre as duas direcoes e a fronteira de login.
+ * Ate setembro de 2026 este arquivo guardava a Direcao A (Catedra) inteira:
+ * vinho profundo como superficie, creme como texto. O redesign (ADR-22 em
+ * `docs/design.md`) trocou as paginas publicas para fundo claro, e a paleta clara
+ * e comum as duas areas — ela vive em `primitivos-pauta.css`.
  *
- * As cores foram medidas do portfolio da CONTRATANTE (ADR-10). Nenhum texto,
- * foto ou logotipo do escritorio foi reaproveitado — so a paleta.
+ * O que sobra aqui e o que so as paginas publicas pintam: as superficies vinho
+ * de destaque (faixa de diferenciais, cartao em destaque, chamada final, rodape),
+ * o texto creme sobre elas, o dourado da marca e o brilho do hero.
  *
- * Consequencia pratica dessa origem: `--ouro-500` e `--vinho-*` sao decisao de
- * MARCA, nao de implementacao. Quando a auditoria de contraste encontrou um par
- * insuficiente com `--ouro-500`, a correcao foi restringir onde ele pode ser
- * usado, nao mudar o valor. Ver `contraste.spec.ts`.
+ * As cores foram medidas do portfolio da CONTRATANTE (ADR-10). `--ouro-500` e os
+ * vinhos sao decisao de MARCA, nao de implementacao: quando um par nao passa no
+ * contraste, a correcao e restringir onde ele aparece, nao mudar o valor. Ver
+ * `contraste.spec.ts`.
  *
  * NENHUM componente le um token deste arquivo. Componente le token semantico
  * (`semanticos.css`).
  */
 :root {
-  /* Superficies — vinho profundo */
+  /* Superficies vinho de destaque */
   --vinho-900: #26050a;
   --vinho-800: #340106;
-  --vinho-700: #420c11;
   --vinho-600: #54151b;
 
-  /* Acento — dourado */
+  /* Dourado da marca */
   --ouro-500: #a8783c;
   --ouro-400: #c39b5f;
-  --ouro-100: rgba(168, 120, 60, 0.16);
+  --ouro-700: #7e5724;
+  --ouro-50: #f5ebdc;
 
-  /* Texto sobre fundo escuro */
+  /* Texto sobre as superficies vinho */
   --creme-50: #f2eee7;
   --creme-200: #cfc4bb;
-  /*
-   * `#9c8b85` na Etapa 1. Passava sobre `--vinho-800` (5,59:1) mas caia para
-   * 4,30:1 sobre `--vinho-600`. Clareado ate o pior fundo da direcao passar.
-   */
-  --creme-400: #a18f89;
 
-  /* Divisores */
-  --linha: rgba(168, 120, 60, 0.24);
-  --linha-forte: rgba(168, 120, 60, 0.42);
+  /* Brilho do hero: rosado e areia, os dois tirados do vinho e do dourado */
+  --rosado-50: #fbf5f3;
+  --rosado-200: #f6e1de;
+  --areia-200: #f3e6d1;
 
-  /* Estados */
-  --ok: #7fa06b;
-  --alerta: #c98a3a;
-  /*
-   * `#c96a63` na Etapa 1: 4,43:1 sobre `--vinho-700`, que e o fundo do
-   * formulario — exatamente onde mensagem de erro aparece. Clareado ate passar
-   * nas quatro superficies. Cor de estado, nao cor de marca: mudar o valor aqui
-   * nao toca o ADR-10.
-   */
-  --erro: #dc746c;
-  --alerta-fundo: rgba(201, 138, 58, 0.08);
-  --erro-fundo: rgba(220, 116, 108, 0.1);
+  /* Divisor sobre fundo vinho */
+  --linha-marca: rgba(242, 238, 231, 0.14);
+  --linha-ouro: rgba(168, 120, 60, 0.5);
 }

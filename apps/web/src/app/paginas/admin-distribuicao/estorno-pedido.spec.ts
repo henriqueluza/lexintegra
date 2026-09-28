@@ -91,7 +91,7 @@ describe('EstornoPedido', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain(
-      'Este pedido nao pode ser estornado.',
+      'Este pedido não pode ser estornado.',
     );
   });
 

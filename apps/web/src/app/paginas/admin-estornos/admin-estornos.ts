@@ -40,7 +40,7 @@ export class AdminEstornos implements OnInit {
     { chave: 'produto', rotulo: 'Pedido' },
     { chave: 'valor', rotulo: 'Valor', alinhamento: 'fim' },
     { chave: 'motivo', rotulo: 'Motivo' },
-    { chave: 'acoes', rotulo: 'Devolucao', alinhamento: 'fim' },
+    { chave: 'acoes', rotulo: 'Devolução', alinhamento: 'fim' },
   ];
 
   protected readonly linhas = signal<readonly EstornoResumo[]>([]);

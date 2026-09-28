@@ -1,35 +1,65 @@
-<div
-  class="shell"
-  [class.shell--cliente]="navegacao().length === 0"
-  data-direcao="pauta"
->
-  <header class="shell__topo">
-    <div class="shell__identidade">
-      <a class="shell__marca" routerLink="/">LexIntegra</a
-      ><span class="shell__ambiente">Área de trabalho</span>
-      <span class="shell__usuario">{{ descricaoDoUsuario() }}</span>
-    </div>
+<div class="shell" data-direcao="pauta">
+  <aside class="shell__lateral">
+    <div class="shell__fixo">
+      <a class="shell__marca" routerLink="/" aria-label="LexIntegra — início"
+        ><img
+          src="/imagens/logo-lexintegra.png"
+          alt="LexIntegra"
+          width="160"
+          height="160"
+      /></a>
 
-    @if (navegacao().length > 0) {
-    <nav class="shell__nav" aria-label="Secoes da administracao">
-      @for (item of navegacao(); track item.rota) {
-      <a
-        class="shell__link"
-        [routerLink]="item.rota"
-        routerLinkActive="shell__link--ativo"
-        >{{ item.rotulo }}</a
-      >
+      @if (rotuloDaArea()) {
+      <p class="shell__area">{{ rotuloDaArea() }}</p>
+      } @if (navegacao().length > 0) {
+      <nav class="shell__nav" aria-label="Seções da sua área">
+        @for (item of navegacao(); track item.rota) { @if (item.grupo) {
+        <span class="shell__grupo">{{ item.grupo }}</span>
+        }
+        <a
+          class="shell__link"
+          [routerLink]="item.rota"
+          routerLinkActive="shell__link--ativo"
+          [routerLinkActiveOptions]="{ exact: item.exata ?? false }"
+          ariaCurrentWhenActive="page"
+          ><app-icone [nome]="item.icone" tamanho="p" /><span
+            >{{ item.rotulo }}</span
+          ></a
+        >
+        }
+      </nav>
       }
-    </nav>
-    }
 
-    <a class="shell__servicos" routerLink="/servicos">Conhecer serviços</a>
-    <app-botao variante="secundario" tamanho="p" (click)="sair()">
-      Sair
-    </app-botao>
-  </header>
+      <div class="shell__rodape">
+        @if (area() === 'Cliente' || area() === 'Advogado') {
+        <p class="shell__nota">
+          <strong>Tudo tem seu contexto.</strong>
+          Arquivos, observações e reuniões ficam dentro de cada pedido.
+        </p>
+        }
+        <button class="shell__sair" type="button" (click)="sair()">
+          <app-icone nome="sair" tamanho="p" /><span>Sair</span>
+        </button>
+      </div>
+    </div>
+  </aside>
 
-  <main class="shell__conteudo">
-    <router-outlet />
-  </main>
+  <div class="shell__principal">
+    <header class="shell__topo">
+      <p class="shell__trilha">
+        Seu espaço @if (area()) {<span aria-hidden="true">/</span>
+        {{ area() }}}
+      </p>
+      <div class="shell__pessoa">
+        <span class="shell__usuario">{{ descricaoDoUsuario() }}</span>
+        @if (iniciais()) {
+        <span class="shell__avatar" aria-hidden="true">{{ iniciais() }}</span>
+        }
+      </div>
+    </header>
+
+    <main class="shell__conteudo">
+      <router-outlet />
+    </main>
+  </div>
 </div>

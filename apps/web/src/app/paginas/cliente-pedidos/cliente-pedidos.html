@@ -1,31 +1,105 @@
 <section class="meus-pedidos">
-  <h1 class="meus-pedidos__titulo">Meus pedidos</h1>
-  <p class="pagina-descricao">
-    Seu atendimento, organizado. Consulte o andamento e os documentos de cada
-    serviço.
-  </p>
+  <div class="meus-pedidos__topo">
+    <div>
+      <h1 class="meus-pedidos__titulo">Meus pedidos</h1>
+      <p class="pagina-descricao">
+        Veja o que avançou e qual é o seu próximo passo em cada serviço.
+      </p>
+    </div>
+    <app-link-acao destino="/servicos" variante="primario" icone="mais"
+      >Contratar serviço</app-link-acao
+    >
+  </div>
 
   @if (carregando()) {
   <app-carregando variante="bloco" rotulo="Carregando seus pedidos" />
   } @else if (falha()) {
   <app-mensagem-erro variante="bloco">
-    Nao foi possivel carregar seus pedidos. Recarregue a pagina.
+    Não foi possível carregar seus pedidos. Recarregue a página.
   </app-mensagem-erro>
   } @else if (pedidos().length === 0) {
   <app-estado-vazio
     titulo="Nenhum pedido ainda"
-    mensagem="Quando voce contratar um produto, ele aparece aqui com o andamento de cada entregavel."
+    mensagem="Quando você contratar um serviço, ele aparece aqui com o andamento de cada entregável."
   />
   } @else {
-  <!--
-    Um `app-cartao-pedido` por pedido, cada um com seus proprios entregaveis,
-    seu proprio saldo e sua propria acao de reuniao. E o criterio de aceite da
-    Etapa 9 na estrutura do template.
-  -->
-  <div class="meus-pedidos__lista">
-    @for (pedido of pedidos(); track pedido.id) {
-    <app-cartao-pedido [pedido]="pedido" (recarregado)="recarregar()" />
-    }
+  <app-resumo [itens]="resumo()" />
+
+  <div class="meus-pedidos__grade">
+    <div class="meus-pedidos__principal">
+      <div class="filtro" role="group" aria-label="Mostrar pedidos">
+        @for (opcao of filtros; track opcao.valor) {
+        <button
+          type="button"
+          class="filtro__opcao"
+          [attr.aria-pressed]="filtro() === opcao.valor"
+          (click)="filtro.set(opcao.valor)"
+        >
+          {{ opcao.rotulo }}
+        </button>
+        }
+      </div>
+
+      <!--
+        Um `app-cartao-pedido` por pedido, cada um com seus proprios entregaveis,
+        seu proprio saldo e sua propria acao de reuniao. E o criterio de aceite da
+        Etapa 9 na estrutura do template.
+      -->
+      <div class="meus-pedidos__lista">
+        @for (pedido of visiveis(); track pedido.id) {
+        <app-cartao-pedido
+          [id]="'pedido-' + pedido.id"
+          [pedido]="pedido"
+          (recarregado)="recarregar()"
+        />
+        } @empty {
+        <p class="meus-pedidos__nenhum">Nenhum pedido neste filtro.</p>
+        }
+      </div>
+    </div>
+
+    <aside class="lateral" aria-label="Resumo do que depende de você">
+      <section class="painel">
+        <h2>Agora é com você</h2>
+        @for (item of pendencias(); track item.pedidoId + item.entregavel) {
+        <a class="pendencia" [href]="'#pedido-' + item.pedidoId">
+          <app-icone nome="documento" tamanho="p" />
+          <strong>{{ item.entregavel }} está disponível.</strong>
+          <span
+            >{{ item.servico }}: confira e confirme, ou peça uma revisão.</span
+          >
+        </a>
+        } @empty {
+        <p class="painel__vazio">
+          Nada depende de você agora. Avisamos por e-mail quando houver um
+          documento para conferir.
+        </p>
+        }
+      </section>
+
+      <section class="painel">
+        <h2>Próximas reuniões</h2>
+        @for (reuniao of proximasReunioes(); track reuniao.id) {
+        <div class="proxima">
+          <span class="proxima__data"
+            ><small>{{ mes(reuniao.inicio) }}</small
+            ><strong>{{ dia(reuniao.inicio) }}</strong></span
+          >
+          <div>
+            <strong>{{ hora(reuniao.inicio) }}</strong>
+            <span>{{ reuniao.servico }}</span>
+            @if (reuniao.semLink) {
+            <span class="proxima__aviso">Link do Teams a caminho</span>
+            }
+          </div>
+        </div>
+        } @empty {
+        <p class="painel__vazio">
+          Nenhuma reunião marcada. Você marca pelo cartão de cada pedido.
+        </p>
+        }
+      </section>
+    </aside>
   </div>
   }
 </section>

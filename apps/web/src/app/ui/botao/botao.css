@@ -54,16 +54,17 @@
 .botao--secundario {
   background: var(--botao-secundario-fundo);
   /*
-   * `--limite-controle`, e nao o divisor decorativo da direcao: esta borda
-   * delimita um controle, e a WCAG 1.4.11 pede 3:1 para ela.
+   * Borda clara (ADR-22): o rotulo ja identifica o botao, entao a borda nao e o
+   * limite que a WCAG 1.4.11 exige. Campo vazio e que precisa de 3:1 — ele nao
+   * tem rotulo dentro de si.
    */
-  border-color: var(--limite-controle);
+  border-color: var(--botao-secundario-borda);
   color: var(--botao-secundario-cor);
 }
 
 .botao--secundario:hover:not(:disabled):not([aria-disabled='true']) {
   background: var(--acento-fundo);
-  color: var(--texto);
+  color: var(--acento);
 }
 
 /*

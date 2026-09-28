@@ -17,10 +17,7 @@ import {
 } from 'shared/regras-reuniao';
 import { reuniaoAtiva } from 'shared/estado-reuniao';
 import type { CartaoPedido } from 'shared/esquemas/pedido';
-import type {
-  HorarioDisponivel,
-  ReuniaoResumo,
-} from 'shared/esquemas/reuniao';
+import type { HorarioDisponivel, ReuniaoResumo } from 'shared/esquemas/reuniao';
 import { ApiClienteService } from '../../autenticacao/api-cliente.service';
 import { Botao } from '../../ui/botao/botao';
 import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
@@ -185,7 +182,10 @@ export class ReunioesDoPedido {
   }
 
   /** O mesmo idioma de `cartao-pedido.agir`: uma acao por vez, falha visivel. */
-  private async agir(chave: string, acao: () => Promise<unknown>): Promise<void> {
+  private async agir(
+    chave: string,
+    acao: () => Promise<unknown>,
+  ): Promise<void> {
     if (this.emCurso() !== null) return;
 
     this.emCurso.set(chave);
@@ -197,7 +197,7 @@ export class ReunioesDoPedido {
     } catch (erro) {
       this.falha.set(
         mensagemDoErro(erro, {
-          409: 'Este horario nao esta mais disponivel. Escolha outro.',
+          409: 'Este horário não está mais disponível. Escolha outro.',
         }),
       );
     } finally {

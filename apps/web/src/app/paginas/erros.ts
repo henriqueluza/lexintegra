@@ -20,15 +20,15 @@ export function mensagemDoErro(
   erro: unknown,
   especificas: Readonly<Record<number, string>> = {},
 ): string {
-  const generica = 'Nao foi possivel concluir a operacao.';
+  const generica = 'Não foi possível concluir a operação.';
   if (!(erro instanceof HttpErrorResponse)) return generica;
 
   const especifica = especificas[erro.status];
   if (especifica !== undefined) return especifica;
 
-  if (erro.status === 404) return 'Este item nao existe mais.';
-  if (erro.status === 409) return 'Ja existe um registro equivalente.';
-  if (erro.status === 403) return 'Seu perfil nao permite esta operacao.';
+  if (erro.status === 404) return 'Este item não existe mais.';
+  if (erro.status === 409) return 'Já existe um registro equivalente.';
+  if (erro.status === 403) return 'Seu perfil não permite esta operação.';
 
   const corpo = erro.error as { erros?: Record<string, string> } | null;
   return Object.values(corpo?.erros ?? {})[0] ?? generica;

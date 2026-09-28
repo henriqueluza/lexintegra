@@ -14,14 +14,18 @@ describe('textos da home', () => {
 
   it('tem os blocos que a pagina renderiza', () => {
     expect(Object.keys(TEXTOS).sort()).toEqual([
+      'atendimento',
+      'aviso',
       'cadastro',
       'como',
+      'convite',
+      'diferenciais',
+      'duvidas',
       'hero',
       'marca',
-      'navegacao',
-      'numeros',
+      'planos',
       'privacidade',
-      'rodape',
+      'proposta',
       'servicos',
     ]);
   });
@@ -35,17 +39,19 @@ describe('textos da home', () => {
   });
 
   /**
-   * Sao fatos do produto, nao metrica de vaidade: quatro estados (ADR-11), doze
-   * meses de validade (item 2.7.2) e tres arquivos de apoio (regra de upload do
-   * cliente). Um numero que a plataforma nao cumpre e promessa falsa numa pagina
-   * de venda.
+   * O catalogo real nasce vazio e e o escritorio que o preenche. Os planos da home
+   * sao EXEMPLOS de formato: nenhum deles pode afirmar quantidade de reuniao ou de
+   * revisao, que e dado de produto, nem ser apresentado como "mais contratado".
    */
-  it('mostra tres numeros, todos com rotulo', () => {
-    expect(TEXTOS.numeros).toHaveLength(3);
-    for (const numero of TEXTOS.numeros) {
-      expect(naoVazio(numero.valor)).toBe(true);
-      expect(naoVazio(numero.rotulo)).toBe(true);
+  it('nao promete numero nem popularidade nos exemplos de servico', () => {
+    for (const plano of TEXTOS.planos.exemplos) {
+      for (const item of plano.itens) expect(item).not.toMatch(/\d/);
     }
+    expect(JSON.stringify(TEXTOS.planos)).not.toMatch(/mais contratad/i);
+  });
+
+  it('tem seis perguntas, todas com resposta', () => {
+    expect(TEXTOS.duvidas.perguntas).toHaveLength(6);
   });
 
   it('nao deixou nenhum texto em branco', () => {
@@ -61,11 +67,6 @@ describe('textos da home', () => {
   });
 
   /**
-   * A navegacao aponta para ancoras da propria pagina. Um destino que nao comeca
-   * com `#` seria uma rota — e rota nova exige entrada em `ROTAS_PUBLICAS` e
-   * pre-renderizacao, coisas que este arquivo nao controla.
-   */
-  /**
    * O texto juridico e o UNICO placeholder que sai literal na tela. Quando ele
    * deixar de ser um marcador, este teste cai — que e o lembrete de que a peca
    * juridica chegou e o item saiu da lista de pendencias.
@@ -73,11 +74,5 @@ describe('textos da home', () => {
   it('explica a finalidade e os direitos sobre dados', () => {
     expect(TEXTOS.privacidade.juridico).not.toContain('TODO');
     expect(TEXTOS.privacidade.juridico).toContain('eliminação');
-  });
-
-  it('navega so por ancoras internas', () => {
-    for (const item of TEXTOS.navegacao) {
-      expect(item.destino.startsWith('#')).toBe(true);
-    }
   });
 });

@@ -1,8 +1,15 @@
+/*
+ * Tokens introduzidos pelos redesigns de setembro de 2026 (PR #27 e ADR-22).
+ * Valores de layout e de movimento que nao dependem da area.
+ */
 :root {
-  --marca-fundo: #f8f5ee;
   --duracao-interacao: 220ms;
   --duracao-acordeao: 280ms;
-  --t-hero: clamp(2.75rem, 4.8vw, 4.375rem);
-  --t-editorial: clamp(2rem, 3.1vw, 2.8rem);
-  --largura-sidebar: 232px;
+  --t-hero: clamp(2.5rem, 5.4vw, 3.875rem);
+  --t-editorial: clamp(1.8125rem, 3.2vw, 2.375rem);
+  --largura-sidebar: 218px;
+  --altura-topo-publico: 88px;
+  --altura-topo-painel: 72px;
+  --largura-preview: 604px;
+  --recuo-descricao: -12px;
 }

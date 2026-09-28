@@ -11,7 +11,7 @@
   <app-mensagem-erro variante="bloco">{{ mensagem }}</app-mensagem-erro>
   } @if (falhaDaLista()) {
   <app-mensagem-erro variante="bloco">
-    Nao foi possivel carregar a lista. Recarregue a pagina.
+    Não foi possível carregar a lista. Recarregue a página.
   </app-mensagem-erro>
   }
 
@@ -24,8 +24,8 @@
   >
     <ng-template appCelulaTabela let-linha let-coluna="coluna">
       @switch (coluna.chave) { @case ('quando') { {{ quando(comoReuniao(linha))
-      }} } @case ('pedido') { {{ comoReuniao(linha).pedidoId }} } @case ('acoes')
-      {
+      }} } @case ('pedido') { {{ comoReuniao(linha).pedidoId }} } @case
+      ('acoes') {
       <div class="reunioes__acoes">
         <app-botao
           variante="primario"

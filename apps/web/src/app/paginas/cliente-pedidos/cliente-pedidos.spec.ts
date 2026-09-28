@@ -271,7 +271,7 @@ describe('ClientePedidos', () => {
       });
 
       expect(botaoCom(fixture, 'Confirmar entrega')).toBeDefined();
-      expect(botaoCom(fixture, 'Pedir revisao')).toBeDefined();
+      expect(botaoCom(fixture, 'Pedir revisão')).toBeDefined();
     });
 
     /** O saldo vem do SNAPSHOT do pedido, nunca do produto vivo. */
@@ -279,7 +279,7 @@ describe('ClientePedidos', () => {
       const { fixture } = await montar({ pedidos: [pedido('p1', [ESGOTADO])] });
 
       expect(botaoCom(fixture, 'Confirmar entrega')).toBeDefined();
-      expect(botaoCom(fixture, 'Pedir revisao')).toBeUndefined();
+      expect(botaoCom(fixture, 'Pedir revisão')).toBeUndefined();
     });
 
     it('confirma e recarrega a lista inteira', async () => {
@@ -298,7 +298,7 @@ describe('ClientePedidos', () => {
         pedidos: [pedido('p1', [AGUARDANDO])],
       });
 
-      botaoCom(fixture, 'Pedir revisao')?.click();
+      botaoCom(fixture, 'Pedir revisão')?.click();
       await fixture.whenStable();
 
       expect(api.chamadas).toContain('revisao p1/001');
@@ -313,7 +313,7 @@ describe('ClientePedidos', () => {
 
       expect(api.chamadas).toEqual(['listar']);
 
-      botaoCom(fixture, 'Observacoes e arquivos')?.click();
+      botaoCom(fixture, 'Observações e arquivos')?.click();
       await fixture.whenStable();
       fixture.detectChanges();
 
@@ -335,11 +335,11 @@ describe('ClientePedidos', () => {
         ],
       });
 
-      botaoCom(fixture, 'Observacoes e arquivos')?.click();
+      botaoCom(fixture, 'Observações e arquivos')?.click();
       await fixture.whenStable();
       fixture.detectChanges();
 
-      expect(textoDe(fixture)).toContain('Escritorio');
+      expect(textoDe(fixture)).toContain('Escritório');
       expect(textoDe(fixture)).toContain('Preciso incluir o socio novo.');
     });
   });
@@ -378,7 +378,7 @@ describe('ClientePedidos', () => {
     async function abrirDetalhes(
       fixture: ComponentFixture<ClientePedidos>,
     ): Promise<void> {
-      botaoCom(fixture, 'Observacoes e arquivos')?.click();
+      botaoCom(fixture, 'Observações e arquivos')?.click();
       await fixture.whenStable();
       fixture.detectChanges();
     }
@@ -428,7 +428,7 @@ describe('ClientePedidos', () => {
       });
 
       expect(botaoCom(fixture, 'Aceitar termos e baixar')).toBeUndefined();
-      expect(textoDe(fixture)).toContain('verificacao de seguranca');
+      expect(textoDe(fixture)).toContain('verificação de segurança');
     });
 
     /** O aceite dos termos precede o link, e vai com a VERSAO do arquivo. */
@@ -582,7 +582,7 @@ describe('ClientePedidos', () => {
       await fixture.whenStable();
       fixture.detectChanges();
 
-      expect(textoDe(fixture)).toContain('ja comecou');
+      expect(textoDe(fixture)).toContain('já começou');
     });
 
     it.each([

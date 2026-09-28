@@ -10,7 +10,8 @@
   margin: 0;
   font-family: var(--fonte-display);
   font-weight: var(--peso-titulo);
-  font-size: var(--t-t2);
+  font-size: var(--t-t1);
+  letter-spacing: var(--letra-titulo);
   color: var(--texto);
 }
 

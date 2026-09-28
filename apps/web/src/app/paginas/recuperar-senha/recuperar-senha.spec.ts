@@ -112,7 +112,7 @@ describe('RecuperarSenha', () => {
     await enviar(fixture);
 
     const texto = fixture.nativeElement.textContent as string;
-    expect(texto).toContain('Nao foi possivel registrar o pedido');
+    expect(texto).toContain('Não foi possível registrar o pedido');
     expect(texto).not.toContain('ana@escritorio.test');
     expect(fixture.nativeElement.querySelector('form')).not.toBeNull();
   });

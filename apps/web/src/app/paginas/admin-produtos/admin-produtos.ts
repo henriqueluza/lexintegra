@@ -67,10 +67,10 @@ export class AdminProdutos implements OnInit {
 
   protected readonly colunas: readonly ColunaTabela[] = [
     { chave: 'nome', rotulo: 'Produto' },
-    { chave: 'preco', rotulo: 'Preco', alinhamento: 'fim' },
+    { chave: 'preco', rotulo: 'Preço', alinhamento: 'fim' },
     { chave: 'composicao', rotulo: 'Composicao' },
-    { chave: 'situacao', rotulo: 'Situacao' },
-    { chave: 'acoes', rotulo: 'Acoes', alinhamento: 'fim' },
+    { chave: 'situacao', rotulo: 'Situação' },
+    { chave: 'acoes', rotulo: 'Ações', alinhamento: 'fim' },
   ];
 
   protected readonly opcoesDeSituacao: readonly OpcaoSelecao[] = [
@@ -148,9 +148,9 @@ export class AdminProdutos implements OnInit {
   }
 
   protected composicao(produto: ProdutoResumo): string {
-    const itens = `${produto.entregaveis.length} entregavel(is)`;
-    const reunioes = `${produto.quantidadeReunioes} reuniao(oes)`;
-    const revisoes = `${produto.numeroRevisoesPermitidas} revisao(oes)`;
+    const itens = `${produto.entregaveis.length} entregável(eis)`;
+    const reunioes = `${produto.quantidadeReunioes} reunião(ões)`;
+    const revisoes = `${produto.numeroRevisoesPermitidas} revisão(ões)`;
     return `${itens} · ${reunioes} · ${revisoes}`;
   }
 
@@ -186,7 +186,7 @@ export class AdminProdutos implements OnInit {
     const dados = this.montarProduto();
     if (dados === null) {
       this.falhaDoFormulario.set(
-        'Confira os valores numericos: preco em reais, e os demais em numeros inteiros.',
+        'Confira os valores numéricos: preço em reais, e os demais em números inteiros.',
       );
       return;
     }

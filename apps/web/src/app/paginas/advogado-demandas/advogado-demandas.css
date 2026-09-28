@@ -23,6 +23,8 @@
 .demandas__observacoes {
   display: flex;
   flex-direction: column;
+  margin: 0;
+  padding: 0;
   list-style: none;
 }
 
@@ -76,8 +78,6 @@
 .demandas__rotulo {
   color: var(--texto-3);
   font-size: var(--t-micro);
-  text-transform: uppercase;
-  letter-spacing: var(--letra-caixa-alta);
 }
 
 .demandas__valor {

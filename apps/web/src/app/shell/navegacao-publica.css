@@ -1,113 +1,228 @@
+/*
+ * Topo publico (ADR-22): faixa branca com a logo a esquerda, as tres ancoras no
+ * centro e o acesso a direita. Visitante ve Entrar e Cadastre-se; quem tem sessao
+ * ve o proprio nome e o carrinho. Abaixo de 860px tudo recolhe atras do botao de
+ * menu.
+ */
+:host {
+  display: block;
+  position: sticky;
+  top: 0;
+  z-index: var(--camada-fixa);
+}
+
 .topo {
+  background: var(--superficie-elevada);
+  border-bottom: var(--borda-fina) solid var(--divisor);
+}
+
+.topo__faixa {
   max-width: var(--largura-conteudo);
+  min-height: var(--altura-topo-publico);
   margin: 0 auto;
-  padding: var(--s5) var(--s5);
+  padding: var(--s2) var(--s5);
+  display: flex;
+  align-items: center;
+  gap: var(--s6);
+}
+
+.marca {
+  display: flex;
+  flex: none;
+}
+
+.marca__logo {
+  width: 150px;
+  height: 66px;
+  object-fit: contain;
+}
+
+nav {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--s5);
+  gap: var(--s6);
 }
-.marca {
+
+.topo__links,
+.topo__acoes {
   display: flex;
   align-items: center;
-  gap: var(--s3);
-  font-family: var(--fonte-display);
-  font-size: var(--t-t3);
-  color: var(--texto);
-  text-decoration: none;
+  gap: var(--s6);
 }
-.marca__logo {
-  width: 104px;
-  height: 104px;
-  object-fit: contain;
-  filter: brightness(0) invert(1);
+
+.topo__links {
+  margin: 0 auto;
 }
-nav {
-  display: flex;
-  align-items: center;
-  gap: var(--s5);
-}
-nav a {
-  font-size: var(--t-menor);
-  color: var(--texto-2);
-  text-decoration: none;
-  padding: var(--s2) 0;
-}
-nav a:hover,
-nav a.ativo {
-  color: var(--texto);
-}
-nav .acesso {
-  border-left: var(--borda-fina) solid var(--divisor);
-  padding-left: var(--s5);
-}
-nav .cadastre {
-  border: var(--borda-fina) solid var(--limite-controle);
-  padding: var(--s3) var(--s4);
-  color: var(--texto);
-}
-.contador {
-  color: var(--acento-forte);
-  margin-left: var(--s1);
-}
-.menu {
-  display: none;
-  background: transparent;
-  border: var(--borda-fina) solid var(--limite-controle);
-  color: var(--texto);
-  padding: var(--s2) var(--s3);
-  font: inherit;
-}
-@media (max-width: 800px) {
-  .topo {
-    flex-wrap: wrap;
-    padding: var(--s4);
-  }
-  .menu {
-    display: block;
-  }
-  nav {
-    display: none;
-    width: 100%;
-    flex-wrap: wrap;
-    gap: var(--s4);
-    padding: var(--s4) 0;
-  }
-  nav.aberto {
-    display: flex;
-  }
-  nav .acesso {
-    border: 0;
-    padding-left: 0;
-  }
+
+.topo__acoes {
+  gap: var(--s4);
 }
 
 nav a {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--t-menor);
+  font-weight: var(--peso-medio);
+  color: var(--texto-2);
+  text-decoration: none;
+  padding: var(--s2) 0;
 }
-nav a::after {
+
+nav a:hover,
+nav a.ativo {
+  color: var(--texto);
+}
+
+/*
+ * Sublinhado que cresce da esquerda. Transicao respeita movimento reduzido.
+ */
+.topo__links a::after {
   content: '';
   position: absolute;
   bottom: 0;
   left: 0;
   width: 100%;
   height: 2px;
-  background: var(--acento-forte);
+  background: var(--acento);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform var(--duracao-interacao) ease;
 }
-nav a:hover::after,
-nav a:focus-visible::after,
-nav a.ativo::after {
+
+.topo__links a:hover::after,
+.topo__links a:focus-visible::after,
+.topo__links a.ativo::after {
   transform: scaleX(1);
 }
+
+nav .cadastre {
+  padding: var(--s3) var(--s5);
+  border-radius: var(--raio);
+  background: var(--acento);
+  color: var(--texto-sobre-acento);
+  font-weight: var(--peso-forte);
+  transition: background-color var(--duracao-rapida) ease;
+}
+
+nav .cadastre:hover,
+nav .cadastre.ativo {
+  background: var(--acento-forte);
+  color: var(--texto-sobre-acento);
+}
+
 .usuario {
-  max-width: 22ch;
+  max-width: 24ch;
   overflow-wrap: anywhere;
 }
+
+.carrinho {
+  padding: var(--s2) var(--s4);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio);
+}
+
+.contador {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 var(--s1);
+  border-radius: var(--raio-pilula);
+  background: var(--acento);
+  color: var(--texto-sobre-acento);
+  font-size: var(--t-micro);
+  font-weight: var(--peso-maximo);
+}
+
+.menu {
+  display: none;
+  align-items: center;
+  gap: var(--s2);
+  margin-left: auto;
+  padding: var(--s2) var(--s3);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio);
+  background: var(--superficie-elevada);
+  color: var(--texto);
+  font-family: var(--fonte-interface);
+  font-size: var(--t-menor);
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+}
+
+@media (max-width: 860px) {
+  .topo__faixa {
+    flex-wrap: wrap;
+    gap: var(--s3);
+    padding: var(--s2) var(--s4);
+    min-height: 0;
+  }
+
+  .marca__logo {
+    width: 120px;
+    height: 54px;
+  }
+
+  .menu {
+    display: inline-flex;
+  }
+
+  nav {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s4);
+    padding: var(--s2) 0 var(--s4);
+  }
+
+  nav.aberto {
+    display: flex;
+  }
+
+  .topo__links,
+  .topo__acoes {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    margin: 0;
+  }
+
+  .topo__links a {
+    padding: var(--s3) 0;
+    border-bottom: var(--borda-fina) solid var(--divisor);
+  }
+
+  .topo__links a::after {
+    display: none;
+  }
+
+  .topo__acoes {
+    gap: var(--s3);
+  }
+
+  nav .acesso,
+  nav .cadastre,
+  .carrinho,
+  .usuario {
+    justify-content: center;
+    max-width: none;
+    padding: var(--s3) var(--s4);
+    border: var(--borda-fina) solid var(--divisor);
+    border-radius: var(--raio);
+  }
+
+  nav .cadastre {
+    border-color: var(--acento);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  nav a::after {
+  .topo__links a::after {
     transition: none;
   }
 }

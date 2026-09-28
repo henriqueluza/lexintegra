@@ -150,7 +150,7 @@ describe('DefinirSenha', () => {
     await enviar(fixture);
 
     expect(chamadas).toEqual(['conferir CODIGO123']);
-    expect(fixture.nativeElement.textContent).toContain('nao conferem');
+    expect(fixture.nativeElement.textContent).toContain('não conferem');
   });
 
   it('define a senha e oferece a entrada', async () => {

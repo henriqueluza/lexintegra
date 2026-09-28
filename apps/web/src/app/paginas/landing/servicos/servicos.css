@@ -1,164 +1,340 @@
+/*
+ * Catalogo publico (ADR-22): busca, grade de cartoes com faixa superior, e o
+ * resumo do carrinho fixo no rodape da tela enquanto houver item. Antes do
+ * cadastro, cartoes de exemplo borrados atras do aviso de cadeado.
+ */
+:host {
+  display: block;
+}
+
+h2 {
+  font-size: var(--t-t3);
+  font-weight: var(--peso-maximo);
+  line-height: var(--altura-titulo);
+  letter-spacing: var(--letra-titulo);
+}
+
+/* ------------------------------ ferramentas ------------------------------- */
+.ferramentas {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s4);
+  margin-bottom: var(--s5);
+}
+
+.busca {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  width: 100%;
+  max-width: 360px;
+  padding: 0 var(--s4);
+  background: var(--campo-fundo);
+  border: var(--borda-fina) solid var(--campo-borda-cor);
+  border-radius: var(--raio);
+  color: var(--texto-3);
+}
+
+.busca:focus-within {
+  outline: var(--borda-media) solid var(--foco);
+  outline-offset: var(--foco-deslocamento);
+}
+
+.busca input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--s3) 0;
+  border: 0;
+  background: transparent;
+  color: var(--texto);
+  font-family: var(--fonte-interface);
+  font-size: var(--t-menor);
+  outline: none;
+}
+
+.ferramentas__contagem {
+  flex: none;
+  font-size: var(--t-mini);
+  color: var(--texto-3);
+}
+
+.sem-resultado {
+  padding: var(--s6);
+  text-align: center;
+  color: var(--texto-3);
+  background: var(--superficie-elevada);
+  border-radius: var(--raio-grande);
+}
+
+/* -------------------------------- vitrine --------------------------------- */
 .vitrine,
 .trava__fundo {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--s4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s5);
 }
 
 .produto {
+  display: flex;
+  flex-direction: column;
+  background: var(--superficie-elevada);
   border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio-grande);
+  overflow: hidden;
+}
+
+/* Faixa de areia com um quadrado dourado girado: textura, nao informacao. */
+.produto__faixa {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 96px;
+  padding: 0 var(--s5);
+  background: var(--dourado-fundo);
+  color: var(--acento);
+  overflow: hidden;
+}
+
+.produto__faixa::after {
+  content: '';
+  position: absolute;
+  top: -36px;
+  right: -20px;
+  width: 145px;
+  height: 145px;
+  border: var(--borda-fina) solid var(--dourado-linha);
+  border-radius: var(--raio-destaque);
+  transform: rotate(35deg);
+}
+
+.produto__corpo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
   padding: var(--s5);
 }
 
-.produto h3 {
-  margin: 0;
-  font-family: var(--fonte-display);
-  font-weight: var(--peso-titulo);
-  font-size: var(--t-t3);
-  line-height: var(--altura-titulo);
-  color: var(--texto);
-}
-
-.produto p {
-  margin: var(--s3) 0 0;
-  color: var(--texto-2);
+.produto__corpo > p {
+  color: var(--texto-3);
   font-size: var(--t-menor);
-  line-height: var(--altura-solta);
+  line-height: var(--altura-corpo);
 }
 
 .produto__entregaveis {
-  margin: var(--s3) 0 0;
-  padding-left: var(--s4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s1);
+  font-size: var(--t-mini);
   color: var(--texto-2);
-  font-size: var(--t-menor);
-  line-height: var(--altura-solta);
 }
 
-.produto__preco {
-  margin-top: var(--s4);
-  font-family: var(--fonte-display);
-  font-size: var(--t-t2);
-  font-weight: var(--peso-titulo);
-  color: var(--acento-forte);
+.produto__entregaveis li {
+  display: flex;
+  gap: var(--s2);
+}
+
+.produto__entregaveis app-icone {
+  color: var(--acento);
+  margin-top: var(--s1);
 }
 
 .produto__inclui {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s4);
+  margin-top: auto;
+  padding-top: var(--s2);
+  font-size: var(--t-micro);
   color: var(--texto-3);
-  font-size: var(--t-mini);
 }
 
-/*
- * A trava: os cartoes ficam la, ilegiveis, atras do aviso.
- *
- * Mostrar que existe um catalogo do outro lado e o que faz o cadastro valer a
- * pena; mostrar o catalogo tornaria o cadastro dispensavel. O desfoque e
- * decorativo — quem usa leitor de tela recebe o aviso e o botao, que e a
- * informacao inteira.
- */
+.produto__inclui span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+}
+
+.produto__rodape {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  padding-top: var(--s4);
+  border-top: var(--borda-fina) solid var(--divisor);
+}
+
+.produto__preco {
+  font-size: var(--t-numeral);
+  font-weight: var(--peso-maximo);
+  letter-spacing: var(--letra-titulo);
+  color: var(--texto);
+}
+
+.produto__preco small {
+  display: block;
+  font-size: var(--t-micro);
+  font-weight: var(--peso-normal);
+  letter-spacing: var(--letra-normal);
+  color: var(--texto-3);
+}
+
+/* ---------------------------------- trava --------------------------------- */
 .trava {
   position: relative;
+  min-height: 420px;
 }
 
-.trava__fundo .produto {
-  filter: blur(3px);
-  opacity: 0.35;
+.trava__fundo {
+  filter: blur(6px);
+  pointer-events: none;
   user-select: none;
 }
 
-.trava__aviso {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--s3);
-  text-align: center;
-  padding: var(--s5);
-  color: var(--acento);
+.produto--exemplo .produto__preco {
+  margin-top: auto;
 }
 
-.trava__aviso h3 {
-  margin: 0;
-  font-family: var(--fonte-display);
-  font-weight: var(--peso-titulo);
-  font-size: var(--t-t3);
-  color: var(--texto);
-}
-
-.trava__aviso p {
-  margin: 0;
-  max-width: 34ch;
-  color: var(--texto-2);
-  font-size: var(--t-menor);
-  line-height: var(--altura-solta);
-}
-
-/* Repetir a busca e acao da pessoa, nao do efeito. Ver `servicos.ts`. */
-.falha {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--s3);
-}
-
-.produto__acao {
-  margin-top: var(--s4);
+.trava__fundo {
+  opacity: 0.55;
 }
 
 /*
- * O resumo do carrinho (Etapa 8). Fica abaixo da vitrine, e nao flutuando sobre
- * ela: a pessoa compara servicos rolando, e um painel fixo cobriria justamente o
- * que ela esta lendo.
+ * A camada do aviso cobre a area INTEIRA dos exemplos, e o cartao fica no
+ * centro dela. Cobrir tudo nao e so visual: os exemplos borrados passam a estar
+ * atras de outro elemento, e o axe deixa de medir contraste de texto que ninguem
+ * deve ler (eles ja sao `aria-hidden`).
  */
-.carrinho {
-  margin-top: var(--s6);
-  border-top: var(--borda-fina) solid var(--divisor);
-  padding-top: var(--s5);
+.trava__aviso {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--s4);
 }
 
-.carrinho h3 {
-  margin: 0;
-  font-family: var(--fonte-display);
-  font-weight: var(--peso-titulo);
-  font-size: var(--t-t3);
-  color: var(--texto);
-}
-
-.carrinho__itens {
-  margin: var(--s4) 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.carrinho__item {
+.trava__cartao {
+  width: min(460px, 100%);
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: center;
   gap: var(--s3);
-  padding: var(--s2) 0;
-  border-bottom: var(--borda-fina) solid var(--divisor);
-  color: var(--texto-2);
+  padding: var(--s6);
+  text-align: center;
+  background: var(--superficie-elevada);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio-grande);
+  box-shadow: var(--sombra-forte);
+}
+
+.trava__aviso p {
+  color: var(--texto-3);
+  font-size: var(--t-menor);
+  line-height: var(--altura-corpo);
+  margin-bottom: var(--s2);
+}
+
+.trava__icone {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--raio-cartao);
+  background: var(--acento-fundo);
+  color: var(--acento);
+}
+
+/* ------------------------------- vazio e falha ---------------------------- */
+.vazio,
+.falha {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s7) var(--s5);
+  text-align: center;
+  background: var(--superficie-elevada);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio-grande);
+}
+
+.vazio p {
+  max-width: 44ch;
+  color: var(--texto-3);
   font-size: var(--t-menor);
 }
 
-.carrinho__preco {
-  margin-left: auto;
-  color: var(--texto);
+/* ------------------------------- carrinho --------------------------------- */
+.carrinho {
+  position: sticky;
+  bottom: var(--s4);
+  z-index: var(--camada-fixa);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s4);
+  margin-top: var(--s6);
+  padding: var(--s4) var(--s5);
+  background: var(--marca-superficie);
+  color: var(--marca-texto);
+  border-radius: var(--raio-grande);
+  box-shadow: var(--sombra-forte);
+  --acento: var(--marca-texto);
+  --acento-forte: var(--superficie-elevada);
+  --texto-sobre-acento: var(--marca-superficie);
+  --foco: var(--marca-acento);
 }
 
-.carrinho__total {
-  margin: var(--s4) 0 0;
-  color: var(--texto);
+.carrinho h2 {
+  font-size: var(--t-corpo);
 }
 
-.carrinho__aviso {
-  margin: var(--s2) 0 0;
-  color: var(--texto-3);
+.carrinho p {
+  color: var(--marca-texto-2);
   font-size: var(--t-mini);
-  line-height: var(--altura-solta);
 }
 
-.carrinho__acao {
-  margin-top: var(--s4);
+.carrinho strong {
+  color: var(--marca-texto);
+}
+
+@media (max-width: 1000px) {
+  .vitrine,
+  .trava__fundo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .vitrine,
+  .trava__fundo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ferramentas {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .busca {
+    max-width: none;
+  }
+
+  .produto__faixa {
+    height: 72px;
+  }
+
+  .carrinho {
+    flex-direction: column;
+    align-items: stretch;
+    bottom: var(--s2);
+  }
+
+  .trava {
+    min-height: 520px;
+  }
 }

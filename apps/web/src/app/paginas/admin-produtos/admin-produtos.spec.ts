@@ -202,7 +202,7 @@ describe('AdminProdutos', () => {
     it('resume a composicao do produto', async () => {
       const { fixture } = await montar({ lista: [LGPD] });
       expect(textoDaTela(fixture)).toContain(
-        '2 entregavel(is) · 3 reuniao(oes) · 2 revisao(oes)',
+        '2 entregável(eis) · 3 reunião(ões) · 2 revisão(ões)',
       );
     });
 
@@ -222,7 +222,7 @@ describe('AdminProdutos', () => {
     it('avisa quando o catalogo nao carrega', async () => {
       const { fixture } = await montar({ erroAoListar: erroHttp(500) });
       expect(textoDaTela(fixture)).toContain(
-        'Nao foi possivel carregar o catalogo.',
+        'Não foi possível carregar o catálogo.',
       );
     });
 
@@ -289,7 +289,7 @@ describe('AdminProdutos', () => {
       await enviar(fixture);
 
       expect(api.chamadas).toEqual(['listar todos']);
-      expect(textoDaTela(fixture)).toContain('Confira os valores numericos');
+      expect(textoDaTela(fixture)).toContain('Confira os valores numéricos');
     });
 
     it('recusa numero fracionado em campo de contagem', async () => {
@@ -327,7 +327,7 @@ describe('AdminProdutos', () => {
       preencherValido(fixture);
       await enviar(fixture);
 
-      expect(textoDaTela(fixture)).toContain('Seu perfil nao permite');
+      expect(textoDaTela(fixture)).toContain('Seu perfil não permite');
     });
   });
 
@@ -339,7 +339,7 @@ describe('AdminProdutos', () => {
       fixture.detectChanges();
 
       expect(textoDaTela(fixture)).toContain('Editar produto');
-      expect(textoDaTela(fixture)).toContain('Salvar alteracoes');
+      expect(textoDaTela(fixture)).toContain('Salvar alterações');
     });
 
     /**
@@ -382,14 +382,14 @@ describe('AdminProdutos', () => {
       interno(fixture).editar(LGPD);
       fixture.detectChanges();
 
-      expect(valoresRenderizados(fixture, 'Entregavel')).toEqual([
+      expect(valoresRenderizados(fixture, 'Entregável')).toEqual([
         'Diagnostico',
         'Politica de privacidade',
       ]);
       expect(valoresRenderizados(fixture, 'Texto')).toEqual([
         'Reuna os contratos vigentes.',
       ]);
-      expect(valoresRenderizados(fixture, 'Preco')).toEqual(['6400,00']);
+      expect(valoresRenderizados(fixture, 'Preço')).toEqual(['6400,00']);
     });
 
     it('esvazia os campos de lista ao cancelar', async () => {
@@ -400,7 +400,7 @@ describe('AdminProdutos', () => {
       interno(fixture).cancelarEdicao();
       fixture.detectChanges();
 
-      expect(valoresRenderizados(fixture, 'Entregavel')).toEqual(['']);
+      expect(valoresRenderizados(fixture, 'Entregável')).toEqual(['']);
       expect(valoresRenderizados(fixture, 'Texto')).toEqual([]);
     });
 
@@ -429,12 +429,12 @@ describe('AdminProdutos', () => {
       ].find((botao) =>
         (botao as HTMLButtonElement)
           .getAttribute('aria-label')
-          ?.includes('Remover entregavel 2'),
+          ?.includes('Remover entregável 2'),
       ) as HTMLButtonElement;
       remover.click();
       fixture.detectChanges();
 
-      expect(valoresRenderizados(fixture, 'Entregavel')).toEqual([
+      expect(valoresRenderizados(fixture, 'Entregável')).toEqual([
         'Primeiro',
         'Terceiro',
       ]);

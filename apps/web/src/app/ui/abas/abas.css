@@ -5,7 +5,7 @@
 .abas__lista {
   display: flex;
   gap: var(--s2);
-  border-bottom: var(--borda-fina) solid var(--divisor);
+  border-bottom: var(--borda-fina) solid var(--aba-lista-borda);
   overflow-x: auto;
   /*
    * Em tela estreita a lista rola no eixo horizontal em vez de quebrar linha:
@@ -22,8 +22,8 @@
   background: transparent;
   border: 0;
   border-bottom: var(--borda-media) solid transparent;
-  border-radius: var(--aba-raio) var(--aba-raio) 0 0;
-  padding: var(--s2) var(--s3);
+  border-radius: var(--aba-raio);
+  padding: var(--s2) var(--s4);
   cursor: pointer;
   white-space: nowrap;
   transition:

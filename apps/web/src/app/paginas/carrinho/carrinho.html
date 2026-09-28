@@ -1,8 +1,14 @@
 <main class="pagina">
-  <header class="abertura">
-    <p class="contexto">Sua contratação</p>
-    <h1>Seu carrinho</h1>
-    <p>Confira os serviços escolhidos antes de seguir para o pagamento.</p>
+  <header class="cabecalho">
+    <div>
+      <p class="rotulo">
+        <app-icone nome="sacola" tamanho="p" />Sua contratação
+      </p>
+      <h1>Seu carrinho</h1>
+      <p class="apoio">
+        Confira os serviços escolhidos antes de seguir para o pagamento.
+      </p>
+    </div>
   </header>
   @if (carrinho.quantidade() === 0) {
   <section class="vazio">
@@ -11,7 +17,10 @@
       Você ainda não adicionou serviços. Conheça o catálogo e veja os escopos
       disponíveis.
     </p>
-    <app-link-acao destino="/servicos" variante="primario"
+    <app-link-acao
+      destino="/servicos"
+      variante="primario"
+      iconeFinal="seta-direita"
       >Conhecer os serviços</app-link-acao
     >
   </section>
@@ -21,6 +30,7 @@
       <ul class="itens">
         @for (item of carrinho.itens(); track $index) {
         <li>
+          <span class="itens__icone"><app-icone nome="documento" /></span>
           <div>
             <h2>{{ item.nome }}</h2>
             <p>Um pedido individual para este serviço.</p>
@@ -44,13 +54,18 @@
         >{{ preco(carrinho.totalIndicativoCentavos()) }}</strong
       >
       <p>
-        Valor estimado. O preço final será confirmado no checkout. Cada serviço
+        Valor estimado. O preço final é confirmado no checkout. Cada serviço
         terá seu próprio acompanhamento.
       </p>
-      <app-link-acao destino="/checkout" variante="primario"
+      <app-link-acao
+        destino="/checkout"
+        variante="primario"
+        iconeFinal="seta-direita"
         >Continuar para o pagamento</app-link-acao
       >
     </aside>
   </div>
   }
 </main>
+
+<app-rodape-publico />

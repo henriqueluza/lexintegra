@@ -1,0 +1,13 @@
+<dl class="resumo">
+  @for (item of itens(); track item.rotulo) {
+  <div class="resumo__item">
+    <span class="resumo__icone" aria-hidden="true"
+      ><app-icone [nome]="item.icone" tamanho="p"
+    /></span>
+    <div>
+      <dt class="resumo__rotulo">{{ item.rotulo }}</dt>
+      <dd class="resumo__valor">{{ item.valor }}</dd>
+    </div>
+  </div>
+  }
+</dl>
