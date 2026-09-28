@@ -94,8 +94,8 @@ variable "proxies_confiaveis" {
 
     Atras do rewrite do Hosting para o Cloud Run (ADR-15) sao dois: o CDN do
     Hosting e a borda do Cloud Run. O NUMERO PRECISA SER CONFERIDO numa requisicao
-    real, inspecionando `X-Forwarded-For` — esta na lista de pendencias manuais da
-    Etapa 6.
+    real, inspecionando `X-Forwarded-For` — e o item B18 do
+    CHECKLIST.md.
   EOT
   type        = number
   default     = 2

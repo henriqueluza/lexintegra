@@ -33,7 +33,7 @@ export const OPCOES_DA_APLICACAO: NestApplicationOptions = { rawBody: true };
  * para de proteger.
  *
  * O padrao e zero, que e a verdade em desenvolvimento. A conferencia do valor
- * real em producao esta na lista de pendencias manuais da Etapa 6.
+ * real em producao e o item B18 do CHECKLIST.md.
  */
 export function proxiesConfiaveis(
   ambiente: NodeJS.ProcessEnv = process.env,
