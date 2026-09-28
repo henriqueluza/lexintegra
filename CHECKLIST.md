@@ -234,9 +234,8 @@ constroem**. As decisões vão para um `decisoes.md`.
   catálogo, carrinho, checkout, shell e painéis refeitos; contraste, axe,
   stylelint, testes unitários, e2e e jornadas passando; documentos
   atualizados.
-- [ ] Regravar as imagens de referência da regressão visual (`pnpm --filter
-  web test:visual:gravar` e a dos painéis, com Docker). Depois, 👤 aprova uma
-  a uma (A2).
+- [x] Imagens de referência da regressão visual regravadas (públicas e
+  painéis). 👤 aprova uma a uma (A2).
 
 **Conteúdo**
 
