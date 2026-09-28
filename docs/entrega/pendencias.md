@@ -1,5 +1,9 @@
 # Pendências da entrega (Etapa 13)
 
+> **Desde 28/09/2026, a lista viva é o [`CHECKLIST.md`](../../CHECKLIST.md) na
+> raiz.** Ele consolida este arquivo, os marcadores dos documentos e o que falta
+> para a entrega. Este arquivo continua como detalhe e roteiro de cada item.
+
 O que ficou em aberto quando a documentação de entrega foi escrita
 (branch `docs/entrega-etapa-13`, 24–25/09/2026). Quando um item for resolvido,
 risque-o aqui e atualize o documento que ele cita.
