@@ -721,9 +721,14 @@ resource "google_monitoring_alert_policy" "sonda_parada" {
       filter   = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.outbox_atraso.name}\" AND resource.type=\"cloud_run_revision\""
       duration = "900s"
 
+      # `ALIGN_SUM`, e NAO `ALIGN_COUNT`: a metrica e DELTA/DISTRIBUTION, e a API
+      # recusa `ALIGN_COUNT` nessa combinacao (400 no primeiro deploy, 25/09/2026).
+      # E o mesmo alinhador de `clamav_base_sem_publicacao`, ausencia sobre
+      # distribuicao ja aceita em producao. Numa condicao de ausencia o valor
+      # alinhado nao importa — so se ha ponto na janela.
       aggregations {
         alignment_period   = "300s"
-        per_series_aligner = "ALIGN_COUNT"
+        per_series_aligner = "ALIGN_SUM"
       }
     }
   }
