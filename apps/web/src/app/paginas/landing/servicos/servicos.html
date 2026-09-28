@@ -3,20 +3,29 @@
   <div class="trava__fundo" aria-hidden="true">
     @for (exemplo of textos.servicos.travado.exemplos; track exemplo) {
     <article class="produto produto--exemplo">
-      <h3>{{ exemplo }}</h3>
-      <p>Escopo fechado, prazo e preço definidos antes de começar.</p>
-      <p class="produto__preco">R$ 0.000</p>
+      <div class="produto__faixa"><app-icone nome="documento" /></div>
+      <div class="produto__corpo">
+        <h2>{{ exemplo }}</h2>
+        <p>Escopo fechado, prazo e preço definidos antes de começar.</p>
+        <p class="produto__preco">R$ 0.000</p>
+      </div>
     </article>
     }
   </div>
 
   <div class="trava__aviso">
-    <app-icone nome="cadeado" />
-    <h3>{{ textos.servicos.travado.titulo }}</h3>
-    <p>{{ textos.servicos.travado.texto }}</p>
-    <app-link-acao destino="/cadastro" variante="primario">
-      {{ textos.servicos.travado.acao }}
-    </app-link-acao>
+    <div class="trava__cartao">
+      <span class="trava__icone"><app-icone nome="cadeado" /></span>
+      <h2>{{ textos.servicos.travado.titulo }}</h2>
+      <p>{{ textos.servicos.travado.texto }}</p>
+      <app-link-acao
+        destino="/cadastro"
+        variante="primario"
+        iconeFinal="seta-direita"
+      >
+        {{ textos.servicos.travado.acao }}
+      </app-link-acao>
+    </div>
   </div>
 </div>
 } @else if (carregando()) {
@@ -31,35 +40,74 @@
   </app-botao>
 </div>
 } @else if ((produtos() ?? []).length === 0) {
-<app-estado-vazio [mensagem]="textos.servicos.vazio" icone="documento" />
+<div class="vazio">
+  <app-estado-vazio [mensagem]="textos.servicos.vazio" icone="documento" />
+  <p>{{ textos.servicos.vazioApoio }}</p>
+</div>
 } @else {
+<div class="ferramentas">
+  <label class="busca">
+    <app-icone nome="busca" tamanho="p" />
+    <span class="visualmente-oculto">{{ textos.servicos.busca }}</span>
+    <input
+      type="search"
+      [placeholder]="textos.servicos.busca"
+      [value]="busca()"
+      (input)="busca.set($any($event.target).value)"
+    />
+  </label>
+  <p class="ferramentas__contagem" aria-live="polite">
+    {{ filtrados().length }} {{ filtrados().length === 1 ? 'serviço' :
+    'serviços' }}
+  </p>
+</div>
+
+@if (filtrados().length === 0) {
+<p class="sem-resultado">{{ textos.servicos.semResultado }}</p>
+}
+
 <div class="vitrine">
-  @for (produto of produtos(); track produto.id) {
+  @for (produto of filtrados(); track produto.id) {
   <article class="produto">
-    <h3>{{ produto.nome }}</h3>
-    <p>{{ produto.descricao }}</p>
+    <div class="produto__faixa"><app-icone nome="documento" /></div>
+    <div class="produto__corpo">
+      <h2>{{ produto.nome }}</h2>
+      <p>{{ produto.descricao }}</p>
 
-    <ul class="produto__entregaveis">
-      @for (entregavel of produto.entregaveis; track entregavel) {
-      <li>{{ entregavel }}</li>
-      }
-    </ul>
+      <ul class="produto__entregaveis">
+        @for (entregavel of produto.entregaveis; track entregavel) {
+        <li><app-icone nome="confere" tamanho="p" />{{ entregavel }}</li>
+        }
+      </ul>
 
-    <p class="produto__preco">{{ preco(produto.precoCentavos) }}</p>
-    <p class="produto__inclui">
-      {{ produto.quantidadeReunioes }} {{ textos.servicos.reunioes }} · {{
-      produto.numeroRevisoesPermitidas }} {{ textos.servicos.revisoes }}
-    </p>
+      <p class="produto__inclui">
+        <span
+          ><app-icone nome="video" tamanho="p" />{{ produto.quantidadeReunioes
+          }} {{ textos.servicos.reunioes }}</span
+        >
+        <span
+          ><app-icone nome="documento" tamanho="p" />{{
+          produto.numeroRevisoesPermitidas }} {{ textos.servicos.revisoes
+          }}</span
+        >
+      </p>
 
-    <div class="produto__acao">
-      <app-botao
-        variante="secundario"
-        tamanho="p"
-        [desabilitado]="carrinho.cheio()"
-        (click)="adicionar(produto)"
-      >
-        {{ textos.servicos.carrinho.adicionar }}
-      </app-botao>
+      <div class="produto__rodape">
+        <p class="produto__preco">
+          <small>{{ textos.servicos.valor }}</small>
+          {{ preco(produto.precoCentavos) }}
+        </p>
+        <div class="produto__acao">
+          <app-botao
+            variante="secundario"
+            tamanho="p"
+            [desabilitado]="carrinho.cheio()"
+            (click)="adicionar(produto)"
+          >
+            {{ textos.servicos.carrinho.adicionar }}
+          </app-botao>
+        </div>
+      </div>
     </div>
   </article>
   }
@@ -67,16 +115,22 @@
 
 @if (carrinho.quantidade() > 0) {
 <aside class="carrinho" aria-label="Seu carrinho">
-  <h3>Seu carrinho</h3>
-  <p aria-live="polite">
-    {{ carrinho.quantidade() }} {{ textos.servicos.carrinho.itens }} · {{
-    preco(carrinho.totalIndicativoCentavos()) }}
-  </p>
-  <app-link-acao destino="/carrinho" variante="primario"
-    >Revisar carrinho</app-link-acao
+  <div>
+    <h2>{{ textos.servicos.carrinho.titulo }}</h2>
+    <p aria-live="polite">
+      {{ carrinho.quantidade() }} {{ textos.servicos.carrinho.itens }}. {{
+      textos.servicos.carrinho.total }}:
+      <strong>{{ preco(carrinho.totalIndicativoCentavos()) }}</strong>
+    </p>
+    @if (carrinho.cheio()) {
+    <p role="status">{{ textos.servicos.carrinho.cheio }}</p>
+    }
+  </div>
+  <app-link-acao
+    destino="/carrinho"
+    variante="primario"
+    iconeFinal="seta-direita"
+    >{{ textos.servicos.carrinho.revisar }}</app-link-acao
   >
-  @if (carrinho.cheio()) {
-  <p role="status">{{ textos.servicos.carrinho.cheio }}</p>
-  }
 </aside>
 } }

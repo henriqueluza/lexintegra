@@ -1,13 +1,15 @@
 import { RodapePublico } from '../../shell/rodape-publico/rodape-publico';
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { Icone } from '../../ui/icone/icone';
+import { JanelaProduto } from '../../ui/janela-produto/janela-produto';
 import { LinkAcao } from '../../ui/link-acao/link-acao';
 import { TEXTOS } from './textos';
 @Component({
   selector: 'app-landing',
-  imports: [RodapePublico, LinkAcao],
+  imports: [RodapePublico, LinkAcao, Icone, JanelaProduto],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './landing.html',
-  styleUrls: ['./landing.css', './rodape-faq.css', './editorial.css'],
+  styleUrl: './landing.css',
 })
 export class Landing {
   protected readonly textos = TEXTOS;
@@ -19,8 +21,5 @@ export class Landing {
       else proximo.add(indice);
       return proximo;
     });
-  }
-  protected numeral(indice: number): string {
-    return String(indice + 1).padStart(2, '0');
   }
 }

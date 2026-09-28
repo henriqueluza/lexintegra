@@ -43,6 +43,17 @@ import {
 export class AdvogadoDisponibilidade implements OnInit {
   private readonly api = inject(ApiAdvogadoService);
 
+  /** `2026-09-28` vira `Semana de 28/09`: a data ISO e chave, nao rotulo. */
+  protected rotuloDaSemana(iso: string): string {
+    return `Semana de ${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+  }
+
+  protected dataCompleta(iso: string | null): string {
+    return iso === null
+      ? ''
+      : `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+  }
+
   protected readonly dias = DIAS;
   protected readonly horas = HORAS;
 

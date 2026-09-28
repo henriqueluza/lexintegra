@@ -12,6 +12,26 @@ import { esperarHidratacao } from './hidratacao';
  */
 async function assentar(page: Page): Promise<void> {
   await page.evaluate(() => document.fonts.ready);
+  /*
+   * Imagem com `loading="lazy"` abaixo da dobra carrega ou nao conforme o tempo,
+   * e a captura de pagina inteira pegava as duas versoes (ADR-22: a foto do
+   * atendimento na home). Aqui toda imagem vira `eager` e o teste espera cada uma
+   * decodificar. O produto continua preguicoso; so a captura fica deterministica.
+   */
+  await page.evaluate(async () => {
+    const imagens = [...document.images];
+    for (const imagem of imagens) imagem.loading = 'eager';
+    await Promise.all(
+      imagens.map((imagem) =>
+        imagem.complete
+          ? imagem.decode().catch(() => undefined)
+          : new Promise((resolver) => {
+              imagem.addEventListener('load', resolver, { once: true });
+              imagem.addEventListener('error', resolver, { once: true });
+            }),
+      ),
+    );
+  });
   await page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => resolve(null))),
   );

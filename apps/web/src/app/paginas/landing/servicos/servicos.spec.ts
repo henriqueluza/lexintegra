@@ -303,4 +303,60 @@ describe('Servicos', () => {
       expect(texto(fixture)).toContain(TEXTOS.servicos.carrinho.cheio);
     });
   });
+  /**
+   * A busca e LOCAL (ADR-22): filtra o que ja veio, sem nova chamada. Acento e
+   * maiuscula nao importam, porque o catalogo e escrito por gente.
+   */
+  describe('busca', () => {
+    const LGPD: ProdutoVitrine = {
+      ...PARECER,
+      id: 'produto-2',
+      nome: 'Adequação à LGPD',
+      descricao: 'Mapeamento do tratamento de dados.',
+    };
+
+    function buscar(fixture: ComponentFixture<Servicos>, termo: string): void {
+      const campo = (fixture.nativeElement as HTMLElement).querySelector(
+        'input[type=search]',
+      ) as HTMLInputElement;
+      campo.value = termo;
+      campo.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+    }
+
+    function cartoes(fixture: ComponentFixture<Servicos>): number {
+      return (fixture.nativeElement as HTMLElement).querySelectorAll(
+        '.vitrine .produto',
+      ).length;
+    }
+
+    it('filtra por nome e descricao, sem acento, sem nova chamada', async () => {
+      resposta = [PARECER, LGPD];
+      const fixture = montar();
+      await liberar(fixture);
+      expect(cartoes(fixture)).toBe(2);
+
+      buscar(fixture, 'adequacao');
+      expect(cartoes(fixture)).toBe(1);
+      expect(texto(fixture)).toContain('1 serviço');
+
+      buscar(fixture, 'DIAGNOSTICO');
+      expect(cartoes(fixture)).toBe(1);
+      expect(texto(fixture)).toContain('Parecer de risco trabalhista');
+
+      buscar(fixture, '');
+      expect(cartoes(fixture)).toBe(2);
+      expect(pedidos).toBe(1);
+    });
+
+    it('diz quando nada corresponde a busca', async () => {
+      const fixture = montar();
+      await liberar(fixture);
+
+      buscar(fixture, 'inexistente');
+
+      expect(cartoes(fixture)).toBe(0);
+      expect(texto(fixture)).toContain(TEXTOS.servicos.semResultado);
+    });
+  });
 });

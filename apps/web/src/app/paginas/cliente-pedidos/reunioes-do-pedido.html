@@ -3,9 +3,7 @@
 
   <p class="reunioes__saldo">
     <b>{{ contratadas() - saldo() }}/{{ contratadas() }}</b>
-    <span>
-      usadas @if (validasAte(); as ate) { · válidas até {{ ate }} }
-    </span>
+    <span> usadas @if (validasAte(); as ate) { · válidas até {{ ate }} } </span>
   </p>
 
   @for (reuniao of ativas(); track reuniao.id) {
@@ -24,9 +22,7 @@
     <p class="reuniao__sem-sala">
       Link a caminho. Assim que a sala for criada, ele chega por e-mail.
     </p>
-    }
-
-    @if (escolhendo() === reuniao.id) {
+    } @if (escolhendo() === reuniao.id) {
     <div class="reunioes__escolha">
       @if (carregando()) {
       <p class="reunioes__aviso">Buscando horários…</p>
@@ -78,9 +74,7 @@
     </p>
     }
   </article>
-  }
-
-  @if (falha(); as mensagem) {
+  } @if (falha(); as mensagem) {
   <app-mensagem-erro variante="linha">{{ mensagem }}</app-mensagem-erro>
   }
 

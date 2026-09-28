@@ -13,7 +13,7 @@ import type { Slot } from 'shared/esquemas/disponibilidade';
  */
 export const HORAS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18] as const;
 
-export const DIAS = ['Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta'] as const;
+export const DIAS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'] as const;
 
 /** Duracao de cada celula da grade. Uma hora e o piso que o schema exige. */
 const DURACAO_MS = 60 * 60 * 1000;

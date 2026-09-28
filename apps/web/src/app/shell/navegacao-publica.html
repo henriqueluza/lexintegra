@@ -1,64 +1,79 @@
 <header class="topo">
-  <a class="marca" routerLink="/" aria-label="LexIntegra — início"
-    ><img
-      class="marca__logo"
-      src="/imagens/logo-lexintegra.png"
-      alt="LexIntegra"
-      width="160"
-      height="160"
-  /></a>
+  <div class="topo__faixa">
+    <a class="marca" routerLink="/" aria-label="LexIntegra — início"
+      ><img
+        class="marca__logo"
+        src="/imagens/logo-lexintegra.png"
+        alt="LexIntegra"
+        width="160"
+        height="160"
+    /></a>
 
-  <button
-    class="menu"
-    type="button"
-    [attr.aria-expanded]="aberto()"
-    aria-controls="navegacao-publica"
-    (click)="aberto.set(!aberto())"
-  >
-    {{ aberto() ? 'Fechar menu' : 'Menu' }}
-  </button>
-  <nav
-    id="navegacao-publica"
-    [class.aberto]="aberto()"
-    aria-label="Navegação principal"
-  >
-    <a routerLink="/" fragment="como" (click)="aberto.set(false)"
-      >Como funciona</a
+    <button
+      class="menu"
+      type="button"
+      [attr.aria-expanded]="aberto()"
+      aria-controls="navegacao-publica"
+      (click)="aberto.set(!aberto())"
     >
-    <a
-      routerLink="/servicos"
-      routerLinkActive="ativo"
-      (click)="aberto.set(false)"
-      >Serviços</a
+      <app-icone [nome]="aberto() ? 'fecha' : 'menu'" tamanho="p" />
+      {{ aberto() ? 'Fechar' : 'Menu' }}
+    </button>
+
+    <nav
+      id="navegacao-publica"
+      [class.aberto]="aberto()"
+      aria-label="Navegação principal"
     >
-    @if (sessao.usuario(); as usuario) {
-    <a
-      class="usuario"
-      [routerLink]="destinoUsuario()"
-      (click)="aberto.set(false)"
-      >{{ usuario.nome || 'Minha conta' }}</a
-    >
-    <a
-      routerLink="/carrinho"
-      routerLinkActive="ativo"
-      (click)="aberto.set(false)"
-      >Carrinho <span class="contador">{{ carrinho.quantidade() }}</span></a
-    >
-    } @else {
-    <a
-      class="acesso"
-      routerLink="/entrar"
-      routerLinkActive="ativo"
-      (click)="aberto.set(false)"
-      >Entrar</a
-    >
-    <a
-      class="cadastre"
-      routerLink="/cadastro"
-      routerLinkActive="ativo"
-      (click)="aberto.set(false)"
-      >Cadastre-se</a
-    >
-    }
-  </nav>
+      <div class="topo__links">
+        <a routerLink="/" fragment="como" (click)="aberto.set(false)"
+          >Como funciona</a
+        >
+        <a
+          routerLink="/servicos"
+          routerLinkActive="ativo"
+          (click)="aberto.set(false)"
+          >Serviços</a
+        >
+        <a routerLink="/" fragment="duvidas" (click)="aberto.set(false)"
+          >Dúvidas</a
+        >
+      </div>
+
+      <div class="topo__acoes">
+        @if (sessao.usuario(); as usuario) {
+        <a
+          class="usuario"
+          [routerLink]="destinoUsuario()"
+          (click)="aberto.set(false)"
+          ><app-icone nome="usuario" tamanho="p" />{{ usuario.nome || semNome
+          }}</a
+        >
+        <a
+          class="carrinho"
+          routerLink="/carrinho"
+          routerLinkActive="ativo"
+          (click)="aberto.set(false)"
+          ><app-icone nome="sacola" tamanho="p" />Carrinho
+          <span class="contador">{{ carrinho.quantidade() }}</span></a
+        >
+        } @else {
+        <a
+          class="acesso"
+          routerLink="/entrar"
+          routerLinkActive="ativo"
+          (click)="aberto.set(false)"
+          >Entrar</a
+        >
+        <a
+          class="cadastre"
+          routerLink="/cadastro"
+          routerLinkActive="ativo"
+          (click)="aberto.set(false)"
+          >Cadastre-se<app-icone nome="seta-direita" tamanho="p"
+        /></a>
+        }
+      </div>
+    </nav>
+  </div>
 </header>

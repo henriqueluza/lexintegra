@@ -86,7 +86,7 @@ export class CartaoPedidoComponent {
     const { situacao, distribuido } = this.pedido();
     if (situacao === 'cancelado') return 'Cancelado';
     if (situacao === 'estornado') return 'Estornado';
-    return distribuido ? 'Em andamento' : 'Em analise';
+    return distribuido ? 'Em andamento' : 'Em análise';
   }
 
   protected readonly observacao = new FormControl('', {
@@ -100,7 +100,7 @@ export class CartaoPedidoComponent {
 
   protected saldoDeRevisoes(entregavel: EntregavelResumo): string {
     const total = this.pedido().snapshot.numeroRevisoesPermitidas;
-    return `${entregavel.revisoesUsadas} de ${total} revisao(oes)`;
+    return `${entregavel.revisoesUsadas} de ${total} revisão(ões)`;
   }
 
   /**

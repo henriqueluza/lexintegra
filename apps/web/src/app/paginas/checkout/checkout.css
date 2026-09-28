@@ -1,37 +1,40 @@
 /*
- * Direcao A (Catedra), como a home: quem chega ao checkout ainda nao tem conta.
- * Uma coluna so, na medida de leitura — a pessoa confere a lista e o valor antes
- * de pagar, e duas colunas espalhariam o que precisa ser lido junto.
+ * Checkout publico (Etapa 8, visual do ADR-22): resumo e formulario lado a lado
+ * em superficies brancas; PIX com o QR centralizado. As formas de pagamento sao
+ * cartoes selecionaveis — o radio continua sendo o controle, o cartao so aumenta
+ * a area de clique.
  */
 .checkout {
   min-height: 75svh;
+  max-width: var(--largura-conteudo);
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--s4);
-  padding: var(--s7) var(--s4);
+  align-items: stretch;
+  gap: var(--s3);
+  padding: var(--s7) var(--s5) var(--s8);
 }
 
 .checkout__marca {
-  font-family: var(--fonte-interface);
-  font-size: var(--t-mini);
-  letter-spacing: var(--letra-caixa-alta);
-  text-transform: uppercase;
+  align-self: flex-start;
   color: var(--acento);
-  text-decoration: none;
+  font-size: var(--t-mini);
+  font-weight: var(--peso-forte);
+  text-underline-offset: var(--s1);
 }
 
 .checkout__titulo {
-  margin: 0;
-  font-family: var(--fonte-display);
-  font-weight: var(--peso-titulo);
-  font-size: var(--t-editorial);
+  margin: 0 0 var(--s4);
+  font-size: var(--t-t1);
+  font-weight: var(--peso-extra);
+  line-height: var(--altura-apertada);
+  letter-spacing: var(--letra-titulo);
   color: var(--texto);
 }
 
 .checkout__caixa {
   width: 100%;
-  max-width: var(--medida-texto);
+  max-width: 680px;
   display: flex;
   flex-direction: column;
   gap: var(--s5);
@@ -39,23 +42,26 @@
 
 .checkout__caixa h2 {
   margin: 0;
-  font-family: var(--fonte-display);
-  font-weight: var(--peso-titulo);
   font-size: var(--t-t3);
+  font-weight: var(--peso-maximo);
+  letter-spacing: var(--letra-titulo);
   color: var(--texto);
 }
 
 .checkout__caixa p {
   margin: var(--s2) 0 0;
-  color: var(--texto-2);
-  line-height: var(--altura-solta);
+  color: var(--texto-3);
+  line-height: var(--altura-corpo);
 }
 
 .checkout__aviso,
 .checkout__resumo,
-.checkout__pix {
+.checkout__pix,
+.checkout__formulario {
+  padding: var(--s6);
+  background: var(--superficie-elevada);
   border: var(--borda-fina) solid var(--divisor);
-  padding: var(--s5);
+  border-radius: var(--raio-grande);
 }
 
 .checkout__itens {
@@ -68,7 +74,7 @@
   display: flex;
   justify-content: space-between;
   gap: var(--s3);
-  padding: var(--s2) 0;
+  padding: var(--s3) 0;
   border-bottom: var(--borda-fina) solid var(--divisor);
   color: var(--texto-2);
   font-size: var(--t-menor);
@@ -76,6 +82,7 @@
 
 .checkout__total {
   color: var(--texto);
+  font-weight: var(--peso-maximo);
 }
 
 .checkout__auxiliar {
@@ -87,62 +94,113 @@
 .checkout__pix {
   display: flex;
   flex-direction: column;
-  gap: var(--s4);
+  gap: var(--s5);
+}
+
+.checkout__formulario app-botao {
+  display: flex;
 }
 
 .checkout__metodos {
   margin: 0;
   padding: 0;
   border: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--s2);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s3);
 }
 
 .checkout__metodos legend {
-  margin-bottom: var(--s2);
-  font-size: var(--t-menor);
+  margin-bottom: var(--s3);
+  font-size: var(--t-mini);
+  font-weight: var(--peso-medio);
   color: var(--texto);
+}
+
+.checkout__metodos .checkout__auxiliar {
+  grid-column: 1 / -1;
 }
 
 .checkout__opcao {
   display: flex;
   align-items: center;
-  gap: var(--s2);
+  gap: var(--s3);
   color: var(--texto);
   font-size: var(--t-menor);
+  line-height: var(--altura-densa);
+}
+
+.checkout__metodos .checkout__opcao {
+  padding: var(--s4);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio);
+  font-weight: var(--peso-forte);
+  cursor: pointer;
+}
+
+.checkout__metodos .checkout__opcao:has(input:checked) {
+  border-color: var(--acento);
+  background: var(--acento-fundo);
+  color: var(--acento);
+}
+
+.checkout__opcao input {
+  accent-color: var(--acento);
+  width: 18px;
+  height: 18px;
+  flex: none;
 }
 
 .checkout__qr {
   align-self: center;
   width: var(--tamanho-qr);
   height: var(--tamanho-qr);
+  padding: var(--s2);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio-cartao);
 }
 
 .checkout__link {
   display: inline-block;
   margin-top: var(--s4);
-  color: var(--acento-forte);
+  color: var(--acento);
+  font-weight: var(--peso-forte);
+  text-underline-offset: var(--s1);
 }
 
+/* Com o formulario na tela, resumo e formulario lado a lado. */
 .checkout__caixa:has(.checkout__formulario) {
-  max-width: var(--largura-conteudo);
+  max-width: none;
   display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  gap: var(--s7);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: var(--s6);
   align-items: start;
 }
+
 .checkout__resumo {
-  background: var(--superficie-elevada);
   --acento: var(--acento-em-elevada);
 }
-.checkout__formulario {
-  border: var(--borda-fina) solid var(--divisor);
-  padding: var(--s6);
-}
-@media (max-width: 800px) {
+
+@media (max-width: 860px) {
+  .checkout {
+    padding: var(--s6) var(--s4) var(--s7);
+  }
+
   .checkout__caixa:has(.checkout__formulario) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--s5);
+  }
+
+  .checkout__aviso,
+  .checkout__resumo,
+  .checkout__pix,
+  .checkout__formulario {
+    padding: var(--s5) var(--s4);
+  }
+}
+
+@media (max-width: 480px) {
+  .checkout__metodos {
+    grid-template-columns: 1fr;
   }
 }

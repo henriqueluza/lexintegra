@@ -86,7 +86,7 @@ describe('ShellAutenticada', () => {
   it('sai e volta para a entrada', async () => {
     const cenario = montar({ nome: 'Ana', email: 'ana@x.test' });
     const botao = cenario.fixture.nativeElement.querySelector(
-      'button',
+      '.shell__sair',
     ) as HTMLButtonElement;
 
     botao.click();
@@ -113,7 +113,7 @@ describe('navegacao da shell', () => {
     ] as HTMLAnchorElement[];
 
     expect(links.map((link) => link.textContent?.trim())).toEqual([
-      'Distribuicao',
+      'Distribuição',
       'Clientes',
       'Advogados',
       'Produtos',
@@ -122,7 +122,7 @@ describe('navegacao da shell', () => {
       /* As duas ultimas sao diagnostico, visitadas quando algo deu errado. */
       'Entregas',
       /* Etapa 10, arquitetura 7.2: a fila de reunioes sem sala. */
-      'Reunioes',
+      'Reuniões',
     ]);
   });
 
@@ -148,24 +148,47 @@ describe('navegacao da shell', () => {
   });
 
   /**
-   * O CLIENTE CONTINUA SEM MENU, e continua sendo decisao.
-   *
-   * A area dele tem uma tela so — os cartoes —, e tudo que se faz com um pedido
-   * acontece dentro do cartao dele. Um item "Reunioes" neste menu seria
-   * exatamente a tela de agendamento solta que o criterio de aceite da Etapa 9
-   * proibe. A barra some por completo em vez de renderizar vazia.
+   * O CLIENTE GANHOU MENU no redesign (ADR-22), e nenhum item e de agendamento.
+   * A reuniao continua dentro do cartao do pedido: um item "Reunioes" aqui seria
+   * a tela de agendamento solta que o criterio de aceite da Etapa 9 proibe.
    */
-  it.each([['cliente'], [null]])(
-    'nao mostra navegacao para o perfil %s',
-    (perfil) => {
-      const { fixture } = montar(
-        { nome: 'Clara', email: 'clara@x.test' },
-        perfil as 'cliente' | null,
-      );
+  it('oferece ao cliente os pedidos, o catalogo e a ficha, sem agendamento', () => {
+    const { fixture } = montar(
+      { nome: 'Clara', email: 'clara@x.test' },
+      'cliente',
+    );
+    const links = [
+      ...fixture.nativeElement.querySelectorAll('.shell__link'),
+    ] as HTMLAnchorElement[];
 
-      expect(fixture.nativeElement.querySelector('.shell__nav')).toBeNull();
-    },
-  );
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/painel',
+      '/servicos',
+      '/painel/anamnese',
+    ]);
+    expect(links.map((link) => link.textContent).join(' ')).not.toMatch(
+      /reuni|agend/i,
+    );
+  });
+
+  it('nao mostra navegacao sem perfil', () => {
+    const { fixture } = montar({ nome: 'Clara', email: 'clara@x.test' }, null);
+
+    expect(fixture.nativeElement.querySelector('.shell__nav')).toBeNull();
+  });
+
+  it('mostra as iniciais da pessoa', () => {
+    const { fixture } = montar(
+      { nome: 'Ana Maria Souza', email: 'ana@x.test' },
+      'cliente',
+    );
+
+    expect(
+      fixture.nativeElement
+        .querySelector('.shell__avatar')
+        ?.textContent?.trim(),
+    ).toBe('AS');
+  });
 
   /**
    * Esconder link nao e controle de acesso — quem protege sao os guards de

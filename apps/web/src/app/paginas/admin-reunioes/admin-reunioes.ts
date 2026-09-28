@@ -42,7 +42,7 @@ export class AdminReunioes implements OnInit {
   protected readonly colunas: readonly ColunaTabela[] = [
     { chave: 'quando', rotulo: 'Quando' },
     { chave: 'pedido', rotulo: 'Pedido' },
-    { chave: 'acoes', rotulo: 'Acoes', alinhamento: 'fim' },
+    { chave: 'acoes', rotulo: 'Ações', alinhamento: 'fim' },
   ];
 
   protected readonly linhas = signal<readonly ReuniaoSemSala[]>([]);
@@ -79,7 +79,10 @@ export class AdminReunioes implements OnInit {
     await this.recarregar();
   }
 
-  private async agir(chave: string, acao: () => Promise<unknown>): Promise<void> {
+  private async agir(
+    chave: string,
+    acao: () => Promise<unknown>,
+  ): Promise<void> {
     if (this.emCurso() !== null) return;
 
     this.emCurso.set(chave);
@@ -89,7 +92,7 @@ export class AdminReunioes implements OnInit {
     } catch (erro) {
       this.falha.set(
         mensagemDoErro(erro, {
-          409: 'Este registro ainda esta na fila. Espere a proxima tentativa.',
+          409: 'Este registro ainda esta na fila. Espere a próxima tentativa.',
         }),
       );
     } finally {

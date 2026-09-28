@@ -10,7 +10,8 @@ import { RouterLink } from '@angular/router';
     <main class="erro">
       <p class="codigo">404</p>
       <h1>Página não encontrada.</h1>
-      <a routerLink="/">Voltar ao início</a>
+      <p>O endereço pode ter mudado ou o link estava incompleto.</p>
+      <a class="erro__acao" routerLink="/">Voltar ao início</a>
     </main>
   `,
 })

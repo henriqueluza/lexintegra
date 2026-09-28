@@ -1,12 +1,12 @@
 <section class="distribuicao">
-  <h1 class="distribuicao__titulo">Distribuicao</h1>
+  <h1 class="distribuicao__titulo">Distribuição</h1>
   <p class="pagina-descricao">
     Direcione cada pedido ao profissional responsável e acompanhe a
     distribuição.
   </p>
 
   <app-selecao
-    rotulo="Situacao"
+    rotulo="Situação"
     [opcoes]="opcoesDeSituacao"
     [formControl]="situacao"
   />
@@ -23,7 +23,7 @@
   <app-mensagem-erro variante="bloco">{{ mensagem }}</app-mensagem-erro>
   } @if (falhaDaLista()) {
   <app-mensagem-erro variante="bloco">
-    Nao foi possivel carregar os pedidos. Recarregue a pagina.
+    Não foi possível carregar os pedidos. Recarregue a página.
   </app-mensagem-erro>
   }
 

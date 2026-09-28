@@ -8,6 +8,12 @@
       "port": 4200
     },
     {
+      "name": "prototipos",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4300", "--bind", "127.0.0.1"],
+      "port": 4300
+    },
+    {
       "name": "completo",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["dev"],

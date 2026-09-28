@@ -11,4 +11,7 @@
   <app-icone [nome]="icone()!" tamanho="p" />
   }
   <span class="link-acao__rotulo"><ng-content /></span>
+  @if (iconeFinal() !== null) {
+  <app-icone [nome]="iconeFinal()!" tamanho="p" />
+  }
 </a>

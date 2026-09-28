@@ -8,9 +8,10 @@ import {
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { SessaoService } from '../autenticacao/sessao.service';
 import { CarrinhoService } from '../publico/carrinho.service';
+import { Icone } from '../ui/icone/icone';
 @Component({
   selector: 'app-navegacao-publica',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, Icone],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './navegacao-publica.html',
   styleUrl: './navegacao-publica.css',
@@ -27,4 +28,5 @@ export class NavegacaoPublica {
         : '/painel';
   });
   protected readonly aberto = signal(false);
+  protected readonly semNome = 'Minha conta';
 }

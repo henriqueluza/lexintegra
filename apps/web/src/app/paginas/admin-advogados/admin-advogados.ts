@@ -23,7 +23,7 @@ import {
  * 409 aqui e sempre a mesma coisa, e o texto generico ("Ja existe um registro
  * equivalente") seria pior do que o que a tela pode dizer.
  */
-const CONFLITO_DE_EMAIL = { 409: 'Ja existe um advogado com este e-mail.' };
+const CONFLITO_DE_EMAIL = { 409: 'Já existe um advogado com este e-mail.' };
 
 /**
  * Provisionamento de advogados pelo administrador global (item 2.4.3).
@@ -58,9 +58,9 @@ export class AdminAdvogados implements OnInit {
   protected readonly colunas: readonly ColunaTabela[] = [
     { chave: 'nome', rotulo: 'Nome' },
     { chave: 'email', rotulo: 'E-mail' },
-    { chave: 'status', rotulo: 'Situacao' },
+    { chave: 'status', rotulo: 'Situação' },
     { chave: 'usuarioTeams', rotulo: 'Teams' },
-    { chave: 'acoes', rotulo: 'Acoes', alinhamento: 'fim' },
+    { chave: 'acoes', rotulo: 'Ações', alinhamento: 'fim' },
   ];
 
   protected readonly linhas = signal<readonly AdvogadoResumo[]>([]);
@@ -90,9 +90,9 @@ export class AdminAdvogados implements OnInit {
   protected erroDoCampo(nome: 'nome' | 'email'): string | null {
     const controle = this.formulario.controls[nome];
     if (!controle.touched || controle.valid) return null;
-    if (controle.hasError('required')) return 'Campo obrigatorio.';
+    if (controle.hasError('required')) return 'Campo obrigatório.';
     return nome === 'email'
-      ? 'Informe um e-mail valido.'
+      ? 'Informe um e-mail válido.'
       : 'Informe o nome completo.';
   }
 

@@ -227,21 +227,15 @@ constroem**. As decisões vão para um `decisoes.md`.
 
 **Redesign do frontend, com estética próxima à da Jusfy**
 
-- [ ] Decidir:
-  - só as páginas públicas, ou também os painéis?
-  - a paleta vinho e dourado (ADR-10) fica?
-  - que referências da Jusfy seguir?
-
-  → Construir:
-  - novo ADR em `docs/design.md`;
-  - tokens novos;
-  - páginas públicas e/ou shell e painéis refeitos;
-  - contraste, axe e stylelint sem exceção nova;
-  - imagens de referência regravadas;
-  - `identidade-navegacao.md`, `revisao-frontend.md` e `AGENTS.md`
-    atualizados.
-
-  É referência **estética**: nada de logo, nome, texto ou imagem deles.
+- [x] Decidido em 28/09: públicas e painéis, paleta vinho e dourado mantida,
+  sans moderna, protótipo aprovado (`docs/prototipos/direcao-final.html`).
+- [x] Construído na branch `feat/redesign-frontend`: ADR-22 em
+  `docs/design.md`, tokens novos, Plus Jakarta Sans, landing, acesso,
+  catálogo, carrinho, checkout, shell e painéis refeitos; contraste, axe,
+  stylelint, testes unitários, e2e e jornadas passando; documentos
+  atualizados.
+- [x] Imagens de referência da regressão visual regravadas (públicas e
+  painéis). 👤 aprova uma a uma (A2).
 
 **Conteúdo**
 
@@ -301,8 +295,7 @@ constroem**. As decisões vão para um `decisoes.md`.
   manual, e em quanto tempo. → Runbooks.
 - [ ] Processo de contestação (chargeback). → `alerta-critico.md`.
 - [ ] Como será provisionado o próximo administrador. → `operacao.md` §8.
-- [ ] Tipografia oficial: manter Source Serif 4 e IBM Plex Sans, ou trocar
-  junto com o redesign?
+- [x] Tipografia: Plus Jakarta Sans, família única (ADR-22).
 
 **Repositório**
 

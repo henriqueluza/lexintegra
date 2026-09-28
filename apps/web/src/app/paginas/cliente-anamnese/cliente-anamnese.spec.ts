@@ -135,6 +135,6 @@ describe('ClienteAnamnese (stub temporario)', () => {
     fixture.detectChanges();
 
     expect(destinos).toEqual([]);
-    expect(texto(fixture)).toContain('Nao foi possivel concluir a operacao.');
+    expect(texto(fixture)).toContain('Não foi possível concluir a operação.');
   });
 });

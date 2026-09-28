@@ -65,7 +65,7 @@ export class CancelamentoPedido {
     } catch (erro) {
       this.falha.set(
         mensagemDoErro(erro, {
-          409: 'O trabalho neste pedido ja comecou, e ele nao pode mais ser cancelado.',
+          409: 'O trabalho neste pedido já começou, e ele não pode mais ser cancelado.',
         }),
       );
     } finally {

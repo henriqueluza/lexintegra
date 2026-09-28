@@ -9,7 +9,7 @@ import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../autenticacao/api.service';
 import { Botao } from '../../ui/botao/botao';
 import { Campo } from '../../ui/campo/campo';
-import { Cartao, CartaoRodape } from '../../ui/cartao/cartao';
+import { MolduraAcesso } from '../../shell/moldura-acesso/moldura-acesso';
 import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
 
 /**
@@ -32,13 +32,12 @@ import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
     RouterLink,
     Botao,
     Campo,
-    Cartao,
-    CartaoRodape,
+    MolduraAcesso,
     MensagemErro,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './recuperar-senha.html',
-  styleUrl: './recuperar-senha.css',
+  styleUrl: '../acesso.css',
 })
 export class RecuperarSenha {
   private readonly api = inject(ApiService);
@@ -56,8 +55,8 @@ export class RecuperarSenha {
     const controle = this.formulario.controls.email;
     if (!controle.touched || controle.valid) return null;
     return controle.hasError('email')
-      ? 'Informe um e-mail valido.'
-      : 'Campo obrigatorio.';
+      ? 'Informe um e-mail válido.'
+      : 'Campo obrigatório.';
   }
 
   protected voltarAoInicio(): void {

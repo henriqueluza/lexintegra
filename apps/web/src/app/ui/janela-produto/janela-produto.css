@@ -1,0 +1,179 @@
+/*
+ * Janela ilustrativa do produto: a area do cliente com um pedido em revisao.
+ * E ILUSTRACAO, nao dado — HTML estatico, sem chamada de rede (regra 10). Aparece
+ * no hero da home e no painel de marca do login.
+ */
+:host {
+  display: block;
+  width: var(--largura-preview);
+  max-width: 100%;
+}
+
+.janela {
+  margin: 0;
+  text-align: left;
+  /* Explicito: a janela aparece sobre o painel vinho do login, que herda creme. */
+  color: var(--texto);
+  background: var(--superficie-elevada);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra-forte);
+  overflow: hidden;
+}
+
+:host(.recortada) .janela {
+  border-bottom: 0;
+  border-radius: var(--raio-cartao) var(--raio-cartao) 0 0;
+}
+
+.janela__barra {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s3) var(--s4);
+  border-bottom: var(--borda-fina) solid var(--divisor);
+  background: var(--superficie-sutil);
+  color: var(--texto-3);
+  font-size: var(--t-nano);
+}
+
+.janela__barra i {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--raio-circulo);
+  background: var(--divisor);
+}
+
+.janela__barra span {
+  margin-left: auto;
+}
+
+.janela__corpo {
+  padding: var(--s5) var(--s5) var(--s6);
+}
+
+.janela__cabeca {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s4);
+  margin-bottom: var(--s5);
+}
+
+.janela__cabeca strong {
+  display: block;
+  font-size: var(--t-maior);
+  font-weight: var(--peso-maximo);
+  letter-spacing: var(--letra-titulo);
+}
+
+.janela__cabeca span {
+  font-size: var(--t-nano);
+  color: var(--texto-3);
+}
+
+.janela__avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--raio);
+  background: var(--acento-fundo);
+  color: var(--acento);
+  font-size: var(--t-mini);
+  font-weight: var(--peso-maximo);
+}
+
+.janela__cabeca .janela__avatar {
+  color: var(--acento);
+}
+
+.janela__pedido {
+  padding: var(--s4);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio);
+}
+
+.janela__linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s3);
+  font-size: var(--t-mini);
+}
+
+.janela__linha--fim {
+  margin-top: var(--s4);
+}
+
+.janela__sub {
+  display: block;
+  margin: var(--s1) 0 var(--s3);
+  font-size: var(--t-nano);
+  color: var(--texto-3);
+}
+
+.janela__linha--fim .janela__sub {
+  margin: 0;
+}
+
+.janela__selo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  flex: none;
+  padding: var(--s1) var(--s2);
+  border-radius: var(--raio-selo);
+  background: var(--selo-rev-fundo);
+  color: var(--selo-rev-cor);
+  font-size: var(--t-nano);
+  font-weight: var(--peso-medio);
+}
+
+.janela__progresso {
+  display: flex;
+  gap: var(--s1);
+}
+
+.janela__progresso i {
+  flex: 1;
+  height: 4px;
+  border-radius: var(--raio-pilula);
+  background: var(--medidor-vazio);
+}
+
+.janela__progresso i.aceso {
+  background: var(--medidor-cheio);
+}
+
+.janela__etapas {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--s2);
+  font-size: var(--t-nano);
+  color: var(--texto-3);
+}
+
+.janela__botao {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  flex: none;
+  padding: var(--s2) var(--s3);
+  border-radius: var(--raio);
+  background: var(--acento);
+  color: var(--texto-sobre-acento);
+  font-size: var(--t-micro);
+  font-weight: var(--peso-forte);
+}
+
+@media (max-width: 760px) {
+  .janela__corpo {
+    padding: var(--s4) var(--s3) var(--s5);
+  }
+
+  .janela__etapas span:nth-child(2) {
+    display: none;
+  }
+}

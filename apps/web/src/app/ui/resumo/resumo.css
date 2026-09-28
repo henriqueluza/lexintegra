@@ -1,0 +1,76 @@
+:host {
+  display: block;
+}
+
+.resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  grid-auto-flow: column;
+  margin: 0;
+  background: var(--superficie-elevada);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio-cartao);
+  overflow: hidden;
+}
+
+.resumo__item {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s5);
+  border-right: var(--borda-fina) solid var(--divisor);
+}
+
+.resumo__item:last-child {
+  border-right: 0;
+}
+
+/* Na `dl`, o `dt` (rotulo) vem antes do `dd` (valor) no DOM; na tela o numero
+   fica em cima. A inversao e so visual. */
+.resumo__item > div {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.resumo__icone {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--raio);
+  background: var(--acento-fundo);
+  color: var(--acento);
+}
+
+.resumo__valor {
+  margin: 0;
+  font-size: var(--t-numeral);
+  font-weight: var(--peso-extra);
+  line-height: var(--altura-titulo);
+  letter-spacing: var(--letra-titulo);
+  color: var(--texto);
+}
+
+.resumo__rotulo {
+  font-size: var(--t-micro);
+  color: var(--texto-3);
+  line-height: var(--altura-densa);
+}
+
+@media (max-width: 720px) {
+  .resumo__item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s2);
+    padding: var(--s3);
+  }
+
+  .resumo__icone {
+    display: none;
+  }
+
+  .resumo__valor {
+    font-size: var(--t-t3);
+  }
+}

@@ -268,8 +268,7 @@ export const IMPEDIMENTOS_PARA_AGENDAR = [
   'intervalo-minimo',
 ] as const;
 
-export type ImpedimentoParaAgendar =
-  (typeof IMPEDIMENTOS_PARA_AGENDAR)[number];
+export type ImpedimentoParaAgendar = (typeof IMPEDIMENTOS_PARA_AGENDAR)[number];
 
 /**
  * O texto que o cliente le, num lugar so.
@@ -283,13 +282,13 @@ export const MOTIVO_DO_IMPEDIMENTO: Readonly<
 > = {
   'pedido-inativo': 'Este pedido foi cancelado ou estornado.',
   'pedido-nao-distribuido':
-    'Seu pedido ainda esta em analise. Assim que um advogado assumir, os horarios aparecem aqui.',
-  'saldo-esgotado': 'As reunioes incluidas neste pedido ja foram usadas.',
-  'fora-da-janela': 'O prazo para usar as reunioes deste pedido terminou.',
+    'Seu pedido ainda está em análise. Assim que um advogado assumir, os horários aparecem aqui.',
+  'saldo-esgotado': 'As reuniões incluídas neste pedido já foram usadas.',
+  'fora-da-janela': 'O prazo para usar as reuniões deste pedido terminou.',
   'antecedencia-minima':
-    'Escolha um horario com pelo menos 24 horas de antecedencia.',
+    'Escolha um horário com pelo menos 24 horas de antecedência.',
   'intervalo-minimo':
-    'Este horario esta perto demais de outra reuniao deste pedido.',
+    'Este horário está perto demais de outra reunião deste pedido.',
 };
 
 export interface DadosDoAgendamento {

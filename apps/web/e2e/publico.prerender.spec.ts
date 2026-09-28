@@ -29,10 +29,10 @@ test.describe('pre-renderizacao da area publica', () => {
   test('serve o conteudo sem JavaScript', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.locator('h1')).toContainText('O jurídico da sua empresa');
+    await expect(page.locator('h1')).toContainText('Seu jurídico conectado.');
     await expect(
       page.getByRole('heading', {
-        name: 'Um caminho claro. Do início à entrega.',
+        name: 'Começar é simples. Acompanhar também.',
       }),
     ).toBeVisible();
     await expect(

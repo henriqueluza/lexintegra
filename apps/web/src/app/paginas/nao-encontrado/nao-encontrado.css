@@ -1,28 +1,45 @@
-/* Ver a nota em landing.css: nenhum valor visual literal. */
 .erro {
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: var(--s3);
-  padding: var(--s7) var(--s5);
+  min-height: 60svh;
   max-width: var(--largura-conteudo);
   margin: 0 auto;
+  padding: var(--s8) var(--s5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s3);
+  text-align: center;
 }
 
 .codigo {
-  font-family: var(--fonte-display);
-  font-weight: var(--peso-leve);
-  font-size: var(--t-numeral);
+  font-size: var(--t-display);
+  font-weight: var(--peso-extra);
   line-height: var(--altura-apertada);
+  letter-spacing: var(--letra-titulo);
   color: var(--acento);
 }
 
 .erro h1 {
-  font-family: var(--fonte-display);
-  font-weight: var(--peso-titulo);
-  font-size: var(--t-t1);
-  line-height: var(--altura-titulo);
+  font-size: var(--t-t2);
+  font-weight: var(--peso-maximo);
   letter-spacing: var(--letra-titulo);
+}
+
+.erro p:not(.codigo) {
+  color: var(--texto-3);
+}
+
+.erro__acao {
+  margin-top: var(--s4);
+  padding: var(--s3) var(--s5);
+  border-radius: var(--raio);
+  background: var(--acento);
+  color: var(--texto-sobre-acento);
+  font-size: var(--t-menor);
+  font-weight: var(--peso-forte);
+  text-decoration: none;
+}
+
+.erro__acao:hover {
+  background: var(--acento-forte);
 }

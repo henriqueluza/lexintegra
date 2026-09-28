@@ -45,7 +45,7 @@ export function anexosDeclarados(arquivos: FileList | null): {
   if (invalido !== undefined) {
     return {
       anexos: [],
-      erro: 'Envie apenas JPG ou PDF, com ate 5 MB cada.',
+      erro: 'Envie apenas JPG ou PDF, com até 5 MB cada.',
     };
   }
 

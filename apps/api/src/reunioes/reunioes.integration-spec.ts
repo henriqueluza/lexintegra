@@ -273,7 +273,7 @@ describe('agendamento', () => {
 
     await expect(
       reunioes.agendar('pedido-1', CLIENTE, segundo, AGORA),
-    ).rejects.toThrow(/ja foram usadas/);
+    ).rejects.toThrow(/já foram usadas/);
   });
 
   it('intervalo minimo recusa o horario perto, e aceita o distante', async () => {

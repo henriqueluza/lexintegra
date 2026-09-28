@@ -36,15 +36,15 @@ for (const caminho of [
     expect(chamadas).toEqual([]);
   });
 }
-test('as duas versões carregam fotografias e a antiga animação redireciona', async ({
+test('a home carrega a fotografia e as rotas antigas redirecionam', async ({
   page,
 }) => {
   await page.goto('/com-movimento');
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator('main img')).toHaveCount(4);
+  await expect(page.locator('main img')).toHaveCount(1);
   await page.goto('/todas-as-imagens');
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator('main img')).toHaveCount(4);
+  await expect(page.locator('main img')).toHaveCount(1);
   for (const foto of await page.locator('main img').all()) {
     await foto.scrollIntoViewIfNeeded();
     await expect(foto).toBeVisible();

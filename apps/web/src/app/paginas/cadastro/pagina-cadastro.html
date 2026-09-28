@@ -1,18 +1,14 @@
-<main class="pagina pagina--cadastro">
-  <header class="abertura">
-    <p class="contexto">Seu primeiro passo</p>
-    <h1>Conheça as possibilidades para sua empresa.</h1>
+<app-moldura-acesso
+  [titulo]="['Encontre seu próximo', 'serviço jurídico.']"
+  texto="O cadastro libera o catálogo com escopos e preços. Sem compromisso de contratação."
+>
+  <h1>Comece pelo cadastro.</h1>
+  <app-cadastro />
+  <div class="rodape">
     <p>
-      Cadastre seus dados para consultar os serviços, os escopos e os valores.
-      Sem compromisso de contratação.
+      Já contratou e definiu sua senha? <a href="/entrar">Entre na sua área</a>
     </p>
-    <p class="auxiliar">
-      Já contratou e definiu sua senha? <a href="/entrar">Entre na sua área.</a>
-    </p>
-  </header>
-  <section class="formulario" aria-label="Cadastro inicial">
-    <app-cadastro />
-  </section>
-</main>
+  </div>
+</app-moldura-acesso>
 
 <app-rodape-publico />

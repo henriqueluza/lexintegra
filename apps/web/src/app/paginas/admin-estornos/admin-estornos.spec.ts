@@ -86,13 +86,13 @@ describe('AdminEstornos', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(texto(fixture)).toContain('Nao foi possivel concluir a operacao.');
+    expect(texto(fixture)).toContain('Não foi possível concluir a operação.');
   });
 
   it('mostra a falha ao carregar', async () => {
     const { fixture } = await montar({ pendentes: new Error('rede') });
 
-    expect(texto(fixture)).toContain('Nao foi possivel carregar os estornos.');
+    expect(texto(fixture)).toContain('Não foi possível carregar os estornos.');
   });
 
   it('diz quando nao ha devolucao pendente', async () => {

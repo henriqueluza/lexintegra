@@ -116,7 +116,8 @@ test.describe('area publica', () => {
       .last()
       .click();
     await page
-      .getByRole('link', { name: 'Explorar serviços e escopos' })
+      .getByRole('link', { name: 'Ver serviços e preços' })
+      .first()
       .click();
     await page.waitForTimeout(500);
 
@@ -139,7 +140,7 @@ test.describe('area publica', () => {
 
     await page.goto('/');
     await page
-      .getByRole('link', { name: 'Conhecer os serviços', exact: true })
+      .getByRole('link', { name: 'Conhecer serviços', exact: true })
       .waitFor();
     await page.evaluate(() => {
       setTimeout(() => {

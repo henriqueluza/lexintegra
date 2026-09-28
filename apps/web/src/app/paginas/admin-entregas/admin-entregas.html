@@ -5,12 +5,12 @@
   </p>
 
   <p class="entregas__nota">
-    Cada linha e um e-mail que o sistema se comprometeu a entregar. O que falha
-    e tentado de novo sozinho; o reenvio manual serve para o que ja parou.
+    Cada linha é um e-mail que o sistema se comprometeu a entregar. O que falha
+    e tentado de novo sozinho; o reenvio manual serve para o que já parou.
   </p>
 
   <app-selecao
-    rotulo="Situacao"
+    rotulo="Situação"
     [opcoes]="opcoesDeSituacao"
     [formControl]="situacao"
   />
@@ -19,7 +19,7 @@
   <app-mensagem-erro variante="bloco">{{ mensagem }}</app-mensagem-erro>
   } @if (falhaDaLista()) {
   <app-mensagem-erro variante="bloco">
-    Nao foi possivel carregar as entregas. Recarregue a pagina.
+    Não foi possível carregar as entregas. Recarregue a página.
   </app-mensagem-erro>
   }
 

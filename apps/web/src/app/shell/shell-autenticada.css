@@ -1,3 +1,10 @@
+/*
+ * Moldura dos paineis (ADR-22): menu lateral branco a esquerda, barra de topo com
+ * a pessoa, conteudo sobre o papel. Abaixo de 900px o menu vira uma faixa no topo
+ * e a navegacao rola na horizontal — em tela estreita, rolar uma faixa e melhor
+ * do que quebrar os itens em duas linhas e perder a leitura de "quantas secoes
+ * existem".
+ */
 .shell {
   min-height: 100svh;
   font-family: var(--fonte-interface);
@@ -7,134 +14,254 @@
   background: var(--superficie);
   color: var(--texto);
 }
-.shell__topo {
+
+/* ------------------------------ menu lateral ------------------------------ */
+.shell__lateral {
+  border-right: var(--borda-fina) solid var(--divisor);
+  background: var(--superficie-elevada);
+}
+
+/* A faixa branca estica com a pagina; o conteudo do menu fica preso no topo. */
+.shell__fixo {
   position: sticky;
   top: 0;
   height: 100svh;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: var(--s6);
-  padding: var(--s6) var(--s5);
-  border-right: var(--borda-fina) solid var(--divisor);
-  background: var(--superficie-elevada);
+  gap: var(--s5);
+  padding: var(--s5) var(--s4);
+  overflow-y: auto;
 }
-.shell__identidade {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s2);
-}
+
 .shell__marca {
-  font-family: var(--fonte-interface);
-  font-size: var(--t-t3);
-  font-weight: var(--peso-forte);
-  color: var(--acento);
-  text-decoration: none;
+  display: block;
+  align-self: center;
 }
-.shell__ambiente {
+
+.shell__marca img {
+  display: block;
+  width: 150px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.shell__area {
+  font-size: var(--t-micro);
   color: var(--texto-3);
-  font-size: var(--t-mini);
-  padding-bottom: var(--s5);
-  border-bottom: var(--borda-fina) solid var(--divisor);
+  text-align: center;
+  padding: var(--s2);
+  background: var(--superficie);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio);
 }
-.shell__usuario {
-  font-size: var(--t-menor);
-  color: var(--texto-2);
-  overflow-wrap: anywhere;
-}
-.shell__conteudo {
-  width: 100%;
-  min-width: 0;
-  max-width: var(--largura-conteudo);
-  margin: 0 auto;
-  padding: var(--s7) var(--s6);
-}
+
 .shell__nav {
   display: flex;
   flex-direction: column;
-  gap: var(--s2);
+  gap: var(--s1);
 }
+
+.shell__grupo {
+  font-size: var(--t-micro);
+  color: var(--texto-3);
+  padding: var(--s4) var(--s3) var(--s1);
+}
+
 .shell__link {
-  color: var(--texto-2);
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3);
+  border-radius: var(--raio);
+  color: var(--texto-3);
   font-size: var(--t-menor);
   text-decoration: none;
-  padding: var(--s3) var(--s4);
-  border-left: var(--borda-grossa) solid transparent;
+  transition:
+    background-color var(--duracao-rapida) ease,
+    color var(--duracao-rapida) ease;
 }
+
 .shell__link:hover {
-  background: var(--superficie-sutil);
+  background: var(--superficie);
   color: var(--texto);
 }
-.shell__link--ativo {
-  color: var(--acento);
-  border-left-color: var(--acento);
+
+.shell__link--ativo,
+.shell__link--ativo:hover {
   background: var(--acento-fundo);
+  color: var(--acento);
   font-weight: var(--peso-forte);
 }
-.shell__servicos {
+
+.shell__rodape {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.shell__nota {
+  font-size: var(--t-micro);
+  color: var(--texto-3);
+  line-height: var(--altura-densa);
+  padding: var(--s4);
+  background: var(--superficie);
+  border-radius: var(--raio-cartao);
+}
+
+.shell__nota strong {
+  display: block;
+  color: var(--texto);
+  margin-bottom: var(--s1);
+}
+
+.shell__sair {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3);
+  border: 0;
+  border-radius: var(--raio);
+  background: transparent;
+  color: var(--texto-3);
+  font-family: var(--fonte-interface);
   font-size: var(--t-menor);
+  cursor: pointer;
+}
+
+.shell__sair:hover {
+  background: var(--acento-fundo);
   color: var(--acento);
 }
-.shell__link:focus-visible {
-  outline: var(--borda-grossa) solid var(--foco);
-  outline-offset: var(--s1);
+
+/* ------------------------------ area principal ---------------------------- */
+.shell__principal {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
+
+.shell__topo {
+  min-height: var(--altura-topo-painel);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  padding: var(--s3) var(--s6);
+  background: var(--superficie-elevada);
+  border-bottom: var(--borda-fina) solid var(--divisor);
+}
+
+.shell__trilha {
+  font-size: var(--t-mini);
+  color: var(--texto-3);
+}
+
+.shell__trilha span {
+  margin: 0 var(--s1);
+}
+
+.shell__pessoa {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+.shell__usuario {
+  font-size: var(--t-mini);
+  font-weight: var(--peso-forte);
+  color: var(--texto);
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.shell__avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--raio-cartao);
+  background: var(--acento-fundo);
+  color: var(--acento);
+  font-size: var(--t-mini);
+  font-weight: var(--peso-maximo);
+}
+
+.shell__conteudo {
+  width: 100%;
+  max-width: var(--largura-conteudo);
+  margin: 0 auto;
+  padding: var(--s6) var(--s6) var(--s8);
+}
+
+/* ------------------------------ tela estreita ----------------------------- */
 @media (max-width: 900px) {
   .shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    /* Sem isto, com pouco conteudo, a altura minima da tela e dividida entre a
+       faixa do menu e o conteudo, e a faixa ganha um vao em branco. */
+    grid-template-rows: auto 1fr;
   }
-  .shell__topo {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    padding: var(--s4);
-    gap: var(--s4);
+
+  .shell__lateral {
+    position: sticky;
+    top: 0;
+    z-index: var(--camada-fixa);
     border-right: 0;
     border-bottom: var(--borda-fina) solid var(--divisor);
   }
-  .shell__nav {
-    order: 2;
-    flex-direction: row;
-    flex-wrap: wrap;
-    width: 100%;
-  }
-  .shell__ambiente {
-    display: none;
-  }
-  .shell__servicos {
-    margin-top: 0;
-    margin-left: auto;
-  }
-  .shell__conteudo {
-    padding: var(--s6) var(--s4);
-  }
-}
 
-/* O cliente tem uma tela principal: a barra superior preserva espaço para os pedidos. */
-.shell--cliente {
-  grid-template-columns: 1fr;
-  grid-template-rows: auto 1fr;
-}
-.shell--cliente .shell__topo {
-  position: static;
-  height: auto;
-  flex-direction: row;
-  align-items: center;
-  flex-wrap: wrap;
-  border-right: 0;
-  border-bottom: var(--borda-fina) solid var(--divisor);
-}
-.shell--cliente .shell__ambiente {
-  display: none;
-}
-.shell--cliente .shell__servicos {
-  margin-top: 0;
-  margin-left: auto;
-}
-@media (max-width: 900px) {
-  .shell__topo {
+  .shell__fixo {
     position: static;
     height: auto;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--s2) var(--s4);
+    padding: var(--s2) var(--s4);
+    overflow: visible;
+  }
+
+  .shell__marca img {
+    width: 112px;
+    height: 48px;
+  }
+
+  .shell__area,
+  .shell__nota,
+  .shell__grupo {
+    display: none;
+  }
+
+  .shell__nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    flex-direction: row;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    padding-bottom: var(--s1);
+  }
+
+  .shell__link {
+    flex: none;
+    padding: var(--s2) var(--s3);
+    white-space: nowrap;
+  }
+
+  .shell__rodape {
+    grid-column: 3;
+    grid-row: 1;
+    margin-top: 0;
+  }
+
+  .shell__topo {
+    min-height: 0;
+    padding: var(--s3) var(--s4);
+  }
+
+  .shell__conteudo {
+    padding: var(--s5) var(--s4) var(--s7);
   }
 }
