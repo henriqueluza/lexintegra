@@ -194,7 +194,7 @@ describe('ReunioesDoPedido', () => {
     );
 
     expect(texto(fixture)).toContain('ainda não está disponível');
-    expect(texto(fixture)).not.toContain('em analise');
+    expect(texto(fixture)).not.toContain('em análise');
   });
 
   /** O saldo continua visivel: o credito nao se perde por estar indisponivel. */
@@ -213,7 +213,7 @@ describe('ReunioesDoPedido', () => {
   it('pedido nao distribuido diz que esta em analise', async () => {
     const { fixture } = await montar(pedido({ distribuido: false }));
 
-    expect(texto(fixture)).toContain('em analise');
+    expect(texto(fixture)).toContain('em análise');
     expect(botoes(fixture).some((b) => /Marcar reuni/u.test(b.textContent ?? ''))).toBe(
       false,
     );
@@ -224,7 +224,7 @@ describe('ReunioesDoPedido', () => {
       pedido({ saldoDeReunioes: 0, reunioes: [reuniao(), reuniao({ id: 'r002' })] }),
     );
 
-    expect(texto(fixture)).toContain('ja foram usadas');
+    expect(texto(fixture)).toContain('já foram usadas');
   });
 
   it('janela vencida diz que o prazo terminou', async () => {

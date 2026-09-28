@@ -200,6 +200,9 @@
 @media (max-width: 900px) {
   .shell {
     grid-template-columns: minmax(0, 1fr);
+    /* Sem isto, com pouco conteudo, a altura minima da tela e dividida entre a
+       faixa do menu e o conteudo, e a faixa ganha um vao em branco. */
+    grid-template-rows: auto 1fr;
   }
 
   .shell__lateral {

@@ -84,20 +84,20 @@ describe('AdvogadoDisponibilidade', () => {
     const { fixture, api } = await montar();
 
     expect(api.chamadas).toEqual(['obter undefined']);
-    expect(fixture.nativeElement.textContent).toContain(SEMANA);
+    expect(fixture.nativeElement.textContent).toContain('07/09/2026');
   });
 
   it('oferece as duas semanas editaveis que o servidor informou', async () => {
     const { fixture } = await montar();
 
-    expect(botaoCom(fixture, SEMANA)).toBeDefined();
-    expect(botaoCom(fixture, SEGUINTE)).toBeDefined();
+    expect(botaoCom(fixture, 'Semana de 07/09')).toBeDefined();
+    expect(botaoCom(fixture, 'Semana de 14/09')).toBeDefined();
   });
 
   it('troca de semana recarregando a grade', async () => {
     const { fixture, api } = await montar();
 
-    botaoCom(fixture, SEGUINTE)?.click();
+    botaoCom(fixture, 'Semana de 14/09')?.click();
     await fixture.whenStable();
 
     expect(api.chamadas).toEqual(['obter undefined', `obter ${SEGUINTE}`]);

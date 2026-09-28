@@ -247,7 +247,7 @@ describe('ReunioesService.agendar', () => {
 
   it.each([
     ['pedido cancelado', { pedido: { situacao: 'cancelado' } }, /cancelado/],
-    ['pedido nao distribuido', { pedido: { distribuido: false } }, /analise/],
+    ['pedido nao distribuido', { pedido: { distribuido: false } }, /análise/],
   ])('%s e recusado', async (_caso, ajuste, esperado) => {
     const { servico } = montar(ajuste);
 
@@ -270,7 +270,7 @@ describe('ReunioesService.agendar', () => {
 
     await expect(
       servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA),
-    ).rejects.toThrow(/ja foram usadas/);
+    ).rejects.toThrow(/já foram usadas/);
   });
 
   it('horario com menos de 24h de antecedencia e recusado', async () => {

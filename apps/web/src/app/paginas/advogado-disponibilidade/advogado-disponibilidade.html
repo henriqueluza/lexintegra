@@ -21,7 +21,7 @@
         [variante]="opcao === semana() ? 'primario' : 'secundario'"
         (click)="trocarSemana(opcao)"
       >
-        {{ opcao }}
+        {{ rotuloDaSemana(opcao) }}
       </app-botao>
       }
     </div>
@@ -32,7 +32,7 @@
     <div class="grade__rolagem">
       <table class="grade__tabela">
         <caption class="grade__legenda">
-          Horários de atendimento da semana de {{ semana() }}
+          Horários de atendimento da semana de {{ dataCompleta(semana()) }}
         </caption>
         <thead>
           <tr>
