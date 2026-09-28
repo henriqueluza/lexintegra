@@ -13,16 +13,17 @@ específica do Claude Code e não representam proteção automaticamente ativa n
 No Codex, valem também a sandbox e as permissões da sessão. Nenhum agente deve
 contornar uma restrição de seu ambiente.
 
-## Redesign do frontend — setembro de 2026
+## Redesign do frontend — setembro de 2026 (ADR-22)
 
-- Branch da revisão de identidade: `codex/identidade-navegacao-footer`. Redesign anterior mesclado pelo PR #27. Escopo, decisões e revisão: `docs/revisao-frontend.md`.
-- Landing única com quatro fotografias em `/`; `/todas-as-imagens` e `/com-movimento` redirecionam para `/`. Logo adaptada e favicon em `apps/web/public/`. Ver `docs/identidade-navegacao.md`.
-- Cadastro inicial em `/cadastro`, catálogo em `/servicos`, carrinho em `/carrinho` e checkout em `/checkout`. Login em `/entrar`.
-- Cadastro inicial continua sendo liberação do catálogo, não criação de conta Firebase. A senha nasce após a primeira compra, conforme o backend existente.
-- Cátedra nas páginas públicas; Pauta em todos os painéis, com nova navegação lateral responsiva.
-- Os marcadores de texto visíveis foram substituídos por redação. Termos são minutas versionadas, ainda sujeitos à revisão jurídica antes de produção. A ficha definitiva da contratante continua pendente; não foi inventada aprovação nem alterado seu schema.
-- Sem animação na hero. Underline da navbar e respostas do FAQ têm transições com respeito a movimento reduzido. Nenhuma landing acessa a API. A navbar restaura a sessão Firebase: visitante vê Entrar/Cadastre-se, autenticado vê usuário/carrinho.
-- As notas por etapa abaixo são históricas. Onde mencionarem formulário dentro da home, texto literal pendente ou ausência de imagens, prevalece este registro do redesign.
+- **Direção clara única** nas páginas públicas e nos painéis, com **Plus Jakarta Sans** como família única. Decisão, tabela do que mudou e consequências: ADR-22 no topo de `docs/design.md`. Protótipo aprovado: `docs/prototipos/direcao-final.html` (Codex + Claude). Branch: `feat/redesign-frontend`.
+- `data-direcao="catedra"` (público) e `"pauta"` (painéis) **ficaram**: agora a diferença é de densidade e escala, não de paleta. Superfícies de marca (vinho profundo, dourado, brilho do hero) são tokens comuns em `:root` de `semanticos.css` (`--marca-*`, `--dourado-*`, `--hero-*`, `--sombra-*`, `--raio-*`). Componente continua lendo só semântico.
+- Landing única em `/`, com uma fotografia só; `/todas-as-imagens` e `/com-movimento` redirecionam para `/`. Cadastro inicial em `/cadastro`, catálogo em `/servicos` (com busca local), carrinho em `/carrinho`, checkout em `/checkout`, login em `/entrar`. As quatro páginas de acesso usam `shell/moldura-acesso`.
+- Cadastro inicial continua sendo liberação do catálogo, não criação de conta Firebase. A senha nasce após a primeira compra.
+- Painéis: menu lateral com ícones (`shell/shell-autenticada`), barra de topo com a pessoa, `ui/resumo` com os números do topo. **O cliente ganhou menu** (pedidos, contratar, ficha), sem item de agendamento: a reunião continua dentro do cartão.
+- Os exemplos de serviço da home não afirmam número nem popularidade — o catálogo real nasce vazio e é o escritório que o preenche (há teste).
+- Termos são minutas versionadas, sujeitas à revisão jurídica. A ficha definitiva da contratante continua pendente.
+- Sem animação na hero. Underline da navbar e respostas do FAQ têm transições com respeito a movimento reduzido. Nenhuma landing acessa a API.
+- As notas por etapa abaixo são históricas. Onde falarem de Cátedra escura, Source Serif, quatro fotografias ou menu ausente para o cliente, prevalece este registro.
 
 ## Estado atual do projeto
 

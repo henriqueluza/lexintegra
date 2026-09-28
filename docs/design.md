@@ -1,6 +1,51 @@
 # Design — LexIntegra
 
-> **Atualização de setembro de 2026:** landing única com quatro fotografias, identidade LexIntegra, navbar por sessão, FAQ com transições e páginas legais ampliadas. Ver [identidade-navegacao.md](identidade-navegacao.md). Cadastro e compra permanecem separados. As referências anteriores a variantes, placeholders e formulário dentro da home são históricas.
+## ADR-22 — Direção clara única (28/09/2026)
+
+**Esta seção substitui a decisão da Etapa 1 abaixo.** O que vem depois dela é
+histórico: explica de onde vieram os nomes e as regras que ficaram.
+
+**Contexto.** A landing escura (Cátedra) e os painéis claros (Pauta) conviviam
+bem, mas a direção pedida em setembro foi uma estética mais próxima da Jusfy —
+clara, geométrica, com cartões e botões evidentes — nas duas áreas. Houve duas
+propostas (Codex e Claude) e uma terceira, aprovada, que junta as duas:
+[`prototipos/direcao-final.html`](prototipos/direcao-final.html).
+
+**Decisão.**
+
+| Peça | O que ficou |
+|---|---|
+| Paleta | Clara nas duas áreas: papel `#F4F4F1`, branco, tinta `#1C1B1E`, ação vinho `#6C0C0C`. O vinho profundo (`#340106`, `#26050A`) e o dourado (`#A8783C`, `#C39B5F`) viram **superfícies e detalhes de marca**: faixa de diferenciais, cartão em destaque, chamada final, rodapé, painel do login. ADR-10 intacto — nenhum valor de marca mudou. |
+| Tipografia | **Uma família, Plus Jakarta Sans** (OFL-1.1, hospedada no domínio via `@fontsource-variable/plus-jakarta-sans`). Saíram Source Serif 4, Archivo e IBM Plex Sans. Títulos 700–800, texto 400–500. |
+| Landing | Hero claro com brilho rosado e areia, a janela do produto no centro e as etiquetas em volta; faixa de diferenciais; "Menos caminhos"; quatro passos; serviços como planos com preço borrado; atendimento com foto; dúvidas; chamada final; rodapé em quatro colunas. |
+| Acesso | Entrar, cadastro, recuperar e definir senha numa moldura dividida: painel vinho à esquerda, formulário sobre branco à direita. |
+| Catálogo | Busca local, cartões com faixa de areia, entregáveis, reuniões, revisões e preço; o carrinho fica numa barra fixa no rodapé da tela enquanto tiver item. |
+| Painéis | Menu lateral branco com ícones e rótulo da área, barra de topo com a pessoa, resumo em números, abas em pílula escura. O cliente ganhou menu (pedidos, contratar, ficha) — **nenhum item de agendamento**; a reunião continua dentro do cartão (Etapa 9). |
+
+**Como isso vive no código.** Os atributos `data-direcao="catedra"` (público) e
+`"pauta"` (painéis) ficaram, porque a diferença que sobrou é de densidade e escala
+tipográfica, e continua sendo por área. Os dois blocos de `semanticos.css`
+apontam para a mesma paleta clara; as superfícies de marca são tokens comuns em
+`:root` (`--marca-*`, `--dourado-*`, `--hero-*`, `--sombra-*`, `--raio-*`).
+Componente continua lendo só token semântico, e o stylelint continua sendo a
+régua.
+
+**Consequências.**
+
+- A auditoria de contraste ganhou os pares das superfícies de marca
+  (`contraste.spec.ts`).
+- O botão secundário usa borda clara: o rótulo identifica o controle, então a
+  borda não é o limite que a WCAG 1.4.11 exige. Campo vazio continua com 3:1.
+- Os exemplos de serviço da home **não afirmam número nem popularidade**: o
+  catálogo real nasce vazio e é o escritório que o preenche (há teste).
+- O texto visível dos painéis foi acentuado; identificadores, rotas e chaves
+  continuam sem acento.
+- Todas as imagens de referência da regressão visual mudaram e precisam de
+  aprovação humana, uma a uma.
+
+---
+
+> **Atualização de setembro de 2026 (anterior ao ADR-22):** landing única com quatro fotografias, identidade LexIntegra, navbar por sessão, FAQ com transições e páginas legais ampliadas. Ver [identidade-navegacao.md](identidade-navegacao.md). Cadastro e compra permanecem separados. As referências anteriores a variantes, placeholders e formulário dentro da home são históricas.
 
 
 Registro da decisão de direção visual (Etapa 1) e o que ela implica para o desenvolvimento. Este documento não substitui `LexIntegra-arquitetura.md` nem `LexIntegra-plano-de-execucao.md` — só fixa a decisão de UI para que ela não precise ser retomada a cada tela nova.

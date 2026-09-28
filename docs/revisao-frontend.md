@@ -1,5 +1,7 @@
 # Redesign do frontend — setembro de 2026
 
+> **Substituído pelo ADR-22 (`design.md`, 28/09/2026)** no que diz respeito à direção visual. A separação de fluxos (landing, cadastro, catálogo, carrinho, checkout, login) continua a mesma.
+
 > Revisão posterior: o usuário escolheu seguir sem animação. As rotas atuais são `/` (duas fotos selecionadas) e `/todas-as-imagens` (quatro fotos). A imagem arquitetônica foi substituída. Detalhes e prompts em [imagens-landing.md](imagens-landing.md). O registro abaixo descreve a primeira entrega.
 
 ## Escopo e critérios

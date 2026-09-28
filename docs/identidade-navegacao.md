@@ -1,5 +1,7 @@
 # Identidade, navegação e conteúdo — revisão após PR #27
 
+> **Substituído pelo ADR-22 (`design.md`, 28/09/2026):** a direção visual abaixo (Cátedra escura, Source Serif 4, quatro fotografias) deu lugar à direção clara com Plus Jakarta Sans. Continuam valendo a navbar por sessão, o rodapé em quatro colunas e os redirecionamentos.
+
 Branch: `codex/identidade-navegacao-footer`. A home passa a ser exclusivamente a versão com as quatro fotografias. Os endereços antigos redirecionam para `/`; o seletor de versão foi removido.
 
 ## Direção visual

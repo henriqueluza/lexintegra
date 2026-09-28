@@ -177,13 +177,11 @@ Servidas pelo próprio site, a partir dos pacotes do npm, importados em
 
 | Fonte | Pacote | Licença | Origem |
 |---|---|---|---|
-| Source Serif 4 (variável) | `@fontsource-variable/source-serif-4@5.3.0` | OFL-1.1 | Adobe, via Fontsource |
-| Archivo (variável) | `@fontsource-variable/archivo@5.3.0` | OFL-1.1 | Omnibus-Type, via Fontsource |
-| IBM Plex Sans | `@fontsource/ibm-plex-sans@5.3.0` | OFL-1.1 | IBM, via Fontsource |
+| Plus Jakarta Sans (variável) | `@fontsource-variable/plus-jakarta-sans@5.3.0` | OFL-1.1 | Tokotype, via Fontsource |
 
 A SIL Open Font License permite uso, embutir e redistribuir, e proíbe vender a
-fonte sozinha. A tipografia oficial da marca segue pendente (arquitetura, ADR-10).
-Estas são as escolhidas em `docs/design.md`.
+fonte sozinha. É a família única escolhida no ADR-22 (`docs/design.md`), que
+substituiu Source Serif 4, Archivo e IBM Plex Sans em setembro de 2026.
 
 ## 5. Imagens, logo e ícones da área pública
 
