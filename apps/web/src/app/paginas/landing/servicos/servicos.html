@@ -40,7 +40,7 @@
   </app-botao>
 </div>
 } @else if ((produtos() ?? []).length === 0) {
-<div class="vazio">
+<div class="vazio" role="status">
   <app-estado-vazio [mensagem]="textos.servicos.vazio" icone="documento" />
   <p>{{ textos.servicos.vazioApoio }}</p>
 </div>
