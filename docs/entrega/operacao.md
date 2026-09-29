@@ -162,9 +162,14 @@ enquanto isso não mudar.**
 
 1. **Confirmar a verificação do domínio.** No painel do Resend, em *Domains*,
    `notificacoes.lexintegra.com.br` precisa aparecer como *Verified*. Os
-   registros (DKIM, os dois CNAMEs de rastreamento e DMARC) ficam no Registro.br,
-   com os valores que o próprio painel do Resend mostra.
-   `[CONFIRMAR: status atual da verificação e em qual conta do Resend o domínio está]`.
+   registros ficam no Registro.br, com os valores que o próprio painel do Resend
+   mostra. **Conferido em 29/09/2026: verificado, na conta do escritório**
+   (criada com o e-mail do dono, Auan Bastos). DNS: DKIM em
+   `resend._domainkey.notificacoes.lexintegra.com.br`; SPF e MX de retorno em
+   `send.notificacoes.lexintegra.com.br`, via CNAME para `send.forge.rmta.net`;
+   DMARC só no domínio principal, `v=DMARC1; p=none;` (o subdomínio herda). Com
+   `p=none` o DMARC só monitora: endurecer para `quarantine` ou `reject` é
+   decisão para depois de algumas semanas de envio real.
 2. **Confirmar que a chave é da mesma conta.** O secret `resend-api-key` precisa
    ser de uma chave da conta onde o domínio foi verificado. Se a conta mudar de
    dono, gere a chave nova na conta nova e siga
@@ -391,8 +396,8 @@ continua recuperável por até 7 dias. A única coleção com TTL é `checkouts`
 | Outbox parado | Evento não entregue há mais de 30 min | [`outbox-parado.md`](../runbooks/outbox-parado.md) |
 | Entrega de e-mail falhando | Mais de 5 falhas de entrega em 10 min | [`entrega-de-email-falhando.md`](../runbooks/entrega-de-email-falhando.md) |
 | Arquivo parado em quarentena | Arquivo sem veredito há mais de 60 min | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
-| Base do ClamAV velha | Base publicada com mais de 48 h | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
-| Base do ClamAV sem publicacao | Nenhuma publicação em 23 h | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
+| Base do ClamAV velha | O `daily` publicado tem mais de 48 h (só o `daily`: `main` e `bytecode` têm meses de idade por natureza) | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
+| Base do ClamAV sem publicacao | Nenhuma publicação do `daily` em 23 h | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
 | Disponibilidade publicada sem link de reuniao | Advogado ativo, com horário publicado e sem `usuarioTeams`. **Só com o Teams ligado**: com `REUNIOES_MODO=desligado`, a sonda não emite o sinal | [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
 | Reuniao marcada sem sala do Teams | Reunião em `reservada_sem_link` há mais de 60 min | [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
 | Webhook do gateway recusado | Mais de 5 recusas do webhook em 10 min, por segredo ou assinatura | [`webhook-recusado.md`](../runbooks/webhook-recusado.md) |
@@ -401,13 +406,25 @@ continua recuperável por até 7 dias. A única coleção com TTL é `checkouts`
 | API fora do ar | O uptime check de `https://lexintegra.com.br/api/health` falha | [`api-fora-do-ar.md`](../runbooks/api-fora-do-ar.md) |
 
 **Quem recebe.** Um canal de e-mail, *Desenvolvimento (PROVISORIO)*, criado só
-quando `ALERTAS_EMAIL_DESENVOLVIMENTO` existe no GitHub. Hoje o valor está
-numa *variable* do repositório, e não num *secret*. O roteamento está em
+quando `ALERTAS_EMAIL_DESENVOLVIMENTO` existe no GitHub. Desde 29/09/2026 o
+valor está num *secret* do repositório, com a *variable* de mesmo nome mantida
+como reserva até o `plan` confirmar que o secret chega ao workflow. O roteamento está em
 [`alertas-roteamento.json`](../../infra/terraform/alertas-roteamento.json), e
 todos os alertas estão em `pendente` (só o canal provisório recebe). Trocar o
 destino e decidir o roteamento faz parte da transferência
 ([`transferencia.md`](transferencia.md)). Depois de qualquer troca, siga
 [`runbooks/alerta-artificial.md`](../runbooks/alerta-artificial.md).
+
+**Incidente do ClamAV, 14/09 a 29/09/2026.** O job `clamav-atualizar-base` nunca rodou: o Scheduler recebia
+`PERMISSION_DENIED` (403), porque a conta `tarefas-lexintegra` não tinha `roles/run.invoker` no job (o
+binding nunca foi declarado no Terraform). Nenhum alerta avisou: a métrica de idade nunca recebeu ponto, e uma
+condição de ausência só dispara para série que já existiu. O scanner seguiu varrendo, porque o boot cai para
+o mirror oficial quando o bucket está vazio. O bucket estava **vazio** até a execução manual de 29/09 e agora tem
+~108 MiB. Correções: binding no Terraform, política *Job da base do ClamAV falhou ou scanner sem base* e
+scanner que recusa toda varredura sem base. Dois falsos positivos do mesmo dia: *Base do ClamAV velha*
+(a métrica media também `main.cvd` e `bytecode.cvd`, meses de idade) e *Retencao parada* / *Sonda de sinais
+parada* (condição agrupada por revisão, disparando após todo deploy). Detalhe em
+`docs/achados-2026-09-29-alertas-e-clamav.md`.
 
 **Webhook recusado tem alerta desde o Bloco E**, pela linha estruturada que o
 guard escreve a cada `401` (`jsonPayload.sinal="webhook.recusado"`).

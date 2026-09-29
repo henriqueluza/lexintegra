@@ -160,8 +160,9 @@ variable "alertas_email_desenvolvimento" {
     entrega e decisao da CONTRATANTE (plano de execucao, "So voce" da Etapa 12), e
     inventar um destinatario seria responder por ela.
 
-    O VALOR NAO MORA NO REPOSITORIO, que e publico: ele vem da variavel
-    ALERTAS_EMAIL_DESENVOLVIMENTO do GitHub Actions. Vazio, nenhum canal e criado
+    O VALOR NAO MORA NO REPOSITORIO (privado desde 29/09/2026, publico antes e a
+    ser transferido): ele vem do secret ALERTAS_EMAIL_DESENVOLVIMENTO do GitHub
+    Actions, com a variable de mesmo nome como reserva. Vazio, nenhum canal e criado
     e os incidentes existem apenas no console do Monitoring — que e o
     comportamento certo para um plan rodado por quem nao configurou a variavel.
 

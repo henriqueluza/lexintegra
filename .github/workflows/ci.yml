@@ -1,5 +1,11 @@
 name: CI
 
+# ATENCAO: os NOMES dos sete jobs abaixo sao os checks obrigatorios da protecao da
+# `main` (29/09/2026): "Lint, testes e build", "Terraform (validate e plan)",
+# "Imagem do scanner", "Versao do Playwright", "Jornadas autenticadas (Etapa 12)",
+# "Acessibilidade e regressao visual" e "Analise de mutacao". Renomear um deles
+# trava todos os PRs ate a protecao ser atualizada no GitHub (Settings -> Branches).
+
 # So em pull request. Um push para branch com PR aberto disparava a mesma
 # verificacao duas vezes, gastando o dobro dos 2.000 minutos mensais gratuitos
 # (arquitetura, secao 11). A main e coberta pelo workflow de deploy, que reexecuta

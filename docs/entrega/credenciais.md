@@ -47,7 +47,7 @@ Levantado com `gh secret list` e `gh variable list`.
 
 | Nome | Tipo | Usado em | É credencial? |
 |---|---|---|---|
-| `ALERTAS_EMAIL_DESENVOLVIMENTO` | **variable** (não há secret com esse nome) | `deploy.yml`, como `TF_VAR_alertas_email_desenvolvimento` | Não, mas é dado pessoal. O `deploy.yml` e o README do Terraform recomendam **secret**: em repositório público, variable não é mascarada no log |
+| `ALERTAS_EMAIL_DESENVOLVIMENTO` | **secret** (criado em 29/09/2026) **e variable** de mesmo nome, mantida de propósito como reserva | `deploy.yml` e `ci.yml`, como `TF_VAR_alertas_email_desenvolvimento`, lendo `secrets.… \|\| vars.…` | Não, mas é dado pessoal. Variable não é mascarada no log. **Não apague a variable antes de o `terraform plan` confirmar que o secret chega:** com valor vazio o canal de alertas é destruído, sem erro visível |
 | `APP_CHECK_SITE_KEY` | variable | `deploy.yml`, gravada em `configuracao-publica.json` | Não. A site key do reCAPTCHA é pública por definição |
 | `APP_CHECK_PROVEDOR` | variable, **não definida** | `deploy.yml` (padrão `recaptcha-enterprise`) | Não |
 | `GITHUB_TOKEN` | automático | `ci.yml`, para comentar o plano no PR | Gerado a cada execução. Não há o que trocar |
@@ -59,7 +59,7 @@ Levantado com `gh secret list` e `gh variable list`.
 | Conta | Chave JSON gerenciada por usuário | Observação |
 |---|---|---|
 | `terraform-ci@…`, `api-lexintegra-run@…`, `scanner-clamav@…`, `clamav-atualizador@…`, `tarefas-lexintegra@…`, `616781378293-compute@developer…` | **nenhuma** | Credencial de ambiente ou federação |
-| `firebase-adminsdk-fbsvc@plataforma-juridica-36bda.iam.gserviceaccount.com` | **1 chave ativa**, criada em 04/09/2026, **sem vencimento** | A aplicação **não** usa essa chave: o Admin SDK roda com ADC (`firebase/firebase.module.ts`). A conta tem `firebaseauth.admin`, `firebaseappcheck.admin` e `iam.serviceAccountTokenCreator` **no projeto inteiro**. Quem tem o JSON pode escrever custom claim, inclusive `admin`. **Passou pela máquina: sim.** Ver a seção 3 |
+| `firebase-adminsdk-fbsvc@plataforma-juridica-36bda.iam.gserviceaccount.com` | 1 chave, criada em 04/09/2026, **sem vencimento**. **Desativada em 29/09/2026; apagar em 30/09 ou 01/10** | A aplicação **não** usa essa chave: o Admin SDK roda com ADC (`firebase/firebase.module.ts`). A conta tem `firebaseauth.admin`, `firebaseappcheck.admin` e `iam.serviceAccountTokenCreator` **no projeto inteiro**. Quem tem o JSON pode escrever custom claim, inclusive `admin`. **Passou pela máquina: sim.** Ver a seção 3 |
 
 ### 1.5 Outras
 
@@ -177,17 +177,19 @@ preencher.
 | Sistema | Acesso do desenvolvedor | Verificado em | O que acontece na transferência |
 |---|---|---|---|
 | Projeto GCP `plataforma-juridica-36bda` | `roles/owner`, e **é o único dono** | `gcloud projects get-iam-policy` | O escritório entra como dono **antes**, e o desenvolvedor sai depois ([`transferencia.md`](transferencia.md)) |
-| Conta de faturamento vinculada ao projeto | `roles/billing.admin`. Há **dois** administradores de faturamento: o desenvolvedor e uma segunda conta pessoal | `gcloud billing accounts get-iam-policy` | `[CONFIRMAR: de quem é a conta de faturamento e quem é a segunda pessoa]`. O ADR-13 diz que ela é do Marcos |
+| Conta de faturamento `018245-5481E8-45B906` | `roles/billing.admin`. Há **dois** administradores: o desenvolvedor e Auan Bastos (`auanbastos01@gmail.com`), dono do escritório, que é o dono da conta. O Marcos **não tem papel** na conta (o texto do ADR-13 diz outra coisa; vale o estado real, conferido em 29/09/2026) | `gcloud billing accounts get-iam-policy` | O escritório indica um **segundo `billing.admin`** (o Marcos ou alguém da B&C) **antes** de o desenvolvedor sair. Sem isso, a conta fica com um único administrador. Só depois o desenvolvedor sai |
 | Firebase (mesmo projeto) | herda o `owner` | — | Sai com o GCP |
-| GitHub `henriqueluza/lexintegra` | dono do repositório | — | Sai com a transferência do repositório |
-| Resend | `[PREENCHER]` | — | `[PREENCHER]` |
-| AbacatePay (conta do escritório) | `[PREENCHER]` | — | `[PREENCHER]` |
-| Registro.br (`lexintegra.com.br`) | `[PREENCHER]` | — | `[PREENCHER]` |
-| Microsoft 365 / Entra ID do escritório | `[PREENCHER]` | — | `[PREENCHER]` |
+| GitHub `henriqueluza/lexintegra` | dono do repositório, na conta pessoal. Privado desde 29/09/2026 | — | Sai com a transferência do repositório. Ver a proteção da `main` em [`transferencia.md`](transferencia.md) |
+| Resend | Conta no e-mail do dono (Auan Bastos); o domínio `notificacoes.lexintegra.com.br` está **verificado** nela. Acesso do desenvolvedor: a definir em 30/09 | Painel, 29/09/2026 | *a definir em 30/09* |
+| AbacatePay (conta do escritório) | Conta no e-mail do dono. Acesso do desenvolvedor: a definir em 30/09 | — | *a definir em 30/09* |
+| Registro.br (`lexintegra.com.br`) | **Contato técnico.** O titular é o dono (Auan Bastos). É um acesso pessoal, e precisa ser passado a alguém do escritório | — | Passar o contato técnico a alguém do escritório e só então sair |
+| Microsoft 365 / Entra ID do escritório | Conta no e-mail do dono. Acesso do desenvolvedor: a definir em 30/09 | — | *a definir em 30/09* |
+| Canal de alertas do Monitoring | E-mail pessoal do desenvolvedor (`henriqueluza@gmail.com`), canal "PROVISORIO" | 29/09/2026 | Proposta: durante a garantia, manter o desenvolvedor como segundo destinatário ao lado do escritório; depois, remover. *O desenvolvedor confirma* |
 
 ### O que permanece durante os 30 dias de garantia (cláusula 4.4)
 
-Para o desenvolvedor preencher. Cada linha precisa de um motivo e de uma data
+Para o desenvolvedor preencher (as linhas "a definir em 30/09" da tabela acima
+saem da reunião com o escritório). Cada linha precisa de um motivo e de uma data
 de saída. Acesso sem motivo escrito sai na transferência.
 
 | Acesso que permanece | Nível | Por quê | Sai em |
