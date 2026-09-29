@@ -182,7 +182,7 @@ e passe a lista ao Claude como "ajustes finais".
   (`abacatepay-api-key`, `abacatepay-webhook-secret`) e preencher
   `credenciais.md` e `operacao.md` 4.2.
 - [x] Faxina: `.agents/`, `.codex/` e `.DS_Store` no `.gitignore`.
-- [ ] Planilha de custos em regime permanente (`.xlsx`), a partir de
+- [x] Planilha de custos em regime permanente (`.xlsx`), a partir de
   `docs/entrega/inventario-custos.md`.
 - [ ] Rascunho do termo de cessão (cláusula 8ª), com `licencas-terceiros.md`
   como anexo.
