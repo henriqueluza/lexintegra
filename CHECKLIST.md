@@ -162,14 +162,14 @@ e passe a lista ao Claude como "ajustes finais".
 
 **Infraestrutura e documentos**
 
-- [ ] PR que tira os dois blocos `removed` de `infra/terraform/varredura.tf`.
-  O `terraform plan` precisa dar `No changes`.
-- [ ] Conferir por `gcloud`, **só leitura**, o que o deploy do Bloco E criou:
+- [x] PR que tira os dois blocos `removed` de `infra/terraform/varredura.tf`.
+  O `terraform plan` precisa dar `No changes`. *Local, sem os `TF_VAR_*` do CI, o plan é idêntico com e sem os blocos; o `No changes` definitivo é o plan do CI do PR.*
+- [x] Conferir por `gcloud`, **só leitura**, o que o deploy do Bloco E criou (29/09/2026; relatório no resumo do PR):
   - as quatro políticas (*Reuniao marcada sem sala do Teams*, *Webhook do
     gateway recusado*, *Retencao parada*, *Sonda de sinais parada*);
   - se as métricas `webhook-recusado`, `retencao-passagens` e
     `reuniao-sem-sala-segundos` recebem pontos.
-- [ ] Descobrir se o projeto usa Firebase Auth padrão ou Identity Platform e
+- [x] Descobrir se o projeto usa Firebase Auth padrão ou Identity Platform e
   preencher `inventario-custos.md`.
 - [ ] Descobrir a origem dos traços dos ícones (protótipo
   `direcao-B-pauta.html`). Registrar em `docs/imagens-landing.md` e, se vier de
