@@ -100,3 +100,8 @@ application_default_credentials.json
 # Etapa 12: relatorios de qualidade e diretorio temporario da analise de mutacao.
 reports/
 .stryker-tmp/
+
+# Ferramentas de agentes e lixo de sistema
+.agents/
+.codex/
+.DS_Store
