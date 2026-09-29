@@ -184,7 +184,7 @@ e passe a lista ao Claude como "ajustes finais".
 - [x] Faxina: `.agents/`, `.codex/` e `.DS_Store` no `.gitignore`.
 - [x] Planilha de custos em regime permanente (`.xlsx`), a partir de
   `docs/entrega/inventario-custos.md`.
-- [ ] Rascunho do termo de cessão (cláusula 8ª), com `licencas-terceiros.md`
+- [x] Rascunho do termo de cessão (cláusula 8ª), com `licencas-terceiros.md`
   como anexo.
 
 **Catálogo vazio em produção** (o escritório cria os produtos pelo admin)
