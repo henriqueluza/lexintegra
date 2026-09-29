@@ -201,18 +201,18 @@ e passe a lista ao Claude como "ajustes finais".
 **Testes automatizados** (rodar agora como linha de base, e de novo depois de
 B2 e de C)
 
-- [ ] `pnpm lint`
-- [ ] `pnpm test`
-- [ ] `pnpm test:integration`
-- [ ] `pnpm quality`
-- [ ] `pnpm test:e2e`
-- [ ] `pnpm test:a11y`
-- [ ] `pnpm test:visual`
-- [ ] `pnpm test:visual paineis`
-- [ ] `pnpm test:jornadas`
-- [ ] `pnpm mutacao`
-- [ ] `pnpm relatorio:qualidade`
-- [ ] Corrigir o que falhar
+- [x] `pnpm lint` *(linha de base 29/09/2026: ok)*
+- [x] `pnpm test` *(linha de base 29/09/2026: ok)*
+- [x] `pnpm test:integration` *(linha de base 29/09/2026: ok)*
+- [x] `pnpm quality` *(linha de base 29/09/2026: ok)*
+- [ ] `pnpm test:e2e` *Rodado em 29/09/2026: 120 ok, 78 falhas, todas capturas de tela (`*.visual.spec.ts`) rodadas fora do contêiner. Ambiente, não defeito; refazer com Docker.*
+- [ ] `pnpm test:a11y` *Não rodou em 29/09/2026: exige Docker, desligado na máquina. Rodar com Docker.*
+- [ ] `pnpm test:visual` *Não rodou em 29/09/2026: exige Docker.*
+- [ ] `pnpm test:visual paineis` *Não rodou em 29/09/2026: exige Docker.*
+- [x] `pnpm test:jornadas` *(linha de base 29/09/2026: ok)*
+- [x] `pnpm mutacao` *(linha de base 29/09/2026: ok)*
+- [x] `pnpm relatorio:qualidade` *(linha de base 29/09/2026: ok)*
+- [ ] Corrigir o que falhar. *Nada a corrigir no código: as únicas falhas da linha de base são de ambiente (Docker desligado). Fica aberto até rodar os quatro comandos acima com Docker.*
 
 **Depois que você confirmar os traços em produção (A1)**
 
