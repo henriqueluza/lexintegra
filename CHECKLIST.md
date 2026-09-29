@@ -176,7 +176,7 @@ e passe a lista ao Claude como "ajustes finais".
   biblioteca, a licença em `licencas-terceiros.md`.
 - [x] Pesquisar os termos de uso da base de assinaturas do ClamAV e preencher
   `licencas-terceiros.md`.
-- [ ] Pesquisar na documentação do AbacatePay:
+- [x] Pesquisar na documentação do AbacatePay:
   - a política de reentrega de webhook, para `operacao.md` 4.2;
   - se o painel reenvia evento, para `webhook-fora-do-ar.md`.
 

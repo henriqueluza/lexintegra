@@ -254,9 +254,16 @@ enquanto isso não mudar.**
 
 **Voltar atrás:** `PAGAMENTOS_MODO = "desligado"` por PR. O checkout e o
 webhook voltam a responder 503. Um QR já emitido e pago nesse intervalo depende
-de o AbacatePay reenviar o evento depois. `[CONFIRMAR: política de reentrega de
-webhook do AbacatePay]`. Confira nos *Webhook Logs* do painel antes de desligar
-com cobrança em aberto.
+de o AbacatePay reenviar o evento depois. Política de
+reentrega, segundo a [documentação de webhooks do AbacatePay](https://docs.abacatepay.com/pages/webhooks)
+(consulta em 29/09/2026): até **7 tentativas em cerca de 18 h** (imediata, +5 s,
++5 min, +30 min, +2 h, +5 h, +10 h), com prazo de 30 s por tentativa. Reentregam
+timeout, erro de conexão, `5xx`, `408` e `429`. Não reentregam `3xx` e os demais
+`4xx`, e `410` desativa o webhook. Com o modo `desligado` a API responde `503`,
+que entra nas reentregas, mas **passadas cerca de 18 h sem resposta `2xx` a
+documentação não informa o que acontece com o evento**. O painel tem reenvio
+manual de um log (ver [`webhook-fora-do-ar.md`](../runbooks/webhook-fora-do-ar.md)).
+Confira nos *Webhook Logs* do painel antes de desligar com cobrança em aberto.
 
 ### 4.3 Microsoft Teams
 

@@ -75,7 +75,11 @@ painel e compare com `eventoNoFormatoReal`
 formato novo.
 
 **Depois de qualquer correção:** reenvie pelo painel do AbacatePay as entregas
-que falharam. `[CONFIRMAR: o painel permite reenvio manual]`. Reenviar é seguro:
+que falharam. Segundo a [documentação](https://docs.abacatepay.com/pages/webhooks)
+(consulta em 29/09/2026), o painel permite o **reenvio manual de um log**: uma
+tentativa só, sem reentrega automática, e o evento reenviado ganha um `id`
+novo. A documentação não informa o limite de logs reenviáveis nem por quanto
+tempo o log fica no painel. Reenviar é seguro:
 o pagamento tem o id da cobrança, e a repetição cai em `duplicata` (ADR-04).
 O que continuar sem pedido segue [pagamento-orfao.md](pagamento-orfao.md).
 
