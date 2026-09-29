@@ -171,9 +171,6 @@ e passe a lista ao Claude como "ajustes finais".
     `reuniao-sem-sala-segundos` recebem pontos.
 - [ ] Descobrir se o projeto usa Firebase Auth padrão ou Identity Platform e
   preencher `inventario-custos.md`.
-- [ ] Descobrir a origem dos traços dos ícones (protótipo
-  `direcao-B-pauta.html`). Registrar em `docs/imagens-landing.md` e, se vier de
-  biblioteca, a licença em `licencas-terceiros.md`.
 - [x] Pesquisar os termos de uso da base de assinaturas do ClamAV e preencher
   `licencas-terceiros.md`.
 - [x] Pesquisar na documentação do AbacatePay:
@@ -236,6 +233,10 @@ constroem**. As decisões vão para um `decisoes.md`.
   atualizados.
 - [x] Imagens de referência da regressão visual regravadas (públicas e
   painéis). 👤 aprova uma a uma (A2).
+- [ ] Descobrir a origem dos traços dos ícones (protótipo
+  `direcao-B-pauta.html`). Registrar em `docs/imagens-landing.md` e, se vier de
+  biblioteca, a licença em `licencas-terceiros.md`. *Depois da entrega do front
+  novo.*
 
 **Conteúdo**
 
