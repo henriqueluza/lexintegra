@@ -174,7 +174,7 @@ e passe a lista ao Claude como "ajustes finais".
 - [ ] Descobrir a origem dos traços dos ícones (protótipo
   `direcao-B-pauta.html`). Registrar em `docs/imagens-landing.md` e, se vier de
   biblioteca, a licença em `licencas-terceiros.md`.
-- [ ] Pesquisar os termos de uso da base de assinaturas do ClamAV e preencher
+- [x] Pesquisar os termos de uso da base de assinaturas do ClamAV e preencher
   `licencas-terceiros.md`.
 - [ ] Pesquisar na documentação do AbacatePay:
   - a política de reentrega de webhook, para `operacao.md` 4.2;
