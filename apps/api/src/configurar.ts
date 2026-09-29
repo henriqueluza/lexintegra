@@ -1,5 +1,6 @@
 import type { NestApplicationOptions } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { criarDiagnosticoDeProxy } from './diagnostico-proxy.js';
 
 /**
  * Opcoes de CRIACAO da aplicacao, que producao e teste de integracao passam ao
@@ -56,4 +57,8 @@ export function configurar(app: NestExpressApplication): void {
    * todo mundo na mesma chave.
    */
   app.set('trust proxy', proxiesConfiaveis());
+
+  // TEMPORARIO: mede o `X-Forwarded-For` real. Ver `diagnostico-proxy.ts`. Vem
+  // DEPOIS de `trust proxy` para `ips` e `ip` refletirem a configuracao em uso.
+  app.use(criarDiagnosticoDeProxy());
 }
