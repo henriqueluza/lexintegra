@@ -181,7 +181,7 @@ e passe a lista ao Claude como "ajustes finais".
   - se o painel reenvia evento, para `webhook-fora-do-ar.md`.
 
   O que a documentação não disser vai para a reunião (C).
-- [ ] Propor os nomes dos secrets de produção do AbacatePay
+- [x] Propor os nomes dos secrets de produção do AbacatePay
   (`abacatepay-api-key`, `abacatepay-webhook-secret`) e preencher
   `credenciais.md` e `operacao.md` 4.2.
 - [ ] Faxina: `.agents/`, `.codex/` e `.DS_Store` no `.gitignore`.

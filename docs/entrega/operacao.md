@@ -214,7 +214,16 @@ enquanto isso não mudar.**
    [`secrets.tf`](../../infra/terraform/secrets.tf), declare um secret para a
    chave de produção e outro para o segredo do webhook, com o
    `secretAccessor` da `api-lexintegra-run`, e faça o merge.
-   `[CONFIRMAR: nomes dos secrets, por exemplo abacatepay-api-key e abacatepay-webhook-secret]`.
+   Nomes propostos, conferidos contra o que o código lê (`apps/api/src`) e a
+   convenção de `secrets.tf` (kebab-case, sufixo `-dev` só na chave de sandbox):
+
+   | Variável de ambiente | Secret | Tipo |
+   |---|---|---|
+   | `ABACATEPAY_API_KEY` | `abacatepay-api-key` | secret |
+   | `ABACATEPAY_WEBHOOK_SECRET` | `abacatepay-webhook-secret` | secret |
+   | `ABACATEPAY_WEBHOOK_CHAVE_HMAC` | — | variável comum: a chave é pública (ADR-19), não é secret |
+
+   São **dois** secrets, não três.
    **Não os referencie ainda no `cloud_run.tf`.** Secret sem versão impede a
    revisão de subir.
 3. **Gravar os valores, à mão.** Quem tem acesso ao painel do escritório gera a
