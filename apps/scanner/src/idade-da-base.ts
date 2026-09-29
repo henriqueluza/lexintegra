@@ -29,6 +29,8 @@
  * separador de campo do proprio cabecalho. Sem desfazer isso, a data nao e
  * reconhecida e a idade viraria `null` justamente quando ela importa.
  */
+import { ehBaseDiaria } from './base-do-clamav.js';
+
 export function geradaEmDoCabecalho(cabecalho: string): Date | null {
   const campos = cabecalho.split(':');
   if (campos[0] !== 'ClamAV-VDB' || campos.length < 2) return null;
@@ -57,6 +59,46 @@ export function versaoDoClamd(saida: string): {
     versao: campos[1],
     geradaEm: Number.isNaN(instante) ? null : new Date(instante),
   };
+}
+
+export interface SinalDePublicacao {
+  readonly sinal: string;
+  readonly campos: Record<string, unknown>;
+}
+
+/**
+ * Os sinais que o job emite para UM arquivo publicado.
+ *
+ * `clamav.base-publicada` sai para todos, com a idade so como informacao. A
+ * METRICA E O ALERTA DE IDADE LEEM `clamav.daily-publicada`, que so sai para o
+ * `daily`: publicar um `main.cvd` de meses ao lado de um `daily.cvd` novo nao
+ * pode gerar alarme (achado de 29/09/2026).
+ */
+export function sinaisDaPublicacao(
+  nome: string,
+  geradaEm: Date | null,
+  agora: Date,
+): readonly SinalDePublicacao[] {
+  const datas =
+    geradaEm === null
+      ? {}
+      : {
+          geradaEm: geradaEm.toISOString(),
+          idadeHoras: idadeEmHoras(geradaEm, agora),
+        };
+
+  const sinais: SinalDePublicacao[] = [
+    { sinal: 'clamav.base-publicada', campos: { arquivo: nome, ...datas } },
+  ];
+
+  if (ehBaseDiaria(nome) && geradaEm !== null) {
+    sinais.push({
+      sinal: 'clamav.daily-publicada',
+      campos: { arquivo: nome, ...datas },
+    });
+  }
+
+  return sinais;
 }
 
 export function idadeEmHoras(geradaEm: Date, agora: Date): number {

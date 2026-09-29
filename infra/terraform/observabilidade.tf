@@ -174,13 +174,19 @@ resource "google_logging_metric" "outbox_entregas" {
   }
 }
 
-# Idade da base do ClamAV no momento em que o job a publicou. O sinal vem do job
-# (`clamav.base-publicada`), e nao do scanner: e ele que responde "o que esta no
-# bucket esta velho?", que e a pergunta que o job verde nao responde sozinho.
+# Idade da base do ClamAV no momento em que o job a publicou. O sinal vem do job,
+# e nao do scanner: e ele que responde "o que esta no bucket esta velho?", que e a
+# pergunta que o job verde nao responde sozinho.
+#
+# MEDE SO O `daily` (`clamav.daily-publicada`, ver `idade-da-base.ts`). Com o sinal
+# `clamav.base-publicada`, que sai para os tres arquivos, o `main.cvd` (meses) e o
+# `bytecode.cvd` (anos) faziam a politica de idade disparar em TODA execucao
+# saudavel do job — incidente falso de 29/09/2026. As duas politicas do ClamAV
+# leem esta metrica: a de ausencia tambem passa a significar "o daily parou".
 resource "google_logging_metric" "clamav_base_idade" {
   project         = var.project_id
   name            = "clamav-base-idade-horas"
-  filter          = "jsonPayload.sinal=\"clamav.base-publicada\""
+  filter          = "jsonPayload.sinal=\"clamav.daily-publicada\""
   value_extractor = "EXTRACT(jsonPayload.idadeHoras)"
   bucket_options {
     linear_buckets {
@@ -543,6 +549,73 @@ resource "google_monitoring_alert_policy" "clamav_base_sem_publicacao" {
         per_series_aligner = "ALIGN_SUM"
       }
     }
+  }
+}
+
+# O JOB DA BASE FALHOU, OU O SCANNER SUBIU SEM BASE.
+#
+# As duas politicas acima dependem de o job ter publicado ALGUMA VEZ: limiar sobre
+# a idade nao dispara sem pontos, e ausencia so dispara para serie que ja existiu.
+# Entre 14/09 e 29/09/2026 o job nunca rodou (403 do Scheduler, sem binding) e
+# nenhum alerta avisou. Estas tres condicoes olham o LOG, que existe desde a
+# primeira falha:
+#   1. o Scheduler nao conseguiu iniciar o job (o 403 daquele incidente);
+#   2. o job iniciou e terminou em erro (freshclam, bucket, memoria);
+#   3. o scanner subiu ou varreu sem nenhuma base (bucket vazio e mirror fora).
+#
+# O QUE ISTO NAO COBRE: job desabilitado ou apagado, que nao gera log nenhum. Para
+# isso serve a politica de ausencia, depois da primeira publicacao.
+resource "google_monitoring_alert_policy" "clamav_job_falhou" {
+  project               = var.project_id
+  display_name          = "Job da base do ClamAV falhou ou scanner sem base"
+  combiner              = "OR"
+  notification_channels = local.canais_por_alerta["clamav-job-falhou"]
+
+  documentation {
+    content = <<-EOT
+      A atualizacao da base do ClamAV falhou, ou o scanner esta sem assinaturas.
+      Um scanner sem base responde `indisponivel` a tudo (nunca `limpo`) e a fila
+      reentrega: nada infectado passa, mas nenhum upload e concluido.
+
+      Confira `gcloud run jobs executions list --job=clamav-atualizar-base --region=${var.region}`
+      e o log da execucao. Se o Scheduler recusou (PERMISSION_DENIED), falta o
+      binding `roles/run.invoker` da conta `tarefas-lexintegra` no job.
+
+      Runbook: docs/runbooks/scanner-indisponivel.md
+    EOT
+  }
+
+  conditions {
+    display_name = "Scheduler nao conseguiu iniciar o job"
+
+    condition_matched_log {
+      filter = "resource.type=\"cloud_scheduler_job\" AND resource.labels.job_id=\"${google_cloud_scheduler_job.clamav_base.name}\" AND severity>=ERROR"
+    }
+  }
+
+  conditions {
+    display_name = "job terminou em erro"
+
+    condition_matched_log {
+      filter = "resource.type=\"cloud_run_job\" AND resource.labels.job_name=\"${google_cloud_run_v2_job.atualizar_base_clamav.name}\" AND severity>=ERROR"
+    }
+  }
+
+  conditions {
+    display_name = "scanner sem base de assinaturas"
+
+    condition_matched_log {
+      filter = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${google_cloud_run_v2_service.scanner.name}\" AND jsonPayload.sinal=\"scanner.sem-base\""
+    }
+  }
+
+  alert_strategy {
+    # Um scanner sem base loga a cada varredura reentregue; sem teto, seriam
+    # dezenas de e-mails iguais.
+    notification_rate_limit {
+      period = "3600s"
+    }
+    auto_close = "86400s"
   }
 }
 

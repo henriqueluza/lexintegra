@@ -32,11 +32,15 @@ set -e
 
 if [ "$CODIGO" -eq 3 ]; then
   echo "entrada: bucket sem base; buscando do mirror publico (primeiro deploy)"
-  # `|| true` SO AQUI, e de propósito: se ate o mirror falhar, o clamd e quem
-  # deve falhar alto logo abaixo. Um scanner sem assinaturas que responde "limpo"
-  # seria pior do que um que nao responde — e `interpretar()` ja garante que a
-  # ausencia vira `indisponivel`, nunca `limpo`.
-  freshclam --datadir /var/lib/clamav || true
+  # SEM `|| true`: a falha do freshclam aparece no log em vez de sumir. Ela NAO
+  # derruba o boot, de proposito — um scanner de pe e sem base responde
+  # `indisponivel` a tudo e loga `scanner.sem-base` (ver `servidor.ts`), enquanto
+  # um que nem sobe deixa o startup probe matar a revisao e a API sem resposta.
+  # O que nunca pode acontecer e responder "limpo" sem assinatura, e
+  # `interpretar()` mais a checagem do servidor garantem isso.
+  if ! freshclam --datadir /var/lib/clamav; then
+    echo "entrada: freshclam falhou com o bucket vazio; o scanner recusara toda varredura ate haver base" >&2
+  fi
 elif [ "$CODIGO" -ne 0 ]; then
   echo "entrada: falha ao carregar a base do bucket (codigo $CODIGO)" >&2
   exit "$CODIGO"
