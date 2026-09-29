@@ -577,8 +577,8 @@ description"**: ele recusa o travessão. A suíte inteira passava porque o gatew
 falso aceitava qualquer texto — o falso agora recusa igual, que é a correção que
 importa. O literal era o menor dos problemas: o **nome e a descrição do produto**
 no checkout hospedado vêm do catálogo, escrito por gente, e texto jurídico usa
-travessão, reticências e aspas curvas o tempo todo; o catálogo real da B&C levaria
-a compra por cartão ao mesmo 400 em produção. `pagamentos/gateway/texto-do-gateway.ts`
+travessão, reticências e aspas curvas o tempo todo; o catálogo que o escritório
+criar pelo painel levaria a compra por cartão ao mesmo 400 em produção. `pagamentos/gateway/texto-do-gateway.ts`
 é o único lugar que prepara esse texto: troca a pontuação tipográfica pelo
 equivalente ASCII, descarta o que sobra e corta num teto conservador. **Acento
 fica** — nada na rodada disse que incomoda, e é nome de produto e de gente. O

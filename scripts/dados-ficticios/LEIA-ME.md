@@ -1,8 +1,13 @@
 # Dados fictícios
 
 **Nada neste diretório é real.** São valores de exemplo, plausíveis mas inventados,
-para que o emulador e os testes de integração tenham com o que trabalhar enquanto o
-catálogo verdadeiro não chega.
+para que o emulador e os testes de integração tenham com o que trabalhar.
+
+**Não existe "catálogo real a importar".** O catálogo de produção nasce vazio, e o
+escritório cria os produtos pelo painel de administração. Estes dados nunca vão para
+produção: `apps/api/src/sem-dados-ficticios-em-producao.spec.ts` prova que nada
+publicado os importa, que o script de semente recusa rodar fora do emulador e que
+o CI não o executa.
 
 | Arquivo | O que é | Quem consome |
 |---|---|---|
@@ -60,14 +65,14 @@ Divergência aqui não quebra teste automaticamente: os documentos são escritos
 direto na REST do emulador, não pelo `PedidosService`. O que pega divergência é a
 suíte de integração, que exercita os serviços de verdade contra o mesmo emulador.
 
-## Quando o catálogo real chegar
+## Ao alterar o catálogo de exemplo
 
 Abra `catalogo-produtos.ts`, troque os objetos, e nada mais. O arquivo é só dados,
-sem lógica, para que a substituição seja mecânica.
+sem lógica.
 
 Depois: `pnpm test:integration`. Cada produto é validado contra `esquemaNovoProduto`,
-o mesmo schema que a API usa para recusar — se o catálogo real tiver um preço em
-reais em vez de centavos, ou um produto sem entregável, isso falha aqui.
+o mesmo schema que a API usa para recusar — se um exemplo tiver preço em reais em
+vez de centavos, ou um produto sem entregável, isso falha aqui.
 
 ## Por que fora de `apps/`
 

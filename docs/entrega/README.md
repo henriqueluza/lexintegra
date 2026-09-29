@@ -23,7 +23,7 @@ terceiro, e o código recusa ligá-las por troca de variável:
 Como ligar cada uma, passo a passo, está em [`operacao.md`](operacao.md).
 
 Também faltam os textos jurídicos definitivos, a ficha de anamnese da
-contratante e o catálogo real. O que existe hoje são marcadores e stubs, cada um
+contratante. O catálogo de produção não é pendência: nasce vazio e o escritório o cria pelo painel. O que existe hoje são marcadores e stubs, cada um
 com teste que cai quando for substituído.
 
 ## Documentos
