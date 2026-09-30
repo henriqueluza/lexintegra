@@ -49,8 +49,8 @@ resource "google_logging_project_exclusion" "webhook_segredo_na_url" {
 # --- Quem recebe --------------------------------------------------------------
 #
 # O canal de DESENVOLVIMENTO e provisorio e esta marcado como tal no
-# `.env.example`. O e-mail nao mora no repositorio — que e publico — e sim numa
-# variavel do GitHub Actions; sem ela, nenhum canal e criado e os incidentes
+# `.env.example`. O e-mail nao mora no repositorio — privado desde 29/09/2026, mas
+# publico antes disso e a ser transferido — e sim num secret do GitHub Actions; sem ela, nenhum canal e criado e os incidentes
 # existem apenas no console do Monitoring.
 resource "google_monitoring_notification_channel" "desenvolvimento" {
   count = var.alertas_email_desenvolvimento == "" ? 0 : 1

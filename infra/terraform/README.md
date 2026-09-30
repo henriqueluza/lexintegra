@@ -194,12 +194,17 @@ uptime check e o painel; `sinais.tf` tem a sonda que os alimenta com o que só
 existe dentro do Firestore.
 
 **Quem recebe alerta não está aqui, e é de propósito.** O destinatário vem de
-`ALERTAS_EMAIL_DESENVOLVIMENTO` no GitHub Actions — o repositório é público. O
+`ALERTAS_EMAIL_DESENVOLVIMENTO` no GitHub Actions — o repositório é privado
+desde 29/09/2026 (foi público de 03/09 a 29/09), mas o e-mail continua fora do
+código, porque o repositório será transferido. O
 `deploy.yml` lê **secret ou variable**, nessa ordem: os dois são lugares
 plausíveis, e ler só um reproduz uma falha silenciosa (o canal tem
 `count = var == "" ? 0 : 1`, então sem valor ele não nasce e as políticas ficam
-sem destinatário, sem nada falhar). Prefira o **secret**: em repositório público
-o log do Actions é público, e variable não é mascarada.
+sem destinatário, sem nada falhar). Prefira o **secret**: variable não é mascarada no log do Actions, e
+o log de um repositório que já foi público continua sendo lido por quem o
+copiou. **Não apague a variable antes de confirmar que o secret chega ao
+`plan`:** com valor vazio o canal é destruído, e todos os alertas passam a não ir
+para lugar nenhum, sem erro visível.
 
 **Os papéis que o CI precisa para isto não estão no Terraform.** `logging.configWriter`
 e `monitoring.editor` são concessão manual, como todos os papéis de projeto da
