@@ -363,13 +363,15 @@ execução corrigida gera alarme falso.
   uma requisição com `traceparent` a `/api/teste-de-traco` gerou dois spans no
   mesmo trace, o do Cloud Run (`/component AppServer`) e o da aplicação
   (`service.name api-lexintegra`). O `telemetry.tracesWriter` basta.
-- [ ] `ci.yml` disparado por `workflow_dispatch` propõe um diff falso nas imagens
+- [x] `ci.yml` disparado por `workflow_dispatch` propõe um diff falso nas imagens
   (30/09, run 36663051297: `0 to add, 3 to change, 0 to destroy` logo depois de
   um deploy verde). Os três são `api-lexintegra`, `scanner-lexintegra` e o job
   `clamav-atualizar-base`: `github.event.pull_request.head.sha` é vazio fora de
   PR, então `TF_VAR_api_image` e `TF_VAR_scanner_image` viram `...:` (tag vazia) e
   `TF_VAR_commit_sha` fica vazio. Não é drift real. Correção: no `ci.yml`, usar
   `github.event.pull_request.head.sha || github.sha` nas três variáveis.
+  Corrigido no PR `fix/ci-plan-workflow-dispatch`. 👤 Depois do merge, disparar o
+  `ci.yml` na `main` e conferir que o plan dá "No changes".
 
 **Catálogo vazio em produção** (o escritório cria os produtos pelo admin)
 

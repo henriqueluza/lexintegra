@@ -341,9 +341,15 @@ jobs:
       - name: Plan
         id: plan
         env:
-          TF_VAR_api_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/api:${{ github.event.pull_request.head.sha }}
-          TF_VAR_scanner_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/scanner:${{ github.event.pull_request.head.sha }}
-          TF_VAR_commit_sha: ${{ github.event.pull_request.head.sha }}
+          # Num PR, o commit do PR. Fora de PR (`workflow_dispatch` na `main`),
+          # `pull_request.head.sha` e vazio e a tag virava `api:` — o plan
+          # propunha trocar as tres imagens por uma tag vazia logo depois de um
+          # deploy verde (run 36663051297, 30/09/2026). `github.sha` e o commit
+          # da `main`, que e o que o deploy implantou: o plan deve dar
+          # "No changes".
+          TF_VAR_api_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/api:${{ github.event.pull_request.head.sha || github.sha }}
+          TF_VAR_scanner_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/scanner:${{ github.event.pull_request.head.sha || github.sha }}
+          TF_VAR_commit_sha: ${{ github.event.pull_request.head.sha || github.sha }}
           # A MESMA EXPRESSAO DO `deploy.yml`, e pelo mesmo motivo. Sem ela, o
           # canal de alertas (`count = var == "" ? 0 : 1`) seria proposto para
           # destruicao em todo plano de PR e esvaziaria os canais das politicas —
