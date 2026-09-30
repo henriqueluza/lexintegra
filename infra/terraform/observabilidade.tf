@@ -758,9 +758,16 @@ resource "google_monitoring_alert_policy" "retencao_parada" {
       filter   = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.retencao_passagens.name}\" AND resource.type=\"cloud_run_revision\""
       duration = "82800s"
 
+      # AGRUPADO POR SERVICO, NUNCA POR REVISAO. Sem `cross_series_reducer`, cada
+      # revisao e uma serie: apos um deploy a serie da revisao anterior para, e a
+      # ausencia dispara 23h depois com a passagem rodando normalmente na revisao
+      # nova (falso positivo de 29/09/2026, revisao 00030). Reduzindo por
+      # `service_name`, a serie so some quando NENHUMA revisao emite.
       aggregations {
-        alignment_period   = "3600s"
-        per_series_aligner = "ALIGN_SUM"
+        alignment_period     = "3600s"
+        per_series_aligner   = "ALIGN_SUM"
+        cross_series_reducer = "REDUCE_SUM"
+        group_by_fields      = ["resource.label.service_name"]
       }
     }
   }
@@ -799,9 +806,16 @@ resource "google_monitoring_alert_policy" "sonda_parada" {
       # E o mesmo alinhador de `clamav_base_sem_publicacao`, ausencia sobre
       # distribuicao ja aceita em producao. Numa condicao de ausencia o valor
       # alinhado nao importa — so se ha ponto na janela.
+      #
+      # AGRUPADO POR SERVICO, NUNCA POR REVISAO: cada deploy criava uma serie nova e
+      # a da revisao anterior parava, o que disparava esta politica ~25 min depois
+      # de TODO merge, com a sonda funcionando (29/09/2026). `REDUCE_SUM` e valido
+      # para DELTA com distribuicao (documentacao do Monitoring).
       aggregations {
-        alignment_period   = "300s"
-        per_series_aligner = "ALIGN_SUM"
+        alignment_period     = "300s"
+        per_series_aligner   = "ALIGN_SUM"
+        cross_series_reducer = "REDUCE_SUM"
+        group_by_fields      = ["resource.label.service_name"]
       }
     }
   }
