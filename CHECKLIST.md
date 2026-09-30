@@ -254,9 +254,28 @@ execução corrigida gera alarme falso.
 - [x] Comentário no topo do `ci.yml` avisando que os nomes dos sete jobs são
   checks obrigatórios da proteção da `main`; registrar a proteção e sua
   dependência do plano do GitHub em `transferencia.md`.
-- [ ] Varredura do histórico do Git e dos logs do Actions atrás de segredos,
-  porque o repositório ficou público de 03/09 a 29/09. Credencial achada é
-  tratada como vazada: rotacionar.
+- [x] Varredura do histórico do Git e dos logs do Actions atrás de segredos,
+  porque o repositório ficou público de 03/09 a 29/09. Feita em 30/09 com
+  `gitleaks` 8.30.1 e buscas por padrão (chaves do AbacatePay e do Resend,
+  chave privada, token do GitHub, `webhookSecret` na URL, token OAuth do Google).
+  **Nenhuma credencial vazada.**
+  - Git: todas as branches (`--all`, 324 commits, 56 branches remotas). Quatro
+    achados eram falsos positivos (`--region=southamerica-east1` em runbooks). O
+    único real é a `apiKey` web do Firebase em
+    `apps/web/src/app/autenticacao/firebase.ts`, commit `34bb502` (04/09),
+    retirada do código em `06eacae` (05/09). É a mesma chave em uso hoje
+    ("Browser key (auto created by Firebase)"). **Não é credencial**: o Firebase
+    a publica em `/__/firebase/init.json` para todo visitante. Está restrita aos
+    referenciadores `lexintegra.com.br/*` e `*.lexintegra.com.br/*` e a 25 APIs.
+    Não precisa rotacionar. (Restringir a lista de APIs ao que o site usa é
+    endurecimento opcional, não correção.)
+  - Actions: as 119 execuções criadas entre 03/09 e 29/09 (1.060 arquivos de
+    log, 70 MB). 519 achados, todos falsos positivos: 502 SHAs de commit na tag
+    da imagem (`api:<sha>`) e 17 `APP_CHECK_SITE_KEY`, que é a chave de site do
+    reCAPTCHA, pública por definição. O e-mail `henriqueluza@gmail.com` aparece
+    em claro em 22 linhas de `TF_VAR_alertas_email_desenvolvimento` (era
+    *variable*, não mascarada) e em 16 linhas de `creator`/`last_modifier` do
+    plan. É dado pessoal exposto, não credencial; desde 30/09 vem de secret.
 - [ ] Medir o consumo de minutos do Actions por workflow e registrar em
   `inventario-custos.md`.
 - [ ] Conferir se o 404 da API responder com a página HTML padrão do Express
