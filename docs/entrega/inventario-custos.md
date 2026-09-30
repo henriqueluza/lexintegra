@@ -114,7 +114,7 @@ Tudo em `observabilidade.tf`, salvo indicação.
 | **Resend** | E-mails por evento (`packages/shared/src/evento-outbox.ts`, `apps/api/src/outbox/evento.ts`), listados abaixo. A arquitetura, seção 12, registra o teto de 100/dia no plano gratuito | `email/`, `outbox/` |
 | **AbacatePay** | Uma cobrança por checkout. O mesmo carrinho reaproveita a cobrança (ADR-19). Para o cartão, um produto no gateway por combinação de nome, descrição e preço (`produtos-gateway`). Tarifa por transação conforme o meio (PIX ou cartão) e um estorno integral por cobrança totalmente estornada. **Hoje, zero**: `PAGAMENTOS_MODO=desligado` | `checkout/`, `pagamentos/`, `estornos/` |
 | **Microsoft Graph** | Uma chamada `onlineMeetings/createOrGet` por reunião. A remarcação reaproveita a sala, e o cancelamento não a apaga (ADR-21, decisão 7). Mais um token OAuth por sessão do adaptador. **Hoje, zero**: `REUNIOES_MODO=desligado`. Exige licença Microsoft 365 com Teams por advogado, que é custo do escritório | `reunioes/sala/` |
-| **GitHub Actions** | CI com 7 jobs por PR (qualidade, scanner, versão do Playwright, visual, jornadas, mutação, Terraform) e deploy com 3 jobs por push na `main`. Repositório **público** hoje. Se virar privado na transferência, passa a consumir a cota de minutos da conta | `.github/workflows/` |
+| **GitHub Actions** | CI com 7 jobs por PR (qualidade, scanner, versão do Playwright, visual, jornadas, mutação, Terraform) e deploy com 3 jobs por push na `main`. Repositório **privado** desde 29/09/2026 (foi público de 03/09 a 29/09), então os minutos contam na cota do plano da conta (seção 7.1) | `.github/workflows/` |
 | **Registro.br** | Domínio `lexintegra.com.br` | fora do repositório |
 
 E-mails por evento:
@@ -137,6 +137,44 @@ cloudtrace, firebasehosting, firebaserules, firebaseappcheck, firestore, iam,
 iamcredentials, identitytoolkit, logging, monitoring, run, secretmanager,
 serviceusage, storage e telemetry. Habilitar uma API não gera cobrança; o uso,
 sim.
+
+### 7.1 Minutos do GitHub Actions
+
+Medido em 30/09/2026 pela API do GitHub, nas execuções de 16/09 a 30/09 (84
+execuções). Minutos somados **por job**, arredondando cada job para cima, que é
+a leitura conservadora: a documentação do GitHub não diz se o arredondamento é
+por job.
+
+| Workflow | Quando roda | Execuções no período (sucesso) | Minutos por execução bem-sucedida | Total no período |
+|---|---|---|---|---|
+| `ci.yml` | a cada push em PR, e por `workflow_dispatch` | 57 (47) | média 30,4, mediana 25, máximo 46 | 1.578 |
+| `deploy.yml` | a cada merge na `main` | 25 (19) | média 13,8, mediana 13, máximo 17 | 335 |
+
+O CI custa cerca de duas vezes o deploy porque roda sete jobs, e o de mutação
+sozinho leva de 17 a 26 minutos. Um PR que recebe três pushes custa cerca de
+90 minutos antes do merge.
+
+**Estimativa mensal contra a cota.** A conta tem **GitHub Pro, 3.000 minutos
+por mês** em repositório privado ([documentação do GitHub](https://docs.github.com/en/billing/concepts/product-billing/github-actions),
+consultada em 30/09/2026). Repositório público não consome cota; este é privado
+desde 29/09/2026, e só daí em diante as execuções contam.
+
+| Cenário | Conta | Minutos por mês |
+|---|---|---|
+| Ritmo destas duas semanas (desenvolvimento intenso) | 1.913 min em 15 dias × 2 | **cerca de 3.800**, acima da cota |
+| Ritmo de 28 a 30/09 (fechamento, com junções) | 31 CI + 12 deploys em 3 dias | acima da cota |
+| Manutenção depois da entrega | 10 PRs × 2 pushes × 30 min + 10 deploys × 14 min | **cerca de 740** |
+
+No ritmo atual, a cota do Pro **não basta**. O excedente em runner Linux de 2
+núcleos custa US$ 0,006 por minuto (mesma página): 800 minutos acima da cota
+seriam cerca de US$ 4,80 no mês. Se passar a ser problema, as alavancas são: o
+job de mutação só em PR que toca código de domínio, e não repetir o CI inteiro
+em push que só muda documentação.
+
+**Na transferência** o repositório vai para a conta do escritório, e a cota
+passa a ser a do plano **dela** (2.000 minutos no Free). O Pro do desenvolvedor
+vem do GitHub Student Developer Pack e não acompanha o repositório
+([`transferencia.md`](transferencia.md)).
 
 ## 8. Removido
 

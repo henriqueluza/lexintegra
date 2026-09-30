@@ -237,20 +237,29 @@ execução corrigida gera alarme falso.
   workflows (`chore/remover-reserva-vars-alertas`). Depois do deploy, o canal
   *Desenvolvimento (PROVISORIO — substituir antes da Etapa 13)* continua
   existindo e ativo, com `henriqueluza@gmail.com` (conferido em 30/09).
-- [ ] Runbook `sonda-parada.md`: trocar "pausar por 20 minutos" por "até o
-  e-mail chegar, no máximo 40 minutos"; registrar latência real de ~25 min e
-  que alarme preso a revisão antiga, logo após deploy, é falso positivo.
-- [ ] Atualizar `docs/runbooks/alerta-artificial.md` (comando com `--severity`
-  e `revision_name` atual, tempos observados, secret em vez de variable).
-- [ ] Documentar o incidente do ClamAV (14/09 a 29/09), o falso positivo de
-  revisão e o falso positivo de idade nos runbooks (`scanner-indisponivel.md`
-  incluso) e em `operacao.md`.
-- [ ] Atualizar os documentos que dizem que o repositório é público
-  (`infra/terraform/README.md:197` e outros).
-- [ ] Preencher `credenciais.md`, `operacao.md` e `transferencia.md` com as
+- [x] Runbook `sonda-parada.md`: "até o e-mail chegar, no máximo 40 minutos";
+  latência real de ~24 min (13:10:04 → 13:34:05 UTC); e o falso positivo por
+  revisão acabou com a correção de 30/09.
+- [x] Atualizar `docs/runbooks/alerta-artificial.md` (comando com
+  `--monitored-resource-*` e `--severity`, `revision_name` atual, tempos
+  observados, secret em vez de variable). O grosso veio no #41; faltava a
+  tabela de sintomas citar só o secret.
+- [x] Documentar o incidente do ClamAV (14/09 a 29/09), o falso positivo de
+  revisão e o falso positivo de idade nos runbooks (`scanner-indisponivel.md`,
+  seção "Histórico") e em `operacao.md` (com os nomes das três políticas novas).
+- [x] Atualizar os documentos que dizem que o repositório é público
+  (`infra/terraform/README.md:197` e outros). Os últimos eram
+  `plano-de-execucao.md` e `inventario-custos.md`; o resto já diz "privado desde
+  29/09" ou fala no passado.
+- [x] Preencher `credenciais.md`, `operacao.md` e `transferencia.md` com as
   respostas da seção 2.13, incluindo a ordem da transferência de acessos
   (primeiro o escritório recebe `owner` e `billing.admin`, depois os acessos do
-  Henrique caem). **Não preencher** as linhas "a definir em 30/09".
+  Henrique caem). O grosso veio no #41; faltavam, em `transferencia.md`, a conta
+  onde o domínio do Resend está verificado e o titular do Registro.br, e a
+  errata do faturamento no ADR-13 e no plano (a conta é do Auan, não do
+  Marcos). As linhas "a definir em 30/09" e a tabela da garantia
+  (`credenciais.md` §4) ficaram como estão. Continua aberta a pergunta "o
+  Resend aceita o mesmo domínio em duas contas?" (`transferencia.md`, 3.1).
 - [x] Comentário no topo do `ci.yml` avisando que os nomes dos sete jobs são
   checks obrigatórios da proteção da `main`; registrar a proteção e sua
   dependência do plano do GitHub em `transferencia.md`.
@@ -276,8 +285,10 @@ execução corrigida gera alarme falso.
     em claro em 22 linhas de `TF_VAR_alertas_email_desenvolvimento` (era
     *variable*, não mascarada) e em 16 linhas de `creator`/`last_modifier` do
     plan. É dado pessoal exposto, não credencial; desde 30/09 vem de secret.
-- [ ] Medir o consumo de minutos do Actions por workflow e registrar em
-  `inventario-custos.md`.
+- [x] Medir o consumo de minutos do Actions por workflow e registrar em
+  `inventario-custos.md` (seção 7.1, 30/09). CI cerca de 30 min por execução,
+  deploy cerca de 14. No ritmo destas duas semanas, cerca de 3.800 min/mês,
+  **acima dos 3.000 do Pro**; em manutenção, cerca de 740.
 - [ ] Conferir se o 404 da API responder com a página HTML padrão do Express
   (e não com o JSON do Nest) é o desejado.
 

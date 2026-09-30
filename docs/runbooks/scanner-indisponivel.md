@@ -31,6 +31,33 @@ e espere a próxima instância do scanner subir.
 
 Todas as políticas estão em `infra/terraform/observabilidade.tf`.
 
+## Histórico: o incidente de 14/09 a 29/09/2026 e os dois falsos positivos
+
+**A base nunca foi atualizada por 15 dias, e nenhum alerta avisou.** O
+Scheduler recebia `PERMISSION_DENIED` (403) ao iniciar o job
+`clamav-atualizar-base`, porque a conta `tarefas-lexintegra` não tinha
+`roles/run.invoker` no job: o binding nunca foi declarado no Terraform. As
+políticas de idade não dispararam porque a métrica nunca recebeu ponto, e uma
+condição de ausência só dispara para série que já existiu. O scanner seguiu
+varrendo com a base que o boot baixava do mirror público, porque o bucket estava
+vazio. Uma execução manual em 29/09 publicou a base (hoje ~108 MiB).
+
+Correções (29 e 30/09): o binding no Terraform (conferido em produção com a
+execução `clamav-atualizar-base-26lmc` pelo Scheduler); as três políticas de
+log acima, que disparam desde a primeira falha; e o scanner que recusa toda
+varredura sem base.
+
+**Falso positivo 1, idade.** Ao publicar a base em 29/09, *Base do ClamAV
+velha* disparou com a base em dia: a métrica media a idade de todos os
+arquivos, e `main.cvd` (6.877 h) e `bytecode.cvd` (9.192 h) são republicados
+raramente pelo próprio ClamAV. Hoje só o `daily` entra na métrica (seção acima).
+Se esta política disparar com `daily.cvd` recente, a correção foi desfeita.
+
+**Falso positivo 2, revisão.** *Retencao parada* e *Sonda de sinais parada*
+disparavam uns 25 minutos depois de todo deploy, porque a condição de ausência
+era agrupada por `revision_name`. Corrigido em 30/09 (agrupada por
+`service_name`); ver [sonda-parada.md](sonda-parada.md).
+
 **Como a varredura funciona** (ADR-18):
 
 1. O navegador envia o arquivo para `gs://lexintegra-quarentena-36bda`.
