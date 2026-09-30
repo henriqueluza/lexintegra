@@ -106,7 +106,7 @@ Decida o plano do escritório antes da Fase 2.
 
 | Nome | Tipo a usar no destino | Valor |
 |---|---|---|
-| `ALERTAS_EMAIL_DESENVOLVIMENTO` | **secret**, não variable: variable não é mascarada no log. Os workflows leem `secrets.… \|\| vars.…`; no destino, crie só o secret | O destinatário decidido na Fase 0. Ver a Fase 4 |
+| `ALERTAS_EMAIL_DESENVOLVIMENTO` | **secret**, não variable: variable não é mascarada no log. Os workflows leem só o secret; no destino, crie o secret (sem variable) | O destinatário decidido na Fase 0. Ver a Fase 4 |
 | `APP_CHECK_SITE_KEY` | variable. É pública por definição | A mesma de hoje: a chave do reCAPTCHA está no projeto GCP, que não muda |
 | `APP_CHECK_PROVEDOR` | variable, **opcional** | Hoje não existe, e o padrão é `recaptcha-enterprise` |
 

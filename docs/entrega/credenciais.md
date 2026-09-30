@@ -47,7 +47,7 @@ Levantado com `gh secret list` e `gh variable list`.
 
 | Nome | Tipo | Usado em | É credencial? |
 |---|---|---|---|
-| `ALERTAS_EMAIL_DESENVOLVIMENTO` | **secret** (criado em 29/09/2026) **e variable** de mesmo nome, mantida de propósito como reserva | `deploy.yml` e `ci.yml`, como `TF_VAR_alertas_email_desenvolvimento`, lendo `secrets.… \|\| vars.…` | Não, mas é dado pessoal. Variable não é mascarada no log. **Não apague a variable antes de o `terraform plan` confirmar que o secret chega:** com valor vazio o canal de alertas é destruído, sem erro visível |
+| `ALERTAS_EMAIL_DESENVOLVIMENTO` | **secret** (criado em 29/09/2026). A variable de mesmo nome foi apagada em 30/09/2026 | `deploy.yml` e `ci.yml`, como `TF_VAR_alertas_email_desenvolvimento`, lendo só `secrets.ALERTAS_EMAIL_DESENVOLVIMENTO` | Não, mas é dado pessoal. **Se o secret sumir, o canal de alertas é destruído** no próximo apply, sem erro visível: o plan do PR mostra isso |
 | `APP_CHECK_SITE_KEY` | variable | `deploy.yml`, gravada em `configuracao-publica.json` | Não. A site key do reCAPTCHA é pública por definição |
 | `APP_CHECK_PROVEDOR` | variable, **não definida** | `deploy.yml` (padrão `recaptcha-enterprise`) | Não |
 | `GITHUB_TOKEN` | automático | `ci.yml`, para comentar o plano no PR | Gerado a cada execução. Não há o que trocar |
