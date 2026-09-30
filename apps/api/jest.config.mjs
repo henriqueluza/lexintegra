@@ -47,6 +47,8 @@ export default {
     // `arnes-pedidos.ts` congela o produto na hora para as suites que precisam de
     // um pedido pronto sem passar por checkout. Tambem e arnes.
     '!arnes-pedidos.ts',
+    // `arnes-http.ts` sobe o servidor dos testes de integracao no loopback.
+    '!arnes-http.ts',
     // `arnes-webhook.ts` e o payload real do sandbox, para testes e simulador.
     '!arnes-webhook.ts',
   ],

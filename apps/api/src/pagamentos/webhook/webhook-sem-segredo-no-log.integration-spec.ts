@@ -17,6 +17,7 @@ import {
 } from '../gateway/modo.js';
 import { assinar, PARAMETRO_SEGREDO_WEBHOOK } from './assinatura.js';
 import { ProcessadorDeEventos } from './processador.service.js';
+import { escutarNoLoopback } from '../../arnes-http.js';
 
 let app: INestApplication;
 let linhas: string[];
@@ -50,7 +51,7 @@ beforeEach(async () => {
     }),
   });
   configurar(app as NestExpressApplication);
-  await app.init();
+  await escutarNoLoopback(app);
 });
 
 afterEach(async () => {

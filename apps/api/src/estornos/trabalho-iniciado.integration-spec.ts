@@ -27,6 +27,7 @@ import {
 } from '../pagamentos/gateway/modo.js';
 import { assinar } from '../pagamentos/webhook/assinatura.js';
 import { ProdutosService } from '../produtos/produtos.service.js';
+import { escutarNoLoopback } from '../arnes-http.js';
 
 const ANA = {
   nome: 'Ana Ribeiro Salgado',
@@ -102,7 +103,7 @@ beforeEach(async () => {
     logger: false,
   });
   configurar(app as NestExpressApplication);
-  await app.init();
+  await escutarNoLoopback(app);
 
   await comprar();
   await http()

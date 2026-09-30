@@ -5,6 +5,7 @@ import request from 'supertest';
 import { AppModule } from './app.module.js';
 import { configurar, OPCOES_DA_APLICACAO } from './configurar.js';
 import { limparEmuladores } from './emulador.js';
+import { escutarNoLoopback } from './arnes-http.js';
 
 const ANA = {
   nome: 'Ana Ribeiro Salgado',
@@ -33,7 +34,7 @@ beforeEach(async () => {
     logger: false,
   });
   configurar(app as NestExpressApplication);
-  await app.init();
+  await escutarNoLoopback(app);
 });
 
 afterEach(async () => {
