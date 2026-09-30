@@ -17,6 +17,7 @@ import {
 } from '../pagamentos/gateway/modo.js';
 import { assinar } from '../pagamentos/webhook/assinatura.js';
 import { COLECAO_CHECKOUTS, FOLGA_ANTES_DE_APAGAR_MS } from './checkout.js';
+import { escutarNoLoopback } from '../arnes-http.js';
 
 const ANA = {
   nome: 'Ana Ribeiro Salgado',
@@ -57,7 +58,7 @@ beforeEach(async () => {
     logger: false,
   });
   configurar(app as NestExpressApplication);
-  await app.init();
+  await escutarNoLoopback(app);
 });
 
 afterEach(async () => {

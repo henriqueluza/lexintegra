@@ -14,6 +14,7 @@ import {
   SEGREDO_WEBHOOK_DESENVOLVIMENTO,
 } from '../gateway/modo.js';
 import { assinar } from './assinatura.js';
+import { escutarNoLoopback } from '../../arnes-http.js';
 
 let app: INestApplication;
 
@@ -30,7 +31,7 @@ async function subir(): Promise<void> {
     logger: false,
   });
   configurar(app as NestExpressApplication);
-  await app.init();
+  await escutarNoLoopback(app);
 }
 
 beforeEach(async () => {

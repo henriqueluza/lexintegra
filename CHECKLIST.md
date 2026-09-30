@@ -345,10 +345,17 @@ execução corrigida gera alarme falso.
   cada push, com o resumo `Plan: …` no topo, e sem comentário novo quando o plan
   é "No changes". Saiu o aviso sobre `import`. Entrou na junção #49; o primeiro
   uso real foi o plan do #51.
-- [ ] `outbox.integration-spec.ts` falhou uma vez (1 de 189, 30/09, na junção do
-  #50) e não reproduziu em cinco execuções seguintes (a suíte inteira duas vezes e
-  o arquivo sozinho três). Causa não investigada. Se voltar no CI, é teste
-  intermitente a corrigir, não a ignorar.
+- [x] `outbox.integration-spec.ts` falhou uma vez (1 de 189, 30/09, na junção do
+  #50). **Causa achada em 30/09:** o supertest escuta em `::` e conecta em
+  `127.0.0.1`, e no macOS o `listen` em `::` aceita uma porta que outro processo
+  já ocupa só no loopback (o emulador do Firestore abre duas assim). A requisição
+  cai no outro processo, que responde 404. Reproduzida em 1 de 25 execuções do
+  arquivo (404 onde a API daria 401), e o mecanismo, à parte, de forma
+  determinística. Corrigido no PR `fix/outbox-intermitente`: os 11 arquivos de
+  integração com servidor HTTP escutam em `127.0.0.1` (`arnes-http.ts`), com
+  teste que recusa arquivo novo fora disso. Depois: 25 de 25 e a integração
+  completa verdes. No CI (Linux) a colisão é bem menos provável, mas o mesmo
+  caminho vale lá.
 - [ ] Regressão visual do estado vazio de `/servicos`: o #44 cobriu o estado com
   e2e e axe nas três larguras, mas não gerou imagem de referência (exige Docker).
   Gerar no contêiner e depois entrar na aprovação uma a uma (A2).

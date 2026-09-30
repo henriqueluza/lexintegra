@@ -15,6 +15,7 @@ import {
 import { EntregaveisService } from '../entregaveis/entregaveis.service.js';
 import { ProdutosService } from '../produtos/produtos.service.js';
 import { PedidosService } from './pedidos.service.js';
+import { escutarNoLoopback } from '../arnes-http.js';
 
 const PARECER: NovoProduto = {
   nome: 'Parecer de risco trabalhista',
@@ -82,7 +83,7 @@ beforeEach(async () => {
     logger: false,
   });
   configurar(app as NestExpressApplication);
-  await app.init();
+  await escutarNoLoopback(app);
 });
 
 afterEach(async () => {
