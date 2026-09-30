@@ -53,7 +53,9 @@ Itens marcados com ❓ podem já ter sido feitos. Se foram, é só marcar.
 
 **Insumo para o Claude**
 
-- [ ] Passar ao Claude a ficha de anamnese recebida do escritório.
+- [x] Passar ao Claude a ficha de anamnese recebida do escritório (30/09/2026).
+  Guardada em `docs/entrega/ficha-anamnese-inicial.docx` (original) e
+  `docs/entrega/ficha-anamnese-inicial.md` (cópia de leitura).
 
 **Provas em produção**
 
@@ -360,8 +362,16 @@ constroem**. As decisões vão para um `decisoes.md`.
 
 **Conteúdo**
 
-- [ ] Ficha de anamnese (insumo de A1). → Trocar o stub `provisoria-v0` pela
-  ficha definitiva: schema, tela, testes e mapa LGPD.
+- [ ] Ficha de anamnese (insumo de A1, **recebido em 30/09**:
+  `docs/entrega/ficha-anamnese-inicial.md`, 10 blocos sobre a empresa cliente).
+  → Trocar o stub `provisoria-v0` pela ficha definitiva: schema, tela, testes e
+  mapa LGPD. Antes de construir, decidir:
+  - quando é preenchida (logo após a compra, como o stub, ou depois) e se é por
+    cliente (`clientes/{uid}/anamnese`, como hoje) ou por pedido;
+  - se todos os campos são obrigatórios, e o que fazer com "Outro" e com as
+    perguntas condicionais ("Se sim, quantas…", "Se publica…");
+  - retenção: a ficha traz passivo trabalhista, autuações e reclamações, dado
+    sigiloso que entra no mapa LGPD e na política de guarda (já pendente).
 - [ ] Texto final das minutas:
   - termos;
   - checkout;
