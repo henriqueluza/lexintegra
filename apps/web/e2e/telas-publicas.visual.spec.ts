@@ -120,6 +120,36 @@ test.describe('regressao visual das telas publicas', () => {
     });
   });
 
+  /**
+   * O catalogo de producao nasce VAZIO (o escritorio cria os produtos pelo
+   * painel), entao este e o estado que o primeiro visitante real encontra. A rota
+   * registrada aqui vence a do `beforeEach`: no Playwright, a ultima vale.
+   */
+  test('catalogo vazio', async ({ page }) => {
+    await page.route('**/api/vitrine', (rota) =>
+      rota.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: '[]',
+      }),
+    );
+    await page.goto('/cadastro');
+    await esperarHidratacao(page);
+
+    await page.getByLabel('Nome completo').fill('Ana Teste de Souza');
+    await page.getByLabel('E-mail').fill('ana@exemplo.test');
+    await page.getByLabel('Telefone').fill('61990000000');
+    await page.getByRole('button', { name: 'Liberar catálogo' }).click();
+    await page.getByRole('link', { name: 'Explorar os serviços' }).click();
+    await expect(
+      page.getByText('Nenhum serviço publicado no momento.'),
+    ).toBeVisible();
+
+    await expect(page).toHaveScreenshot('catalogo-vazio.png', {
+      fullPage: true,
+    });
+  });
+
   test('entrar', async ({ page }) => {
     await page.goto('/entrar');
     await assentar(page);
