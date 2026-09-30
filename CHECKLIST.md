@@ -307,7 +307,7 @@ B2 e de C)
 Já podem ser feitos, a menos que apareça dependência do caminho do Cloud Tasks
 (nesse caso, anotar aqui).
 
-- [ ] PR da branch `chore/remover-cloudtrace-agent`.
+- [x] PR da branch `chore/remover-cloudtrace-agent`.
 - [ ] Medir o custo de `verifyIdToken(checkRevoked)`, pendência aberta desde a
   Etapa 4.
 
