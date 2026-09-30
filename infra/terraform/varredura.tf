@@ -178,6 +178,23 @@ resource "google_cloud_run_v2_job" "atualizar_base_clamav" {
   depends_on = [google_project_service.apis]
 }
 
+# O SCHEDULER PRECISA PODER EXECUTAR O JOB. Este binding nunca existiu: o job
+# `clamav-atualizar-base` respondeu 403 (PERMISSION_DENIED) a toda chamada de
+# 14/09 a 29/09/2026, sem que nenhum alerta avisasse. `roles/run.invoker` no JOB
+# cobre `run.jobs.run`, que e o que a chamada `v1 .../jobs/...:run` exige; a
+# concessao e sobre este job so, nao sobre o projeto.
+#
+# ORDEM DE MERGE IMPORTA: a metrica de idade ja mede so o `daily` (este mesmo PR).
+# Com o binding e a metrica antiga, cada execucao bem-sucedida dispararia "Base do
+# ClamAV velha" por causa do `main.cvd`.
+resource "google_cloud_run_v2_job_iam_member" "tarefas_executam_atualizacao_da_base" {
+  project  = var.project_id
+  location = google_cloud_run_v2_job.atualizar_base_clamav.location
+  name     = google_cloud_run_v2_job.atualizar_base_clamav.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.tarefas.email}"
+}
+
 # --- A fila de varredura -------------------------------------------------------
 resource "google_cloud_tasks_queue" "varredura" {
   project  = var.project_id
