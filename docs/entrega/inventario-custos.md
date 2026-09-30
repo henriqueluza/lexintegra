@@ -96,7 +96,7 @@ Tudo em `observabilidade.tf`, salvo indicação.
 | Item | Quantidade |
 |---|---|
 | Métricas personalizadas por log | **9**: `alertas-criticos`, `outbox-atraso-segundos`, `quarentena-atraso-segundos`, `outbox-entregas`, `clamav-base-idade-horas`, `disponibilidade-sem-link`, `reuniao-sem-sala-segundos`, `webhook-recusado`, `retencao-passagens` |
-| Políticas de alerta | **12**, todas com condição sobre métrica. A arquitetura, seção 12, registra que o Monitoring passa a cobrar alertas a partir de 01/09/2027 |
+| Políticas de alerta | **15** no código (12 existiam em produção em 29/09/2026, antes do deploy que cria as três de log do ClamAV). Três são de correspondência de log, uma condição cada; as demais têm condição sobre métrica. A arquitetura, seção 12, registra que o Monitoring passa a cobrar alertas a partir de 01/09/2027 |
 | Uptime check | **1**, `API LexIntegra (/api/health)`, a cada **300 s**, a partir de várias regiões |
 | Painel | 1 (`paineis/operacao.json`) |
 | Canal de notificação | 1 e-mail, e só existe com a variável do GitHub definida |

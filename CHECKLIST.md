@@ -273,6 +273,14 @@ execução corrigida gera alarme falso.
 - [ ] Rascunho do termo de cessão (cláusula 8ª), com `licencas-terceiros.md`
   como anexo.
 
+- [x] Política `clamav_job_falhou` dividida em três (30/09/2026). O deploy do
+  PR #38 falhou no `apply` (HTTP 400: política com condição de log só pode ter
+  uma condição), e o do #39 falhou igual, porque a política quebrada estava na
+  `main`. O CI não pegou porque o `terraform plan` não valida essa regra: ela
+  mora na API do Monitoring. Virou lint (`scripts/conferir-condicoes-de-log.mjs`,
+  em `pnpm lint`), com o formato antigo confirmado como reprovado. 👤 Depois do
+  merge, conferir o deploy (ver o PR).
+
 **Catálogo vazio em produção** (o escritório cria os produtos pelo admin)
 
 - [ ] Vitrine e `/servicos` com estado vazio adequado.

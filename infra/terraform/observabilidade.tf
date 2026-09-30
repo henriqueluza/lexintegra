@@ -552,34 +552,40 @@ resource "google_monitoring_alert_policy" "clamav_base_sem_publicacao" {
   }
 }
 
-# O JOB DA BASE FALHOU, OU O SCANNER SUBIU SEM BASE.
+# O JOB DA BASE FALHOU, OU O SCANNER SUBIU SEM BASE: TRES POLITICAS.
 #
 # As duas politicas acima dependem de o job ter publicado ALGUMA VEZ: limiar sobre
 # a idade nao dispara sem pontos, e ausencia so dispara para serie que ja existiu.
 # Entre 14/09 e 29/09/2026 o job nunca rodou (403 do Scheduler, sem binding) e
-# nenhum alerta avisou. Estas tres condicoes olham o LOG, que existe desde a
+# nenhum alerta avisou. Estas tres politicas olham o LOG, que existe desde a
 # primeira falha:
 #   1. o Scheduler nao conseguiu iniciar o job (o 403 daquele incidente);
 #   2. o job iniciou e terminou em erro (freshclam, bucket, memoria);
 #   3. o scanner subiu ou varreu sem nenhuma base (bucket vazio e mirror fora).
 #
+# UMA CONDICAO POR POLITICA, e nao tres condicoes numa politica: o Cloud Monitoring
+# recusa no `apply` ("Alert policies with a log matching condition can only have a
+# single condition", HTTP 400). O `terraform plan` NAO valida essa regra, entao o
+# erro so apareceu no deploy do PR #38. `scripts/conferir-condicoes-de-log.mjs`
+# (parte do `pnpm lint`) barra a volta.
+#
 # O QUE ISTO NAO COBRE: job desabilitado ou apagado, que nao gera log nenhum. Para
 # isso serve a politica de ausencia, depois da primeira publicacao.
-resource "google_monitoring_alert_policy" "clamav_job_falhou" {
+resource "google_monitoring_alert_policy" "clamav_scheduler_falhou" {
   project               = var.project_id
-  display_name          = "Job da base do ClamAV falhou ou scanner sem base"
+  display_name          = "ClamAV: Scheduler nao conseguiu iniciar o job"
   combiner              = "OR"
-  notification_channels = local.canais_por_alerta["clamav-job-falhou"]
+  notification_channels = local.canais_por_alerta["clamav-scheduler-falhou"]
 
   documentation {
     content = <<-EOT
-      A atualizacao da base do ClamAV falhou, ou o scanner esta sem assinaturas.
-      Um scanner sem base responde `indisponivel` a tudo (nunca `limpo`) e a fila
-      reentrega: nada infectado passa, mas nenhum upload e concluido.
+      O Cloud Scheduler nao conseguiu iniciar o job `clamav-atualizar-base`. A base
+      do ClamAV nao esta sendo atualizada.
 
-      Confira `gcloud run jobs executions list --job=clamav-atualizar-base --region=${var.region}`
-      e o log da execucao. Se o Scheduler recusou (PERMISSION_DENIED), falta o
-      binding `roles/run.invoker` da conta `tarefas-lexintegra` no job.
+      Se a causa for PERMISSION_DENIED, falta o binding `roles/run.invoker` da conta
+      `tarefas-lexintegra` no job. Confira
+      `gcloud run jobs executions list --job=clamav-atualizar-base --region=${var.region}`
+      e o log do job do Scheduler.
 
       Runbook: docs/runbooks/scanner-indisponivel.md
     EOT
@@ -593,12 +599,65 @@ resource "google_monitoring_alert_policy" "clamav_job_falhou" {
     }
   }
 
+  alert_strategy {
+    notification_rate_limit {
+      period = "3600s"
+    }
+    auto_close = "86400s"
+  }
+}
+
+resource "google_monitoring_alert_policy" "clamav_job_erro" {
+  project               = var.project_id
+  display_name          = "ClamAV: job da base terminou em erro"
+  combiner              = "OR"
+  notification_channels = local.canais_por_alerta["clamav-job-erro"]
+
+  documentation {
+    content = <<-EOT
+      O job `clamav-atualizar-base` iniciou e terminou em erro (freshclam, bucket,
+      memoria). A base publicada nao foi atualizada.
+
+      Confira `gcloud run jobs executions list --job=clamav-atualizar-base --region=${var.region}`
+      e o log da execucao.
+
+      Runbook: docs/runbooks/scanner-indisponivel.md
+    EOT
+  }
+
   conditions {
     display_name = "job terminou em erro"
 
     condition_matched_log {
       filter = "resource.type=\"cloud_run_job\" AND resource.labels.job_name=\"${google_cloud_run_v2_job.atualizar_base_clamav.name}\" AND severity>=ERROR"
     }
+  }
+
+  alert_strategy {
+    notification_rate_limit {
+      period = "3600s"
+    }
+    auto_close = "86400s"
+  }
+}
+
+resource "google_monitoring_alert_policy" "clamav_scanner_sem_base" {
+  project               = var.project_id
+  display_name          = "ClamAV: scanner sem base de assinaturas"
+  combiner              = "OR"
+  notification_channels = local.canais_por_alerta["clamav-scanner-sem-base"]
+
+  documentation {
+    content = <<-EOT
+      O scanner subiu ou varreu sem nenhuma base de assinaturas. Um scanner sem base
+      responde `indisponivel` a tudo (nunca `limpo`) e a fila reentrega: nada
+      infectado passa, mas nenhum upload e concluido.
+
+      Rode o job (`gcloud run jobs execute clamav-atualizar-base --region=${var.region} --wait`)
+      e espere a proxima instancia do scanner subir.
+
+      Runbook: docs/runbooks/scanner-indisponivel.md
+    EOT
   }
 
   conditions {
