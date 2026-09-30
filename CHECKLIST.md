@@ -251,8 +251,14 @@ execução corrigida gera alarme falso.
   tratada como vazada: rotacionar.
 - [ ] Medir o consumo de minutos do Actions por workflow e registrar em
   `inventario-custos.md`.
-- [ ] Conferir se o 404 da API responder com a página HTML padrão do Express
-  (e não com o JSON do Nest) é o desejado.
+- [x] Conferir se o 404 da API responder com a página HTML padrão do Express
+  (e não com o JSON do Nest) é o desejado. **Não era: era defeito.** O tratador
+  de 404 do Nest 12 monta um router do Express com o prefixo global cru, e com
+  `setGlobalPrefix('api')` (sem a barra) o Express 5 não o casava com `/api/...`.
+  Corrigido para `'/api'` no PR `fix/api-404-json`, com teste de integração que
+  exige o JSON do Nest. 👤 Depois do merge: `curl -i
+  https://lexintegra.com.br/api/rota-que-nao-existe` responde 404 com
+  `content-type: application/json`.
 
 **Infraestrutura e documentos**
 

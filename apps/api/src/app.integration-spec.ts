@@ -55,6 +55,25 @@ describe('rotas publicas sobre HTTP', () => {
     await http().get('/health').expect(404);
   });
 
+  /**
+   * ROTA INEXISTENTE SOB /api RESPONDE O JSON DO NEST, e nao a pagina HTML do
+   * Express. Com o prefixo sem barra (`'api'`), o tratador de 404 do Nest 12 nao
+   * casava no Express 5 e o cliente recebia HTML (achado de 29/09/2026, em
+   * `/api/teste-de-traco`). Ver `configurar.ts`.
+   */
+  it('responde 404 em JSON para rota inexistente sob /api', async () => {
+    const resposta = await http()
+      .get('/api/rota-que-nao-existe')
+      .expect(404)
+      .expect('content-type', /application\/json/);
+
+    expect(resposta.body).toEqual({
+      message: 'Cannot GET /api/rota-que-nao-existe',
+      error: 'Not Found',
+      statusCode: 404,
+    });
+  });
+
   it('aceita o pre-cadastro e devolve o token', async () => {
     const resposta = await http()
       .post('/api/pre-cadastros')
