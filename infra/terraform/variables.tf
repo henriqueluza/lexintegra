@@ -93,9 +93,16 @@ variable "proxies_confiaveis" {
     inteiro como um visitante so — nao falha, so para de proteger.
 
     Atras do rewrite do Hosting para o Cloud Run (ADR-15) sao dois: o CDN do
-    Hosting e a borda do Cloud Run. O NUMERO PRECISA SER CONFERIDO numa requisicao
-    real, inspecionando `X-Forwarded-For` — esta no CHECKLIST.md,
-    secao A1.
+    Hosting e a borda do Cloud Run.
+
+    O VALOR 2 FOI MEDIDO em producao em 30/09/2026 (~04:09 UTC), com um log
+    temporario, ja removido, em `/api/health`: `X-Forwarded-For` =
+    "138.0.245.113,74.125.210.192" (dois enderecos), endereco do socket
+    169.254.169.126 (o proxy do Cloud Run), `ips` = ["138.0.245.113",
+    "74.125.210.192"] e `ip` = 138.0.245.113, que era o IPv4 publico de quem fez a
+    requisicao. Com 2, o Express descarta os dois saltos da direita e fica com o
+    visitante. Um teste (`apps/api/src/proxies-confiaveis.spec.ts`) trava este
+    default: mudar o numero exige refazer a medicao.
   EOT
   type        = number
   default     = 2

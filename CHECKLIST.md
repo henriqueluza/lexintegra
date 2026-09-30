@@ -76,10 +76,13 @@ Itens marcados com ❓ podem já ter sido feitos. Se foram, é só marcar.
 
   Isso destrava dois itens do Claude em B1: remover `cloudtrace.agent` e medir
   o `verifyIdToken`.
-- [ ] Conferir o valor de `PROXIES_CONFIAVEIS` numa requisição real, olhando o
-  `X-Forwarded-For`. Com o número errado, o limitador trata todo mundo como um
-  visitante só. **Aguardando o log de diagnóstico do B1**; comandos de medição
-  na seção 2.11 de `docs/achados-2026-09-29-alertas-e-clamav.md`.
+- [x] Conferir o valor de `PROXIES_CONFIAVEIS` numa requisição real, olhando o
+  `X-Forwarded-For`. **Medido em 30/09/2026 (~04:09 UTC)**, em `/api/health`:
+  `X-Forwarded-For` = `138.0.245.113,74.125.210.192`, socket `169.254.169.126`,
+  `ips` = os dois endereços, `ip` = `138.0.245.113` (o IPv4 público do Henrique,
+  conferido com `curl -4`). O valor **2 está correto** e foi mantido. Uma origem
+  só: a segunda medição, pelo celular em rede móvel, que a seção 2.11 sugeria,
+  não foi feita.
 - [x] Chaves do App Check configuradas no console do Firebase (29/09,
   reCAPTCHA Enterprise, `APP_CHECK_ENFORCE=true`).
 - [ ] Teste manual com o arquivo EICAR: ele reprova e nunca fica acessível em
@@ -200,22 +203,27 @@ e passe a lista ao Claude como "ajustes finais".
 Ordem: métrica de idade do `daily` antes ou junto do binding, senão cada
 execução corrigida gera alarme falso.
 
-- [ ] Idade da base do ClamAV medida só pelo `daily`, não pelo arquivo mais
-  antigo (seção 2.7 do relatório).
-- [ ] Binding `roles/run.invoker` de `tarefas-lexintegra` no job
-  `clamav-atualizar-base`, via Terraform. Depois do merge, conferir que a
-  próxima execução agendada aparece em
-  `gcloud run jobs executions list --job=clamav-atualizar-base`.
+- [x] Idade da base do ClamAV medida só pelo `daily`, não pelo arquivo mais
+  antigo (seção 2.7 do relatório). Conferido em produção em 30/09: a métrica lê
+  `clamav.daily-publicada` e o `daily.cvd` saiu com `idadeHoras` 22; o alerta da
+  base não disparou.
+- [x] Binding `roles/run.invoker` de `tarefas-lexintegra` no job
+  `clamav-atualizar-base`, via Terraform. Conferido em produção em 30/09: binding
+  presente, e `gcloud scheduler jobs run clamav-base-diaria` (04:05:36 UTC) gerou
+  a execução `clamav-atualizar-base-26lmc`, concluída com sucesso, sem
+  `status.code` de erro no Scheduler.
 - [ ] Alerta para "a base do ClamAV nunca foi publicada" e para falha do job
   no Scheduler.
 - [ ] Scanner sem base: recusar tudo e alertar; revisar o `|| true` de
   `apps/scanner/entrada.sh:39`.
-- [ ] Condições de ausência agregando por identidade estável, não por
-  `revision_name` (*Retencao parada*, *Sonda de sinais parada* e demais). Hoje
-  todo merge na `main` gera um alarme falso da sonda uns 25 minutos depois.
-- [ ] Log de diagnóstico temporário de proxy, acionado por
-  `x-diagnostico-proxy: 1` (seção 2.11). Depois da medição do Henrique, PR que
-  remove o log e, se preciso, ajusta `proxies_confiaveis`.
+- [x] Condições de ausência agregando por identidade estável, não por
+  `revision_name` (conferido em produção em 30/09: *Sonda de sinais parada* e
+  *Retencao parada* com `REDUCE_SUM` e `groupByFields` só por
+  `resource.label.service_name`). Antes disso, todo merge na `main` gerava um
+  alarme falso da sonda uns 25 minutos depois.
+- [x] Log de diagnóstico temporário de proxy (seção 2.11), medido e **removido**
+  no PR `chore/remover-diagnostico-proxy`. O valor 2 ficou, com teste que o trava
+  (`apps/api/src/proxies-confiaveis.spec.ts`).
 - [x] Canal de notificação confirmado sem mudança com a variável já apagada
   (30/09, run 36663051297), e PR removendo a reserva `|| vars.` dos dois
   workflows (`chore/remover-reserva-vars-alertas`).

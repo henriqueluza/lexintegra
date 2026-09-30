@@ -1,6 +1,5 @@
 import type { NestApplicationOptions } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { criarDiagnosticoDeProxy } from './diagnostico-proxy.js';
 
 /**
  * Opcoes de CRIACAO da aplicacao, que producao e teste de integracao passam ao
@@ -33,8 +32,8 @@ export const OPCOES_DA_APLICACAO: NestApplicationOptions = { rawBody: true };
  * requisicoes passa a contar o mundo inteiro como um visitante so: nao falha, so
  * para de proteger.
  *
- * O padrao e zero, que e a verdade em desenvolvimento. A conferencia do valor
- * real em producao esta no CHECKLIST.md, secao A1.
+ * O padrao e zero, que e a verdade em desenvolvimento. Em producao o valor e 2, e
+ * foi MEDIDO em 30/09/2026 (ver `infra/terraform/variables.tf`).
  */
 export function proxiesConfiaveis(
   ambiente: NodeJS.ProcessEnv = process.env,
@@ -57,8 +56,4 @@ export function configurar(app: NestExpressApplication): void {
    * todo mundo na mesma chave.
    */
   app.set('trust proxy', proxiesConfiaveis());
-
-  // TEMPORARIO: mede o `X-Forwarded-For` real. Ver `diagnostico-proxy.ts`. Vem
-  // DEPOIS de `trust proxy` para `ips` e `ip` refletirem a configuracao em uso.
-  app.use(criarDiagnosticoDeProxy());
 }

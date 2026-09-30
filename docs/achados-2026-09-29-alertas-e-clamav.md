@@ -494,6 +494,11 @@ ter uma segunda origem (provavelmente IPv4).
 Se o valor medido for diferente de 2, o agente troca o padrão em
 `variables.tf` (ou o valor de produção), com um teste que trave o número.
 
+**Resultado (30/09/2026, ~04:09 UTC):** `x-forwarded-for` =
+`138.0.245.113,74.125.210.192`, socket `169.254.169.126`, `ips` = os dois
+endereços, `ip` = `138.0.245.113` (o IPv4 público do Henrique). O valor 2 está
+correto e ficou. O teste que o trava é `apps/api/src/proxies-confiaveis.spec.ts`.
+
 ---
 
 ## 2.12 App Check e alerta artificial (itens ❓ do A1): os dois feitos
@@ -674,9 +679,9 @@ Em **B1 (Claude ou Codex, já pode fazer)**:
 - [ ] Preencher `credenciais.md`, `operacao.md` e `transferencia.md` com as
   respostas da seção 2.13, incluindo a ordem da transferência de acessos e o
   segundo `billing.admin` a ser indicado pelo escritório.
-- [ ] Log de diagnóstico temporário de proxy, acionado por
-  `x-diagnostico-proxy: 1` (seção 2.11). Depois da medição do Henrique, PR
-  que remove o log e, se preciso, ajusta `proxies_confiaveis`.
+- [x] Log de diagnóstico temporário de proxy (seção 2.11), medido em 30/09 e
+  removido no PR `chore/remover-diagnostico-proxy`. `proxies_confiaveis` = 2
+  mantido, com teste.
 - [ ] Varredura do histórico do Git e dos logs do Actions atrás de segredos,
   porque o repositório ficou público de 03/09 a 29/09 (seção 2.9).
 - [ ] Comentário no topo do `ci.yml` avisando que os nomes dos sete jobs são
@@ -753,9 +758,8 @@ Em **A1 / A2 (Henrique)**:
   AbacatePay e Microsoft na tabela de acessos, e a coluna "Na garantia", serão
   fechadas na reunião de 30/09 com o escritório (as contas estão no e-mail do
   dono).
-- [ ] Medir `PROXIES_CONFIAVEIS` quando o log de diagnóstico estiver no ar
-  (seção 2.11). No `CHECKLIST.md`, o item do A1 continua aberto, com a nota
-  "aguardando o log de diagnóstico do B1".
+- [x] `PROXIES_CONFIAVEIS` medido em 30/09 (seção 2.11): `X-Forwarded-For` com
+  dois endereços, `ip` = o do Henrique. O valor 2 está correto.
 - [x] `main` protegida em 29/09 (seção 2.9): PR obrigatório sem aprovação,
   sete checks do CI obrigatórios, regra valendo para administradores.
 - [x] Repositório tornado privado em 29/09.
