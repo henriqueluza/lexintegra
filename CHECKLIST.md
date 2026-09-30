@@ -297,9 +297,11 @@ execução corrigida gera alarme falso.
   #50) e não reproduziu em cinco execuções seguintes (a suíte inteira duas vezes e
   o arquivo sozinho três). Causa não investigada. Se voltar no CI, é teste
   intermitente a corrigir, não a ignorar.
-- [ ] Regressão visual do estado vazio de `/servicos`: o #44 cobriu o estado com
-  e2e e axe nas três larguras, mas não gerou imagem de referência (exige Docker).
-  Gerar no contêiner e depois entrar na aprovação uma a uma (A2).
+- [x] Regressão visual do estado vazio de `/servicos`: teste `catalogo vazio` em
+  `telas-publicas.visual.spec.ts` e três imagens novas
+  (`catalogo-vazio-{estreito,medio,largo}.png`), geradas no contêiner em 30/09
+  com `--update-snapshots=missing`, sem tocar nas existentes. 👤 Entram na
+  aprovação uma a uma (A2).
 - [ ] 👤 Depois do deploy do #49, que removeu `roles/cloudtrace.agent`: repetir a
   busca `traceSampled=true` e conferir no Trace Explorer que os traços da
   `api-lexintegra` continuam chegando (o `telemetry.tracesWriter` fica). Reversão:
@@ -327,14 +329,14 @@ B2 e de C)
 - [x] `pnpm test` *(linha de base 29/09/2026: ok)*
 - [x] `pnpm test:integration` *(linha de base 29/09/2026: ok)*
 - [x] `pnpm quality` *(linha de base 29/09/2026: ok)*
-- [ ] `pnpm test:e2e` *Rodado em 29/09/2026: 120 ok, 78 falhas, todas capturas de tela (`*.visual.spec.ts`) rodadas fora do contêiner. Ambiente, não defeito; refazer com Docker.*
-- [ ] `pnpm test:a11y` *Não rodou em 29/09/2026: exige Docker, desligado na máquina. Rodar com Docker.*
-- [ ] `pnpm test:visual` *Não rodou em 29/09/2026: exige Docker.*
-- [ ] `pnpm test:visual paineis` *Não rodou em 29/09/2026: exige Docker.*
+- [x] `pnpm test:e2e` *30/09/2026: a suíte e2e inteira passa no contêiner (`pnpm test:visual`, 204 ok, 15 pulados). No host, as capturas de tela sempre diferem (fonte e antisserrilhamento), então o `test:e2e` do host não é a referência. Atenção: com um `ng serve` seu já na porta 4200, o Playwright do host o reaproveita e testa o SEU código, não o da branch (foi o que produziu 11 falhas não visuais em 30/09, contra a `feat/landing-nevoa`).*
+- [x] `pnpm test:a11y` *30/09/2026, no contêiner: 51 ok.*
+- [x] `pnpm test:visual` *30/09/2026, no contêiner: 204 ok, 15 pulados, com as imagens do catálogo vazio.*
+- [x] `pnpm test:visual paineis` *30/09/2026, no contêiner: 45 ok.*
 - [x] `pnpm test:jornadas` *(linha de base 29/09/2026: ok)*
 - [x] `pnpm mutacao` *(linha de base 29/09/2026: ok)*
 - [x] `pnpm relatorio:qualidade` *(linha de base 29/09/2026: ok)*
-- [ ] Corrigir o que falhar. *Nada a corrigir no código: as únicas falhas da linha de base são de ambiente (Docker desligado). Fica aberto até rodar os quatro comandos acima com Docker.*
+- [x] Corrigir o que falhar. *Nada a corrigir no código: as falhas da linha de base eram de ambiente, e com Docker as quatro suítes passam (30/09).*
 
 **Traços em produção confirmados (OTLP e Hosting, 29/09)**
 
