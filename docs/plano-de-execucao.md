@@ -317,6 +317,22 @@ qualquer coisa que não seja um projeto `demo-`.
 - `verifyIdToken` roda com `checkRevoked: true` em toda requisição autenticada,
   o que custa uma ida ao Firebase por chamada. É o que faz a suspensão valer
   contra sessão já aberta. Revisitar na Etapa 12, com número medido.
+  **Medido em 30/09/2026** (Cloud Trace, leitura pela API, 30 dias, amostra de
+  10%): 23 traces autenticados, com o `POST .../accounts:lookup` do Identity
+  Toolkit (a chamada de `getUser` dentro de `verifyIdToken(token, true)`,
+  `firebase-admin` 14.3) em **p50 = 327 ms, p95 = 392 ms, máximo 909 ms**,
+  dentro de requisições com **p50 = 372 ms e p95 = 546 ms**. Ou seja, a
+  verificação de revogação é cerca de 88% do tempo mediano de uma requisição
+  autenticada. Não existe série "sem `checkRevoked`": a opção está ligada em toda
+  requisição, então não há comparação direta. Amostra pequena (o volume
+  autenticado ainda é baixo, cerca de 230 requisições por mês estimadas pela
+  amostragem) e sem separar instância nova de instância quente. **Recomendação:
+  manter ligado.** A suspensão valer contra sessão aberta é regra de segurança
+  (Etapa 4, revogação de token na suspensão), o custo é um atraso de cerca de 0,3 s por tela num volume baixo,
+  e a alternativa (cache de revogação por alguns segundos, ou checar só em rotas
+  que escrevem) troca segurança por latência antes de haver problema medido.
+  Rever se o volume autenticado crescer ou se o p95 da requisição passar de 1 s.
+  Decisão do Henrique.
 
 **Descobertas de infraestrutura que teriam quebrado o deploy:**
 

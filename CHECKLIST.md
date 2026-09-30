@@ -303,13 +303,22 @@ Já podem ser feitos, a menos que apareça dependência do caminho do Cloud Task
 (nesse caso, anotar aqui).
 
 - [ ] PR da branch `chore/remover-cloudtrace-agent`.
-- [ ] Medir o custo de `verifyIdToken(checkRevoked)`, pendência aberta desde a
-  Etapa 4.
+- [x] Medir o custo de `verifyIdToken(checkRevoked)`, pendência aberta desde a
+  Etapa 4. Medido em 30/09/2026: `accounts:lookup` p50 327 ms, p95 392 ms, cerca
+  de 88% de uma requisição autenticada. Resultado e recomendação (manter) em
+  `docs/plano-de-execucao.md`, Etapa 4.
 
 ### B2. Precisa de decisão do Henrique (passo 3)
 
 Cada item diz **o que decidir** e, depois da seta, **o que o Claude ou o Codex
 constroem**. As decisões vão para um `decisoes.md`.
+
+**Segurança e latência**
+
+- [ ] Manter `verifyIdToken(token, true)` em toda requisição autenticada?
+  Medido em 30/09: custa cerca de 327 ms (p50) por requisição, 88% do tempo dela.
+  Recomendação: manter, pelo motivo em `docs/plano-de-execucao.md`, Etapa 4. →
+  Se a decisão for mudar, construir o cache de revogação ou o recorte por rota.
 
 **Redesign do frontend, com estética próxima à da Jusfy**
 
@@ -462,7 +471,8 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
 - [ ] `EMAIL_FROM` com o remetente decidido em B2.
 - [ ] Atualizar `operacao.md` 4.1 e `entrega-de-email-falhando.md`.
 - [ ] 👤 E-mail real de teste em Gmail, Outlook e Apple Mail.
-- [ ] 👤 Conferir que o `traceparent` sobrevive ao Cloud Tasks: pedir
+- [ ] 👤 Conferir que o `traceparent` sobrevive ao Cloud Tasks (roteiro completo na
+  seção 4.4 de `docs/runbooks/limpeza-infra.md`): pedir
   "Esqueci minha senha" em `/entrar` e comparar o `trace` da requisição do
   navegador com o da entrega da task (user agent `Google-Cloud-Tasks`) no log do
   Cloud Run. Mesmo trace, ou link entre os dois, fecha o item. Adiado de A1 em
