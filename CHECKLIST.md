@@ -30,14 +30,18 @@ Itens marcados com ❓ podem já ter sido feitos. Se foram, é só marcar.
 
 **Segurança (uns 20 min, sem depender de nada)**
 
-- [ ] Apagar a chave JSON da `firebase-adminsdk-fbsvc`: criada em
-  04/09/2026, sem vencimento e sem uso pela aplicação. **Desativada em
-  29/09; apagar em 30/09 ou 01/10** (`docs/entrega/credenciais.md` §3).
+- [x] Apagar a chave JSON da `firebase-adminsdk-fbsvc`: criada em
+  04/09/2026, sem vencimento e sem uso pela aplicação. Desativada em 29/09 e
+  **apagada em 30/09**; a conta não tem mais nenhuma chave criada por usuário
+  (`docs/entrega/credenciais.md` §3).
 - [x] Tirar `roles/editor` da SA padrão do Compute
   (`docs/runbooks/limpeza-infra.md` §2). Feito em 29/09, 13:52 UTC, depois de
   conferir que nada roda com ela.
-- [ ] Segunda conferência de `roles/editor`: depois das execuções de 16h e 17h
-  (Brasília) de 29/09, procurar recusa de permissão nos logs.
+- [x] Segunda conferência de `roles/editor`: nenhuma recusa de permissão
+  (`protoPayload.status.code=7`) em 15 horas desde a remoção. A `retencao-diaria`
+  das 20:00 UTC de 29/09 rodou sem erro, antes do primeiro merge do dia. O
+  `PERMISSION_DENIED` do `clamav-base-diaria` às 19:00 UTC era o problema antigo
+  do binding do job, não a remoção.
 - [x] Proteger a `main` no GitHub com PR obrigatório e checks do CI
   obrigatórios (`transferencia.md`, Fase 2). Feito em 29/09: PR sem exigir
   aprovação, sete checks do `ci.yml`, valendo para administradores.
@@ -66,11 +70,11 @@ Itens marcados com ❓ podem já ter sido feitos. Se foram, é só marcar.
   *Retenção parada* e *Webhook recusado* não têm disparo seguro hoje. Não
   improvise. (*Retenção parada* disparou por acidente em 29/09, por troca de
   revisão, e provou o caminho política → e-mail: ver B1.)
-- [ ] Soft delete, primeira parte (`docs/entrega/operacao.md` §6):
-  - hoje, excluir um objeto de teste de `lexintegra-arquivos-36bda` e ver que
-    ele continua recuperável;
-  - um dia depois, conferir que não sobram versões não atuais
-    (`--all-versions`).
+- [x] Soft delete, primeira parte (`docs/entrega/operacao.md` §6):
+  - [x] 29/09: objeto `teste-soft-delete/20260929-100813.txt` (geração
+    `1790687297036031`) excluído de `lexintegra-arquivos-36bda` e recuperável;
+  - [x] 30/09: `--all-versions` sem nenhum objeto (versionamento desligado), e o
+    objeto excluído ainda recuperável.
 - [x] No Trace Explorer: chegam traços da `api-lexintegra` por OTLP e o
   `traceparent` sobrevive ao rewrite do Hosting (29/09, seção 2.10 de
   `docs/achados-2026-09-29-alertas-e-clamav.md`). A parte do Cloud Tasks foi para a
@@ -89,7 +93,8 @@ Itens marcados com ❓ podem já ter sido feitos. Se foram, é só marcar.
   reCAPTCHA Enterprise, `APP_CHECK_ENFORCE=true`).
 - [ ] Teste manual com o arquivo EICAR: ele reprova e nunca fica acessível em
   nenhum momento. **Adiado** até as correções do ClamAV (B1) e até haver como
-  criar um pedido em produção (AbacatePay).
+  criar um pedido em produção (AbacatePay). É também o "refazer o EICAR depois
+  das correções" do bloco do ClamAV.
 - [x] Alerta artificial disparado e recebido (29/09, 14:22 UTC, em
   `henriqueluza@gmail.com`), pelo caminho alternativo
   (`docs/runbooks/alerta-artificial.md`). O caminho real ficou em C →
@@ -100,13 +105,13 @@ Itens marcados com ❓ podem já ter sido feitos. Se foram, é só marcar.
 O job `clamav-atualizar-base` falhou com `PERMISSION_DENIED` desde 14/09 por
 falta de binding (B1). Execução manual em 29/09 publicou a base no bucket.
 
-- [ ] Enquanto a correção não entra, repetir
-  `gcloud run jobs execute clamav-atualizar-base --region=southamerica-east1 --wait`
-  a cada um ou dois dias.
-- [ ] Anotar se o alerta do ClamAV chega em 30/09 por volta de 11:42 UTC (23 h
-  depois da publicação manual). Se chegar, é alerta verdadeiro e prova a
-  política.
-- [ ] Refazer o teste do EICAR depois das correções.
+- [x] Repetir a execução manual do job a cada um ou dois dias, e anotar se o
+  alerta chega em 30/09 por volta de 11:42 UTC: **deixaram de se aplicar**. O
+  agendamento funciona desde 30/09 (binding no Terraform, execução
+  `clamav-atualizar-base-26lmc` pelo Scheduler), então a base não envelhece mais
+  até o alerta.
+- O "refazer o teste do EICAR depois das correções" foi juntado ao item *Teste
+  manual com o arquivo EICAR*, em *Provas em produção*.
 
 **Perguntas que só você sabe responder**
 
@@ -127,13 +132,14 @@ Mande as respostas ao Claude para ele preencher os documentos.
 ### A2. Ao longo do caminho
 
 - [ ] Revisar e mesclar os PRs do Claude e do Codex. **Merge na `main` é
-  deploy.**
+  deploy.** Esperar o deploy de cada merge terminar com sucesso antes de mesclar
+  o próximo: em 29/09, o #39 foi mesclado em cima do deploy quebrado do #38.
 - [ ] Aprovar, uma a uma, as imagens de referência da regressão visual. Faça
   isso **depois do redesign**, porque as atuais vão todas mudar.
 - [ ] Aprovar os textos institucionais do site.
 - [ ] Criar no painel admin os acessos dos advogados reais.
-- [ ] 📅 Por volta de 05/10: o objeto excluído no teste de soft delete sumiu de
-  vez.
+- [ ] 📅 Por volta de 06/10: o objeto excluído no teste de soft delete sumiu de
+  vez (retenção de 604800 s a partir das 13:08 UTC de 29/09).
 - [ ] 📅 No faturamento de outubro: o armazenamento de
   `lexintegra-clamav-db-36bda` caiu. **A premissa mudou em 29/09**: o bucket
   estava vazio e agora tem cerca de 108 MiB. Reavaliar o que esperar.
@@ -228,7 +234,9 @@ execução corrigida gera alarme falso.
   (`apps/api/src/proxies-confiaveis.spec.ts`).
 - [x] Canal de notificação confirmado sem mudança com a variável já apagada
   (30/09, run 36663051297), e PR removendo a reserva `|| vars.` dos dois
-  workflows (`chore/remover-reserva-vars-alertas`).
+  workflows (`chore/remover-reserva-vars-alertas`). Depois do deploy, o canal
+  *Desenvolvimento (PROVISORIO — substituir antes da Etapa 13)* continua
+  existindo e ativo, com `henriqueluza@gmail.com` (conferido em 30/09).
 - [ ] Runbook `sonda-parada.md`: trocar "pausar por 20 minutos" por "até o
   e-mail chegar, no máximo 40 minutos"; registrar latência real de ~25 min e
   que alarme preso a revisão antiga, logo após deploy, é falso positivo.
@@ -286,8 +294,11 @@ execução corrigida gera alarme falso.
   uma condição), e o do #39 falhou igual, porque a política quebrada estava na
   `main`. O CI não pegou porque o `terraform plan` não valida essa regra: ela
   mora na API do Monitoring. Virou lint (`scripts/conferir-condicoes-de-log.mjs`,
-  em `pnpm lint`), com o formato antigo confirmado como reprovado. 👤 Depois do
-  merge, conferir o deploy (ver o PR).
+  em `pnpm lint`), com o formato antigo confirmado como reprovado.
+  - [x] 👤 O deploy depois do merge ficou verde (30/09), e as três políticas
+    novas (*Scheduler não conseguiu iniciar o job*, *job terminou em erro*,
+    *scanner sem base de assinaturas*) existem em produção e estão ativas,
+    junto com as de *Base do ClamAV*.
 
 - [x] Comentário do plano do Terraform no PR (`ci.yml`): um por PR, atualizado a
   cada push, com o resumo `Plan: …` no topo, e sem comentário novo quando o plan
@@ -300,10 +311,10 @@ execução corrigida gera alarme falso.
 - [ ] Regressão visual do estado vazio de `/servicos`: o #44 cobriu o estado com
   e2e e axe nas três larguras, mas não gerou imagem de referência (exige Docker).
   Gerar no contêiner e depois entrar na aprovação uma a uma (A2).
-- [ ] 👤 Depois do deploy do #49, que removeu `roles/cloudtrace.agent`: repetir a
-  busca `traceSampled=true` e conferir no Trace Explorer que os traços da
-  `api-lexintegra` continuam chegando (o `telemetry.tracesWriter` fica). Reversão:
-  `git revert` do commit e deploy.
+- [x] 👤 Depois do deploy do #49, que removeu `roles/cloudtrace.agent`: em 30/09,
+  uma requisição com `traceparent` a `/api/teste-de-traco` gerou dois spans no
+  mesmo trace, o do Cloud Run (`/component AppServer`) e o da aplicação
+  (`service.name api-lexintegra`). O `telemetry.tracesWriter` basta.
 - [ ] `ci.yml` disparado por `workflow_dispatch` propõe um diff falso nas imagens
   (30/09, run 36663051297: `0 to add, 3 to change, 0 to destroy` logo depois de
   um deploy verde). Os três são `api-lexintegra`, `scanner-lexintegra` e o job
