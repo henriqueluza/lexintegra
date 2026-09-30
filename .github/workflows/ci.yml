@@ -386,27 +386,57 @@ jobs:
         with:
           script: |
             const plano = process.env.PLANO || '(sem saida)';
-            const corpo = [
-              '### Terraform plan',
-              '',
-              'Revisar antes do merge. Se o PR trouxer bloco de `import`, o criterio',
-              'e: **nenhum recurso importado pode aparecer como "will be created"** —',
-              'um create ali significa import errado (ver `infra/terraform/README.md`).',
-              '',
-              '<details><summary>Plano completo</summary>',
-              '',
-              '```terraform',
-              plano.length > 60000 ? plano.slice(0, 60000) + '\n... (truncado)' : plano,
-              '```',
-              '',
-              '</details>',
-            ].join('\n');
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: corpo,
-            });
+            const marca = '<!-- terraform-plan -->';
+            const semMudanca = /No changes\.|Infrastructure matches/.test(plano);
+            const resumo =
+              plano.match(/^Plan: .*$/m)?.[0] ??
+              (semMudanca ? 'No changes.' : '(sem resumo: abra o plano completo)');
+
+            // UM comentario por PR, atualizado a cada push, e nenhum quando nao
+            // ha o que revisar. Antes, cada push criava outro, todos com o aviso
+            // sobre `import` (que saiu da configuracao no Bloco D).
+            const existentes = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+              },
+            );
+            const anterior = existentes.find((c) => c.body?.includes(marca));
+
+            const corpo = semMudanca
+              ? [marca, '### Terraform plan', '', 'Sem mudanca de infraestrutura.'].join('\n')
+              : [
+                  marca,
+                  '### Terraform plan',
+                  '',
+                  `**${resumo}** Revisar antes do merge.`,
+                  '',
+                  '<details><summary>Plano completo</summary>',
+                  '',
+                  '```terraform',
+                  plano.length > 60000 ? plano.slice(0, 60000) + '\n... (truncado)' : plano,
+                  '```',
+                  '',
+                  '</details>',
+                ].join('\n');
+
+            if (anterior) {
+              await github.rest.issues.updateComment({
+                comment_id: anterior.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: corpo,
+              });
+            } else if (!semMudanca) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: corpo,
+              });
+            }
 
       - name: Falhar se o plan falhou
         if: steps.plan.outcome == 'failure'
