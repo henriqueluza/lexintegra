@@ -254,23 +254,20 @@ execução corrigida gera alarme falso.
     `reuniao-sem-sala-segundos` recebem pontos.
 - [x] Descobrir se o projeto usa Firebase Auth padrão ou Identity Platform e
   preencher `inventario-custos.md`.
-- [ ] Descobrir a origem dos traços dos ícones (protótipo
-  `direcao-B-pauta.html`). Registrar em `docs/imagens-landing.md` e, se vier de
-  biblioteca, a licença em `licencas-terceiros.md`.
-- [ ] Pesquisar os termos de uso da base de assinaturas do ClamAV e preencher
+- [x] Pesquisar os termos de uso da base de assinaturas do ClamAV e preencher
   `licencas-terceiros.md`.
-- [ ] Pesquisar na documentação do AbacatePay:
+- [x] Pesquisar na documentação do AbacatePay:
   - a política de reentrega de webhook, para `operacao.md` 4.2;
   - se o painel reenvia evento, para `webhook-fora-do-ar.md`.
 
   O que a documentação não disser vai para a reunião (C).
-- [ ] Propor os nomes dos secrets de produção do AbacatePay
+- [x] Propor os nomes dos secrets de produção do AbacatePay
   (`abacatepay-api-key`, `abacatepay-webhook-secret`) e preencher
   `credenciais.md` e `operacao.md` 4.2.
-- [ ] Faxina: `.agents/`, `.codex/` e `.DS_Store` no `.gitignore`.
-- [ ] Planilha de custos em regime permanente (`.xlsx`), a partir de
+- [x] Faxina: `.agents/`, `.codex/` e `.DS_Store` no `.gitignore`.
+- [x] Planilha de custos em regime permanente (`.xlsx`), a partir de
   `docs/entrega/inventario-custos.md`.
-- [ ] Rascunho do termo de cessão (cláusula 8ª), com `licencas-terceiros.md`
+- [x] Rascunho do termo de cessão (cláusula 8ª), com `licencas-terceiros.md`
   como anexo.
 
 **Catálogo vazio em produção** (o escritório cria os produtos pelo admin)
@@ -322,6 +319,10 @@ constroem**. As decisões vão para um `decisoes.md`.
   atualizados.
 - [x] Imagens de referência da regressão visual regravadas (públicas e
   painéis). 👤 aprova uma a uma (A2).
+- [ ] Descobrir a origem dos traços dos ícones (protótipo
+  `direcao-B-pauta.html`). Registrar em `docs/imagens-landing.md` e, se vier de
+  biblioteca, a licença em `licencas-terceiros.md`. *Depois da entrega do front
+  novo.*
 
 **Conteúdo**
 

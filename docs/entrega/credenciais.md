@@ -35,8 +35,8 @@ pessoa.
 
 | Nome (variável) | Onde vai ficar | Quando nasce |
 |---|---|---|
-| `ABACATEPAY_API_KEY` de produção (`abc_prod_`) | secret novo. `[CONFIRMAR: nome]` | Ao ligar o pagamento ([`operacao.md`](operacao.md), 4.2) |
-| `ABACATEPAY_WEBHOOK_SECRET` | secret novo | Idem. É **nosso**: gerado com `openssl rand` e cadastrado no painel |
+| `ABACATEPAY_API_KEY` de produção (`abc_prod_`) | secret novo **`abacatepay-api-key`** (mesmo padrão kebab-case de `resend-api-key` e `abacatepay-api-key-dev`) | Ao ligar o pagamento ([`operacao.md`](operacao.md), 4.2) |
+| `ABACATEPAY_WEBHOOK_SECRET` | secret novo **`abacatepay-webhook-secret`** | Idem. É **nosso**: gerado com `openssl rand` e cadastrado no painel |
 | `ABACATEPAY_WEBHOOK_CHAVE_HMAC` | variável comum. É pública e fixa, publicada pelo AbacatePay (ADR-19) | Idem. **Não é credencial** |
 | `GRAPH_CLIENT_SECRET` | secret novo | Ao ligar o Teams ([`operacao.md`](operacao.md), 4.3). **Vence**: secrets do Entra ID têm validade |
 | `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID` | variáveis comuns | Idem. Identificadores, não credenciais |
