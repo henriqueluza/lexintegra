@@ -180,8 +180,9 @@ fictício de `scripts/dados-ficticios/` e a grade de horários. O script se
 recusa a falar com um projeto real: exige a variável do emulador e um projeto
 `demo-`.
 
-Os dados de `scripts/dados-ficticios/` são **fictícios** e precisam ser
-trocados pelo catálogo real antes de produção (ver o `LEIA-ME.md` de lá).
+Os dados de `scripts/dados-ficticios/` são **fictícios**, só para emulador e
+testes, e nunca vão para produção: o catálogo de produção nasce vazio e o
+escritório o cria pelo painel (ver o `LEIA-ME.md` de lá).
 
 ### Testes
 

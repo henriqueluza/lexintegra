@@ -370,8 +370,8 @@ qualquer coisa que não seja um projeto `demo-`.
 
 **Impossível delegar**
 
-- Obter da CONTRATANTE o catálogo real: nomes, descrições, preços, entregáveis e regras de reunião de cada produto. São dados comerciais, não invenção do desenvolvedor.
-- Cadastrar ou validar o catálogo em produção.
+- Definir o catálogo de produção: nomes, descrições, preços, entregáveis e regras de reunião de cada produto. São dados comerciais, não invenção do desenvolvedor. **Atualização de 29/09/2026:** não há catálogo a importar. Produção começa vazia e o escritório cria os produtos pelo painel de administração.
+- Cadastrar ou validar o catálogo em produção (pelo painel, pelo escritório).
 
 **Bloquear ativamente**
 

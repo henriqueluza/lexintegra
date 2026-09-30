@@ -272,10 +272,10 @@ execução corrigida gera alarme falso.
 
 **Catálogo vazio em produção** (o escritório cria os produtos pelo admin)
 
-- [ ] Vitrine e `/servicos` com estado vazio adequado.
-- [ ] Confirmar que nenhum dado fictício chega a produção: hoje eles ficam só
+- [x] Vitrine e `/servicos` com estado vazio adequado.
+- [x] Confirmar que nenhum dado fictício chega a produção: hoje eles ficam só
   no emulador.
-- [ ] Atualizar o LEIA-ME de `scripts/dados-ficticios/` e o `AGENTS.md`: não
+- [x] Atualizar o LEIA-ME de `scripts/dados-ficticios/` e o `AGENTS.md`: não
   existe mais "catálogo real a importar".
 
 **Testes automatizados** (rodar agora como linha de base, e de novo depois de
