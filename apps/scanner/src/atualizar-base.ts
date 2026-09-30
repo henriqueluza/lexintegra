@@ -3,7 +3,7 @@ import { open, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { Storage } from '@google-cloud/storage';
-import { geradaEmDoCabecalho, idadeEmHoras } from './idade-da-base.js';
+import { geradaEmDoCabecalho, sinaisDaPublicacao } from './idade-da-base.js';
 import { registrar } from './registrar.js';
 
 const executar = promisify(execFile);
@@ -59,16 +59,13 @@ async function principal(): Promise<void> {
      */
     const geradaEm = await geracaoDe(join(PASTA, nome));
 
-    registrar('INFO', `base publicada: ${nome}`, {
-      sinal: 'clamav.base-publicada',
-      arquivo: nome,
-      ...(geradaEm === null
-        ? {}
-        : {
-            geradaEm: geradaEm.toISOString(),
-            idadeHoras: idadeEmHoras(geradaEm, new Date()),
-          }),
-    });
+    for (const { sinal, campos } of sinaisDaPublicacao(
+      nome,
+      geradaEm,
+      new Date(),
+    )) {
+      registrar('INFO', `base publicada: ${nome}`, { sinal, ...campos });
+    }
   }
 }
 

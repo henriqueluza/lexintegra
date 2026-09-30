@@ -1,6 +1,7 @@
 import {
   geradaEmDoCabecalho,
   idadeEmHoras,
+  sinaisDaPublicacao,
   versaoDoClamd,
 } from './idade-da-base.js';
 
@@ -67,5 +68,47 @@ describe('idadeEmHoras', () => {
         new Date('2026-09-15T08:00:00.000Z'),
       ),
     ).toBe(0);
+  });
+});
+
+describe('sinaisDaPublicacao', () => {
+  const agora = new Date('2026-09-29T12:42:00.000Z');
+  const nomes = (sinais: ReturnType<typeof sinaisDaPublicacao>): string[] =>
+    sinais.map(({ sinal }) => sinal);
+
+  /**
+   * O achado de 29/09/2026: `main.cvd` de 6877 h e `bytecode.cvd` de 9192 h
+   * publicados ao lado de um `daily.cvd` de 6 h disparavam a politica de idade em
+   * toda execucao saudavel. So o sinal do `daily` alimenta a metrica.
+   */
+  it('so o daily emite o sinal que alimenta a metrica de idade', () => {
+    const antiga = new Date('2025-12-16T23:18:00.000Z');
+
+    expect(nomes(sinaisDaPublicacao('main.cvd', antiga, agora))).toEqual([
+      'clamav.base-publicada',
+    ]);
+    expect(nomes(sinaisDaPublicacao('bytecode.cvd', antiga, agora))).toEqual([
+      'clamav.base-publicada',
+    ]);
+  });
+
+  it('daily.cvd e daily.cld emitem os dois sinais, com a idade real', () => {
+    const geradaEm = new Date('2026-09-29T06:26:00.000Z');
+
+    for (const nome of ['daily.cvd', 'daily.cld']) {
+      const sinais = sinaisDaPublicacao(nome, geradaEm, agora);
+      expect(nomes(sinais)).toEqual([
+        'clamav.base-publicada',
+        'clamav.daily-publicada',
+      ]);
+      expect(sinais[1]?.campos['idadeHoras']).toBe(6);
+    }
+  });
+
+  it('daily com data ilegivel nao inventa idade nem alimenta a metrica', () => {
+    const sinais = sinaisDaPublicacao('daily.cvd', null, agora);
+
+    expect(nomes(sinais)).toEqual(['clamav.base-publicada']);
+    expect(sinais[0]?.campos).toEqual({ arquivo: 'daily.cvd' });
   });
 });
