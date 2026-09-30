@@ -44,10 +44,12 @@ Itens marcados com ❓ podem já ter sido feitos. Se foram, é só marcar.
 - [x] Repositório tornado privado em 29/09. Ele foi público de 03/09 a 29/09.
 - [x] Criar o secret `ALERTAS_EMAIL_DESENVOLVIMENTO` no GitHub (29/09). A
   *variable* **continua**, de propósito, como reserva.
-- [ ] Apagar a *variable* `ALERTAS_EMAIL_DESENVOLVIMENTO` quando o agente avisar
-  que o `terraform plan` confirmou o secret:
+- [x] Apagar a *variable* `ALERTAS_EMAIL_DESENVOLVIMENTO` (feito em 30/09, antes
+  do plan, e o plan por `workflow_dispatch` confirmou o secret; a ordem inversa
+  seria circular). O comando era:
   `gh variable delete ALERTAS_EMAIL_DESENVOLVIMENTO --repo henriqueluza/lexintegra`.
-  Só depois o B1 remove a reserva `|| vars.` dos workflows.
+  A reserva `|| vars.` dos workflows saiu no PR
+  `chore/remover-reserva-vars-alertas`.
 
 **Insumo para o Claude**
 
@@ -214,10 +216,9 @@ execução corrigida gera alarme falso.
 - [ ] Log de diagnóstico temporário de proxy, acionado por
   `x-diagnostico-proxy: 1` (seção 2.11). Depois da medição do Henrique, PR que
   remove o log e, se preciso, ajusta `proxies_confiaveis`.
-- [ ] No primeiro PR com `terraform plan`, confirmar que o canal de
-  notificação não muda e **lembrar o Henrique de apagar a variável
-  `ALERTAS_EMAIL_DESENVOLVIMENTO`** (A1). Depois, PR removendo a reserva
-  `|| vars.` dos dois workflows.
+- [x] Canal de notificação confirmado sem mudança com a variável já apagada
+  (30/09, run 36663051297), e PR removendo a reserva `|| vars.` dos dois
+  workflows (`chore/remover-reserva-vars-alertas`).
 - [ ] Runbook `sonda-parada.md`: trocar "pausar por 20 minutos" por "até o
   e-mail chegar, no máximo 40 minutos"; registrar latência real de ~25 min e
   que alarme preso a revisão antiga, logo após deploy, é falso positivo.
@@ -277,6 +278,14 @@ execução corrigida gera alarme falso.
   mora na API do Monitoring. Virou lint (`scripts/conferir-condicoes-de-log.mjs`,
   em `pnpm lint`), com o formato antigo confirmado como reprovado. 👤 Depois do
   merge, conferir o deploy (ver o PR).
+
+- [ ] `ci.yml` disparado por `workflow_dispatch` propõe um diff falso nas imagens
+  (30/09, run 36663051297: `0 to add, 3 to change, 0 to destroy` logo depois de
+  um deploy verde). Os três são `api-lexintegra`, `scanner-lexintegra` e o job
+  `clamav-atualizar-base`: `github.event.pull_request.head.sha` é vazio fora de
+  PR, então `TF_VAR_api_image` e `TF_VAR_scanner_image` viram `...:` (tag vazia) e
+  `TF_VAR_commit_sha` fica vazio. Não é drift real. Correção: no `ci.yml`, usar
+  `github.event.pull_request.head.sha || github.sha` nas três variáveis.
 
 **Catálogo vazio em produção** (o escritório cria os produtos pelo admin)
 

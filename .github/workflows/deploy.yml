@@ -191,25 +191,16 @@ jobs:
           TF_VAR_scanner_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/scanner:${{ github.sha }}
           TF_VAR_commit_sha: ${{ github.sha }}
           # Etapa 12. Destinatario PROVISORIO dos alertas, ate a CONTRATANTE
-          # decidir quem atende. Nao mora no repositorio, que e publico.
+          # decidir quem atende. Nao mora no repositorio.
           #
-          # FALTAVA, e a falta era silenciosa: o canal de notificacao tem
-          # `count = var == "" ? 0 : 1`, entao sem valor ele simplesmente nao
-          # nasce. As politicas de alerta seriam criadas sem destinatario
-          # nenhum, o incidente apareceria so no console, e nada falharia — o
-          # deploy ficaria verde com o alerta mudo.
-          #
-          # SECRET **OU** VARIABLE, nesta ordem. Os dois sao lugares plausiveis
-          # para guardar um e-mail no GitHub, e ler so um deles reproduz a falha
-          # silenciosa acima quando alguem escolhe o outro — que foi o que
-          # aconteceu no primeiro deploy desta etapa. `secrets.X` vazio cai no
-          # `vars.X` pelo `||`.
-          #
-          # PREFIRA O SECRET: em repositorio publico, o log do Actions e publico,
-          # e variable NAO e mascarada no log — secret e. A variavel do Terraform
-          # e `sensitive`, entao o valor nao sai no plan; o risco e um passo
-          # futuro que ecoe a variavel sem pensar.
-          TF_VAR_alertas_email_desenvolvimento: ${{ secrets.ALERTAS_EMAIL_DESENVOLVIMENTO || vars.ALERTAS_EMAIL_DESENVOLVIMENTO }}
+          # SO O SECRET. O canal de notificacao tem `count = var == "" ? 0 : 1`,
+          # entao sem valor ele simplesmente nao nasce, as politicas ficam sem
+          # destinatario e nada falha — o deploy fica verde com o alerta mudo. Ate
+          # 30/09/2026 havia uma reserva `|| vars.ALERTAS_EMAIL_DESENVOLVIMENTO`,
+          # retirada depois de a variable ser apagada e o `plan` confirmar que o
+          # secret chega. Variable nao e mascarada no log do Actions; secret e. A
+          # variavel do Terraform e `sensitive`, entao o valor nao sai no plan.
+          TF_VAR_alertas_email_desenvolvimento: ${{ secrets.ALERTAS_EMAIL_DESENVOLVIMENTO }}
         run: terraform apply -input=false -auto-approve -lock-timeout=10m
         working-directory: infra/terraform
 

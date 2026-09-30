@@ -18,8 +18,7 @@ inclusive na Etapa 13, quando a operação passar para a CONTRATANTE.
 
 1. **O destinatário existe?** O canal só é criado quando
    `ALERTAS_EMAIL_DESENVOLVIMENTO` está definido como **secret** do repositório
-   no GitHub (ou como *variable*, enquanto a reserva `|| vars.` dos workflows
-   existir). Sem valor, o Terraform não cria canal nenhum e o incidente aparece
+   no GitHub (a reserva por *variable* saiu em 30/09/2026). Sem valor, o Terraform não cria canal nenhum e o incidente aparece
    só no console — comportamento certo, mas não fecha o critério de aceite.
 
 2. **O deploy já aplicou as políticas?** Confirme no console:

@@ -369,41 +369,30 @@ forks. Consequências para o agente:
   depende do plano de quem o receber, e o Pro do Henrique depende da condição
   de estudante: registrar em `transferencia.md`.
 
-### Secret criado, variável mantida de propósito
+### Secret criado; a reserva por variável saiu em 30/09
 
-Os dois workflows já leem o valor com reserva:
+Até 30/09/2026 os dois workflows liam o valor com reserva
+(`secrets.ALERTAS_EMAIL_DESENVOLVIMENTO || vars.ALERTAS_EMAIL_DESENVOLVIMENTO`).
+Em 29/09 o Henrique criou o secret com o mesmo valor da variável. A reserva
+existia pelo motivo documentado em `infra/terraform/variables.tf`: com o valor
+vazio, nenhum canal de notificação é criado, e o próximo `apply` destruiria o
+canal de e-mail sem erro visível.
 
-```yaml
-# .github/workflows/deploy.yml:212 e .github/workflows/ci.yml:347
-TF_VAR_alertas_email_desenvolvimento: ${{ secrets.ALERTAS_EMAIL_DESENVOLVIMENTO || vars.ALERTAS_EMAIL_DESENVOLVIMENTO }}
-```
+**A instrução original desta seção estava errada.** Ela mandava conferir, no plan
+de um PR, que o canal não muda, e só depois apagar a variável. Com a reserva
+`|| vars.` ativa, isso não prova nada: se o secret chegar vazio, o valor vem da
+variável e o plan mostra "sem mudança" do mesmo jeito. O teste circular passa
+sempre.
 
-Em 29/09 o Henrique criou o secret `ALERTAS_EMAIL_DESENVOLVIMENTO` com o mesmo
-valor da variável. **A variável não foi apagada**, pelo motivo documentado em
-`infra/terraform/variables.tf:164`: com o valor vazio, nenhum canal de
-notificação é criado. Se o secret chegasse vazio e a variável já não existisse,
-o próximo `terraform apply` destruiria o canal de e-mail, e todos os alertas
-passariam a não ir para lugar nenhum, sem nenhum erro visível.
+**O procedimento que vale:** apagar a variável **primeiro**, disparar o `ci.yml`
+por `workflow_dispatch` na `main` (só CI e plan, sem deploy) e olhar o job
+"Terraform (validate e plan)". O canal deve aparecer só em "Refreshing state",
+sem mudança nem destruição. Se aparecer destruído, o secret não chega: recriar a
+variável e corrigir o secret. Um plan não altera nada na nuvem, então o risco é
+só o de o canal ser proposto para destruição num plan que ninguém aplicou.
 
-### ⚠️ Lembrete obrigatório para o Henrique
-
-**No primeiro PR que você (agente) abrir e que rode o `terraform plan` do
-`ci.yml`, confira no log que o canal de notificação
-(`google_monitoring_notification_channel`) não aparece com mudança nem
-destruição. Com isso confirmado, avise o Henrique explicitamente, na
-descrição do PR e na sua resposta, para ele rodar:**
-
-```bash
-gh variable delete ALERTAS_EMAIL_DESENVOLVIMENTO --repo henriqueluza/lexintegra
-```
-
-**Não apague a variável você mesmo, e não remova a reserva `|| vars.` dos
-workflows antes de a variável ter sido apagada.** Depois que o Henrique
-confirmar a exclusão, abra um PR que remove `|| vars.ALERTAS_EMAIL_DESENVOLVIMENTO`
-das duas linhas e confira de novo que o plan não mexe no canal.
-
-Se o plan mostrar o canal sendo alterado ou destruído, o secret não está
-chegando ao workflow: não mescle o PR e avise o Henrique.
+Feito assim em 30/09/2026 (run 36663051297): o canal não mudou, o secret chega, e
+a reserva `|| vars.` foi removida dos dois workflows.
 
 ---
 
@@ -672,10 +661,9 @@ Em **B1 (Claude ou Codex, já pode fazer)**:
 - [ ] Idade da base do ClamAV medida só pelo `daily`, não pelo arquivo mais
   antigo (seção 2.7). Deve entrar junto ou antes do binding, senão cada
   execução corrigida gera um alarme falso.
-- [ ] No primeiro PR com `terraform plan`, confirmar que o canal de
-  notificação não muda e **lembrar o Henrique de apagar a variável
-  `ALERTAS_EMAIL_DESENVOLVIMENTO`** (seção 2.9). Depois, PR removendo a
-  reserva `|| vars.` dos dois workflows.
+- [x] Canal de notificação confirmado sem mudança com a variável já apagada
+  (30/09, run 36663051297, seção 2.9). A reserva `|| vars.` saiu dos dois
+  workflows no PR `chore/remover-reserva-vars-alertas`.
 - [ ] Atualizar os documentos que dizem que o repositório é público
   (`infra/terraform/README.md:197` e outros).
 - [ ] Medir o consumo de minutos do Actions por workflow e registrar em
@@ -757,8 +745,8 @@ Em **A1 / A2 (Henrique)**:
   `gcloud run jobs execute clamav-atualizar-base --region=southamerica-east1 --wait`
   a cada um ou dois dias.
 - [ ] Refazer o teste do EICAR depois das correções.
-- [ ] Apagar a variável `ALERTAS_EMAIL_DESENVOLVIMENTO` quando o agente
-  avisar que o plan confirmou o secret.
+- [x] Variável `ALERTAS_EMAIL_DESENVOLVIMENTO` apagada em 30/09, antes do
+  plan que confirmou o secret (a ordem correta, seção 2.9).
 - [x] Traços: `traceparent` pelo Hosting e spans por OTLP confirmados em 29/09.
 - [x] App Check conferido e alerta artificial recebido em 29/09 (seção 2.12).
 - [x] Perguntas do A1 respondidas em 29/09 (seção 2.13). As linhas de Resend,

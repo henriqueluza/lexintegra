@@ -423,8 +423,8 @@ continua recuperável por até 7 dias. A única coleção com TTL é `checkouts`
 
 **Quem recebe.** Um canal de e-mail, *Desenvolvimento (PROVISORIO)*, criado só
 quando `ALERTAS_EMAIL_DESENVOLVIMENTO` existe no GitHub. Desde 29/09/2026 o
-valor está num *secret* do repositório, com a *variable* de mesmo nome mantida
-como reserva até o `plan` confirmar que o secret chega ao workflow. O roteamento está em
+valor está num *secret* do repositório. A *variable* de mesmo nome foi apagada
+em 30/09/2026, depois de o `plan` confirmar que o secret chega ao workflow. O roteamento está em
 [`alertas-roteamento.json`](../../infra/terraform/alertas-roteamento.json), e
 todos os alertas estão em `pendente` (só o canal provisório recebe). Trocar o
 destino e decidir o roteamento faz parte da transferência

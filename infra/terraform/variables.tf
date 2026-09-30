@@ -162,7 +162,7 @@ variable "alertas_email_desenvolvimento" {
 
     O VALOR NAO MORA NO REPOSITORIO (privado desde 29/09/2026, publico antes e a
     ser transferido): ele vem do secret ALERTAS_EMAIL_DESENVOLVIMENTO do GitHub
-    Actions, com a variable de mesmo nome como reserva. Vazio, nenhum canal e criado
+    Actions (so o secret; a reserva por variable saiu em 30/09/2026). Vazio, nenhum canal e criado
     e os incidentes existem apenas no console do Monitoring — que e o
     comportamento certo para um plan rodado por quem nao configurou a variavel.
 

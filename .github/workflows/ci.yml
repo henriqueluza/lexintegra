@@ -344,13 +344,12 @@ jobs:
           TF_VAR_api_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/api:${{ github.event.pull_request.head.sha }}
           TF_VAR_scanner_image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/lexintegra/scanner:${{ github.event.pull_request.head.sha }}
           TF_VAR_commit_sha: ${{ github.event.pull_request.head.sha }}
-          # A MESMA EXPRESSAO DO `deploy.yml`, e pelo mesmo motivo (secret ou
-          # variable). Faltava aqui: o canal de alertas tem
-          # `count = var == "" ? 0 : 1`, entao todo plano de PR propunha destrui-lo
-          # e esvaziar os canais das oito politicas — um diff falso em todo PR,
-          # que treina quem revisa a ignorar diff de infraestrutura. A variavel e
-          # `sensitive`: o valor nao aparece no plano comentado.
-          TF_VAR_alertas_email_desenvolvimento: ${{ secrets.ALERTAS_EMAIL_DESENVOLVIMENTO || vars.ALERTAS_EMAIL_DESENVOLVIMENTO }}
+          # A MESMA EXPRESSAO DO `deploy.yml`, e pelo mesmo motivo. Sem ela, o
+          # canal de alertas (`count = var == "" ? 0 : 1`) seria proposto para
+          # destruicao em todo plano de PR e esvaziaria os canais das politicas —
+          # um diff falso que treina quem revisa a ignorar diff de infraestrutura.
+          # A variavel e `sensitive`: o valor nao aparece no plano comentado.
+          TF_VAR_alertas_email_desenvolvimento: ${{ secrets.ALERTAS_EMAIL_DESENVOLVIMENTO }}
         run: terraform plan -input=false -no-color -lock-timeout=5m -out=plano.tfplan
         working-directory: infra/terraform
         continue-on-error: true
