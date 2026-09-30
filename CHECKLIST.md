@@ -241,7 +241,7 @@ execução corrigida gera alarme falso.
   respostas da seção 2.13, incluindo a ordem da transferência de acessos
   (primeiro o escritório recebe `owner` e `billing.admin`, depois os acessos do
   Henrique caem). **Não preencher** as linhas "a definir em 30/09".
-- [ ] Comentário no topo do `ci.yml` avisando que os nomes dos sete jobs são
+- [x] Comentário no topo do `ci.yml` avisando que os nomes dos sete jobs são
   checks obrigatórios da proteção da `main`; registrar a proteção e sua
   dependência do plano do GitHub em `transferencia.md`.
 - [ ] Varredura do histórico do Git e dos logs do Actions atrás de segredos,
@@ -287,6 +287,21 @@ execução corrigida gera alarme falso.
   em `pnpm lint`), com o formato antigo confirmado como reprovado. 👤 Depois do
   merge, conferir o deploy (ver o PR).
 
+- [x] Comentário do plano do Terraform no PR (`ci.yml`): um por PR, atualizado a
+  cada push, com o resumo `Plan: …` no topo, e sem comentário novo quando o plan
+  é "No changes". Saiu o aviso sobre `import`. Entrou na junção #49; o primeiro
+  uso real foi o plan do #51.
+- [ ] `outbox.integration-spec.ts` falhou uma vez (1 de 189, 30/09, na junção do
+  #50) e não reproduziu em cinco execuções seguintes (a suíte inteira duas vezes e
+  o arquivo sozinho três). Causa não investigada. Se voltar no CI, é teste
+  intermitente a corrigir, não a ignorar.
+- [ ] Regressão visual do estado vazio de `/servicos`: o #44 cobriu o estado com
+  e2e e axe nas três larguras, mas não gerou imagem de referência (exige Docker).
+  Gerar no contêiner e depois entrar na aprovação uma a uma (A2).
+- [ ] 👤 Depois do deploy do #49, que removeu `roles/cloudtrace.agent`: repetir a
+  busca `traceSampled=true` e conferir no Trace Explorer que os traços da
+  `api-lexintegra` continuam chegando (o `telemetry.tracesWriter` fica). Reversão:
+  `git revert` do commit e deploy.
 - [ ] `ci.yml` disparado por `workflow_dispatch` propõe um diff falso nas imagens
   (30/09, run 36663051297: `0 to add, 3 to change, 0 to destroy` logo depois de
   um deploy verde). Os três são `api-lexintegra`, `scanner-lexintegra` e o job
