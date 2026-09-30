@@ -30,16 +30,24 @@ Itens marcados com ❓ podem já ter sido feitos. Se foram, é só marcar.
 
 **Segurança (uns 20 min, sem depender de nada)**
 
-- [ ] Apagar a chave JSON ativa da `firebase-adminsdk-fbsvc`: criada em
-  04/09/2026, sem vencimento e sem uso pela aplicação. Antes, confirme que
-  nenhum script seu depende dela (`docs/entrega/credenciais.md` §3).
-- [ ] Tirar `roles/editor` da SA padrão do Compute
-  (`docs/runbooks/limpeza-infra.md` §2).
-- [ ] Proteger a `main` no GitHub com PR obrigatório e checks do CI
-  obrigatórios (`transferencia.md`, Fase 2). Trabalhando sozinho, **não** exija
-  aprovação: senão você não consegue mesclar o próprio PR.
-- [ ] Mover `ALERTAS_EMAIL_DESENVOLVIMENTO` de *variable* para *secret* no
-  GitHub.
+- [ ] Apagar a chave JSON da `firebase-adminsdk-fbsvc`: criada em
+  04/09/2026, sem vencimento e sem uso pela aplicação. **Desativada em
+  29/09; apagar em 30/09 ou 01/10** (`docs/entrega/credenciais.md` §3).
+- [x] Tirar `roles/editor` da SA padrão do Compute
+  (`docs/runbooks/limpeza-infra.md` §2). Feito em 29/09, 13:52 UTC, depois de
+  conferir que nada roda com ela.
+- [ ] Segunda conferência de `roles/editor`: depois das execuções de 16h e 17h
+  (Brasília) de 29/09, procurar recusa de permissão nos logs.
+- [x] Proteger a `main` no GitHub com PR obrigatório e checks do CI
+  obrigatórios (`transferencia.md`, Fase 2). Feito em 29/09: PR sem exigir
+  aprovação, sete checks do `ci.yml`, valendo para administradores.
+- [x] Repositório tornado privado em 29/09. Ele foi público de 03/09 a 29/09.
+- [x] Criar o secret `ALERTAS_EMAIL_DESENVOLVIMENTO` no GitHub (29/09). A
+  *variable* **continua**, de propósito, como reserva.
+- [ ] Apagar a *variable* `ALERTAS_EMAIL_DESENVOLVIMENTO` quando o agente avisar
+  que o `terraform plan` confirmou o secret:
+  `gh variable delete ALERTAS_EMAIL_DESENVOLVIMENTO --repo henriqueluza/lexintegra`.
+  Só depois o B1 remove a reserva `|| vars.` dos workflows.
 
 **Insumo para o Claude**
 
@@ -47,43 +55,67 @@ Itens marcados com ❓ podem já ter sido feitos. Se foram, é só marcar.
 
 **Provas em produção**
 
-- [ ] Alerta *Sonda de sinais parada* (`docs/runbooks/sonda-parada.md`):
-  1. pausar o job `sinais-operacionais` por 20 minutos;
-  2. ver o incidente abrir e o e-mail chegar;
-  3. retomar o job.
+- [x] Alerta *Sonda de sinais parada* (`docs/runbooks/sonda-parada.md`): feito
+  em 29/09. Incidente aberto às 13:34:05 UTC, e-mail no mesmo minuto, fechado
+  sozinho às 13:37:02. A detecção leva uns 24 minutos, não 15.
 
   *Retenção parada* e *Webhook recusado* não têm disparo seguro hoje. Não
-  improvise.
+  improvise. (*Retenção parada* disparou por acidente em 29/09, por troca de
+  revisão, e provou o caminho política → e-mail: ver B1.)
 - [ ] Soft delete, primeira parte (`docs/entrega/operacao.md` §6):
   - hoje, excluir um objeto de teste de `lexintegra-arquivos-36bda` e ver que
     ele continua recuperável;
   - um dia depois, conferir que não sobram versões não atuais
     (`--all-versions`).
-- [ ] No Trace Explorer, conferir que:
-  - chegam traços da `api-lexintegra` por OTLP;
-  - o `traceparent` sobrevive ao rewrite do Hosting e ao Cloud Tasks.
+- [x] No Trace Explorer: chegam traços da `api-lexintegra` por OTLP e o
+  `traceparent` sobrevive ao rewrite do Hosting (29/09, seção 2.10 de
+  `docs/achados-2026-09-29-alertas-e-clamav.md`). A parte do Cloud Tasks foi para a
+  seção C, Resend.
 
-  Isso destrava dois itens do Claude: remover `cloudtrace.agent` e medir o
-  `verifyIdToken`.
+  Isso destrava dois itens do Claude em B1: remover `cloudtrace.agent` e medir
+  o `verifyIdToken`.
 - [ ] Conferir o valor de `PROXIES_CONFIAVEIS` numa requisição real, olhando o
   `X-Forwarded-For`. Com o número errado, o limitador trata todo mundo como um
-  visitante só.
-- [ ] ❓ Chaves do App Check configuradas no console do Firebase.
-- [ ] ❓ Teste manual com o arquivo EICAR: ele reprova e nunca fica acessível
-  em nenhum momento.
-- [ ] ❓ Alerta artificial disparado e recebido
-  (`docs/runbooks/alerta-artificial.md`).
+  visitante só. **Aguardando o log de diagnóstico do B1**; comandos de medição
+  na seção 2.11 de `docs/achados-2026-09-29-alertas-e-clamav.md`.
+- [x] Chaves do App Check configuradas no console do Firebase (29/09,
+  reCAPTCHA Enterprise, `APP_CHECK_ENFORCE=true`).
+- [ ] Teste manual com o arquivo EICAR: ele reprova e nunca fica acessível em
+  nenhum momento. **Adiado** até as correções do ClamAV (B1) e até haver como
+  criar um pedido em produção (AbacatePay).
+- [x] Alerta artificial disparado e recebido (29/09, 14:22 UTC, em
+  `henriqueluza@gmail.com`), pelo caminho alternativo
+  (`docs/runbooks/alerta-artificial.md`). O caminho real ficou em C →
+  AbacatePay.
+
+**ClamAV: o job nunca rodou (achado de 29/09)**
+
+O job `clamav-atualizar-base` falhou com `PERMISSION_DENIED` desde 14/09 por
+falta de binding (B1). Execução manual em 29/09 publicou a base no bucket.
+
+- [ ] Enquanto a correção não entra, repetir
+  `gcloud run jobs execute clamav-atualizar-base --region=southamerica-east1 --wait`
+  a cada um ou dois dias.
+- [ ] Anotar se o alerta do ClamAV chega em 30/09 por volta de 11:42 UTC (23 h
+  depois da publicação manual). Se chegar, é alerta verdadeiro e prova a
+  política.
+- [ ] Refazer o teste do EICAR depois das correções.
 
 **Perguntas que só você sabe responder**
 
 Mande as respostas ao Claude para ele preencher os documentos.
 
-- [ ] Status da verificação do domínio no Resend, e em qual conta está (painel
-  do Resend).
-- [ ] Titular atual do domínio no Registro.br.
-- [ ] Dono da conta de faturamento e quem é o segundo `billing.admin`.
+- [x] Status da verificação do domínio no Resend, e em qual conta está:
+  verificado, conta do escritório (29/09).
+- [x] Titular atual do domínio no Registro.br: o dono (Auan Bastos); contato
+  técnico: Henrique (29/09).
+- [x] Dono da conta de faturamento: Auan Bastos; `billing.admin`: Auan e
+  Henrique. **O escritório ainda precisa indicar um segundo `billing.admin`**
+  (ver D).
 - [ ] Tabela de acessos pessoais: o que você tem e o que fica durante a
-  garantia (`credenciais.md` §4).
+  garantia (`credenciais.md` §4). Respostas de 29/09 já dadas; faltam as linhas
+  de Resend, AbacatePay e Microsoft e a coluna "Na garantia", para a reunião de
+  30/09.
 
 ### A2. Ao longo do caminho
 
@@ -96,7 +128,8 @@ Mande as respostas ao Claude para ele preencher os documentos.
 - [ ] 📅 Por volta de 05/10: o objeto excluído no teste de soft delete sumiu de
   vez.
 - [ ] 📅 No faturamento de outubro: o armazenamento de
-  `lexintegra-clamav-db-36bda` caiu.
+  `lexintegra-clamav-db-36bda` caiu. **A premissa mudou em 29/09**: o bucket
+  estava vazio e agora tem cerca de 108 MiB. Reavaliar o que esperar.
 
 ### A3. Testes manuais do app inteiro (passo 6)
 
@@ -160,6 +193,56 @@ e passe a lista ao Claude como "ajustes finais".
 
 ### B1. Já pode fazer (passo 2)
 
+**Alertas e ClamAV (achados de 29/09)**
+
+Ordem: métrica de idade do `daily` antes ou junto do binding, senão cada
+execução corrigida gera alarme falso.
+
+- [ ] Idade da base do ClamAV medida só pelo `daily`, não pelo arquivo mais
+  antigo (seção 2.7 do relatório).
+- [ ] Binding `roles/run.invoker` de `tarefas-lexintegra` no job
+  `clamav-atualizar-base`, via Terraform. Depois do merge, conferir que a
+  próxima execução agendada aparece em
+  `gcloud run jobs executions list --job=clamav-atualizar-base`.
+- [ ] Alerta para "a base do ClamAV nunca foi publicada" e para falha do job
+  no Scheduler.
+- [ ] Scanner sem base: recusar tudo e alertar; revisar o `|| true` de
+  `apps/scanner/entrada.sh:39`.
+- [ ] Condições de ausência agregando por identidade estável, não por
+  `revision_name` (*Retencao parada*, *Sonda de sinais parada* e demais). Hoje
+  todo merge na `main` gera um alarme falso da sonda uns 25 minutos depois.
+- [ ] Log de diagnóstico temporário de proxy, acionado por
+  `x-diagnostico-proxy: 1` (seção 2.11). Depois da medição do Henrique, PR que
+  remove o log e, se preciso, ajusta `proxies_confiaveis`.
+- [ ] No primeiro PR com `terraform plan`, confirmar que o canal de
+  notificação não muda e **lembrar o Henrique de apagar a variável
+  `ALERTAS_EMAIL_DESENVOLVIMENTO`** (A1). Depois, PR removendo a reserva
+  `|| vars.` dos dois workflows.
+- [ ] Runbook `sonda-parada.md`: trocar "pausar por 20 minutos" por "até o
+  e-mail chegar, no máximo 40 minutos"; registrar latência real de ~25 min e
+  que alarme preso a revisão antiga, logo após deploy, é falso positivo.
+- [ ] Atualizar `docs/runbooks/alerta-artificial.md` (comando com `--severity`
+  e `revision_name` atual, tempos observados, secret em vez de variable).
+- [ ] Documentar o incidente do ClamAV (14/09 a 29/09), o falso positivo de
+  revisão e o falso positivo de idade nos runbooks (`scanner-indisponivel.md`
+  incluso) e em `operacao.md`.
+- [ ] Atualizar os documentos que dizem que o repositório é público
+  (`infra/terraform/README.md:197` e outros).
+- [ ] Preencher `credenciais.md`, `operacao.md` e `transferencia.md` com as
+  respostas da seção 2.13, incluindo a ordem da transferência de acessos
+  (primeiro o escritório recebe `owner` e `billing.admin`, depois os acessos do
+  Henrique caem). **Não preencher** as linhas "a definir em 30/09".
+- [ ] Comentário no topo do `ci.yml` avisando que os nomes dos sete jobs são
+  checks obrigatórios da proteção da `main`; registrar a proteção e sua
+  dependência do plano do GitHub em `transferencia.md`.
+- [ ] Varredura do histórico do Git e dos logs do Actions atrás de segredos,
+  porque o repositório ficou público de 03/09 a 29/09. Credencial achada é
+  tratada como vazada: rotacionar.
+- [ ] Medir o consumo de minutos do Actions por workflow e registrar em
+  `inventario-custos.md`.
+- [ ] Conferir se o 404 da API responder com a página HTML padrão do Express
+  (e não com o JSON do Nest) é o desejado.
+
 **Infraestrutura e documentos**
 
 - [ ] PR que tira os dois blocos `removed` de `infra/terraform/varredura.tf`.
@@ -214,7 +297,10 @@ B2 e de C)
 - [ ] `pnpm relatorio:qualidade`
 - [ ] Corrigir o que falhar
 
-**Depois que você confirmar os traços em produção (A1)**
+**Traços em produção confirmados (OTLP e Hosting, 29/09)**
+
+Já podem ser feitos, a menos que apareça dependência do caminho do Cloud Tasks
+(nesse caso, anotar aqui).
 
 - [ ] PR da branch `chore/remover-cloudtrace-agent`.
 - [ ] Medir o custo de `verifyIdToken(checkRevoked)`, pendência aberta desde a
@@ -344,6 +430,10 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
 
 **Construir**
 
+- [ ] 👤 Alerta artificial pelo caminho real: webhook com corpo ilegível no
+  sandbox, emitindo `pagamento.webhook-ilegivel` (runbook
+  `alerta-artificial.md`). O teste pelo caminho alternativo já foi feito em
+  29/09.
 - [ ] Rodada de cartão no sandbox, seção 4 de
   `docs/runbooks/checkout-sandbox.md`. Ela confirma o nome do evento de
   conclusão do cartão, **o maior risco em aberto**.
@@ -363,7 +453,8 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
 
 **Obter**
 
-- [ ] Domínio `notificacoes.lexintegra.com.br` verificado.
+- [x] Domínio `notificacoes.lexintegra.com.br` verificado (29/09, conta do
+  escritório). DMARC em `p=none`: endurecer só depois de semanas de envio real.
 - [ ] Plano contratado e teto diário.
 
 **Construir**
@@ -371,6 +462,11 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
 - [ ] `EMAIL_FROM` com o remetente decidido em B2.
 - [ ] Atualizar `operacao.md` 4.1 e `entrega-de-email-falhando.md`.
 - [ ] 👤 E-mail real de teste em Gmail, Outlook e Apple Mail.
+- [ ] 👤 Conferir que o `traceparent` sobrevive ao Cloud Tasks: pedir
+  "Esqueci minha senha" em `/entrar` e comparar o `trace` da requisição do
+  navegador com o da entrega da task (user agent `Google-Cloud-Tasks`) no log do
+  Cloud Run. Mesmo trace, ou link entre os dois, fecha o item. Adiado de A1 em
+  29/09 porque o envio de e-mail ainda não funcionava.
 
 ---
 
@@ -395,6 +491,8 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
 
 **Transferência** (`docs/entrega/transferencia.md`, fases 0 a 4)
 
+- [ ] 👤 O escritório indica um segundo `billing.admin` (Marcos ou alguém da
+  B&C) **antes** de o Henrique sair; hoje são só Auan e Henrique.
 - [ ] 👤 Rotacionar **todas** as credenciais que passaram pela sua máquina.
 - [ ] 👤 Transferir o projeto GCP/Firebase (`plataforma-juridica-36bda`), o
   repositório e as contas de terceiros.

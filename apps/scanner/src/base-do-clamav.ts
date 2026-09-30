@@ -29,3 +29,27 @@ export function ehArquivoDeBase(nome: string): boolean {
   const minusculo = nome.toLowerCase();
   return EXTENSOES_DE_BASE.some((extensao) => minusculo.endsWith(extensao));
 }
+
+/**
+ * `daily.cvd` ou `daily.cld` — o UNICO arquivo cuja idade diz se as assinaturas
+ * estao atuais.
+ *
+ * `main.cvd` e `bytecode.cvd` sao republicados raramente pelo proprio ClamAV
+ * (meses ou anos entre uma versao e outra). Medir a idade de todos e alertar
+ * pelo maior valor faz a politica disparar em TODA execucao saudavel do job: foi
+ * o que aconteceu em 29/09/2026, com `main.cvd` de 6877 h e `bytecode.cvd` de
+ * 9192 h contra um `daily.cvd` de 6 h. O `freshclam` produz `.cld` depois de
+ * aplicar um diff, entao os dois formatos valem.
+ */
+export function ehBaseDiaria(nome: string): boolean {
+  return /^daily\.c[vl]d$/i.test(nome.split('/').pop() ?? nome);
+}
+
+/**
+ * Ha assinatura para varrer? Uma pasta so com `.info`, por exemplo, nao tem: o
+ * clamd recusaria subir. Sem base, o scanner NUNCA aprova — responde
+ * `indisponivel` (ver `servidor.ts`).
+ */
+export function temBaseParaVarrer(nomes: readonly string[]): boolean {
+  return nomes.some((nome) => /\.c[vl]d$/i.test(nome));
+}

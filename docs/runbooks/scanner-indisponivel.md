@@ -7,7 +7,22 @@
 - *Base do ClamAV velha* (`clamav_base_velha`): a base publicada tem mais de
   `limite_base_clamav_horas` (48) horas.
 - *Base do ClamAV sem publicacao* (`clamav_base_sem_publicacao`): nenhuma
-  publicação em 23 horas.
+  publicação do `daily` em 23 horas.
+- *Job da base do ClamAV falhou ou scanner sem base* (`clamav_job_falhou`): o
+  Scheduler não conseguiu iniciar o job (ex.: `PERMISSION_DENIED`), o job
+  terminou em erro, ou o scanner subiu/varreu sem nenhuma base
+  (`scanner.sem-base`). É o único que avisa quando a base **nunca** foi
+  publicada; os outros dois precisam de pelo menos uma publicação. Não cobre job
+  desabilitado ou apagado.
+
+**A idade que os dois alertas de base medem é a do `daily`** (`daily.cvd` ou
+`daily.cld`), sinal `clamav.daily-publicada`. `main.cvd` e `bytecode.cvd` têm
+meses ou anos de idade por natureza e não entram na métrica.
+
+**Scanner sem base:** responde `indisponivel` a toda varredura (nunca `limpo`),
+sem baixar o objeto, e a fila reentrega. Para sair: rode o job
+(`gcloud run jobs execute clamav-atualizar-base --region=southamerica-east1 --wait`)
+e espere a próxima instância do scanner subir.
 
 Todas as políticas estão em `infra/terraform/observabilidade.tf`.
 
