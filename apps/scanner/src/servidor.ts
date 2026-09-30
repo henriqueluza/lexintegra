@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { Storage } from '@google-cloud/storage';
-import { temBaseParaVarrer } from './base-do-clamav.js';
+import { SINAL_SEM_BASE, temBaseParaVarrer } from './base-do-clamav.js';
 import { idadeEmHoras, versaoDoClamd } from './idade-da-base.js';
 import { registrar } from './registrar.js';
 import { interpretar, type ResultadoDaVarredura } from './veredito.js';
@@ -41,8 +41,9 @@ const PASTA_DA_BASE = process.env['CLAMAV_DB_DIR'] ?? '/var/lib/clamav';
  * rede). O clamd nao sobe sem assinaturas, entao o `clamdscan` sairia com erro e
  * `interpretar` ja daria `indisponivel`; a checagem existe para que isso seja
  * DECISAO E SINAL, e nao consequencia acidental de um daemon morto: responde na
- * hora, sem baixar o objeto, e loga `scanner.sem-base` em ERROR, que a politica
- * "Job da base do ClamAV falhou" observa. A fila reentrega ate a base existir.
+ * hora, sem baixar o objeto, e loga `SINAL_SEM_BASE` em ERROR, que a politica
+ * "ClamAV: scanner sem base de assinaturas" observa. A fila reentrega ate a base
+ * existir.
  *
  * O servidor SOBE mesmo assim: prender o boot faria o startup probe derrubar a
  * revisao, e a API ficaria sem quem responda `indisponivel`.
@@ -91,7 +92,7 @@ async function varrer(
 ): Promise<ResultadoDaVarredura> {
   if (await semBase()) {
     registrar('ERROR', 'scanner sem base de assinaturas; recusando varredura', {
-      sinal: 'scanner.sem-base',
+      sinal: SINAL_SEM_BASE,
     });
     return { veredito: 'indisponivel' };
   }
@@ -183,7 +184,7 @@ servidor.listen(PORTA, () => {
   void semBase().then((vazia) => {
     if (vazia) {
       registrar('ERROR', 'scanner subiu sem base de assinaturas', {
-        sinal: 'scanner.sem-base',
+        sinal: SINAL_SEM_BASE,
       });
     }
   });
