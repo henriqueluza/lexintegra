@@ -53,3 +53,11 @@ export function ehBaseDiaria(nome: string): boolean {
 export function temBaseParaVarrer(nomes: readonly string[]): boolean {
   return nomes.some((nome) => /\.c[vl]d$/i.test(nome));
 }
+
+/**
+ * O sinal que o scanner loga, em ERROR, quando sobe ou varre sem base. A politica
+ * "ClamAV: scanner sem base de assinaturas" (`infra/terraform/observabilidade.tf`)
+ * casa exatamente este valor em `jsonPayload.sinal`, e `alertas-do-clamav.spec.ts`
+ * confere os dois lados: renomear um sem o outro desligaria o alerta em silencio.
+ */
+export const SINAL_SEM_BASE = 'scanner.sem-base';

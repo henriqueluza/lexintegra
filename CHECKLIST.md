@@ -220,10 +220,21 @@ execução corrigida gera alarme falso.
   presente, e `gcloud scheduler jobs run clamav-base-diaria` (04:05:36 UTC) gerou
   a execução `clamav-atualizar-base-26lmc`, concluída com sucesso, sem
   `status.code` de erro no Scheduler.
-- [ ] Alerta para "a base do ClamAV nunca foi publicada" e para falha do job
-  no Scheduler.
-- [ ] Scanner sem base: recusar tudo e alertar; revisar o `|| true` de
-  `apps/scanner/entrada.sh:39`.
+- [x] Alerta para "a base do ClamAV nunca foi publicada" e para falha do job
+  no Scheduler. Coberto pelas três políticas de log (#38 e a divisão de
+  `clamav_job_falhou`), que disparam desde a primeira falha, sem depender de uma
+  publicação anterior: *Scheduler não conseguiu iniciar o job*, *job terminou em
+  erro* e *scanner sem base de assinaturas*. Ativas em produção (30/09). O PR
+  `fix/scanner-sem-base` fez a falha do job sair como log estruturado em ERROR
+  (`clamav.job-falhou`) e amarrou os filtros ao código com teste
+  (`apps/scanner/src/alertas-do-clamav.spec.ts`).
+- [x] Scanner sem base: recusar tudo e alertar; revisar o `|| true` de
+  `apps/scanner/entrada.sh:39`. Feito no #38: o `|| true` saiu, e o scanner sem
+  base responde `indisponivel` a toda varredura (nunca `limpo`) e loga
+  `scanner.sem-base` em ERROR. O PR `fix/scanner-sem-base` trocou o literal por
+  `SINAL_SEM_BASE`, com teste que confere o filtro da política e que o
+  `entrada.sh` não volta a ter `|| true` nem `2>/dev/null`. Falta a prova com
+  falha real, que é humana: ver o teste do EICAR em A1.
 - [x] Condições de ausência agregando por identidade estável, não por
   `revision_name` (conferido em produção em 30/09: *Sonda de sinais parada* e
   *Retencao parada* com `REDUCE_SUM` e `groupByFields` só por
