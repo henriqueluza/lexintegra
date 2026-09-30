@@ -16,8 +16,11 @@ Estado conferido em 24/09/2026:
 
 - o projeto GCP não pertence a nenhuma organização;
 - o único `roles/owner` do projeto é a conta do desenvolvedor;
-- o repositório `henriqueluza/lexintegra` é **público**, e a `main` **não tem
-  proteção de branch**.
+- o repositório `henriqueluza/lexintegra` era **público** e a `main` **não tinha
+  proteção de branch**. **Em 29/09/2026** ele passou a **privado** (foi público
+  de 03/09 a 29/09) e a `main` foi protegida (ver a Fase 2).
+- a conta de faturamento tem dois `billing.admin`: o desenvolvedor e Auan Bastos
+  (dono do escritório e da conta). Ninguém mais.
 
 ---
 
@@ -38,7 +41,7 @@ Nada para durante esta fase.
 | # | Passo | Quem | Conferir depois | Voltar atrás |
 |---|---|---|---|---|
 | 1.1 | Conceder `roles/owner` à conta Google do escritório: IAM → Grant access, ou `gcloud projects add-iam-policy-binding plataforma-juridica-36bda --member=user:<conta> --role=roles/owner`. O Google manda convite, e **o papel só vale depois de aceito** | Dev concede, escritório aceita | `gcloud projects get-iam-policy` mostra os **dois** donos. O escritório abre o console do Firebase e vê o projeto | Remover o binding |
-| 1.2 | Faturamento. O ADR-13 diz que a conta de faturamento é do Marcos. Em 24/09/2026, a conta vinculada tinha **dois** `billing.admin`: o desenvolvedor e uma segunda conta pessoal. `[CONFIRMAR: de quem é a conta e quem é a segunda pessoa]`. Se for do escritório ou do Marcos, confirme o *lock the link*. A saída do desenvolvedor dela fica para a Fase 6. Se for do desenvolvedor, o escritório vincula uma conta dele | Ambos | `gcloud billing projects describe plataforma-juridica-36bda` mostra a conta certa, `billingEnabled: True` | Revincular a conta anterior. Projeto sem faturamento para os serviços pagos |
+| 1.2 | Faturamento. Conta `018245-5481E8-45B906`, do dono do escritório (Auan Bastos, `auanbastos01@gmail.com`), com dois `billing.admin`: ele e o desenvolvedor. O Marcos não tem papel nela (o texto do ADR-13 dizia que a conta era dele; o estado real prevalece, conferido em 29/09/2026). **O escritório deve indicar um segundo `billing.admin`** (o Marcos ou alguém da B&C) **antes** da saída do desenvolvedor, senão a conta fica com um administrador só. Confirme o *lock the link*. A saída do desenvolvedor da conta fica para a Fase 6 | Ambos | `gcloud billing projects describe plataforma-juridica-36bda` mostra a conta certa, `billingEnabled: True` | Revincular a conta anterior. Projeto sem faturamento para os serviços pagos |
 | 1.3 | O escritório executa, com a conta dele, uma leitura de cada coisa: Cloud Run, Logs, Monitoring, Firestore (console) e Secret Manager (lista, **sem** abrir valor) | Escritório | Acessou tudo | — |
 
 ## Fase 2 — Repositório e CI
@@ -83,14 +86,27 @@ transferência pode assumir `terraform-ci`, e `terraform-ci` administra o
 projeto inteiro.
 
 **Proteção da `main`.** Quem faz push na `main` aplica Terraform como
-`terraform-ci`. Hoje a `main` não tem proteção. No repositório novo, exija PR
-com revisão e as verificações do CI antes do merge.
+`terraform-ci`. Desde 29/09/2026 a `main` do repositório de origem está
+protegida: PR obrigatório **sem exigir aprovação** (trabalhando sozinho, exigir
+travaria o próprio merge), branch atualizada com a `main` (`strict`), sem force
+push nem exclusão, valendo também para administradores, e **sete checks
+obrigatórios**, todos jobs do `ci.yml`: *Lint, testes e build*, *Terraform
+(validate e plan)*, *Imagem do scanner*, *Versao do Playwright*, *Jornadas
+autenticadas (Etapa 12)*, *Acessibilidade e regressao visual* e *Analise de
+mutacao*. **Renomear um desses jobs trava todos os PRs** até a proteção ser
+atualizada (há um aviso no topo do `ci.yml`).
+
+No repositório de destino, a proteção **precisa ser recriada** e **depende do
+plano do GitHub de quem o receber**: proteção de branch em repositório privado
+exige plano pago. O plano Pro do desenvolvedor vem do GitHub Student Developer
+Pack e depende da condição de estudante, então não acompanha a transferência.
+Decida o plano do escritório antes da Fase 2.
 
 ### Segredos e variáveis do GitHub Actions para recriar
 
 | Nome | Tipo a usar no destino | Valor |
 |---|---|---|
-| `ALERTAS_EMAIL_DESENVOLVIMENTO` | **secret**, não variable: o repositório é público e variable não é mascarada no log | O destinatário decidido na Fase 0. Ver a Fase 4 |
+| `ALERTAS_EMAIL_DESENVOLVIMENTO` | **secret**, não variable: variable não é mascarada no log. Os workflows leem `secrets.… \|\| vars.…`; no destino, crie só o secret | O destinatário decidido na Fase 0. Ver a Fase 4 |
 | `APP_CHECK_SITE_KEY` | variable. É pública por definição | A mesma de hoje: a chave do reCAPTCHA está no projeto GCP, que não muda |
 | `APP_CHECK_PROVEDOR` | variable, **opcional** | Hoje não existe, e o padrão é `recaptcha-enterprise` |
 
@@ -133,6 +149,12 @@ Depois das Fases 2 e 3: a ordem da seção 3.1 de
 
 ## Fase 6 — Por último: remover os acessos do desenvolvedor
 
+**A ordem importa:** primeiro alguém do escritório recebe `owner` no projeto e
+`billing.admin` na conta; depois os acessos do desenvolvedor são reduzidos ou
+removidos. Nunca o contrário, senão o projeto ou a conta ficam sem dono humano.
+O contato técnico do Registro.br também é um acesso pessoal do desenvolvedor e
+precisa ser passado a alguém do escritório.
+
 Só depois de **tudo acima conferido**, e conforme a tabela de
 [`credenciais.md`](credenciais.md), seção 4. O que ficar durante a garantia
 (cláusula 4.4) fica com motivo e data de saída escritos.
@@ -140,7 +162,7 @@ Só depois de **tudo acima conferido**, e conforme a tabela de
 | # | Passo | Quem | Conferir depois |
 |---|---|---|---|
 | 6.1 | Remover `roles/owner` do desenvolvedor no projeto, ou rebaixar para o papel combinado na tabela da garantia | Escritório (dono novo) | `gcloud projects get-iam-policy` sem a conta do desenvolvedor, ou com o papel combinado |
-| 6.2 | Remover o `billing.admin` do desenvolvedor na conta de faturamento | Escritório | Política da conta de faturamento |
+| 6.2 | Remover o `billing.admin` do desenvolvedor na conta de faturamento, **só depois de o escritório ter indicado o segundo `billing.admin`** | Escritório | Política da conta de faturamento, com pelo menos dois administradores humanos do lado do escritório |
 | 6.3 | Remover o desenvolvedor do repositório ou da organização no GitHub | Escritório | Lista de membros |
 | 6.4 | Remover o desenvolvedor de Resend, AbacatePay, Registro.br e Microsoft 365 | Escritório | Lista de membros de cada painel |
 | 6.5 | O desenvolvedor apaga as credenciais locais: `.env`, ADC do `gcloud` (`gcloud auth revoke`, `gcloud auth application-default revoke`), login do CLI do AbacatePay e o clone do repositório, se combinado | Dev | Declaração por escrito |
