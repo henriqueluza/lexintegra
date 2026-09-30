@@ -11,7 +11,7 @@
  * O PROBLEMA MAIOR NAO ERA O LITERAL. A descricao do PIX e nossa e cabia numa
  * correcao de uma linha; o nome e a descricao do PRODUTO vem do catalogo, escritos
  * por quem cadastra — e texto juridico usa travessao, reticencias e aspas curvas o
- * tempo todo. O catalogo real da B&C chegaria com eles, e a compra por cartao
+ * tempo todo. O catalogo que o escritorio criar pelo painel chegaria com eles, e a compra por cartao
  * falharia em producao pelo mesmo 400.
  *
  * A LISTA E CONSERVADORA E NAO ESTA DOCUMENTADA. So o travessao foi observado; o

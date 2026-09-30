@@ -179,6 +179,26 @@ describe('Servicos', () => {
     });
 
     /**
+     * O catalogo de producao nasce vazio (o escritorio o cria pelo painel), entao
+     * este e o estado que o primeiro visitante real encontra. Ele precisa ser
+     * anunciado ao leitor de tela, explicar o que fazer e nao oferecer o que nao
+     * existe: nem busca, nem cartao, nem resumo de carrinho.
+     */
+    it('anuncia o vazio e nao oferece busca, cartao nem carrinho', async () => {
+      resposta = [];
+      const fixture = montar();
+
+      await liberar(fixture);
+
+      const raiz = fixture.nativeElement as HTMLElement;
+      expect(raiz.querySelector('.vazio')?.getAttribute('role')).toBe('status');
+      expect(texto(fixture)).toContain(TEXTOS.servicos.vazioApoio);
+      expect(raiz.querySelector('input[type="search"]')).toBeNull();
+      expect(raiz.querySelector('.produto')).toBeNull();
+      expect(raiz.querySelector('.carrinho')).toBeNull();
+    });
+
+    /**
      * A causa nao vai para a tela. Um 401 aqui significa token vencido, e a
      * mensagem util e a mesma de uma falha de rede — distinguir os casos daria a
      * quem sonda um mapa dos estados do servidor.

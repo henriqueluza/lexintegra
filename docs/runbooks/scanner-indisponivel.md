@@ -8,11 +8,16 @@
   `limite_base_clamav_horas` (48) horas.
 - *Base do ClamAV sem publicacao* (`clamav_base_sem_publicacao`): nenhuma
   publicação do `daily` em 23 horas.
-- *Job da base do ClamAV falhou ou scanner sem base* (`clamav_job_falhou`): o
-  Scheduler não conseguiu iniciar o job (ex.: `PERMISSION_DENIED`), o job
-  terminou em erro, ou o scanner subiu/varreu sem nenhuma base
-  (`scanner.sem-base`). É o único que avisa quando a base **nunca** foi
-  publicada; os outros dois precisam de pelo menos uma publicação. Não cobre job
+- *ClamAV: Scheduler nao conseguiu iniciar o job* (`clamav_scheduler_falhou`):
+  o Scheduler não iniciou o job (ex.: `PERMISSION_DENIED`).
+- *ClamAV: job da base terminou em erro* (`clamav_job_erro`): o job iniciou e
+  terminou em erro (freshclam, bucket, memória).
+- *ClamAV: scanner sem base de assinaturas* (`clamav_scanner_sem_base`): o
+  scanner subiu ou varreu sem nenhuma base (`scanner.sem-base`).
+
+  Estes três, cada um numa política (o Cloud Monitoring aceita uma condição só
+  por política de log), são os que avisam quando a base **nunca** foi publicada;
+  os outros dois precisam de pelo menos uma publicação. Não cobrem job
   desabilitado ou apagado.
 
 **A idade que os dois alertas de base medem é a do `daily`** (`daily.cvd` ou

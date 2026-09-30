@@ -1,11 +1,10 @@
-// ⚠️ DADOS FICTÍCIOS — SUBSTITUIR PELO CATÁLOGO REAL DA B&C ⚠️
-// Ver: docs/plano-de-execucao.md, Etapa 5, seção "Só você".
+// ⚠️ DADOS FICTÍCIOS — SÓ PARA EMULADOR E TESTES ⚠️
 // Este arquivo alimenta o script de seed do emulador e os testes de integração.
-// Nenhum destes produtos deve ir para produção sem substituição.
+// O catálogo de produção NASCE VAZIO: o escritório cria os produtos pelo painel
+// de administração. Não há catálogo real a importar, e nada daqui vai para produção.
 //
-// COMO SUBSTITUIR, quando o catálogo real chegar do Marcos:
-//   1. Troque os objetos abaixo. Não mexa em mais nada — este arquivo é só dados,
-//      sem lógica, de propósito.
+// Ao alterar os objetos abaixo:
+//   1. Não mexa em mais nada — este arquivo é só dados, sem lógica, de propósito.
 //   2. `pnpm test:integration` valida cada um contra `esquemaNovoProduto`, o mesmo
 //      schema que a API usa para recusar. Dado inválido falha aqui, não em produção.
 //   3. Preços em CENTAVOS. R$ 2.500,00 é `250_000`, não `2500`.

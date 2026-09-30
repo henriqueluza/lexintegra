@@ -253,12 +253,14 @@ amostrado**:
 ```
 resource.type="cloud_run_revision"
 resource.labels.service_name="api-lexintegra"
-jsonPayload."logging.googleapis.com/trace_sampled"=true
+traceSampled=true
 ```
 
-O Cloud Logging promove esses campos para o topo da entrada: o que interessa é o
-campo `trace`, no formato `projects/plataforma-juridica-36bda/traces/<traceId>`.
-Guarde o `<traceId>`.
+O campo é `traceSampled`, e não `jsonPayload."logging.googleapis.com/trace_sampled"`:
+o Cloud Logging tira esse campo do `jsonPayload` e o promove para o topo da
+entrada (conferido em produção em 30/09/2026). Junto com ele vem o campo `trace`,
+no formato `projects/plataforma-juridica-36bda/traces/<traceId>`. Guarde o
+`<traceId>`.
 
 ### 4.2 Achar o mesmo trace no Cloud Trace
 
@@ -285,3 +287,102 @@ próprio; o plano esperado é um único `destroy`, de
 **Voltar atrás, se o trace sumir depois:** `git revert` daquele commit e deploy.
 O rastreio perdido nesse intervalo não volta, mas a aplicação não é afetada — o
 exportador não derruba requisição.
+
+### 4.4 O `traceparent` atravessa o Cloud Tasks
+
+Falta provar o salto assíncrono: a entrega de uma tarefa continuar o trace da
+requisição que a enfileirou. Em 30/09/2026 **não havia nenhuma entrega do outbox
+nos logs dos últimos 30 dias**, então esse caminho nunca foi exercitado em
+produção.
+
+**Que ação enfileira uma tarefa.** O "Esqueci minha senha" (`/recuperar-senha`,
+área pública). Ele chama `POST /api/auth/redefinicao-senha`
+(`autenticacao/senha/redefinicao.controller.ts`). Use o e-mail de uma conta
+**existente e habilitada** que você leia (a do administrador serve): para
+endereço desconhecido, ou conta suspensa, o serviço não enfileira nada.
+
+- Um pedido por conta a cada 15 minutos (o id do registro carrega a janela; o
+  segundo cai como duplicata). O limite é de 5 pedidos a cada 10 minutos por
+  origem.
+- **O e-mail de redefinição sai de verdade**, pelo Resend, para a caixa da conta.
+  Ignore o e-mail; não é preciso clicar no link.
+- Alternativa que também enfileira: criar um advogado (evento `definir-senha`),
+  mas isso cria uma conta, então prefira a redefinição.
+
+**O caminho da tarefa.**
+
+1. A requisição grava o registro no outbox (`OutboxService.registrar`,
+   `outbox/outbox.service.ts`), **na mesma transação**, guardando no campo
+   `rastreio` o `traceparent` de quando o evento nasceu.
+2. Depois do commit, `EnfileiradorDeEventos.enfileirarPorId` chama
+   `CloudTasksFila.enfileirar` (`tarefas/cloud-tasks.fila.ts`), que faz
+   `propagation.inject(context.active(), cabecalhos)`. Isso escreve o
+   `traceparent` do contexto ativo em `httpRequest.headers` da tarefa. É o único
+   lugar do projeto que monta a requisição de tarefa.
+3. O Cloud Tasks (fila `eventos`) faz `POST <url da API>/api/interno/outbox`,
+   com token OIDC da service account de tarefas, repassando os cabeçalhos da
+   tarefa. O alvo é `URL_APLICACAO` (`https://lexintegra.com.br`, o mesmo domínio
+   do site), então a chamada **passa pelo rewrite do Hosting** antes de chegar ao
+   Cloud Run, como a de um navegador.
+4. `OutboxController.entregar` (`outbox/outbox.controller.ts`) recebe, e o
+   `DespachanteOutbox` reivindica o registro e entrega. No lado de dentro, a
+   instrumentação de `http` extrai o `traceparent` do cabeçalho recebido, então o
+   span da entrega deve nascer como filho do span da requisição original.
+
+**O que pode dar errado, e é o que se confere.** O Cloud Tasks não reserva o
+`traceparent`, mas nenhuma documentação promete que ele sobrevive ao caminho
+até o Cloud Run (Hosting incluído; a travessia do Hosting já foi confirmada para
+requisições de navegador em 29/09/2026). E o Cloud Run popula o `traceparent` de entrada por conta
+própria (ver `observabilidade/amostragem.ts`). Se ele sobrescrever o nosso, a
+entrega abre um trace novo, sem ligação com o do pedido.
+
+**Como conferir.**
+
+1. Faça o pedido de redefinição em `/entrar` ("Esqueci minha senha") e anote a
+   hora.
+2. Logs Explorer, dois minutos depois. Pegue o log de **requisição** de cada ponta
+   (os do Cloud Run, `run.googleapis.com/requests`, que trazem `trace`). Isto não
+   depende de o e-mail ter saído:
+
+   ```
+   resource.type="cloud_run_revision"
+   resource.labels.service_name="api-lexintegra"
+   httpRequest.requestUrl:"/api/auth/redefinicao-senha"
+   ```
+
+   e
+
+   ```
+   resource.type="cloud_run_revision"
+   resource.labels.service_name="api-lexintegra"
+   httpRequest.requestUrl:"/api/interno/outbox"
+   httpRequest.userAgent:"Google-CloudTasks"
+   ```
+
+   (Se o filtro do user agent não devolver nada, tire-o e escolha pela hora. A
+   varredura do Scheduler bate em `/api/interno/outbox/varredura`, que também
+   casa com o trecho da URL: ignore-a.) Em cada uma anote o final do campo
+   `trace` (`.../traces/<traceId>`) e o `traceSampled`.
+   Se a entrega tiver enviado o e-mail, a entrada `jsonPayload.sinal="outbox.entrega"`
+   traz também `jsonPayload.rastreioDeOrigem`, o trace id da requisição que
+   enfileirou (lido do registro do outbox, não do cabeçalho): serve de controle.
+3. **Se os dois trace ids forem iguais, o `traceparent` atravessou o Cloud
+   Tasks.** Confirme no Trace Explorer, buscando esse trace id: devem aparecer o
+   span `POST /api/auth/redefinicao-senha` e, depois, o span `POST
+   /api/interno/outbox` do `api-lexintegra`, no **mesmo** trace. O Trace Explorer
+   só guarda spans nossos de requisição amostrada (10%): se `traceSampled` for
+   falso na origem, a igualdade dos ids ainda vale como prova, mas não haverá
+   spans nossos para ver. Repita depois de 15 minutos, ou com outra conta, para
+   pegar um amostrado.
+4. **Se forem diferentes**, o cabeçalho não sobreviveu (ou o Cloud Run o
+   substituiu). Registre os dois ids e a data no PR, e trate como achado: a
+   entrega assíncrona fica fora do trace do pedido, e a correção seria levar o
+   `traceparent` no corpo da tarefa e restaurá-lo na entrega. Isso é mudança de
+   código, e fica para decisão.
+5. Sem entrada nenhuma para `/api/interno/outbox` depois de alguns minutos: a
+   tarefa não foi entregue. Olhe a fila `eventos` no console e o log da API por
+   `redefinir-senha`.
+
+Registre no PR o par de trace ids e a data. Esta conferência não bloqueia a
+remoção do `roles/cloudtrace.agent`: é sobre o rastreio da entrega, não sobre a
+exportação.

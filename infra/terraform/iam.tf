@@ -102,11 +102,6 @@ locals {
     # nao mais pelo exportador especifico do Cloud Trace.
     "roles/telemetry.tracesWriter",
 
-    # `cloudtrace.agent` era o papel do exportador antigo. Fica ate a primeira
-    # exportacao por OTLP ser confirmada em producao — remove-lo junto com a
-    # troca deixaria a etapa sem caminho de volta se o endpoint novo recusar.
-    "roles/cloudtrace.agent",
-
     # Etapa 4. Sem este papel o Admin SDK nao cria usuario, nao escreve custom
     # claim, nao gera link de definicao de senha e nao revoga token — ou seja, o
     # provisionamento de advogados (item 2.4.3) e a suspensao (2.4.6) falham em

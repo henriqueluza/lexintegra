@@ -19,8 +19,8 @@ beforeEach(async () => {
 });
 
 /**
- * O contrato que o LEIA-ME de `scripts/dados-ficticios/` promete: quando o
- * catalogo real da B&C chegar e alguem trocar os objetos daquele arquivo, um
+ * O contrato que o LEIA-ME de `scripts/dados-ficticios/` promete: quando
+ * alguem trocar os objetos daquele arquivo, um
  * preco digitado em reais em vez de centavos, ou um produto sem entregavel, falha
  * AQUI — nao em producao, e nao na primeira compra.
  */

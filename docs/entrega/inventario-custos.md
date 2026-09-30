@@ -96,7 +96,7 @@ Tudo em `observabilidade.tf`, salvo indicação.
 | Item | Quantidade |
 |---|---|
 | Métricas personalizadas por log | **9**: `alertas-criticos`, `outbox-atraso-segundos`, `quarentena-atraso-segundos`, `outbox-entregas`, `clamav-base-idade-horas`, `disponibilidade-sem-link`, `reuniao-sem-sala-segundos`, `webhook-recusado`, `retencao-passagens` |
-| Políticas de alerta | **12**, todas com condição sobre métrica. A arquitetura, seção 12, registra que o Monitoring passa a cobrar alertas a partir de 01/09/2027 |
+| Políticas de alerta | **15** no código (12 existiam em produção em 29/09/2026, antes do deploy que cria as três de log do ClamAV). Três são de correspondência de log, uma condição cada; as demais têm condição sobre métrica. A arquitetura, seção 12, registra que o Monitoring passa a cobrar alertas a partir de 01/09/2027 |
 | Uptime check | **1**, `API LexIntegra (/api/health)`, a cada **300 s**, a partir de várias regiões |
 | Painel | 1 (`paineis/operacao.json`) |
 | Canal de notificação | 1 e-mail, e só existe com a variável do GitHub definida |
@@ -109,7 +109,7 @@ Tudo em `observabilidade.tf`, salvo indicação.
 | Serviço | O que o sistema consome | Onde |
 |---|---|---|
 | **Firebase Hosting** | Arquivos estáticos e tráfego da SPA, com cache de um ano nos `.js`, `.css` e `.woff2`. Fora do Terraform (`firebase.json`) | `deploy.yml`, passo *Frontend e regras* |
-| **Firebase Auth** | Uma conta por cliente, advogado e administrador. `verifyIdToken(…, true)` em **toda** requisição autenticada (Etapa 4). `[CONFIRMAR: o projeto usa o Firebase Auth padrão ou o Identity Platform, que cobra por usuário ativo]` | `autenticacao/` |
+| **Firebase Auth** | Uma conta por cliente, advogado e administrador. `verifyIdToken(…, true)` em **toda** requisição autenticada (Etapa 4). **Confirmado em 29/09/2026:** o projeto usa o **Firebase Auth padrão**. A Identity Toolkit Admin API (`GET admin/v2/projects/plataforma-juridica-36bda/config`, só leitura) devolve `subtype: FIREBASE_AUTH`, e não `IDENTITY_PLATFORM`; MFA está `DISABLED`. Custo: a página oficial de preços do Firebase ([firebase.google.com/pricing](https://firebase.google.com/pricing), consultada em 29/09/2026) informa e-mail/senha sem custo até 50 mil usuários ativos por mês. A página não informa a tarifa acima disso (remete ao preço do Google Cloud) nem se MFA é cobrado. Login por SMS seria cobrado por mensagem, mas o projeto não o usa. Se o projeto for atualizado para o Identity Platform no futuro, o subtype muda e este item deve ser revisto. | `autenticacao/` |
 | **App Check (reCAPTCHA Enterprise)** | Uma avaliação na primeira interação com o formulário da área pública (ADR-16, decisão 3) e nas chamadas públicas seguintes | `app-check/`, `vars.APP_CHECK_SITE_KEY` |
 | **Resend** | E-mails por evento (`packages/shared/src/evento-outbox.ts`, `apps/api/src/outbox/evento.ts`), listados abaixo. A arquitetura, seção 12, registra o teto de 100/dia no plano gratuito | `email/`, `outbox/` |
 | **AbacatePay** | Uma cobrança por checkout. O mesmo carrinho reaproveita a cobrança (ADR-19). Para o cartão, um produto no gateway por combinação de nome, descrição e preço (`produtos-gateway`). Tarifa por transação conforme o meio (PIX ou cartão) e um estorno integral por cobrança totalmente estornada. **Hoje, zero**: `PAGAMENTOS_MODO=desligado` | `checkout/`, `pagamentos/`, `estornos/` |

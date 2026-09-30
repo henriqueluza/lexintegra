@@ -317,6 +317,22 @@ qualquer coisa que não seja um projeto `demo-`.
 - `verifyIdToken` roda com `checkRevoked: true` em toda requisição autenticada,
   o que custa uma ida ao Firebase por chamada. É o que faz a suspensão valer
   contra sessão já aberta. Revisitar na Etapa 12, com número medido.
+  **Medido em 30/09/2026** (Cloud Trace, leitura pela API, 30 dias, amostra de
+  10%): 23 traces autenticados, com o `POST .../accounts:lookup` do Identity
+  Toolkit (a chamada de `getUser` dentro de `verifyIdToken(token, true)`,
+  `firebase-admin` 14.3) em **p50 = 327 ms, p95 = 392 ms, máximo 909 ms**,
+  dentro de requisições com **p50 = 372 ms e p95 = 546 ms**. Ou seja, a
+  verificação de revogação é cerca de 88% do tempo mediano de uma requisição
+  autenticada. Não existe série "sem `checkRevoked`": a opção está ligada em toda
+  requisição, então não há comparação direta. Amostra pequena (o volume
+  autenticado ainda é baixo, cerca de 230 requisições por mês estimadas pela
+  amostragem) e sem separar instância nova de instância quente. **Recomendação:
+  manter ligado.** A suspensão valer contra sessão aberta é regra de segurança
+  (Etapa 4, revogação de token na suspensão), o custo é um atraso de cerca de 0,3 s por tela num volume baixo,
+  e a alternativa (cache de revogação por alguns segundos, ou checar só em rotas
+  que escrevem) troca segurança por latência antes de haver problema medido.
+  Rever se o volume autenticado crescer ou se o p95 da requisição passar de 1 s.
+  Decisão do Henrique.
 
 **Descobertas de infraestrutura que teriam quebrado o deploy:**
 
@@ -370,8 +386,8 @@ qualquer coisa que não seja um projeto `demo-`.
 
 **Impossível delegar**
 
-- Obter da CONTRATANTE o catálogo real: nomes, descrições, preços, entregáveis e regras de reunião de cada produto. São dados comerciais, não invenção do desenvolvedor.
-- Cadastrar ou validar o catálogo em produção.
+- Definir o catálogo de produção: nomes, descrições, preços, entregáveis e regras de reunião de cada produto. São dados comerciais, não invenção do desenvolvedor. **Atualização de 29/09/2026:** não há catálogo a importar. Produção começa vazia e o escritório cria os produtos pelo painel de administração.
+- Cadastrar ou validar o catálogo em produção (pelo painel, pelo escritório).
 
 **Bloquear ativamente**
 
@@ -927,7 +943,7 @@ quebra dois pontos abaixo do piso observado. O sobrevivente que valia matar era
 - Definir quais alertas acordam alguém e quais só registram. É decisão operacional que depende de quem vai atender. A estrutura está pronta: `infra/terraform/alertas-roteamento.json`, hoje com os oito alertas em `pendente`.
 - Confirmar com a CONTRATANTE quem receberá os alertas depois da entrega, já que a operação passa a ser dela. Hoje o destinatário é provisório e vem da variável `ALERTAS_EMAIL_DESENVOLVIMENTO` do GitHub — sem ela, nenhum canal é criado.
 - **Disparar o alerta artificial e confirmar que ele chega** — é o critério de aceite da etapa, e não há como automatizá-lo. Roteiro em `docs/runbooks/alerta-artificial.md`.
-- Conferir em produção, depois do primeiro deploy: o `traceparent` sobrevivendo ao rewrite do Hosting e ao Cloud Tasks (nenhuma documentação promete isso), e a primeira exportação por OTLP chegando ao Cloud Trace — só depois disso o papel `roles/cloudtrace.agent` pode sair.
+- Conferir em produção, depois do primeiro deploy: o `traceparent` sobrevivendo ao rewrite do Hosting e ao Cloud Tasks (nenhuma documentação promete isso), e a primeira exportação por OTLP chegando ao Cloud Trace — só depois disso o papel `roles/cloudtrace.agent` pode sair. *(Confirmado e removido no Bloco D; roteiro em `docs/runbooks/limpeza-infra.md`, seção 4.)*
 - Medir o custo de `verifyIdToken(checkRevoked)` com o trace agora disponível (pendência aberta desde a Etapa 4).
 - Aprovar as imagens de referência da regressão visual antes de elas entrarem.
 

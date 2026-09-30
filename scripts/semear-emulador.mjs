@@ -475,7 +475,7 @@ await semearDisponibilidade(uidPorEmail);
 await semearClientesEPedidos(idsDeProduto, uidPorEmail);
 
 console.log(
-  '\n  DADOS FICTICIOS. Substituir pelo catalogo real da B&C antes de producao,',
+  '\n  DADOS FICTICIOS, so para emulador. O catalogo de producao nasce vazio,',
 );
 console.log(
   '  e revalidar clientes/pedidos contra o checkout quando a Etapa 8 existir',

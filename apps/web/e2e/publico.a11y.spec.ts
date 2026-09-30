@@ -80,4 +80,43 @@ test.describe('acessibilidade da area publica', () => {
 
     expect(await violacoes(page)).toEqual([]);
   });
+
+  /**
+   * O catalogo de producao nasce vazio, entao este e o estado que o primeiro
+   * visitante real encontra em `/servicos`. Alem do axe, confere que o vazio nao
+   * quebra o layout: sem rolagem horizontal, mensagem visivel e anunciada, e
+   * nenhuma busca nem cartao para o leitor de tela tropecar.
+   */
+  test('com o catalogo vazio', async ({ page }) => {
+    await page.route('**/api/vitrine', (rota) =>
+      rota.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: '[]',
+      }),
+    );
+    await page.goto('/cadastro');
+    await esperarHidratacao(page);
+
+    await page.getByLabel('Nome completo').fill('Ana Ribeiro Salgado');
+    await page.getByLabel('E-mail').fill('ana@empresa.com.br');
+    await page.getByLabel('Telefone').fill('(61) 99000-0000');
+    await page.getByRole('button', { name: 'Liberar catálogo' }).click();
+    await page.getByRole('link', { name: 'Explorar os serviços' }).click();
+
+    const vazio = page.getByRole('status').filter({
+      hasText: 'Nenhum serviço publicado no momento.',
+    });
+    await expect(vazio).toBeVisible();
+    await expect(page.getByRole('searchbox')).toHaveCount(0);
+
+    const transbordo = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth,
+    );
+    expect(transbordo).toBe(false);
+
+    expect(await violacoes(page)).toEqual([]);
+  });
 });

@@ -245,71 +245,85 @@ execução corrigida gera alarme falso.
 
 **Infraestrutura e documentos**
 
-- [ ] PR que tira os dois blocos `removed` de `infra/terraform/varredura.tf`.
-  O `terraform plan` precisa dar `No changes`.
-- [ ] Conferir por `gcloud`, **só leitura**, o que o deploy do Bloco E criou:
+- [x] PR que tira os dois blocos `removed` de `infra/terraform/varredura.tf`.
+  O `terraform plan` precisa dar `No changes`. *Local, sem os `TF_VAR_*` do CI, o plan é idêntico com e sem os blocos; o `No changes` definitivo é o plan do CI do PR.*
+- [x] Conferir por `gcloud`, **só leitura**, o que o deploy do Bloco E criou (29/09/2026; relatório no resumo do PR):
   - as quatro políticas (*Reuniao marcada sem sala do Teams*, *Webhook do
     gateway recusado*, *Retencao parada*, *Sonda de sinais parada*);
   - se as métricas `webhook-recusado`, `retencao-passagens` e
     `reuniao-sem-sala-segundos` recebem pontos.
-- [ ] Descobrir se o projeto usa Firebase Auth padrão ou Identity Platform e
+- [x] Descobrir se o projeto usa Firebase Auth padrão ou Identity Platform e
   preencher `inventario-custos.md`.
-- [ ] Descobrir a origem dos traços dos ícones (protótipo
-  `direcao-B-pauta.html`). Registrar em `docs/imagens-landing.md` e, se vier de
-  biblioteca, a licença em `licencas-terceiros.md`.
-- [ ] Pesquisar os termos de uso da base de assinaturas do ClamAV e preencher
+- [x] Pesquisar os termos de uso da base de assinaturas do ClamAV e preencher
   `licencas-terceiros.md`.
-- [ ] Pesquisar na documentação do AbacatePay:
+- [x] Pesquisar na documentação do AbacatePay:
   - a política de reentrega de webhook, para `operacao.md` 4.2;
   - se o painel reenvia evento, para `webhook-fora-do-ar.md`.
 
   O que a documentação não disser vai para a reunião (C).
-- [ ] Propor os nomes dos secrets de produção do AbacatePay
+- [x] Propor os nomes dos secrets de produção do AbacatePay
   (`abacatepay-api-key`, `abacatepay-webhook-secret`) e preencher
   `credenciais.md` e `operacao.md` 4.2.
-- [ ] Faxina: `.agents/`, `.codex/` e `.DS_Store` no `.gitignore`.
-- [ ] Planilha de custos em regime permanente (`.xlsx`), a partir de
+- [x] Faxina: `.agents/`, `.codex/` e `.DS_Store` no `.gitignore`.
+- [x] Planilha de custos em regime permanente (`.xlsx`), a partir de
   `docs/entrega/inventario-custos.md`.
-- [ ] Rascunho do termo de cessão (cláusula 8ª), com `licencas-terceiros.md`
+- [x] Rascunho do termo de cessão (cláusula 8ª), com `licencas-terceiros.md`
   como anexo.
+
+- [x] Política `clamav_job_falhou` dividida em três (30/09/2026). O deploy do
+  PR #38 falhou no `apply` (HTTP 400: política com condição de log só pode ter
+  uma condição), e o do #39 falhou igual, porque a política quebrada estava na
+  `main`. O CI não pegou porque o `terraform plan` não valida essa regra: ela
+  mora na API do Monitoring. Virou lint (`scripts/conferir-condicoes-de-log.mjs`,
+  em `pnpm lint`), com o formato antigo confirmado como reprovado. 👤 Depois do
+  merge, conferir o deploy (ver o PR).
 
 **Catálogo vazio em produção** (o escritório cria os produtos pelo admin)
 
-- [ ] Vitrine e `/servicos` com estado vazio adequado.
-- [ ] Confirmar que nenhum dado fictício chega a produção: hoje eles ficam só
+- [x] Vitrine e `/servicos` com estado vazio adequado.
+- [x] Confirmar que nenhum dado fictício chega a produção: hoje eles ficam só
   no emulador.
-- [ ] Atualizar o LEIA-ME de `scripts/dados-ficticios/` e o `AGENTS.md`: não
+- [x] Atualizar o LEIA-ME de `scripts/dados-ficticios/` e o `AGENTS.md`: não
   existe mais "catálogo real a importar".
 
 **Testes automatizados** (rodar agora como linha de base, e de novo depois de
 B2 e de C)
 
-- [ ] `pnpm lint`
-- [ ] `pnpm test`
-- [ ] `pnpm test:integration`
-- [ ] `pnpm quality`
-- [ ] `pnpm test:e2e`
-- [ ] `pnpm test:a11y`
-- [ ] `pnpm test:visual`
-- [ ] `pnpm test:visual paineis`
-- [ ] `pnpm test:jornadas`
-- [ ] `pnpm mutacao`
-- [ ] `pnpm relatorio:qualidade`
-- [ ] Corrigir o que falhar
+- [x] `pnpm lint` *(linha de base 29/09/2026: ok)*
+- [x] `pnpm test` *(linha de base 29/09/2026: ok)*
+- [x] `pnpm test:integration` *(linha de base 29/09/2026: ok)*
+- [x] `pnpm quality` *(linha de base 29/09/2026: ok)*
+- [ ] `pnpm test:e2e` *Rodado em 29/09/2026: 120 ok, 78 falhas, todas capturas de tela (`*.visual.spec.ts`) rodadas fora do contêiner. Ambiente, não defeito; refazer com Docker.*
+- [ ] `pnpm test:a11y` *Não rodou em 29/09/2026: exige Docker, desligado na máquina. Rodar com Docker.*
+- [ ] `pnpm test:visual` *Não rodou em 29/09/2026: exige Docker.*
+- [ ] `pnpm test:visual paineis` *Não rodou em 29/09/2026: exige Docker.*
+- [x] `pnpm test:jornadas` *(linha de base 29/09/2026: ok)*
+- [x] `pnpm mutacao` *(linha de base 29/09/2026: ok)*
+- [x] `pnpm relatorio:qualidade` *(linha de base 29/09/2026: ok)*
+- [ ] Corrigir o que falhar. *Nada a corrigir no código: as únicas falhas da linha de base são de ambiente (Docker desligado). Fica aberto até rodar os quatro comandos acima com Docker.*
 
 **Traços em produção confirmados (OTLP e Hosting, 29/09)**
 
 Já podem ser feitos, a menos que apareça dependência do caminho do Cloud Tasks
 (nesse caso, anotar aqui).
 
-- [ ] PR da branch `chore/remover-cloudtrace-agent`.
-- [ ] Medir o custo de `verifyIdToken(checkRevoked)`, pendência aberta desde a
-  Etapa 4.
+- [x] PR da branch `chore/remover-cloudtrace-agent`.
+- [x] Medir o custo de `verifyIdToken(checkRevoked)`, pendência aberta desde a
+  Etapa 4. Medido em 30/09/2026: `accounts:lookup` p50 327 ms, p95 392 ms, cerca
+  de 88% de uma requisição autenticada. Resultado e recomendação (manter) em
+  `docs/plano-de-execucao.md`, Etapa 4.
 
 ### B2. Precisa de decisão do Henrique (passo 3)
 
 Cada item diz **o que decidir** e, depois da seta, **o que o Claude ou o Codex
 constroem**. As decisões vão para um `decisoes.md`.
+
+**Segurança e latência**
+
+- [ ] Manter `verifyIdToken(token, true)` em toda requisição autenticada?
+  Medido em 30/09: custa cerca de 327 ms (p50) por requisição, 88% do tempo dela.
+  Recomendação: manter, pelo motivo em `docs/plano-de-execucao.md`, Etapa 4. →
+  Se a decisão for mudar, construir o cache de revogação ou o recorte por rota.
 
 **Redesign do frontend, com estética próxima à da Jusfy**
 
@@ -322,6 +336,10 @@ constroem**. As decisões vão para um `decisoes.md`.
   atualizados.
 - [x] Imagens de referência da regressão visual regravadas (públicas e
   painéis). 👤 aprova uma a uma (A2).
+- [ ] Descobrir a origem dos traços dos ícones (protótipo
+  `direcao-B-pauta.html`). Registrar em `docs/imagens-landing.md` e, se vier de
+  biblioteca, a licença em `licencas-terceiros.md`. *Depois da entrega do front
+  novo.*
 
 **Conteúdo**
 
@@ -462,7 +480,8 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
 - [ ] `EMAIL_FROM` com o remetente decidido em B2.
 - [ ] Atualizar `operacao.md` 4.1 e `entrega-de-email-falhando.md`.
 - [ ] 👤 E-mail real de teste em Gmail, Outlook e Apple Mail.
-- [ ] 👤 Conferir que o `traceparent` sobrevive ao Cloud Tasks: pedir
+- [ ] 👤 Conferir que o `traceparent` sobrevive ao Cloud Tasks (roteiro completo na
+  seção 4.4 de `docs/runbooks/limpeza-infra.md`): pedir
   "Esqueci minha senha" em `/entrar` e comparar o `trace` da requisição do
   navegador com o da entrega da task (user agent `Google-Cloud-Tasks`) no log do
   Cloud Run. Mesmo trace, ou link entre os dois, fecha o item. Adiado de A1 em

@@ -577,8 +577,8 @@ description"**: ele recusa o travessão. A suíte inteira passava porque o gatew
 falso aceitava qualquer texto — o falso agora recusa igual, que é a correção que
 importa. O literal era o menor dos problemas: o **nome e a descrição do produto**
 no checkout hospedado vêm do catálogo, escrito por gente, e texto jurídico usa
-travessão, reticências e aspas curvas o tempo todo; o catálogo real da B&C levaria
-a compra por cartão ao mesmo 400 em produção. `pagamentos/gateway/texto-do-gateway.ts`
+travessão, reticências e aspas curvas o tempo todo; o catálogo que o escritório
+criar pelo painel levaria a compra por cartão ao mesmo 400 em produção. `pagamentos/gateway/texto-do-gateway.ts`
 é o único lugar que prepara esse texto: troca a pontuação tipográfica pelo
 equivalente ASCII, descarta o que sobra e corta num teto conservador. **Acento
 fica** — nada na rodada disse que incomoda, e é nome de produto e de gente. O
@@ -1106,7 +1106,7 @@ São o mesmo padrão, e vale enunciá-lo: **estado derivável do tempo se calcul
 
 **Decisão.** Exportar por OTLP para `https://telemetry.googleapis.com/v1/traces`, com `@opentelemetry/exporter-trace-otlp-proto` e credencial do ambiente (ADC). Entregar a um terceiro um componente que morre em semanas seria transferir o problema junto com o sistema.
 
-**Custo da decisão.** Duas mudanças de infraestrutura: a API `telemetry.googleapis.com` habilitada e o papel `roles/telemetry.tracesWriter` na conta de runtime. O papel `roles/cloudtrace.agent` fica até a primeira exportação ser confirmada em produção — remover os dois de uma vez deixaria a etapa sem caminho de volta.
+**Custo da decisão.** Duas mudanças de infraestrutura: a API `telemetry.googleapis.com` habilitada e o papel `roles/telemetry.tracesWriter` na conta de runtime. O papel `roles/cloudtrace.agent` ficou até a primeira exportação ser confirmada em produção — remover os dois de uma vez deixaria a etapa sem caminho de volta. Saiu no Bloco D, depois da conferência de `docs/runbooks/limpeza-infra.md`, seção 4.
 
 **Armadilha que o desenho evita.** O token do Google expira em uma hora. O exportador OTLP aceita callback assíncrono de cabeçalho exatamente por isso; fixar o token na criação faria o rastreio funcionar por sessenta minutos e parar depois, sem erro nenhum — a instância continuaria de pé, só sem trace.
 
