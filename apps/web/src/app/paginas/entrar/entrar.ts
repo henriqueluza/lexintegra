@@ -15,7 +15,7 @@ import {
 import { rotaInicialDe } from '../../autenticacao/guardas';
 import { Botao } from '../../ui/botao/botao';
 import { Campo } from '../../ui/campo/campo';
-import { Cartao } from '../../ui/cartao/cartao';
+import { MolduraAcesso } from '../../shell/moldura-acesso/moldura-acesso';
 import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
 
 /**
@@ -35,12 +35,12 @@ import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
     RouterLink,
     Botao,
     Campo,
-    Cartao,
+    MolduraAcesso,
     MensagemErro,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './entrar.html',
-  styleUrl: './entrar.css',
+  styleUrl: '../acesso.css',
 })
 export class Entrar {
   private readonly sessao = inject(SessaoService);
@@ -58,9 +58,9 @@ export class Entrar {
     const controle = this.formulario.controls[nome];
     if (!controle.touched || controle.valid) return null;
     if (nome === 'email' && controle.hasError('email')) {
-      return 'Informe um e-mail valido.';
+      return 'Informe um e-mail válido.';
     }
-    return 'Campo obrigatorio.';
+    return 'Campo obrigatório.';
   }
 
   /**
@@ -70,7 +70,7 @@ export class Entrar {
    */
   protected mensagemDaFalha(motivo: FalhaEntrada): string {
     if (motivo === 'conta-desabilitada') {
-      return 'Este acesso esta suspenso. Procure o escritorio.';
+      return 'Este acesso está suspenso. Procure o escritório.';
     }
     if (motivo === 'excesso-de-tentativas') {
       return 'Muitas tentativas seguidas. Aguarde alguns minutos.';
@@ -78,7 +78,7 @@ export class Entrar {
     if (motivo === 'credencial-invalida') {
       return 'E-mail ou senha incorretos.';
     }
-    return 'Nao foi possivel entrar agora. Tente novamente em instantes.';
+    return 'Não foi possível entrar agora. Tente novamente em instantes.';
   }
 
   protected async enviar(): Promise<void> {

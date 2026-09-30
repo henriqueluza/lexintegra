@@ -65,7 +65,7 @@ export class AdminDistribuicao implements OnInit {
   protected readonly colunas: readonly ColunaTabela[] = [
     { chave: 'produto', rotulo: 'Produto' },
     { chave: 'cliente', rotulo: 'Cliente' },
-    { chave: 'situacao', rotulo: 'Situacao' },
+    { chave: 'situacao', rotulo: 'Situação' },
     { chave: 'pedido', rotulo: 'Pedido' },
     { chave: 'acoes', rotulo: 'Distribuir', alinhamento: 'fim' },
     { chave: 'estorno', rotulo: 'Estorno', alinhamento: 'fim' },
@@ -137,7 +137,7 @@ export class AdminDistribuicao implements OnInit {
     this.aEstornar.set(null);
     this.aviso.set(
       estorno.execucao === 'gateway_pendente'
-        ? 'Estorno registrado. A cobranca inteira sera estornada pelo gateway.'
+        ? 'Estorno registrado. A cobrança inteira será estornada pelo gateway.'
         : 'Estorno registrado. Devolva o valor ao cliente e registre em Estornos.',
     );
     await this.recarregar();

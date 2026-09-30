@@ -1,11 +1,17 @@
 <main class="pagina">
-  <header class="abertura">
-    <p class="contexto">Serviços jurídicos</p>
-    <h1>Escolha com clareza.</h1>
-    <p>
-      Compare o escopo, os entregáveis e as condições de cada serviço. Adicione
-      ao carrinho o que faz sentido para sua empresa.
-    </p>
+  <header class="cabecalho">
+    <div>
+      <p class="rotulo">
+        <app-icone nome="grade" tamanho="p" />Catálogo de serviços
+      </p>
+      <h1>Qual é o próximo passo da sua empresa?</h1>
+      <p class="apoio">
+        Entenda o escopo. Compare entregas. Escolha com clareza.
+      </p>
+    </div>
+    <app-link-acao destino="/carrinho" variante="secundario" icone="sacola"
+      >Carrinho ({{ carrinho.quantidade() }})</app-link-acao
+    >
   </header>
   <app-servicos />
 </main>

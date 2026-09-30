@@ -50,7 +50,7 @@
         </app-botao>
         } @else if (entregavel.temArquivo) {
         <span class="cartao-pedido__saldo">
-          Arquivo em verificacao de seguranca.
+          Arquivo em verificação de segurança.
         </span>
         }
       </div>
@@ -77,7 +77,7 @@
           [carregando]="emCurso() === entregavel.id"
           (click)="pedirRevisao(entregavel)"
         >
-          Pedir revisao
+          Pedir revisão
         </app-botao>
         }
       </div>
@@ -93,9 +93,8 @@
       [attr.aria-expanded]="detalhesAbertos()"
       (click)="alternarDetalhes()"
     >
-      {{ detalhesAbertos() ? 'Ocultar detalhes' : 'Observacoes e arquivos' }}
+      {{ detalhesAbertos() ? 'Ocultar detalhes' : 'Observações e arquivos' }}
     </app-botao>
-
   </div>
 
   <!--
@@ -104,10 +103,7 @@
     como saber qual saldo debitar (ADR-12, arquitetura 5.4), e
     `app.routes.spec.ts` guarda o mesmo do lado das rotas.
   -->
-  <app-reunioes-do-pedido
-    [pedido]="pedido()"
-    (alterado)="recarregado.emit()"
-  />
+  <app-reunioes-do-pedido [pedido]="pedido()" (alterado)="recarregado.emit()" />
 
   @if (detalhesAbertos()) {
   <section class="cartao-pedido__detalhes">
@@ -115,16 +111,16 @@
     <app-mensagem-erro>{{ mensagem }}</app-mensagem-erro>
     }
 
-    <h3 class="cartao-pedido__subtitulo">Observacoes</h3>
+    <h3 class="cartao-pedido__subtitulo">Observações</h3>
 
     @if (observacoes().length === 0) {
-    <p class="cartao-pedido__vazio">Nenhuma observacao ainda.</p>
+    <p class="cartao-pedido__vazio">Nenhuma observação ainda.</p>
     } @else {
     <ul class="cartao-pedido__observacoes">
       @for (item of observacoes(); track item.id) {
       <li class="cartao-pedido__observacao">
         <span class="cartao-pedido__autor">
-          {{ item.autorPerfil === 'cliente' ? 'Voce' : 'Escritorio' }}
+          {{ item.autorPerfil === 'cliente' ? 'Você' : 'Escritório' }}
         </span>
         <span>{{ item.texto }}</span>
       </li>
@@ -144,7 +140,7 @@
       (submit)="$event.preventDefault(); enviarObservacao()"
     >
       <app-campo
-        rotulo="Nova observacao"
+        rotulo="Nova observação"
         [formControl]="observacao"
         [multilinha]="true"
         [linhas]="3"
@@ -155,7 +151,7 @@
         [carregando]="emCurso() === 'observacao'"
         [desabilitado]="observacao.invalid"
       >
-        Enviar observacao
+        Enviar observação
       </app-botao>
     </form>
 
@@ -177,7 +173,7 @@
 
     <div class="cartao-pedido__formulario">
       <label class="cartao-pedido__arquivo">
-        <span>Escolher arquivos (JPG ou PDF, ate {{ maximoAnexos }})</span>
+        <span>Escolher arquivos (JPG ou PDF, até {{ maximoAnexos }})</span>
         <input
           type="file"
           multiple

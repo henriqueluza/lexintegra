@@ -9,7 +9,6 @@ import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import {
   conferirPolitica,
   POLITICA_UPLOAD,
-  prefixoDoFluxo,
   type PedidoDeUpload,
 } from 'shared';
 import {
@@ -21,6 +20,7 @@ import { COLECAO_PEDIDOS } from '../pedidos/pedido.js';
 import { FILA_DE_VARREDURA, type FilaDeVarredura } from '../varredura/fila.js';
 import { EntregaveisService } from './entregaveis.service.js';
 import {
+  caminhoDaVersao,
   SUBCOLECAO_ENTREGAVEIS,
   type DocumentoEntregavel,
 } from './entregavel.js';
@@ -84,7 +84,7 @@ export class UploadDeEntregavelService {
      * sobrescrita. Sobrescrever apagaria o arquivo que o cliente ja aceitou.
      */
     const versao = await this.proximaVersao(alvo);
-    const caminho = `${prefixoDoFluxo(FLUXO, alvo.pedidoId, alvo.entregavelId)}/v${String(versao)}`;
+    const caminho = caminhoDaVersao(alvo, versao);
 
     await this.entregaveis.registrarArquivo(
       alvo,

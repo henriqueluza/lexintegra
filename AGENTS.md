@@ -13,16 +13,17 @@ específica do Claude Code e não representam proteção automaticamente ativa n
 No Codex, valem também a sandbox e as permissões da sessão. Nenhum agente deve
 contornar uma restrição de seu ambiente.
 
-## Redesign do frontend — setembro de 2026
+## Redesign do frontend — setembro de 2026 (ADR-22)
 
-- Branch da revisão de identidade: `codex/identidade-navegacao-footer`. Redesign anterior mesclado pelo PR #27. Escopo, decisões e revisão: `docs/revisao-frontend.md`.
-- Landing única com quatro fotografias em `/`; `/todas-as-imagens` e `/com-movimento` redirecionam para `/`. Logo adaptada e favicon em `apps/web/public/`. Ver `docs/identidade-navegacao.md`.
-- Cadastro inicial em `/cadastro`, catálogo em `/servicos`, carrinho em `/carrinho` e checkout em `/checkout`. Login em `/entrar`.
-- Cadastro inicial continua sendo liberação do catálogo, não criação de conta Firebase. A senha nasce após a primeira compra, conforme o backend existente.
-- Cátedra nas páginas públicas; Pauta em todos os painéis, com nova navegação lateral responsiva.
-- Os marcadores de texto visíveis foram substituídos por redação. Termos são minutas versionadas, ainda sujeitos à revisão jurídica antes de produção. A ficha definitiva da contratante continua pendente; não foi inventada aprovação nem alterado seu schema.
-- Sem animação na hero. Underline da navbar e respostas do FAQ têm transições com respeito a movimento reduzido. Nenhuma landing acessa a API. A navbar restaura a sessão Firebase: visitante vê Entrar/Cadastre-se, autenticado vê usuário/carrinho.
-- As notas por etapa abaixo são históricas. Onde mencionarem formulário dentro da home, texto literal pendente ou ausência de imagens, prevalece este registro do redesign.
+- **Direção clara única** nas páginas públicas e nos painéis, com **Plus Jakarta Sans** como família única. Decisão, tabela do que mudou e consequências: ADR-22 no topo de `docs/design.md`. Protótipo aprovado: `docs/prototipos/direcao-final.html` (Codex + Claude). Branch: `feat/redesign-frontend`.
+- `data-direcao="catedra"` (público) e `"pauta"` (painéis) **ficaram**: agora a diferença é de densidade e escala, não de paleta. Superfícies de marca (vinho profundo, dourado, brilho do hero) são tokens comuns em `:root` de `semanticos.css` (`--marca-*`, `--dourado-*`, `--hero-*`, `--sombra-*`, `--raio-*`). Componente continua lendo só semântico.
+- Landing única em `/`, com uma fotografia só; `/todas-as-imagens` e `/com-movimento` redirecionam para `/`. Cadastro inicial em `/cadastro`, catálogo em `/servicos` (com busca local), carrinho em `/carrinho`, checkout em `/checkout`, login em `/entrar`. As quatro páginas de acesso usam `shell/moldura-acesso`.
+- Cadastro inicial continua sendo liberação do catálogo, não criação de conta Firebase. A senha nasce após a primeira compra.
+- Painéis: menu lateral com ícones (`shell/shell-autenticada`), barra de topo com a pessoa, `ui/resumo` com os números do topo. **O cliente ganhou menu** (pedidos, contratar, ficha), sem item de agendamento: a reunião continua dentro do cartão.
+- Os exemplos de serviço da home não afirmam número nem popularidade — o catálogo real nasce vazio e é o escritório que o preenche (há teste).
+- Termos são minutas versionadas, sujeitas à revisão jurídica. A ficha definitiva da contratante continua pendente.
+- Sem animação na hero. Underline da navbar e respostas do FAQ têm transições com respeito a movimento reduzido. Nenhuma landing acessa a API.
+- As notas por etapa abaixo são históricas. Onde falarem de Cátedra escura, Source Serif, quatro fotografias ou menu ausente para o cliente, prevalece este registro.
 
 ## Estado atual do projeto
 
@@ -75,15 +76,9 @@ segurança registrado: a confirmação consultar a cobrança no gateway.
 - **Pipeline no GitHub Actions**: `.github/workflows/ci.yml` (lint, testes com limiar, build, `terraform plan` comentado no PR) e `deploy.yml` (push na `main` → imagem para o Artifact Registry, `terraform apply`, Hosting, smoke test contra `/api/health` comparando o `commitSha`). Autenticação por Workload Identity Federation; nenhum segredo de GCP cadastrado no GitHub.
 - **Bucket sobrando, já removido:** `gs://lexintegra-tfstate` (sem sufixo) existia no projeto, vazio e sem uso — o registro anterior dizia que o nome estava tomado por terceiros, e não estava. Foi apagado à mão em 03/09/2026; hoje responde 404. Conferência em `docs/runbooks/limpeza-infra.md`, seção 1.
 
-**Aguardando resposta externa, não bloqueiam Etapas 1 e 2:**
+**Pendências: a lista única é o [`CHECKLIST.md`](CHECKLIST.md), na raiz** (desde 28/09/2026). Ela absorveu `docs/entrega/pendencias.md` (apagado), as listas de espera que ficavam aqui e os blocos "Só você" ainda abertos do plano. Pendência nova entra lá, e em nenhum outro lugar — nem aqui.
 
-- Aprovação final da AbacatePay para modo de produção (chave `abc_prod_...`) — bloqueia o **fechamento** da Etapa 8; a parte que não depende dela está no PR de `feat/checkout-sandbox-abacatepay`.
-- **Homologação de cartão da conta pelo AbacatePay** — sem ela, o checkout hospedado responde `CARD is not available for this store` e **o cartão não funciona em ambiente nenhum, nem em produção**. Não há endpoint nem configuração no painel que resolva; é processo da conta, com prazo de terceiro. Confirmar com antecedência se a conta do escritório já tem cartão homologado. Ver o "Só você" da Etapa 8.
-- Verificação completa de domínio no Resend — confirmar status atual; bloqueia a Etapa 7, não antes.
-
-**Ainda faltam, do lado da CONTRATANTE:** ficha de anamnese, tipografia oficial (se houver manual além do PDF), confirmação de licenciamento Microsoft Teams dos advogados, aditivo da cláusula 7ª assinado.
-
-**Pendência conhecida na identidade visual:** a logo original enviada tem o wordmark do nome de trabalho anterior embutido na arte — precisa ser refeita com "LexIntegra" antes de uso público (ver ADR-10). As cores extraídas continuam válidas.
+**Logo resolvida:** a arte foi adaptada para "LexIntegra" no redesign (`docs/identidade-navegacao.md`); a pendência do wordmark antigo (ADR-10) está fechada.
 
 **Etapa 3 — sistema de design implementado (branch `feat/sistema-design`):**
 
@@ -208,7 +203,7 @@ segurança registrado: a confirmação consultar a cobrança no gateway.
 
 - **O log estruturado e um `LoggerService` proprio** (`observabilidade/logger-estruturado.ts`). O `json: true` do Nest escreve `level` e `timestamp` numerico; o Cloud Logging le `severity`. Ate aqui o alerta critico chegava como `textPayload` e **nenhuma politica casaria com ele**.
 - **Trace por OTLP para a Telemetry API, nao pelo exportador do Cloud Trace** (ADR-20): aquele sera arquivado em 30/10/2026. Exige `telemetry.googleapis.com` habilitada e `roles/telemetry.tracesWriter`; `cloudtrace.agent`, do exportador antigo, saiu depois de a exportacao por OTLP ser confirmada em producao (Bloco D).
-- **Sem gancho de ESM**, e nao por acaso: o Express 5 e CommonJS, entao o gancho de `require` da conta. Ele fica atras de `RASTREIO_HOOK_ESM`, desligado. `instrumentation-nestjs-core` nao entra — declara `>=4 <12`.
+- **Sem gancho de ESM**, e nao por acaso: o Express 5 e CommonJS, entao o gancho de `require` da conta. Nao ha variavel que ligue o gancho de ESM — `RASTREIO_HOOK_ESM`, citada aqui ate o Bloco E, nunca existiu no codigo; liga-lo seria mudar `observabilidade/instrumentacao.ts`. `instrumentation-nestjs-core` nao entra — declara `>=4 <12`.
 - **A amostragem NAO usa as variaveis padrao do OpenTelemetry**: `parentbased_traceidratio` deixa `remoteParentNotSampled` em `AlwaysOff`, que e o caso comum no Cloud Run — nenhum trace nosso existiria.
 - **O registro do outbox guarda `rastreio`**, o traceparent de origem, e a entrega loga o trace id dele. A entrega quase sempre roda noutro trace.
 - **Relato de erro do navegador**: `POST /api/erros-do-navegador`, publico, **sem App Check** (exigi-lo violaria a regra 10, e o erro que mais interessa e o da propria inicializacao do App Check). **A regra 10 ganha da observabilidade**: na home, antes do pre-cadastro, o relato espera em memoria.
@@ -243,7 +238,7 @@ segurança registrado: a confirmação consultar a cobrança no gateway.
 - **Imagens de referência:** nove novas, **não aprovadas**, e todas as existentes dos painéis mudaram porque o menu ganhou item. Revisão humana, uma a uma.
 - **Cobertura:** `apps/api` 91/82/90/92, `apps/web` 96/89/91/97, `shared` 99/100/100/99. **Mutação:** `shared` 98,15%, API 87,69%.
 
-**Próximo trabalho recomendado:** revisão humana dos PRs das Etapas 8 e 10, os dois parciais. **As duas travam no mesmo lugar — prazo de terceiro — e as duas precisam ser iniciadas AGORA, não quando o código estiver pronto:** a homologação de cartão com o AbacatePay (sem ela o cartão não funciona nem em produção) e o registro do aplicativo no Entra ID com a application access policy (propagação de até 48h). Quando a primeira sair, fazer a parte de cartão da rodada no sandbox — o nome do evento de conclusão do cartão é o item de maior risco ainda aberto. Quando a segunda sair, preencher `usuarioTeams` de cada advogado e ligar `REUNIOES_MODO=graph` em commit próprio, com uma chamada de teste manual antes. As imagens de referência da regressão visual esperam aprovação uma a uma. Do lado da CONTRATANTE seguem pendentes: catálogo real da B&C, ficha de anamnese, textos jurídicos do estorno e do cancelamento, domínio verificado no Resend, chave de produção, os destinatários dos alertas e a confirmação das oito decisões provisórias do ADR-21 — em especial a antecedência mínima de 24 horas para marcar e a devolução do crédito quando quem cancela é o escritório.
+**Próximo trabalho recomendado:** o que estiver aberto no [`CHECKLIST.md`](CHECKLIST.md), na ordem da seção 0 de lá.
 
 ## Stack
 
@@ -477,7 +472,7 @@ Estas vêm de decisões registradas nos ADRs. Violá-las é bug, não preferênc
 
 16. **Upload tem dois fluxos distintos, não um.** Advogado envia entregável (dispara transição de estado). Cliente envia até 3 arquivos de apoio (jpg/pdf, 5 MB cada) associados ao pedido, sem afetar o estado do entregável. Não misture os dois num único endpoint ou numa única validação.
 
-17. **Custom claim só é escrita em dois lugares, e cada um escreve um perfil só** (emendada na Etapa 8). `AdvogadosService.criar` escreve `role: advogado`. `ContasClienteService.obterOuCriar` escreve `role: cliente`, e **só em conta sem perfil nenhum** — e-mail que já é advogado ou administrador vira pagamento `conflito_de_conta`, nunca troca de claim. Nada mais na aplicação chama `setCustomUserClaims`, e isso é lint: um `no-restricted-syntax` no `eslint.config.mjs` recusa a chamada fora dos dois serviços. `admin` nunca é escrito por código: o administrador global é provisionado fora da aplicação (item 2.4.2), por script manual em `scripts/manual-only/`. Suspensão **não** mexe na claim — quem foi suspenso continua sendo advogado, o que muda é o acesso.
+17. **Custom claim só é escrita em dois lugares, e cada um escreve um perfil só** (emendada na Etapa 8). `AdvogadosService.criar` escreve `role: advogado`. `ContasClienteService.obterOuCriar` escreve `role: cliente`, e **só em conta sem perfil nenhum** — e-mail que já é advogado ou administrador vira pagamento `conflito_de_conta`, nunca troca de claim. Nada mais na aplicação chama `setCustomUserClaims`, e isso é lint: um `no-restricted-syntax` no `eslint.config.mjs` recusa a chamada fora dos dois serviços. `admin` nunca é escrito por código: o administrador global é provisionado fora da aplicação (item 2.4.2), por operação manual do desenvolvedor, fora do repositório (ver "Scripts de execução manual apenas"). Suspensão **não** mexe na claim — quem foi suspenso continua sendo advogado, o que muda é o acesso.
 
 18. **Rota nova na API nasce fechada.** Os guards são globais; abrir exige `@Publico()` explícito, e a superfície administrativa declara `@Perfis('admin')` na classe do controlador, não em cada método. As rotas públicas de usuário são **oito** — health, redefinição de senha, pré-cadastro, vitrine, checkout, situação do checkout, webhook do gateway e relato de erro do navegador (Etapa 12) — mais as **cinco** internas (varredura, retenção, entrega e varredura do outbox, e sinais operacionais), que são `@Publico()` só no sentido de "sem usuário" e exigem credencial de tarefa. `controladores.spec.ts` lista todas **nominalmente**: abrir uma rota exige editar o teste. A vitrine e o checkout são `@Publico()` no sentido de "sem identidade" e mesmo assim exigem o token de pré-cadastro, por um guard de controlador. O webhook e o relato de erro do navegador são os únicos públicos de usuário sem App Check. O webhook se autentica por assinatura antes de qualquer leitura; o relato de erro não pode exigir App Check por duas razões — obter o token é chamada de rede, e a regra 10 proíbe isso na home, e o erro que mais interessa é justamente o da inicialização do App Check. No lugar, ele tem esquema estreito, limite por endereço e teto por instância.
 
@@ -515,7 +510,14 @@ Pare também quando: a mudança exigir novo serviço externo, alterar custo reco
 
 ## Scripts de execução manual apenas
 
-Scripts dentro de `scripts/manual-only/` (ex. `atribuir-admin.js`) nunca devem ser
+**A pasta `scripts/manual-only/` não existe no repositório** (verificado no Bloco E,
+25/09/2026: nenhum commit a criou). O script de elevação a administrador nunca foi
+versionado; a claim `admin` foi gravada à mão, fora do repositório. O caminho
+continua reservado: o `.claude/settings.json` nega a execução de qualquer coisa
+sob ele, e a regra abaixo vale para qualquer script que eleve privilégio, esteja
+onde estiver.
+
+Scripts de elevação de privilégio nunca devem ser
 executados por sessão de agente — nem sugeridos, nem rodados automaticamente.
 Elevação de privilégio (atribuição de custom claims) é a operação mais sensível
 do sistema e deve ser executada apenas manualmente, pelo desenvolvedor, fora

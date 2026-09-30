@@ -21,7 +21,7 @@
           [obrigatorio]="true"
         />
         <app-campo
-          rotulo="Preco"
+          rotulo="Preço"
           formControlName="preco"
           marcador="3.200,00"
           dica="Informe o valor em reais."
@@ -30,7 +30,7 @@
       </div>
 
       <app-campo
-        rotulo="Descricao"
+        rotulo="Descrição"
         formControlName="descricao"
         [multilinha]="true"
         [obrigatorio]="true"
@@ -38,21 +38,21 @@
 
       <div class="produtos__campos produtos__campos--quatro">
         <app-campo
-          rotulo="Reunioes incluidas"
+          rotulo="Reuniões incluídas"
           formControlName="quantidadeReunioes"
         />
         <app-campo
-          rotulo="Prazo das reunioes"
+          rotulo="Prazo das reuniões"
           formControlName="prazoValidadeReunioesDias"
           dica="Dias a partir da compra."
         />
         <app-campo
-          rotulo="Intervalo minimo"
+          rotulo="Intervalo mínimo"
           formControlName="intervaloMinimoReunioesDias"
-          dica="Dias entre uma reuniao e outra."
+          dica="Dias entre uma reunião e outra."
         />
         <app-campo
-          rotulo="Revisoes permitidas"
+          rotulo="Revisões permitidas"
           formControlName="numeroRevisoesPermitidas"
           dica="Número de revisões incluídas para cada entregável."
         />
@@ -69,23 +69,23 @@
         salvo, e digitar no campo escrevia num controle ja removido.
       -->
       <fieldset class="produtos__lista">
-        <legend class="produtos__legenda">Entregaveis</legend>
+        <legend class="produtos__legenda">Entregáveis</legend>
         <p class="produtos__ajuda">
-          Cada item vira um entregavel proprio no pedido, com estado e saldo de
-          revisao independentes. Pelo menos um.
+          Cada item vira um entregável próprio no pedido, com estado e saldo de
+          revisão independentes. Pelo menos um.
         </p>
 
         @for (controle of lista('entregaveis').controls; track controle) {
         <div class="produtos__item">
           <app-campo
-            [rotulo]="'Entregavel ' + ($index + 1)"
+            [rotulo]="'Entregável ' + ($index + 1)"
             [formControl]="controle"
           />
           <app-botao
             variante="texto"
             tamanho="p"
             icone="fecha"
-            [rotuloAcessivel]="'Remover entregavel ' + ($index + 1)"
+            [rotuloAcessivel]="'Remover entregável ' + ($index + 1)"
             (click)="remover('entregaveis', $index)"
           >
             Remover
@@ -99,7 +99,7 @@
             tamanho="p"
             (click)="acrescentar('entregaveis')"
           >
-            Adicionar entregavel
+            Adicionar entregável
           </app-botao>
         </div>
       </fieldset>
@@ -147,7 +147,7 @@
 
       <div class="produtos__acoes">
         <app-botao variante="primario" tipo="submit" [carregando]="salvando()">
-          {{ editando() === null ? 'Cadastrar produto' : 'Salvar alteracoes' }}
+          {{ editando() === null ? 'Cadastrar produto' : 'Salvar alterações' }}
         </app-botao>
 
         @if (editando() !== null) {
@@ -161,7 +161,7 @@
 
   <div class="produtos__filtro">
     <app-selecao
-      rotulo="Situacao"
+      rotulo="Situação"
       [opcoes]="opcoesDeSituacao"
       [formControl]="situacao"
     />
@@ -169,7 +169,7 @@
 
   @if (falhaDaLista()) {
   <app-mensagem-erro variante="bloco">
-    Nao foi possivel carregar o catalogo.
+    Não foi possível carregar o catálogo.
   </app-mensagem-erro>
   }
 

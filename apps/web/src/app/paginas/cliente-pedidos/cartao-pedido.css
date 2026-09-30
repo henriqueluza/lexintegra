@@ -41,6 +41,9 @@
 .cartao-pedido__entregaveis {
   display: flex;
   flex-direction: column;
+  gap: var(--s3);
+  margin: 0;
+  padding: 0;
   list-style: none;
 }
 
@@ -49,8 +52,9 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--s3);
-  padding: var(--s3) 0;
-  border-top: var(--borda-fina) solid var(--divisor);
+  padding: var(--s4);
+  border-radius: var(--raio);
+  background: var(--superficie);
 }
 
 .cartao-pedido__identificacao {
@@ -62,7 +66,7 @@
 }
 
 .cartao-pedido__nome {
-  font-weight: var(--peso-medio);
+  font-weight: var(--peso-forte);
 }
 
 .cartao-pedido__saldo,
@@ -95,7 +99,7 @@
 
 .cartao-pedido__subtitulo {
   font-family: var(--fonte-display);
-  font-size: var(--t-t3);
+  font-size: var(--t-t2);
   font-weight: var(--peso-titulo);
   letter-spacing: var(--letra-titulo);
 }
@@ -127,4 +131,15 @@
   flex-direction: column;
   gap: var(--s2);
   font-size: var(--t-mini);
+}
+
+/* Observacao: balao sobre o papel, com o autor em cima (ADR-22). */
+.cartao-pedido__observacao {
+  padding: var(--s3) var(--s4);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+
+.cartao-pedido__autor {
+  font-weight: var(--peso-forte);
 }

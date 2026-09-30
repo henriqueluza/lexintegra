@@ -34,6 +34,7 @@
   --peso-medio: 500;
   --peso-forte: 600;
   --peso-maximo: 700;
+  --peso-extra: 800;
 
   /* Alturas de linha */
   --altura-apertada: 1.15;
@@ -52,7 +53,7 @@
   --borda-fina: 1px;
   --borda-media: 2px;
   --borda-grossa: 3px;
-  --traco-icone: 1.5px;
+  --traco-icone: 1.7px;
 
   /*
    * Medidas de leitura em `ch`, nao em pixel: elas dependem da largura do

@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   inject,
   signal,
@@ -59,6 +60,17 @@ export class Servicos {
    * novo, para sempre — requisicoes em rajada contra o Cloud Run vindas de uma
    * tela parada. Quem tenta de novo depois de uma falha e a pessoa, no botao.
    */
+  /** Busca local, sobre o que ja veio: nenhuma chamada nova por tecla. */
+  protected readonly busca = signal('');
+  protected readonly filtrados = computed(() => {
+    const termo = normalizar(this.busca().trim());
+    const todos = this.produtos() ?? [];
+    if (termo === '') return todos;
+    return todos.filter((produto) =>
+      normalizar(`${produto.nome} ${produto.descricao}`).includes(termo),
+    );
+  });
+
   private readonly tentado = signal(false);
 
   constructor() {
@@ -97,4 +109,12 @@ export class Servicos {
       this.carregando.set(false);
     }
   }
+}
+
+/** Minusculas e sem acento: "revisao" encontra "Revisão". */
+function normalizar(texto: string): string {
+  return texto
+    .toLocaleLowerCase('pt-BR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }

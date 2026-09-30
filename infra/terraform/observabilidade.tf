@@ -174,13 +174,19 @@ resource "google_logging_metric" "outbox_entregas" {
   }
 }
 
-# Idade da base do ClamAV no momento em que o job a publicou. O sinal vem do job
-# (`clamav.base-publicada`), e nao do scanner: e ele que responde "o que esta no
-# bucket esta velho?", que e a pergunta que o job verde nao responde sozinho.
+# Idade da base do ClamAV no momento em que o job a publicou. O sinal vem do job,
+# e nao do scanner: e ele que responde "o que esta no bucket esta velho?", que e a
+# pergunta que o job verde nao responde sozinho.
+#
+# MEDE SO O `daily` (`clamav.daily-publicada`, ver `idade-da-base.ts`). Com o sinal
+# `clamav.base-publicada`, que sai para os tres arquivos, o `main.cvd` (meses) e o
+# `bytecode.cvd` (anos) faziam a politica de idade disparar em TODA execucao
+# saudavel do job — incidente falso de 29/09/2026. As duas politicas do ClamAV
+# leem esta metrica: a de ausencia tambem passa a significar "o daily parou".
 resource "google_logging_metric" "clamav_base_idade" {
   project         = var.project_id
   name            = "clamav-base-idade-horas"
-  filter          = "jsonPayload.sinal=\"clamav.base-publicada\""
+  filter          = "jsonPayload.sinal=\"clamav.daily-publicada\""
   value_extractor = "EXTRACT(jsonPayload.idadeHoras)"
   bucket_options {
     linear_buckets {
@@ -197,19 +203,82 @@ resource "google_logging_metric" "clamav_base_idade" {
   }
 }
 
-# SEM EMISSOR ATE A ETAPA 10, e isso e deliberado.
+# Advogado ATIVO, com horario publicado na semana corrente ou na seguinte, e sem
+# `usuarioTeams` — o preventivo: um cliente pode marcar com ele e a sala nunca
+# nasceria (ADR-21, decisao B). A sonda emite UMA LINHA POR ADVOGADO
+# (`sinais/reunioes.ts`), e a metrica conta linhas.
 #
-# A arquitetura (secao 9) lista "advogados com disponibilidade publicada e sem
-# link de reuniao" entre as metricas de negocio. O modelo nao tem campo de
-# reuniao — a Etapa 10 esta bloqueada por dependencia externa (Entra ID/Teams) —,
-# entao NADA emite este sinal hoje. A metrica e a politica existem para que a
-# Etapa 10 so precise emitir a linha; a politica dispara com `> 0` e, sem dado,
-# nao dispara nunca. Emitir `0` daqui seria fingir medicao de algo que nao
-# existe.
+# SO E EMITIDO COM O TEAMS LIGADO. Com `REUNIOES_MODO=desligado` a sonda nao
+# emite, e a metrica fica sem ponto: todo advogado estaria "sem link" por uma
+# integracao desligada de proposito (achado 4.2 do Bloco E). Ate o Bloco E
+# nada emitia este sinal, e a politica nunca disparava.
 resource "google_logging_metric" "disponibilidade_sem_link" {
   project = var.project_id
   name    = "disponibilidade-sem-link"
   filter  = "resource.type=\"cloud_run_revision\" AND jsonPayload.sinal=\"disponibilidade.sem-link\""
+
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "INT64"
+  }
+}
+
+# Idade da reuniao em `reservada_sem_link` criada ha mais tempo, na MESMA linha
+# `sinais` da sonda — como as idades do outbox e da quarentena. Sai sempre,
+# inclusive zerada; com o Teams desligado nenhuma reuniao nasce, e o valor e 0.
+# Complementa o `outbox.abandonado`, que avisa uma vez so: este continua medindo
+# enquanto a reuniao estiver sem sala (achado 4.2 do Bloco E).
+resource "google_logging_metric" "reuniao_sem_sala" {
+  project         = var.project_id
+  name            = "reuniao-sem-sala-segundos"
+  filter          = "resource.type=\"cloud_run_revision\" AND jsonPayload.sinal=\"sinais\""
+  value_extractor = "EXTRACT(jsonPayload.reuniaoSemSalaSegundos)"
+  bucket_options {
+    linear_buckets {
+      num_finite_buckets = 48
+      width              = 900
+      offset             = 0
+    }
+  }
+
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "DISTRIBUTION"
+    unit        = "s"
+  }
+}
+
+# Recusa do webhook por segredo ou assinatura (`AssinaturaWebhookGuard`). O
+# motivo entra como rotulo: tudo por `segredo` costuma ser segredo trocado de um
+# lado so; `assinatura` com segredo certo e alguem que tem a URL e nao o corpo
+# assinado (achado 4.5 do Bloco E). Nao le o log de requisicao — a exclusao
+# acima o descarta —, le a linha da aplicacao, que nao tem URL.
+resource "google_logging_metric" "webhook_recusado" {
+  project = var.project_id
+  name    = "webhook-recusado"
+  filter  = "resource.type=\"cloud_run_revision\" AND jsonPayload.sinal=\"webhook.recusado\""
+
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "INT64"
+
+    labels {
+      key         = "motivo"
+      description = "segredo ou assinatura"
+    }
+  }
+
+  label_extractors = {
+    motivo = "EXTRACT(jsonPayload.motivo)"
+  }
+}
+
+# Uma linha por passagem da retencao que CHEGA AO FIM (`retencao.service.ts`).
+# Alimenta uma condicao de AUSENCIA: o problema e o silencio.
+resource "google_logging_metric" "retencao_passagens" {
+  project = var.project_id
+  name    = "retencao-passagens"
+  filter  = "resource.type=\"cloud_run_revision\" AND jsonPayload.sinal=\"retencao.passagem\""
 
   metric_descriptor {
     metric_kind = "DELTA"
@@ -260,6 +329,8 @@ resource "google_monitoring_alert_policy" "alertas_criticos" {
       tentativas; `pagamento.orfao`, `pagamento.divergente` e
       `pagamento.conflito_de_conta` sao casos em que houve dinheiro e nao ha pedido.
       Nenhum deles se resolve sozinho.
+
+      Runbook: docs/runbooks/alerta-critico.md
     EOT
   }
 
@@ -293,6 +364,8 @@ resource "google_monitoring_alert_policy" "outbox_parado" {
       segundos; o varredor fecha a janela de tarefa perdida em minutos. Acima disso,
       algo esta impedindo a entrega — provedor fora do ar, fila com backoff longo, ou
       registros abandonados acumulando.
+
+      Runbook: docs/runbooks/outbox-parado.md
     EOT
   }
 
@@ -330,6 +403,8 @@ resource "google_monitoring_alert_policy" "entrega_de_email_falhando" {
       Varias tentativas de entrega falharam na mesma janela. Uma falha isolada e o
       caso que a fila resolve sozinha; varias seguidas indicam provedor recusando —
       teto diario do Resend, dominio nao verificado, chave revogada.
+
+      Runbook: docs/runbooks/entrega-de-email-falhando.md
     EOT
   }
 
@@ -363,6 +438,8 @@ resource "google_monitoring_alert_policy" "quarentena_parada" {
       esgotou as tentativas e sumiu da fila. Nada falhou agora, ninguem foi avisado, e o
       arquivo fica parado — o cliente so ve "em verificacao de seguranca" (regra
       inviolavel 6).
+
+      Runbook: docs/runbooks/scanner-indisponivel.md
     EOT
   }
 
@@ -396,6 +473,8 @@ resource "google_monitoring_alert_policy" "clamav_base_velha" {
       limite de taxa e nao ha nada novo a aplicar, e o bucket recebe de volta os mesmos
       bytes. Um scanner que responde "limpo" com assinaturas velhas parece estar
       funcionando, e e esse o pior desfecho possivel.
+
+      Runbook: docs/runbooks/scanner-indisponivel.md
     EOT
   }
 
@@ -449,6 +528,8 @@ resource "google_monitoring_alert_policy" "clamav_base_sem_publicacao" {
       dia, entao isto significa pelo menos uma execucao perdida — e provavelmente duas.
       Sem esta politica, um job que simplesmente para de rodar nao dispara nada: o alerta
       de base velha depende de haver sinal para medir.
+
+      Runbook: docs/runbooks/scanner-indisponivel.md
     EOT
   }
 
@@ -471,7 +552,73 @@ resource "google_monitoring_alert_policy" "clamav_base_sem_publicacao" {
   }
 }
 
-# SEM TRAFEGO ATE A ETAPA 10 — ver o comentario da metrica.
+# O JOB DA BASE FALHOU, OU O SCANNER SUBIU SEM BASE.
+#
+# As duas politicas acima dependem de o job ter publicado ALGUMA VEZ: limiar sobre
+# a idade nao dispara sem pontos, e ausencia so dispara para serie que ja existiu.
+# Entre 14/09 e 29/09/2026 o job nunca rodou (403 do Scheduler, sem binding) e
+# nenhum alerta avisou. Estas tres condicoes olham o LOG, que existe desde a
+# primeira falha:
+#   1. o Scheduler nao conseguiu iniciar o job (o 403 daquele incidente);
+#   2. o job iniciou e terminou em erro (freshclam, bucket, memoria);
+#   3. o scanner subiu ou varreu sem nenhuma base (bucket vazio e mirror fora).
+#
+# O QUE ISTO NAO COBRE: job desabilitado ou apagado, que nao gera log nenhum. Para
+# isso serve a politica de ausencia, depois da primeira publicacao.
+resource "google_monitoring_alert_policy" "clamav_job_falhou" {
+  project               = var.project_id
+  display_name          = "Job da base do ClamAV falhou ou scanner sem base"
+  combiner              = "OR"
+  notification_channels = local.canais_por_alerta["clamav-job-falhou"]
+
+  documentation {
+    content = <<-EOT
+      A atualizacao da base do ClamAV falhou, ou o scanner esta sem assinaturas.
+      Um scanner sem base responde `indisponivel` a tudo (nunca `limpo`) e a fila
+      reentrega: nada infectado passa, mas nenhum upload e concluido.
+
+      Confira `gcloud run jobs executions list --job=clamav-atualizar-base --region=${var.region}`
+      e o log da execucao. Se o Scheduler recusou (PERMISSION_DENIED), falta o
+      binding `roles/run.invoker` da conta `tarefas-lexintegra` no job.
+
+      Runbook: docs/runbooks/scanner-indisponivel.md
+    EOT
+  }
+
+  conditions {
+    display_name = "Scheduler nao conseguiu iniciar o job"
+
+    condition_matched_log {
+      filter = "resource.type=\"cloud_scheduler_job\" AND resource.labels.job_id=\"${google_cloud_scheduler_job.clamav_base.name}\" AND severity>=ERROR"
+    }
+  }
+
+  conditions {
+    display_name = "job terminou em erro"
+
+    condition_matched_log {
+      filter = "resource.type=\"cloud_run_job\" AND resource.labels.job_name=\"${google_cloud_run_v2_job.atualizar_base_clamav.name}\" AND severity>=ERROR"
+    }
+  }
+
+  conditions {
+    display_name = "scanner sem base de assinaturas"
+
+    condition_matched_log {
+      filter = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${google_cloud_run_v2_service.scanner.name}\" AND jsonPayload.sinal=\"scanner.sem-base\""
+    }
+  }
+
+  alert_strategy {
+    # Um scanner sem base loga a cada varredura reentregue; sem teto, seriam
+    # dezenas de e-mails iguais.
+    notification_rate_limit {
+      period = "3600s"
+    }
+    auto_close = "86400s"
+  }
+}
+
 resource "google_monitoring_alert_policy" "disponibilidade_sem_link" {
   project               = var.project_id
   display_name          = "Disponibilidade publicada sem link de reuniao"
@@ -480,14 +627,16 @@ resource "google_monitoring_alert_policy" "disponibilidade_sem_link" {
 
   documentation {
     content = <<-EOT
-      Ha reuniao marcada sem link do Teams (regra inviolavel 13: o link nunca e
-      inventado nem reaproveitado; a reuniao fica em estado "sem link").
+      Ha advogado ativo, com horario publicado na semana corrente ou na seguinte, e
+      sem `usuarioTeams` (o object ID do Entra). Um cliente pode marcar com ele, e a
+      sala do Teams nunca seria criada: a reuniao ficaria em "reservada_sem_link"
+      (regra inviolavel 13). O log da sonda traz o `advogadoId` de cada um.
 
-      ESTA POLITICA NASCE SEM TRAFEGO. O modelo ainda nao tem campo de reuniao — a
-      Etapa 10 depende de configuracao no Entra ID —, entao nenhum codigo emite o sinal
-      `disponibilidade.sem-link`. Ela existe para a Etapa 10 so precisar emitir a linha,
-      e enquanto isso nao dispara: sem dado, `> 0` nunca e verdadeiro. Se aparecer
-      incidente aqui antes da Etapa 10, e defeito de filtro, nao de negocio.
+      So dispara com o Teams ligado: com REUNIOES_MODO=desligado a sonda nao emite
+      este sinal. Enquanto a edicao de advogado nao existir, advogados criados antes
+      de o campo existir disparam este alerta — comportamento esperado.
+
+      Runbook: docs/runbooks/reuniao-sem-link.md
     EOT
   }
 
@@ -508,6 +657,170 @@ resource "google_monitoring_alert_policy" "disponibilidade_sem_link" {
   }
 }
 
+resource "google_monitoring_alert_policy" "reuniao_sem_sala" {
+  project               = var.project_id
+  display_name          = "Reuniao marcada sem sala do Teams"
+  combiner              = "OR"
+  notification_channels = local.canais_por_alerta["reuniao-sem-sala"]
+
+  documentation {
+    content = <<-EOT
+      Ha reuniao em "reservada_sem_link" ha mais de ${var.limite_reuniao_sem_sala_minutos} minutos: o
+      cliente marcou, o slot e o saldo estao reservados, e a sala do Teams nao
+      nasceu. O `outbox.abandonado` avisa uma vez, depois de 10 tentativas; este
+      continua enquanto a reuniao estiver sem sala. Com o Teams desligado nenhuma
+      reuniao nasce, e este alerta nao dispara.
+
+      Runbook: docs/runbooks/reuniao-sem-link.md
+    EOT
+  }
+
+  conditions {
+    display_name = "idade da mais antiga acima do limite"
+
+    condition_threshold {
+      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.reuniao_sem_sala.name}\" AND resource.type=\"cloud_run_revision\""
+      comparison      = "COMPARISON_GT"
+      threshold_value = var.limite_reuniao_sem_sala_minutos * 60
+      duration        = "0s"
+
+      aggregations {
+        alignment_period   = "600s"
+        per_series_aligner = "ALIGN_PERCENTILE_99"
+      }
+    }
+  }
+}
+
+resource "google_monitoring_alert_policy" "webhook_recusado" {
+  project               = var.project_id
+  display_name          = "Webhook do gateway recusado"
+  combiner              = "OR"
+  notification_channels = local.canais_por_alerta["webhook-recusado"]
+
+  documentation {
+    content = <<-EOT
+      Mais de ${var.limite_webhook_recusado} chamadas ao webhook do AbacatePay recusadas em 10 minutos, por
+      segredo da URL ou por assinatura. O rotulo `motivo` separa os casos: todas
+      por `segredo` costuma ser o segredo trocado num lado so (Secret Manager ou
+      painel do gateway), e o pagamento real para de virar pedido; `assinatura` com
+      segredo certo e alguem com a URL tentando forjar evento. Com
+      PAGAMENTOS_MODO=desligado o webhook responde 503 antes de conferir, e isto nao
+      dispara.
+
+      Runbook: docs/runbooks/webhook-recusado.md
+    EOT
+  }
+
+  conditions {
+    display_name = "recusas em 10 minutos"
+
+    condition_threshold {
+      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.webhook_recusado.name}\" AND resource.type=\"cloud_run_revision\""
+      comparison      = "COMPARISON_GT"
+      threshold_value = var.limite_webhook_recusado
+      duration        = "0s"
+
+      aggregations {
+        alignment_period     = "600s"
+        per_series_aligner   = "ALIGN_SUM"
+        cross_series_reducer = "REDUCE_SUM"
+        group_by_fields      = ["metric.label.motivo"]
+      }
+    }
+  }
+}
+
+# AUSENCIA, como a base do ClamAV — e pelo mesmo teto: a condicao de ausencia
+# nao passa de 23h30m. Por isso a retencao roda DUAS VEZES POR DIA (varredura.tf):
+# com uma, o intervalo normal (24h) ja estouraria a janela todo dia.
+resource "google_monitoring_alert_policy" "retencao_parada" {
+  project               = var.project_id
+  display_name          = "Retencao parada"
+  combiner              = "OR"
+  notification_channels = local.canais_por_alerta["retencao-parada"]
+
+  documentation {
+    content = <<-EOT
+      Nenhuma passagem da retencao chegou ao fim nas ultimas 23 horas. Ela roda as 5h
+      e as 17h: isto e pelo menos uma execucao perdida ou quebrada no meio. Parada, a
+      retencao nao avisa o titular no 23o dia nem exclui no 30o — arquivos ficam
+      alem do prazo, sem erro nenhum.
+
+      Runbook: docs/runbooks/retencao-parada.md
+    EOT
+  }
+
+  conditions {
+    display_name = "nenhuma passagem concluida em 23 horas"
+
+    condition_absent {
+      filter   = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.retencao_passagens.name}\" AND resource.type=\"cloud_run_revision\""
+      duration = "82800s"
+
+      # AGRUPADO POR SERVICO, NUNCA POR REVISAO. Sem `cross_series_reducer`, cada
+      # revisao e uma serie: apos um deploy a serie da revisao anterior para, e a
+      # ausencia dispara 23h depois com a passagem rodando normalmente na revisao
+      # nova (falso positivo de 29/09/2026, revisao 00030). Reduzindo por
+      # `service_name`, a serie so some quando NENHUMA revisao emite.
+      aggregations {
+        alignment_period     = "3600s"
+        per_series_aligner   = "ALIGN_SUM"
+        cross_series_reducer = "REDUCE_SUM"
+        group_by_fields      = ["resource.label.service_name"]
+      }
+    }
+  }
+}
+
+# A SONDA PARADA DEIXA OUTROS ALERTAS CEGOS: outbox parado, quarentena parada,
+# reuniao sem sala e disponibilidade sem link vem todos dela. Nao precisa de
+# metrica nova: `outbox-atraso-segundos` recebe um ponto a cada execucao da
+# sonda, inclusive zerado, justamente para "sem dado" significar "sonda parada".
+resource "google_monitoring_alert_policy" "sonda_parada" {
+  project               = var.project_id
+  display_name          = "Sonda de sinais parada"
+  combiner              = "OR"
+  notification_channels = local.canais_por_alerta["sonda-parada"]
+
+  documentation {
+    content = <<-EOT
+      A sonda `sinais-operacionais` nao registra medicao ha 15 minutos (roda a cada 5).
+      Enquanto ela estiver parada, os alertas de outbox parado, arquivo em
+      quarentena, reuniao sem sala e disponibilidade sem link NAO disparam — nao ha
+      dado para medir.
+
+      Runbook: docs/runbooks/sonda-parada.md
+    EOT
+  }
+
+  conditions {
+    display_name = "sem medicao em 15 minutos"
+
+    condition_absent {
+      filter   = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.outbox_atraso.name}\" AND resource.type=\"cloud_run_revision\""
+      duration = "900s"
+
+      # `ALIGN_SUM`, e NAO `ALIGN_COUNT`: a metrica e DELTA/DISTRIBUTION, e a API
+      # recusa `ALIGN_COUNT` nessa combinacao (400 no primeiro deploy, 25/09/2026).
+      # E o mesmo alinhador de `clamav_base_sem_publicacao`, ausencia sobre
+      # distribuicao ja aceita em producao. Numa condicao de ausencia o valor
+      # alinhado nao importa — so se ha ponto na janela.
+      #
+      # AGRUPADO POR SERVICO, NUNCA POR REVISAO: cada deploy criava uma serie nova e
+      # a da revisao anterior parava, o que disparava esta politica ~25 min depois
+      # de TODO merge, com a sonda funcionando (29/09/2026). `REDUCE_SUM` e valido
+      # para DELTA com distribuicao (documentacao do Monitoring).
+      aggregations {
+        alignment_period     = "300s"
+        per_series_aligner   = "ALIGN_SUM"
+        cross_series_reducer = "REDUCE_SUM"
+        group_by_fields      = ["resource.label.service_name"]
+      }
+    }
+  }
+}
+
 resource "google_monitoring_alert_policy" "api_fora_do_ar" {
   project               = var.project_id
   display_name          = "API fora do ar"
@@ -519,6 +832,8 @@ resource "google_monitoring_alert_policy" "api_fora_do_ar" {
       O uptime check falhou de mais de uma regiao. Como ele bate no dominio publico, a
       falha pode estar no Hosting, no rewrite (ADR-15) ou no Cloud Run — nesta ordem de
       probabilidade, porque o Cloud Run tem startup probe no mesmo endpoint.
+
+      Runbook: docs/runbooks/api-fora-do-ar.md
     EOT
   }
 

@@ -7,7 +7,7 @@
 
   <app-cartao
     titulo="Cadastrar advogado"
-    descricao="O acesso e criado aqui e so aqui. Nao ha autocadastro."
+    descricao="O acesso é criado aqui e só aqui. Não há autocadastro."
   >
     <form
       class="advogados__formulario"
@@ -32,13 +32,13 @@
           rotulo="ID do Teams (Entra)"
           formControlName="usuarioTeams"
           marcador="00000000-0000-0000-0000-000000000000"
-          dica="Opcional. ID de objeto do Entra, nao o e-mail. So e usado quando a criacao da sala do Teams for ligada."
+          dica="Opcional. ID de objeto do Entra, não o e-mail. Só é usado quando a criação da sala do Teams for ligada."
         />
       </div>
 
       <p class="advogados__aviso">
-        Nenhuma senha e definida aqui. O advogado recebe por e-mail um link de
-        uso unico para escolher a propria senha.
+        Nenhuma senha é definida aqui. O advogado recebe por e-mail um link de
+        uso único para escolher a própria senha.
       </p>
 
       @if (falhaDoCadastro(); as mensagem) {
@@ -59,7 +59,7 @@
 
   @if (falhaDaLista()) {
   <app-mensagem-erro variante="bloco">
-    Nao foi possivel carregar a lista de advogados.
+    Não foi possível carregar a lista de advogados.
   </app-mensagem-erro>
   }
 

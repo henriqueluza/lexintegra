@@ -32,7 +32,7 @@ async function iniciarTrabalho(
 ): Promise<void> {
   await entrar(page, CONTAS.advogado);
   await page.getByRole('button', { name: 'Iniciar trabalho' }).first().click();
-  await expect(page.getByText('Enviar entregavel').first()).toBeVisible();
+  await expect(page.getByText('Enviar entregável').first()).toBeVisible();
 }
 
 test.describe('arquivos', () => {
@@ -85,7 +85,7 @@ test.describe('arquivos', () => {
     await entrar(page, CONTAS.cliente);
 
     await expect(
-      page.getByText('Arquivo em verificacao de seguranca.').first(),
+      page.getByText('Arquivo em verificação de segurança.').first(),
     ).toBeVisible({ timeout: 15_000 });
     await expect(
       page.getByRole('button', { name: 'Aceitar termos e baixar' }),

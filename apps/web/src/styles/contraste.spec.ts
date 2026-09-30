@@ -312,6 +312,93 @@ const PARES: Record<Direcao, readonly Par[]> = {
       alvo: TEXTO,
       uso: 'selo Entregue',
     },
+    // --- Superficies de marca do redesign (ADR-22) ---
+    {
+      frente: '--marca-texto',
+      fundo: '--marca-superficie',
+      alvo: TEXTO,
+      uso: 'titulo sobre o cartao em destaque, a chamada final e o painel do login',
+    },
+    {
+      frente: '--marca-texto-2',
+      fundo: '--marca-superficie',
+      alvo: TEXTO,
+      uso: 'texto de apoio sobre vinho',
+    },
+    {
+      frente: '--marca-texto-2',
+      fundo: '--marca-superficie-profunda',
+      alvo: TEXTO,
+      uso: 'links do rodape e faixa de diferenciais',
+    },
+    {
+      frente: '--marca-acento',
+      fundo: '--marca-superficie-profunda',
+      alvo: CONTROLE,
+      uso: 'icone dos diferenciais e anel de foco sobre o rodape',
+    },
+    {
+      frente: '--marca-acento',
+      fundo: '--marca-superficie',
+      alvo: CONTROLE,
+      uso: 'anel de foco sobre as superficies vinho',
+    },
+    {
+      frente: '--marca-superficie',
+      fundo: '--marca-texto',
+      alvo: TEXTO,
+      uso: 'botao creme com texto vinho, dentro das faixas de marca',
+    },
+    {
+      frente: '--texto',
+      fundo: '--hero-fundo',
+      alvo: TEXTO,
+      uso: 'titulo do hero',
+    },
+    {
+      frente: '--texto-3',
+      fundo: '--hero-fundo',
+      alvo: TEXTO,
+      uso: 'apoio do hero',
+    },
+    {
+      frente: '--texto-3',
+      fundo: '--hero-brilho-1',
+      alvo: TEXTO,
+      uso: 'apoio do hero onde o brilho rosado e mais forte',
+    },
+    {
+      frente: '--dourado-texto',
+      fundo: '--dourado-fundo',
+      alvo: CONTROLE,
+      uso: 'icone dourado das etiquetas do hero (grafico, WCAG 1.4.11)',
+    },
+    {
+      frente: '--acento',
+      fundo: '--dourado-fundo',
+      alvo: CONTROLE,
+      uso: 'icone na faixa de areia do cartao de servico',
+    },
+    {
+      frente: '--texto-sobre-acento',
+      fundo: '--acento',
+      alvo: TEXTO,
+      uso: 'faixa de aviso do topo da home',
+    },
+    // Os quatro chips, cada um contra o proprio fundo: a area publica agora usa
+    // o mesmo selo preenchido dos paineis.
+    {
+      frente: '--selo-sol-cor',
+      fundo: '--selo-sol-fundo',
+      alvo: TEXTO,
+      uso: 'chip Solicitado',
+    },
+    {
+      frente: '--selo-rev-cor',
+      fundo: '--selo-rev-fundo',
+      alvo: TEXTO,
+      uso: 'chip Em revisao',
+    },
   ],
   pauta: [
     ...rampaDeTexto(),

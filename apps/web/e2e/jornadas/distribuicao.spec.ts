@@ -49,6 +49,6 @@ test.describe('distribuicao', () => {
   test('o outro advogado nao ve a demanda alheia', async ({ page }) => {
     await entrar(page, CONTAS.outroAdvogado);
 
-    await expect(page.getByText('Nenhuma demanda distribuida')).toBeVisible();
+    await expect(page.getByText('Nenhuma demanda distribuída')).toBeVisible();
   });
 });

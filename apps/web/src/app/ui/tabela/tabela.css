@@ -5,7 +5,7 @@
 .tabela {
   background: var(--superficie-elevada);
   border: var(--borda-fina) solid var(--divisor);
-  border-radius: var(--raio);
+  border-radius: var(--raio-cartao);
   overflow: hidden;
 }
 
@@ -21,11 +21,9 @@
 
 .tabela__grade th {
   text-align: left;
-  font-size: var(--t-nano);
-  font-weight: var(--peso-forte);
-  letter-spacing: var(--letra-caixa-alta);
-  text-transform: uppercase;
-  color: var(--texto-fraco);
+  font-size: var(--t-micro);
+  font-weight: var(--peso-medio);
+  color: var(--texto-3);
   background: var(--superficie-sutil);
   padding: var(--s2) var(--s4);
   border-bottom: var(--borda-fina) solid var(--divisor);
@@ -92,9 +90,7 @@
   .tabela__grade td::before {
     content: attr(data-rotulo);
     flex: 0 0 40%;
-    font-size: var(--t-nano);
-    letter-spacing: var(--letra-caixa-alta);
-    text-transform: uppercase;
-    color: var(--texto-fraco);
+    font-size: var(--t-micro);
+    color: var(--texto-3);
   }
 }

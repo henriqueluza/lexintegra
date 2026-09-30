@@ -1,5 +1,5 @@
 import type { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import { podeSerServido } from 'shared';
+import { podeSerServido, prefixoDoFluxo } from 'shared';
 import type {
   EntregavelResumo,
   EstadoArquivo,
@@ -136,4 +136,19 @@ export function resumoDoEntregavel(
     arquivoServivel: arquivo !== null && podeSerServido(arquivo.estado),
     versaoDoArquivo: arquivo?.versao ?? null,
   };
+}
+
+/**
+ * O caminho do objeto de UMA versao do arquivo de um entregavel, sem o balde.
+ *
+ * Cada versao e um objeto proprio (`.../v1`, `.../v2`), e nao sobrescrita:
+ * sobrescrever apagaria o arquivo que o cliente ja aceitou. Por isso o caminho
+ * mora num lugar so — quem grava (`upload.service.ts`) e quem apaga todas as
+ * versoes (`retencao.service.ts`) precisam montar exatamente a mesma string.
+ */
+export function caminhoDaVersao(
+  alvo: { readonly pedidoId: string; readonly entregavelId: string },
+  versao: number,
+): string {
+  return `${prefixoDoFluxo('entregavel-advogado', alvo.pedidoId, alvo.entregavelId)}/v${String(versao)}`;
 }

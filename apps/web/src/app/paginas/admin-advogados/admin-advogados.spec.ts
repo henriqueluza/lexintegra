@@ -149,7 +149,7 @@ describe('AdminAdvogados', () => {
     const { fixture } = await montar({ erroAoListar: erroHttp(500) });
 
     expect(fixture.nativeElement.textContent).toContain(
-      'Nao foi possivel carregar a lista',
+      'Não foi possível carregar a lista',
     );
   });
 
@@ -165,7 +165,7 @@ describe('AdminAdvogados', () => {
 
     expect(senhas).toHaveLength(0);
     expect(fixture.nativeElement.textContent).toContain(
-      'link de uso unico para escolher a propria senha',
+      'link de uso único para escolher a própria senha',
     );
   });
 
@@ -198,7 +198,7 @@ describe('AdminAdvogados', () => {
     await enviar(fixture);
 
     expect(fixture.nativeElement.textContent).toContain(
-      'Ja existe um advogado com este e-mail.',
+      'Já existe um advogado com este e-mail.',
     );
   });
 
@@ -214,7 +214,7 @@ describe('AdminAdvogados', () => {
     await enviar(fixture);
 
     expect(fixture.nativeElement.textContent).toContain(
-      'Seu perfil nao permite',
+      'Seu perfil não permite',
     );
   });
 
@@ -245,7 +245,7 @@ describe('AdminAdvogados', () => {
     await enviar(fixture);
 
     expect(fixture.nativeElement.textContent).toContain(
-      'Nao foi possivel concluir a operacao.',
+      'Não foi possível concluir a operação.',
     );
   });
 

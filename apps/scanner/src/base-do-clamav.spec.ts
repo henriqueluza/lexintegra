@@ -1,4 +1,9 @@
-import { ehArquivoDeBase, EXTENSOES_DE_BASE } from './base-do-clamav.js';
+import {
+  ehArquivoDeBase,
+  ehBaseDiaria,
+  EXTENSOES_DE_BASE,
+  temBaseParaVarrer,
+} from './base-do-clamav.js';
 
 describe('ehArquivoDeBase', () => {
   /**
@@ -62,5 +67,39 @@ describe('ehArquivoDeBase', () => {
       '.ndb',
       '.info',
     ]);
+  });
+});
+
+describe('ehBaseDiaria', () => {
+  it.each(['daily.cvd', 'daily.cld', 'DAILY.CVD', 'pasta/daily.cvd'])(
+    'aceita %s',
+    (nome) => {
+      expect(ehBaseDiaria(nome)).toBe(true);
+    },
+  );
+
+  it.each([
+    'main.cvd',
+    'bytecode.cvd',
+    'daily.cvd.tmp',
+    'xdaily.cvd',
+    'daily.info',
+  ])('recusa %s', (nome) => {
+    expect(ehBaseDiaria(nome)).toBe(false);
+  });
+});
+
+describe('temBaseParaVarrer', () => {
+  it('sem nenhum arquivo, nao ha base', () => {
+    expect(temBaseParaVarrer([])).toBe(false);
+  });
+
+  it('so metadado nao e base: o clamd nao subiria', () => {
+    expect(temBaseParaVarrer(['freshclam.dat', 'notas.info'])).toBe(false);
+  });
+
+  it('um .cvd ou .cld basta', () => {
+    expect(temBaseParaVarrer(['main.cvd'])).toBe(true);
+    expect(temBaseParaVarrer(['daily.cld'])).toBe(true);
   });
 });

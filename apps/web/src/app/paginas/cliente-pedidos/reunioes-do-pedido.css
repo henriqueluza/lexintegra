@@ -9,11 +9,9 @@
 
 .reunioes__rotulo {
   margin: 0;
-  font-size: var(--t-micro);
-  font-weight: var(--peso-medio);
-  letter-spacing: var(--letra-caixa-alta);
-  text-transform: uppercase;
-  color: var(--texto-3);
+  font-size: var(--t-menor);
+  font-weight: var(--peso-forte);
+  color: var(--texto);
 }
 
 .reunioes__saldo {

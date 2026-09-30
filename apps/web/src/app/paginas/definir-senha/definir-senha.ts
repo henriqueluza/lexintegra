@@ -11,7 +11,7 @@ import { SessaoService } from '../../autenticacao/sessao.service';
 import { Botao } from '../../ui/botao/botao';
 import { Campo } from '../../ui/campo/campo';
 import { Carregando } from '../../ui/carregando/carregando';
-import { Cartao, CartaoRodape } from '../../ui/cartao/cartao';
+import { MolduraAcesso } from '../../shell/moldura-acesso/moldura-acesso';
 import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
 
 type Situacao = 'conferindo' | 'formulario' | 'invalido' | 'pronto';
@@ -37,13 +37,12 @@ type Situacao = 'conferindo' | 'formulario' | 'invalido' | 'pronto';
     Botao,
     Campo,
     Carregando,
-    Cartao,
-    CartaoRodape,
+    MolduraAcesso,
     MensagemErro,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './definir-senha.html',
-  styleUrl: './definir-senha.css',
+  styleUrl: '../acesso.css',
 })
 export class DefinirSenha implements OnInit {
   private readonly sessao = inject(SessaoService);
@@ -91,14 +90,14 @@ export class DefinirSenha implements OnInit {
     if (!controle.touched || controle.valid) return null;
     return controle.hasError('minlength')
       ? 'Use ao menos 12 caracteres.'
-      : 'Campo obrigatorio.';
+      : 'Campo obrigatório.';
   }
 
   protected erroDaConfirmacao(): string | null {
     const { senha, confirmacao } = this.formulario.controls;
     if (!confirmacao.touched) return null;
-    if (confirmacao.value === '') return 'Campo obrigatorio.';
-    return senha.value === confirmacao.value ? null : 'As senhas nao conferem.';
+    if (confirmacao.value === '') return 'Campo obrigatório.';
+    return senha.value === confirmacao.value ? null : 'As senhas não conferem.';
   }
 
   protected pedirOutro(): void {

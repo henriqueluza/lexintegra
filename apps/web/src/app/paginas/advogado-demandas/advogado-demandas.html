@@ -9,7 +9,7 @@
   <app-carregando variante="bloco" rotulo="Carregando suas demandas" />
   } @else if (falhaDaLista()) {
   <app-mensagem-erro variante="bloco">
-    Nao foi possivel carregar as demandas. Recarregue a pagina.
+    Não foi possível carregar as demandas. Recarregue a página.
   </app-mensagem-erro>
   } @else if (demandas().length === 0) {
   <!--
@@ -18,10 +18,11 @@
     distribuiu nada — nao que algo falhou.
   -->
   <app-estado-vazio
-    titulo="Nenhuma demanda distribuida"
-    mensagem="Quando o administrador distribuir um pedido para voce, ele aparece aqui."
+    titulo="Nenhuma demanda distribuída"
+    mensagem="Quando o administrador distribuir um pedido para você, ele aparece aqui."
   />
   } @else {
+  <app-resumo [itens]="resumo()" />
   <div class="demandas__lista">
     @for (demanda of demandas(); track demanda.id) {
     <app-cartao [titulo]="demanda.snapshot.nome">
@@ -44,7 +45,7 @@
           </app-botao>
           } @if (podeEnviarArquivo(entregavel)) {
           <label class="demandas__arquivo">
-            <span>Enviar entregavel</span>
+            <span>Enviar entregável</span>
             <input
               type="file"
               (change)="enviarArquivo(demanda.id, entregavel, $event)"
@@ -62,7 +63,7 @@
           [attr.aria-expanded]="abertaId() === demanda.id"
           (click)="abrir(demanda)"
         >
-          {{ abertaId() === demanda.id ? 'Ocultar' : 'Anamnese e observacoes' }}
+          {{ abertaId() === demanda.id ? 'Ocultar' : 'Anamnese e observações' }}
         </app-botao>
       </div>
 
@@ -76,7 +77,7 @@
         <h3 class="demandas__subtitulo">Anamnese</h3>
 
         @if (anamnese().length === 0) {
-        <p class="demandas__vazio">O cliente ainda nao preencheu a ficha.</p>
+        <p class="demandas__vazio">O cliente ainda não preencheu a ficha.</p>
         } @else {
         <!--
           RENDERIZADOR GENERICO: pares campo/valor, sem conhecer nome de campo
@@ -94,10 +95,10 @@
         </dl>
         } }
 
-        <h3 class="demandas__subtitulo">Observacoes</h3>
+        <h3 class="demandas__subtitulo">Observações</h3>
 
         @if (observacoes().length === 0) {
-        <p class="demandas__vazio">Nenhuma observacao ainda.</p>
+        <p class="demandas__vazio">Nenhuma observação ainda.</p>
         } @else {
         <ul class="demandas__observacoes">
           @for (item of observacoes(); track item.id) {

@@ -2,17 +2,15 @@
   <h1 class="agenda__titulo">Minha agenda</h1>
 
   <p class="agenda__nota">
-    As reuniões marcadas nos pedidos que você atende, da mais próxima para a mais
-    distante. Reunião cancelada não aparece aqui.
+    As reuniões marcadas nos pedidos que você atende, da mais próxima para a
+    mais distante. Reunião cancelada não aparece aqui.
   </p>
 
   @if (falha()) {
   <app-mensagem-erro variante="bloco">
-    Nao foi possivel carregar a agenda. Recarregue a pagina.
+    Não foi possível carregar a agenda. Recarregue a página.
   </app-mensagem-erro>
-  }
-
-  @if (carregando()) {
+  } @if (carregando()) {
   <app-carregando variante="tabela" rotulo="Carregando a agenda" />
   } @else if (vazia()) {
   <app-estado-vazio

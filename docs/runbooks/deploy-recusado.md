@@ -1,0 +1,87 @@
+# Runbook — deploy recusado (pipeline vermelho, plano inesperado, imagem que não sobe)
+
+**Nenhum alerta leva aqui.** O sinal é o workflow *Deploy* vermelho no GitHub
+Actions (`.github/workflows/deploy.yml`), ou o comentário de `terraform plan`
+de um PR mostrando algo que ninguém pediu.
+
+**A produção não cai por deploy recusado.** Enquanto o Terraform não aplica, e
+enquanto a revisão nova não passa no startup probe, o tráfego fica onde estava.
+A urgência é não deixar a `main` quebrada por muito tempo.
+
+**Quem executa:** quem mantém o código. `terraform apply` e `firebase deploy`
+**só** pelo pipeline.
+
+---
+
+## Sintoma
+
+- Workflow *Deploy* vermelho num push na `main`.
+- Workflow *CI* vermelho num PR.
+- Plano do PR com `destroy` ou `replace` inesperado.
+
+## Como confirmar e o que fazer, pelo passo que falhou
+
+Os números são os da tabela da seção 1 de
+[`operacao.md`](../entrega/operacao.md).
+
+| Passo que falhou | Causa comum | O que fazer |
+|---|---|---|
+| 2, *Acessibilidade e regressão visual* | Mudança de tela sem imagem de referência atualizada | Baixe o artefato `playwright-diferencas`. Se a mudança é desejada, regrave **só** as imagens afetadas e revise uma a uma. **Não regrave em bloco** |
+| 3, *Lint e testes* | Código que não passa ou cobertura abaixo do limiar | Corrija. O merge pode ter juntado dois branches verdes num resultado vermelho |
+| 4, *Integração* | Emulador sem Java, ou teste de integração quebrado | Leia o log do `scripts/emuladores.sh`. Ele diz o que falta |
+| 7, *Garantir o Artifact Registry* | Variável do Terraform sem `default` | O `pnpm lint:terraform` deveria ter pegado. Dê `default` à variável (README do Terraform, "Apply parcial") |
+| 10, *Aplicar*, com `403` | Recurso de um tipo novo sem papel para `terraform-ci` | Os papéis do CI são concessão **manual**. Conceda com `gcloud projects add-iam-policy-binding` e reexecute. `papeis-de-bootstrap.json` deveria ter o papel declarado |
+| 10, com `Error acquiring the state lock` | Outro apply em andamento, ou um lock preso por execução cancelada | Espere. Se nada estiver rodando, `terraform force-unlock <id>` **à mão**, com o id da mensagem |
+| 10, com `tainted` e destroy recusado por `deletion_protection` | A criação de uma revisão falhou antes e o Terraform marcou o recurso | `terraform untaint google_cloud_run_v2_service.api` (ou o endereço da mensagem), local, e reexecute o workflow. **Não troque a proteção para `false`**: não desatasca, porque o provider lê o valor do state |
+| 10, revisão não fica pronta | A imagem nova não sobe: variável inválida (`Recusando subir`), `ERR_MODULE_NOT_FOUND`, OOM | Logs da revisão nova no Cloud Run. Ver [api-fora-do-ar.md](api-fora-do-ar.md) |
+| 10, `Error creating AlertPolicy: 404 Cannot find metric(s)` | Uma métrica por log e a política que a usa entraram **no mesmo apply**. O Monitoring leva até 10 minutos para enxergar a métrica nova, e o `depends_on` implícito não espera por isso. Aconteceu no deploy do PR #33 | Espere 10 minutos e **reexecute o deploy**. A métrica já foi criada, e a política cria na segunda vez. Nada a corrigir no código |
+| 10, `Error creating AlertPolicy: 400 … aligner cannot be applied` | Alinhador incompatível com o tipo da métrica. Ex.: `ALIGN_COUNT` numa métrica `DELTA`/`DISTRIBUTION` (política `sonda_parada`, PR #33) | Corrija o `per_series_aligner` por PR. O `plan` não pega isso: a API só valida ao criar. Copie o alinhador de uma política existente sobre o mesmo tipo de métrica |
+| 8 ou 9, `cannot update tag` | Tag imutável | Não deveria acontecer: o passo pula tag existente. Se acontecer, confira se o `describe` do passo está autenticado |
+| 14, *Frontend e regras* | `roles/firebasehosting.admin` ou `roles/firebaserules.admin` ausentes, ou regra do Firestore inválida | Conceda o papel à mão. Regra inválida quebra antes, no passo 4 |
+| 15, *Smoke test* | `/api/health` não devolve o `commitSha` novo em 10 tentativas | O Terraform aplicou, mas a revisão não assumiu o tráfego. Veja as revisões no console |
+| 16, *Landing pré-renderizada* | Build sem SSG | Veja o passo do CI *Conferir que o build do Angular foi mesmo pré-renderizado* |
+
+**Reexecutar é seguro.** O deploy pode ser repetido no mesmo commit: as
+imagens já publicadas são reaproveitadas (*Re-run failed jobs* no GitHub, ou
+*Run workflow*).
+
+## Plano do Terraform inesperado
+
+- **CI vermelho em *Recusar destroy em PR sem mudança de infraestrutura*.** O
+  PR não toca `infra/terraform` e mesmo assim o plano propõe destruir algo. Há
+  duas causas prováveis:
+  - o plano do CI está lendo uma variável diferente da do deploy. Compare os
+    `TF_VAR_*` do job `terraform` em `ci.yml` com os do `deploy.yml`: eles
+    precisam ser os mesmos;
+  - alguém mudou a infraestrutura por fora do Terraform.
+
+  Explique o diff antes de qualquer merge. Até o Bloco E, todo PR mostrava o
+  canal de alertas sendo destruído, porque o plan não recebia
+  `TF_VAR_alertas_email_desenvolvimento`. Isso foi corrigido, e o passo existe
+  para não voltar.
+- **`will be created` em recurso que já existe:** import errado ou recurso
+  criado fora do Terraform. Não aplique. Ver README do Terraform, "Armadilhas
+  conhecidas".
+- **`must be replaced`** em Firestore, KMS, bucket de state ou secret: esses
+  têm `prevent_destroy`, e o plan falha de propósito. Descubra qual atributo
+  forçou a troca.
+- **`update in-place` de imagem para `gcr.io/cloudrun/hello` ou `""`** num plan
+  local: faltam os `TF_VAR_*` de imagem. Esperado no local, e não é o que o
+  pipeline aplica.
+
+## O que nunca fazer
+
+- `terraform apply`, `firebase deploy` ou `gcloud run deploy` na máquina
+  local. O pipeline é o único caminho, e os hooks do agente bloqueiam esses
+  comandos.
+- Desligar `immutable_tags` do Artifact Registry para "destravar" publicação.
+- Afrouxar limiar de cobertura, mutação ou lint para o merge passar.
+- Regravar todas as imagens de referência da regressão visual de uma vez.
+- Dar `roles/owner` ao `terraform-ci` para acabar com os 403.
+
+## Como saber que resolveu
+
+- O workflow *Deploy* fica verde até o fim, incluindo o smoke test.
+- `https://lexintegra.com.br/api/health` devolve o `commitSha` do commit.
+- Um `terraform plan` seguinte, com as variáveis do pipeline, mostra
+  `No changes` (fora as imagens, se o commit mudou).

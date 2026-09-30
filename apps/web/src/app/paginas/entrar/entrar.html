@@ -1,62 +1,49 @@
-<main class="entrada">
-  <div class="entrada__apresentacao">
-    <p class="entrada__marca">Sua área reservada</p>
-    <h1>O trabalho continua.<br />Tudo está aqui.</h1>
+<app-moldura-acesso
+  [titulo]="['Seu trabalho jurídico.', 'Em um só lugar.']"
+  texto="Documentos, reuniões e próximos passos de cada pedido, conectados à sua rotina."
+>
+  <h1>Bom ter você por aqui.</h1>
+  <p class="apoio">Acesse sua área para acompanhar seus pedidos.</p>
+
+  <form [formGroup]="formulario" (ngSubmit)="enviar()">
+    <app-campo
+      rotulo="E-mail"
+      tipo="email"
+      formControlName="email"
+      [obrigatorio]="true"
+      [erro]="erroDoCampo('email')"
+    />
+
+    <app-campo
+      rotulo="Senha"
+      tipo="password"
+      formControlName="senha"
+      [obrigatorio]="true"
+      [erro]="erroDoCampo('senha')"
+    />
+
+    <a class="link" routerLink="/recuperar-senha">Esqueci minha senha</a>
+
+    @if (falha(); as motivo) {
+    <app-mensagem-erro variante="bloco"
+      >{{ mensagemDaFalha(motivo) }}</app-mensagem-erro
+    >
+    }
+
+    <app-botao variante="primario" tipo="submit" [carregando]="enviando()">
+      Entrar
+    </app-botao>
+  </form>
+
+  <div class="rodape">
     <p>
-      Consulte seus pedidos, acompanhe os documentos e mantenha o contexto do
-      atendimento em um só lugar.
+      Ainda não contratou? <a routerLink="/servicos">Conheça os serviços</a>
     </p>
-    <a routerLink="/cadastro">Ainda não conhece os serviços? Cadastre-se.</a>
-  </div>
-
-  <div class="entrada__caixa">
-    <app-cartao titulo="Entrar" descricao="Acesse com o e-mail cadastrado.">
-      <form
-        class="entrada__formulario"
-        [formGroup]="formulario"
-        (ngSubmit)="enviar()"
-      >
-        <app-campo
-          rotulo="E-mail"
-          tipo="email"
-          formControlName="email"
-          [obrigatorio]="true"
-          [erro]="erroDoCampo('email')"
-        />
-
-        <app-campo
-          rotulo="Senha"
-          tipo="password"
-          formControlName="senha"
-          [obrigatorio]="true"
-          [erro]="erroDoCampo('senha')"
-        />
-
-        @if (falha(); as motivo) {
-        <app-mensagem-erro variante="bloco"
-          >{{ mensagemDaFalha(motivo) }}</app-mensagem-erro
-        >
-        }
-
-        <div class="entrada__acoes">
-          <app-botao
-            variante="primario"
-            tipo="submit"
-            [carregando]="enviando()"
-          >
-            Entrar
-          </app-botao>
-          <p class="entrada__auxiliar">
-            <a routerLink="/recuperar-senha">Esqueci minha senha</a>
-          </p>
-        </div>
-      </form>
-    </app-cartao>
-    <p class="entrada__auxiliar">
-      Primeiro acesso após a compra? Use o link enviado ao seu e-mail para
+    <p>
+      Primeiro acesso depois da compra? Use o link enviado ao seu e-mail para
       definir sua senha.
     </p>
   </div>
-</main>
+</app-moldura-acesso>
 
 <app-rodape-publico />

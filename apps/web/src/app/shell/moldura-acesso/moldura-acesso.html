@@ -1,0 +1,20 @@
+<main class="acesso">
+  <section class="acesso__marca">
+    <div class="acesso__apresentacao">
+      <h2>
+        @for (linha of titulo(); track linha) {
+        <span>{{ linha }} </span>
+        }
+      </h2>
+      <p>{{ texto() }}</p>
+      <app-janela-produto class="acesso__janela" />
+    </div>
+    <p class="acesso__frase">Clareza para seguir em frente.</p>
+  </section>
+
+  <section class="acesso__formulario">
+    <div class="acesso__caixa">
+      <ng-content />
+    </div>
+  </section>
+</main>

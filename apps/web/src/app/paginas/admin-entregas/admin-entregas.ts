@@ -32,12 +32,12 @@ const ROTULO_DO_ESTADO: Readonly<Record<string, string>> = {
 const ROTULO_DO_TIPO: Readonly<Record<string, string>> = {
   'definir-senha': 'Acesso de advogado',
   'redefinir-senha': 'Redefinicao de senha',
-  'aviso-exclusao-arquivos': 'Aviso de exclusao',
+  'aviso-exclusao-arquivos': 'Aviso de exclusão',
   'acesso-cliente': 'Acesso de cliente',
   'estorno-integral': 'Estorno integral no gateway',
-  'criar-sala-reuniao': 'Sala da reuniao no Teams',
-  'convite-reuniao': 'Convite de reuniao',
-  'cancelamento-reuniao': 'Cancelamento de reuniao',
+  'criar-sala-reuniao': 'Sala da reunião no Teams',
+  'convite-reuniao': 'Convite de reunião',
+  'cancelamento-reuniao': 'Cancelamento de reunião',
 };
 
 /**
@@ -73,9 +73,9 @@ export class AdminEntregas implements OnInit {
 
   protected readonly colunas: readonly ColunaTabela[] = [
     { chave: 'tipo', rotulo: 'Evento' },
-    { chave: 'estado', rotulo: 'Situacao' },
+    { chave: 'estado', rotulo: 'Situação' },
     { chave: 'tentativas', rotulo: 'Tentativas' },
-    { chave: 'quando', rotulo: 'Ultima tentativa' },
+    { chave: 'quando', rotulo: 'Última tentativa' },
     { chave: 'erro', rotulo: 'Motivo' },
     { chave: 'acoes', rotulo: 'Reenviar', alinhamento: 'fim' },
   ];

@@ -3,7 +3,7 @@ import { SemAppCheck } from '../app-check/decoradores.js';
 import { Publico } from '../autenticacao/decoradores.js';
 import { SemLimite } from '../limite/decoradores.js';
 import { TarefaInterna } from '../tarefas/decoradores.js';
-import { SinaisService, type Sinais } from './sinais.service.js';
+import { SinaisService, type Medicao } from './sinais.service.js';
 
 /**
  * A sonda periodica dos sinais operacionais (arquitetura, secao 9).
@@ -30,7 +30,7 @@ export class SinaisController {
   @SemAppCheck()
   @TarefaInterna()
   @Publico()
-  medir(): Promise<Sinais> {
+  medir(): Promise<Medicao> {
     return this.sinais.medir();
   }
 }

@@ -83,5 +83,5 @@ function mensagemDoConflito(erro: unknown): string {
   const corpo = (erro as { error?: { message?: unknown } } | null)?.error;
   return typeof corpo?.message === 'string'
     ? corpo.message
-    : 'Este pedido nao pode ser estornado.';
+    : 'Este pedido não pode ser estornado.';
 }
