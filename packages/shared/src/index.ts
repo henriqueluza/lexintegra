@@ -17,6 +17,7 @@ export * from './esquemas/anexo.js';
 export * from './esquemas/checkout.js';
 export * from './esquemas/cliente.js';
 export * from './esquemas/contestacao.js';
+export * from './esquemas/pagamento-problematico.js';
 export * from './esquemas/disponibilidade.js';
 export * from './esquemas/erro-do-navegador.js';
 export * from './esquemas/observacao.js';
