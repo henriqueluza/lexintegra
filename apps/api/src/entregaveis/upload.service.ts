@@ -6,17 +6,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
-import {
-  conferirPolitica,
-  POLITICA_UPLOAD,
-  type PedidoDeUpload,
-} from 'shared';
+import { conferirPolitica, POLITICA_UPLOAD, type PedidoDeUpload } from 'shared';
 import {
   ARMAZENAMENTO,
   type Armazenamento,
 } from '../armazenamento/armazenamento.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
-import { COLECAO_PEDIDOS } from '../pedidos/pedido.js';
+import { exigirSemContestacao } from '../pedidos/pausa.js';
+import { COLECAO_PEDIDOS, type DocumentoPedido } from '../pedidos/pedido.js';
 import { FILA_DE_VARREDURA, type FilaDeVarredura } from '../varredura/fila.js';
 import { EntregaveisService } from './entregaveis.service.js';
 import {
@@ -112,10 +109,15 @@ export class UploadDeEntregavelService {
     advogadoUid: string,
   ): Promise<void> {
     const referencia = this.referencia(alvo);
-    const documento = await referencia.get();
-    if (!documento.exists) {
+    const [documento, pedido] = await Promise.all([
+      referencia.get(),
+      this.db.collection(COLECAO_PEDIDOS).doc(alvo.pedidoId).get(),
+    ]);
+    if (!documento.exists || !pedido.exists) {
       throw new NotFoundException('Entregavel nao encontrado.');
     }
+    /* Pausado por contestacao: o envio fica parado ate ela terminar (5.4). */
+    exigirSemContestacao(pedido.data() as DocumentoPedido);
 
     const arquivo = (documento.data() as DocumentoEntregavel).arquivoAtual;
     if (arquivo === null) {

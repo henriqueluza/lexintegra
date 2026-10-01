@@ -48,6 +48,7 @@ interface ApiDeTeste {
   anamnese: AnamneseResumo[];
   observacoes: ObservacaoResumo[];
   chamadas: string[];
+  tipos: string[];
   erroAoListar: unknown;
 }
 
@@ -60,6 +61,7 @@ async function montar(opcoes: Partial<ApiDeTeste> = {}): Promise<{
     anamnese: opcoes.anamnese ?? [],
     observacoes: opcoes.observacoes ?? [],
     chamadas: [],
+    tipos: [],
     erroAoListar: opcoes.erroAoListar ?? null,
   };
 
@@ -107,11 +109,12 @@ async function montar(opcoes: Partial<ApiDeTeste> = {}): Promise<{
           pedirEnvioDeEntregavel: (
             pedidoId: string,
             entregavelId: string,
-            arquivo: { nome: string },
+            arquivo: { nome: string; tipo: string },
           ) => {
             api.chamadas.push(
               `pedirUrl ${pedidoId}/${entregavelId} ${arquivo.nome}`,
             );
+            api.tipos.push(arquivo.tipo);
             return Promise.resolve({
               url: 'https://bucket.example/quarentena/e1',
               versao: 1,
@@ -350,6 +353,47 @@ describe('AdvogadoDemandas', () => {
         expect(api.chamadas).toContain('pedirUrl p1/001 minuta.pdf');
         expect(puts).toEqual(['https://bucket.example/quarentena/e1']);
         expect(api.chamadas).toContain('confirmar p1/001');
+      } finally {
+        globalThis.fetch = original;
+      }
+    });
+
+    /**
+     * B2, decisoes.md 3.1: o DOCX que o navegador entrega com `type` vazio. O
+     * tipo sai da extensao, e o MESMO vai no pedido e no PUT — e ele que entra
+     * na assinatura da URL.
+     */
+    it('DOCX sem tipo do navegador: deduz pela extensao, no pedido e no PUT', async () => {
+      const original = globalThis.fetch;
+      const tiposDoPut: string[] = [];
+      globalThis.fetch = ((_url: string, opcoes: RequestInit) => {
+        tiposDoPut.push(
+          (opcoes.headers as Record<string, string>)['Content-Type'],
+        );
+        return Promise.resolve({ ok: true, status: 200 } as Response);
+      }) as unknown as typeof fetch;
+
+      try {
+        const { fixture, api } = await montar({
+          demandas: [demanda('p1', [EM_ELABORACAO])],
+        });
+        const entrada = fixture.nativeElement.querySelector(
+          'input[type=file]',
+        ) as HTMLInputElement;
+        expect(entrada.accept).toContain('.docx');
+
+        const arquivo = new File([''], 'parecer.docx', { type: '' });
+        Object.defineProperty(entrada, 'files', {
+          value: { 0: arquivo, length: 1, item: () => arquivo },
+          configurable: true,
+        });
+        entrada.dispatchEvent(new Event('change'));
+        await fixture.whenStable();
+
+        const docx =
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        expect(api.tipos).toEqual([docx]);
+        expect(tiposDoPut).toEqual([docx]);
       } finally {
         globalThis.fetch = original;
       }

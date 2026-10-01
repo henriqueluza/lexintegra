@@ -104,6 +104,24 @@ export class GcsArmazenamento implements Armazenamento {
     return new Uint8Array(conteudo);
   }
 
+  async lerFaixa(
+    objeto: Objeto,
+    inicio: number,
+    quantidade: number,
+  ): Promise<Uint8Array> {
+    if (quantidade <= 0) return new Uint8Array();
+    const [conteudo] = await this.arquivo(objeto).download({
+      start: inicio,
+      end: inicio + quantidade - 1,
+    });
+    return new Uint8Array(conteudo);
+  }
+
+  async tamanho(objeto: Objeto): Promise<number> {
+    const [metadados] = await this.arquivo(objeto).getMetadata();
+    return Number(metadados.size ?? 0);
+  }
+
   async mover(origem: Objeto, destino: Objeto): Promise<void> {
     /*
      * COPIA E APAGA, e nao `move`: os dois objetos estao em BALDES diferentes —

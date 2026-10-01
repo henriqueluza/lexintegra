@@ -545,7 +545,7 @@ describe('ClientePedidos', () => {
       fixture.detectChanges();
       expect(textoDe(fixture)).toContain('não devolve o valor pago');
       expect(textoDe(fixture)).toContain(
-        'Esta ação não gera devolução automática',
+        'Cancelar o pedido não devolve o valor automaticamente',
       );
 
       botaoCom(fixture, 'Confirmar cancelamento')?.click();

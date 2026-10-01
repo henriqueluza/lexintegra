@@ -72,6 +72,27 @@ export const POLITICA: Readonly<Record<TipoEvento, PoliticaDeEvento>> = {
    * reuniao fantasma.
    */
   'cancelamento-reuniao': { criticidade: 'critico', maxTentativas: 10 },
+  /*
+   * A pausa por contestacao (B2, decisoes.md 5.4). Critico porque e o unico
+   * aviso de que as reunioes futuras do cliente sumiram da agenda — sem ele, o
+   * cliente aparece numa sala que o escritorio ja desmarcou.
+   */
+  'pausa-contestacao': { criticidade: 'critico', maxTentativas: 10 },
+  /*
+   * O escritorio desmarcou (ADR-21, decisao H). Critico pelo mesmo motivo do
+   * cancelamento: sem ele, o cliente aparece numa reuniao que nao existe mais.
+   */
+  'reuniao-desmarcada-escritorio': {
+    criticidade: 'critico',
+    maxTentativas: 10,
+  },
+  /*
+   * O e-mail do advogado mudou (decisoes.md 4.1). Critico como `definir-senha`:
+   * sem ele o advogado nao entra pelo endereco novo.
+   */
+  'acesso-advogado-atualizado': { criticidade: 'critico', maxTentativas: 10 },
+  /* O administrador convidado nao entra sem este e-mail (decisoes.md 5.5). */
+  'convite-administrador': { criticidade: 'critico', maxTentativas: 10 },
 };
 
 export interface ConfiguracaoDoOutbox {

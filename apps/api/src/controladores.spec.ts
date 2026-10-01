@@ -8,8 +8,12 @@ import { Reflector } from '@nestjs/core';
 import type { Perfil } from 'shared';
 import { AdvogadosController } from './advogados/advogados.controller.js';
 import { AnamneseController } from './anamnese/anamnese.controller.js';
+import { ContestacoesAdminController } from './contestacoes/contestacoes.admin.controller.js';
+import { PagamentosAdminController } from './pagamentos/admin/pagamentos.admin.controller.js';
+import { AdministradoresController } from './administradores/administradores.controller.js';
 import type { AnamneseService } from './anamnese/anamnese.service.js';
 import type { AdvogadosService } from './advogados/advogados.service.js';
+import type { EdicaoDeAdvogadoService } from './advogados/edicao.service.js';
 import {
   CHAVE_PERFIS,
   CHAVE_PUBLICO,
@@ -118,6 +122,9 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['entregas do outbox', OutboxAdminController],
     ['estornos (Etapa 8)', EstornosAdminController],
     ['reunioes sem sala (Etapa 10)', ReunioesAdminController],
+    ['contestacoes (B2)', ContestacoesAdminController],
+    ['pagamentos problematicos (B2)', PagamentosAdminController],
+    ['administradores (B2)', AdministradoresController],
   ])(
     'a superficie administrativa de %s exige admin, na classe',
     (_nome, classe) => {
@@ -131,6 +138,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['criar', AdvogadosController.prototype.criar],
     ['suspender', AdvogadosController.prototype.suspender],
     ['reativar', AdvogadosController.prototype.reativar],
+    ['editar (B2)', AdvogadosController.prototype.editar],
     ['produtos.listar', ProdutosController.prototype.listar],
     ['produtos.obter', ProdutosController.prototype.obter],
     ['produtos.criar', ProdutosController.prototype.criar],
@@ -140,6 +148,19 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['pre-cadastros.listar', PreCadastrosAdminController.prototype.listar],
     ['outbox.listar', OutboxAdminController.prototype.listar],
     ['outbox.reenviar', OutboxAdminController.prototype.reenviar],
+    [
+      'contestacoes.listarAbertas',
+      ContestacoesAdminController.prototype.listarAbertas,
+    ],
+    [
+      'contestacoes.registrarResultado',
+      ContestacoesAdminController.prototype.registrarResultado,
+    ],
+    ['pagamentos.listar', PagamentosAdminController.prototype.listar],
+    ['pagamentos.resolver', PagamentosAdminController.prototype.resolver],
+    ['administradores.listar', AdministradoresController.prototype.listar],
+    ['administradores.convidar', AdministradoresController.prototype.convidar],
+    ['administradores.remover', AdministradoresController.prototype.remover],
   ])('o metodo administrativo %s nao se declara publico', (_nome, metodo) => {
     expect(reflector.get(CHAVE_PUBLICO, metodo)).toBeUndefined();
   });
@@ -179,6 +200,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['vitrine', VitrineController.prototype.listar],
     ['checkout (Etapa 8)', CheckoutController.prototype.iniciar],
     ['situacao do checkout (Etapa 8)', CheckoutController.prototype.situacao],
+    ['metodos do checkout (B2)', CheckoutController.prototype.metodos],
     ['webhook do gateway (Etapa 8)', WebhookController.prototype.receber],
     [
       'relato de erro do navegador (Etapa 12)',
@@ -279,6 +301,7 @@ describe('limite de requisicoes das rotas publicas', () => {
     ['vitrine', VitrineController.prototype.listar],
     ['checkout', CheckoutController.prototype.iniciar],
     ['situacao do checkout', CheckoutController.prototype.situacao],
+    ['metodos do checkout', CheckoutController.prototype.metodos],
     ['webhook do gateway', WebhookController.prototype.receber],
     [
       'relato de erro do navegador',
@@ -415,6 +438,7 @@ describe('limite de requisicoes das rotas publicas', () => {
     ['vitrine', VitrineController.prototype.listar],
     ['checkout', CheckoutController.prototype.iniciar],
     ['situacao do checkout', CheckoutController.prototype.situacao],
+    ['metodos do checkout', CheckoutController.prototype.metodos],
   ])('%s e verificado pelo App Check', (_nome, metodo) => {
     expect(reflector.get(CHAVE_SEM_APP_CHECK, metodo)).toBeUndefined();
   });
@@ -460,8 +484,14 @@ describe('AdvogadosController', () => {
         return Promise.resolve({});
       },
     } as unknown as AdvogadosService;
+    const edicao = {
+      editar: (uid: string, dados: { email: string }, admin: string) => {
+        chamadas.push(`editar ${uid} para ${dados.email} por ${admin}`);
+        return Promise.resolve({});
+      },
+    } as unknown as EdicaoDeAdvogadoService;
 
-    return { controlador: new AdvogadosController(servico), chamadas };
+    return { controlador: new AdvogadosController(servico, edicao), chamadas };
   }
 
   it('lista', async () => {
@@ -482,6 +512,18 @@ describe('AdvogadosController', () => {
       ADMIN,
     );
     expect(chamadas).toEqual(['criar ana@escritorio.test por uid-admin']);
+  });
+
+  it('edita pelo uid do caminho, com a autoria do token', async () => {
+    const { controlador, chamadas } = montar();
+    await controlador.editar(
+      'uid-advogado',
+      { nome: 'Ana Souza', email: 'nova@escritorio.test', usuarioTeams: null },
+      ADMIN,
+    );
+    expect(chamadas).toEqual([
+      'editar uid-advogado para nova@escritorio.test por uid-admin',
+    ]);
   });
 
   it('suspende e reativa pelo uid do caminho', async () => {
@@ -681,16 +723,10 @@ describe('WebhookController', () => {
 describe('AnamneseController', () => {
   it('exige o perfil de cliente, na classe', () => {
     expect(
-      reflector.get<readonly Perfil[]>(
-        CHAVE_PERFIS,
-        AnamneseController,
-      ),
+      reflector.get<readonly Perfil[]>(CHAVE_PERFIS, AnamneseController),
     ).toEqual(['cliente']);
     expect(
-      reflector.get(
-        CHAVE_PUBLICO,
-        AnamneseController.prototype.registrar,
-      ),
+      reflector.get(CHAVE_PUBLICO, AnamneseController.prototype.registrar),
     ).toBeUndefined();
   });
 
@@ -754,20 +790,53 @@ describe('EstornosAdminController', () => {
 });
 
 describe('CheckoutController', () => {
-  function montar(): { controlador: CheckoutController; chamadas: string[] } {
+  function montar(cartao = true): {
+    controlador: CheckoutController;
+    chamadas: string[];
+  } {
     const chamadas: string[] = [];
-    const controlador = new CheckoutController({
-      iniciar: (_dados: unknown, preCadastroId: string) => {
-        chamadas.push(`iniciar ${preCadastroId}`);
-        return Promise.resolve({});
-      },
-      situacao: (checkoutId: string, preCadastroId: string) => {
-        chamadas.push(`situacao ${checkoutId} ${preCadastroId}`);
-        return Promise.resolve({ estado: 'pago' });
-      },
-    } as unknown as CheckoutService);
+    const controlador = new CheckoutController(
+      {
+        iniciar: (_dados: unknown, preCadastroId: string) => {
+          chamadas.push(`iniciar ${preCadastroId}`);
+          return Promise.resolve({});
+        },
+        situacao: (checkoutId: string, preCadastroId: string) => {
+          chamadas.push(`situacao ${checkoutId} ${preCadastroId}`);
+          return Promise.resolve({ estado: 'pago' });
+        },
+      } as unknown as CheckoutService,
+      cartao,
+    );
     return { controlador, chamadas };
   }
+
+  /** B2, decisoes.md 3.4: o interruptor do cartao, no servidor. */
+  it('recusa cartao com 422 quando o interruptor esta desligado', () => {
+    const { controlador, chamadas } = montar(false);
+
+    expect(() =>
+      controlador.iniciar({ metodo: 'cartao' } as never, 'id.segredo'),
+    ).toThrow('ainda não está disponível');
+    expect(chamadas).toEqual([]);
+  });
+
+  it('com o cartao desligado, o PIX continua', async () => {
+    const { controlador, chamadas } = montar(false);
+    await controlador.iniciar({ metodo: 'pix' } as never, 'id.segredo');
+    expect(chamadas).toEqual(['iniciar id']);
+  });
+
+  it('informa os metodos disponiveis', () => {
+    expect(montar(false).controlador.metodos()).toEqual({
+      pix: true,
+      cartao: false,
+    });
+    expect(montar(true).controlador.metodos()).toEqual({
+      pix: true,
+      cartao: true,
+    });
+  });
 
   /** O id sai do token que o guard ja validou — o segredo nunca chega ao servico. */
   it('passa ao servico so o id do pre-cadastro', async () => {
@@ -999,10 +1068,7 @@ describe('perfis das areas autenticadas', () => {
       'cliente.cancelarReuniao (Etapa 10)',
       PedidosClienteController.prototype.cancelarReuniao,
     ],
-    [
-      'advogado.agenda (Etapa 10)',
-      ReunioesAdvogadoController.prototype.agenda,
-    ],
+    ['advogado.agenda (Etapa 10)', ReunioesAdvogadoController.prototype.agenda],
     [
       'admin.reunioesSemSala (Etapa 10)',
       ReunioesAdminController.prototype.semSala,

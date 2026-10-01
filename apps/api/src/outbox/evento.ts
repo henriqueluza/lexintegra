@@ -71,6 +71,25 @@ export interface NovoEvento {
   readonly estorno?: EstornoDoEvento;
   /** Nos tres eventos de reuniao da Etapa 10. */
   readonly reuniao?: ReuniaoDoEvento;
+  /**
+   * So em `pausa-contestacao`: a cobranca contestada. E so um id, sem valor nem
+   * produto — o e-mail diz o que precisa sem dado do pedido em repouso aqui.
+   */
+  readonly cobrancaId?: string;
+  /**
+   * So em `aviso-exclusao-arquivos`: o pedido cujos arquivos vao sair. O aviso
+   * e UM POR PEDIDO (decisoes.md, 2.2) — ate o Bloco D da B2 a chave era o
+   * cliente, e o segundo pedido do mesmo cliente nunca era avisado.
+   */
+  readonly pedidoId?: string;
+  /**
+   * Em `acesso-advogado-atualizado` e `convite-administrador`: a versao do
+   * acesso, que sobe a cada troca de e-mail do advogado (decisoes.md 4.1) e a
+   * cada convite de administrador (5.5). Sem ela, a segunda troca
+   * cairia no documento da primeira, ja entregue, e o endereco novo nunca
+   * receberia o link.
+   */
+  readonly versao?: number;
 }
 
 export interface RegistroOutbox {
@@ -78,6 +97,8 @@ export interface RegistroOutbox {
   readonly destinatarioUid: string;
   readonly estorno?: EstornoDoEvento;
   readonly reuniao?: ReuniaoDoEvento;
+  readonly cobrancaId?: string;
+  readonly pedidoId?: string;
   readonly estado: EstadoEntrega;
   readonly criadoEm: Timestamp;
   /** Quantas vezes o registro foi REIVINDICADO. Ver `OutboxService.reivindicar`. */
@@ -152,6 +173,16 @@ export function idDoEvento(
   uid: string,
   agora: number = Date.now(),
 ): string {
+  /*
+   * OS TRES DA ETAPA 10 E A PAUSA POR CONTESTACAO tem a mesma FORMA de id —
+   * `tipo_chave` —, e o que os distingue e a CHAVE, montada em `chaveDoEvento`:
+   * a sala leva so (pedido, reuniao); o convite e o cancelamento levam tambem
+   * `sequence` e o destinatario; a pausa leva a cobranca e o destinatario — um
+   * aviso por cliente por cobranca contestada, e o webhook repetido cai no
+   * mesmo documento. O porque de cada parte esta la, junto da composicao.
+   */
+  if (temChaveComposta(tipo)) return `${tipo}_${uid}`;
+
   switch (tipo) {
     case 'definir-senha':
       return `definir-senha_${uid}`;
@@ -174,24 +205,14 @@ export function idDoEvento(
       return `estorno-integral_${uid}`;
 
     /*
-     * O aviso de exclusao acontece UMA vez por pedido fechado, e o pedido ja e
-     * marcado como avisado na mesma transacao. O uid basta — e se o job repetir
-     * a passagem no mesmo dia, o `create` estoura como duplicata esperada em vez
-     * de mandar o mesmo aviso duas vezes.
+     * O aviso de exclusao acontece UMA vez por PEDIDO fechado, e o pedido ja e
+     * marcado como avisado na mesma transacao. A chave e o pedido (ver
+     * `chaveDoEvento`): se o job repetir a passagem, o evento ja existe e nao
+     * sai de novo. Ate o Bloco D da B2 a chave era o cliente, e o segundo pedido
+     * do mesmo cliente caia no documento do primeiro e nunca era avisado.
      */
     case 'aviso-exclusao-arquivos':
       return `aviso-exclusao_${uid}`;
-
-    /*
-     * OS TRES DA ETAPA 10 tem a mesma FORMA de id — `tipo_chave` —, e o que os
-     * distingue e a CHAVE, montada em `chaveDoEvento`: a sala leva so (pedido,
-     * reuniao); o convite e o cancelamento levam tambem `sequence` e o
-     * destinatario. O porque de cada parte esta la, junto da composicao.
-     */
-    case 'criar-sala-reuniao':
-    case 'convite-reuniao':
-    case 'cancelamento-reuniao':
-      return `${tipo}_${uid}`;
 
     case 'redefinir-senha': {
       const janela = Math.floor(agora / JANELA_REDEFINICAO_MS);
@@ -201,6 +222,22 @@ export function idDoEvento(
     default:
       return semRamo(tipo);
   }
+}
+
+const COM_CHAVE_COMPOSTA = [
+  'criar-sala-reuniao',
+  'convite-reuniao',
+  'cancelamento-reuniao',
+  'pausa-contestacao',
+  'reuniao-desmarcada-escritorio',
+  'acesso-advogado-atualizado',
+  'convite-administrador',
+] as const;
+
+function temChaveComposta(
+  tipo: TipoEvento,
+): tipo is (typeof COM_CHAVE_COMPOSTA)[number] {
+  return (COM_CHAVE_COMPOSTA as readonly TipoEvento[]).includes(tipo);
 }
 
 /**
@@ -255,6 +292,13 @@ export function ehDuplicata(erro: unknown): boolean {
  */
 export function chaveDoEvento(evento: NovoEvento): string {
   if (evento.estorno !== undefined) return evento.estorno.pagamentoId;
+  if (evento.versao !== undefined) {
+    return `${evento.destinatarioUid}_v${String(evento.versao)}`;
+  }
+  if (evento.pedidoId !== undefined) return evento.pedidoId;
+  if (evento.cobrancaId !== undefined) {
+    return `${evento.cobrancaId}_${evento.destinatarioUid}`;
+  }
 
   const reuniao = evento.reuniao;
   if (reuniao === undefined) return evento.destinatarioUid;

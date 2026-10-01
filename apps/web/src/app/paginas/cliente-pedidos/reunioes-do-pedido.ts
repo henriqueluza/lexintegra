@@ -90,6 +90,7 @@ export class ReunioesDoPedido {
 
     return impedimentoParaAgendar({
       situacao: pedido.situacao,
+      contestacaoAberta: pedido.contestacaoAberta,
       distribuido: pedido.distribuido,
       quantidadeContratada: pedido.snapshot.quantidadeReunioes,
       intervaloMinimoDias: 0,

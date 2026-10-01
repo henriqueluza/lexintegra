@@ -37,6 +37,10 @@ export const TIPOS_EVENTO = [
   'criar-sala-reuniao',
   'convite-reuniao',
   'cancelamento-reuniao',
+  'pausa-contestacao',
+  'reuniao-desmarcada-escritorio',
+  'acesso-advogado-atualizado',
+  'convite-administrador',
 ] as const;
 
 export type TipoEvento = (typeof TIPOS_EVENTO)[number];
@@ -68,6 +72,36 @@ export type TipoEvento = (typeof TIPOS_EVENTO)[number];
  * recebe e o oposto: remover o evento em vez de atualiza-lo. Colapsa-los daria
  * um so montador com um `if` no meio, e o `if` erraria no dia em que a ordem dos
  * campos do iCalendar importasse.
+ */
+
+/*
+ * `acesso-advogado-atualizado` (B2, decisoes.md 4.1) e o novo link de acesso
+ * quando o administrador troca o e-mail de um advogado. E evento DIFERENTE de
+ * `definir-senha` porque `definir-senha` acontece uma vez por conta — a chave e
+ * o uid —, e a troca de e-mail pode acontecer quantas vezes o administrador
+ * quiser: a chave leva a versao do acesso, e cada troca tem o seu registro.
+ */
+
+/*
+ * `convite-administrador` (B2, decisoes.md 5.5) e o link de definicao de senha
+ * de quem foi convidado a administrador. Separado de `definir-senha` pela mesma
+ * razao que separa os outros: "o administrador criou um advogado" e "o
+ * administrador convidou outro administrador" sao fatos distintos. A chave leva
+ * a versao do convite, porque quem foi removido pode ser convidado de novo.
+ */
+
+/*
+ * `pausa-contestacao` (B2, decisoes.md 5.4) e o aviso ao cliente de que o
+ * pagamento foi contestado no meio de pagamento, os pedidos daquela cobranca
+ * ficaram pausados e as reunioes futuras foram desmarcadas com devolucao ao
+ * saldo. Um por cliente por cobranca: a chave leva a cobranca.
+ */
+
+/*
+ * `reuniao-desmarcada-escritorio` (B2, ADR-21 decisao H) e o aviso ao CLIENTE de
+ * que o escritorio desmarcou a reuniao: o credito voltou ao saldo, e ele pode
+ * marcar outro horario. Sai sempre que o administrador cancela — inclusive
+ * quando a reuniao nunca ganhou sala e, portanto, nao ha `METHOD:CANCEL`.
  */
 
 /*

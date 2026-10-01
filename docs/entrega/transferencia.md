@@ -165,5 +165,6 @@ Só depois de **tudo acima conferido**, e conforme a tabela de
 | 6.2 | Remover o `billing.admin` do desenvolvedor na conta de faturamento, **só depois de o escritório ter indicado o segundo `billing.admin`** | Escritório | Política da conta de faturamento, com pelo menos dois administradores humanos do lado do escritório |
 | 6.3 | Remover o desenvolvedor do repositório ou da organização no GitHub | Escritório | Lista de membros |
 | 6.4 | Remover o desenvolvedor de Resend, AbacatePay, Registro.br e Microsoft 365 | Escritório | Lista de membros de cada painel |
+| 6.4a | Remover o acesso de **administrador da plataforma** do desenvolvedor, em `/admin/administradores`, depois de o Auan estar ativo (B2, decisões 5.5; [`operacao.md`](operacao.md), 8) | Escritório (Auan) | Linha `administrador.removido` em `auditoria/`; o desenvolvedor não entra mais no painel administrativo |
 | 6.5 | O desenvolvedor apaga as credenciais locais: `.env`, ADC do `gcloud` (`gcloud auth revoke`, `gcloud auth application-default revoke`), login do CLI do AbacatePay e o clone do repositório, se combinado | Dev | Declaração por escrito |
 | 6.6 | Na saída da garantia, repetir 6.1 a 6.4 para o que tiver ficado | Escritório | Tabela da garantia zerada |

@@ -161,7 +161,9 @@ describe('provisionamento de advogado', () => {
     });
 
     expect(transporte.enviadas).toHaveLength(1);
-    expect(transporte.enviadas[0].modelo?.alias).toBe('password-reset');
+    expect(transporte.enviadas[0].assunto).toBe(
+      'Seu acesso de advogado à LexIntegra',
+    );
     expect(transporte.enviadas[0].para).toEqual([ANA.email]);
   });
 
@@ -174,8 +176,9 @@ describe('provisionamento de advogado', () => {
     await servico.criar(ANA, UID_ADMIN);
     await entregarFila();
 
-    const link = transporte.enviadas[0].modelo?.variaveis['LINK'] ?? '';
-    const url = new URL(link);
+    // Desde a B2 o link vai no corpo do texto versionado (decisoes.md 5.1).
+    const corpo = transporte.enviadas[0].corpoTexto ?? '';
+    const url = new URL(/https?:\/\/\S+/u.exec(corpo)?.[0] ?? '');
     expect(url.pathname).toBe('/definir-senha');
     expect(url.searchParams.get('oobCode')).toMatch(/.+/);
   });

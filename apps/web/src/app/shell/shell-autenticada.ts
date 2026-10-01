@@ -66,16 +66,26 @@ export class ShellAutenticada {
         { rota: '/admin/produtos', rotulo: 'Produtos', icone: 'grade' },
         /* Etapa 8: as devolucoes que o escritorio faz por fora do gateway. */
         { rota: '/admin/estornos', rotulo: 'Estornos', icone: 'estorno' },
+        /* B2 (decisoes.md 5.5): convidar e remover administradores. */
+        {
+          rota: '/admin/administradores',
+          rotulo: 'Administradores',
+          icone: 'cadeado',
+        },
         /*
-         * As duas ultimas sao telas de DIAGNOSTICO, visitadas quando algo deu
-         * errado — nao parte do trabalho do dia. Por isso no fim, separadas.
+         * O grupo do fim e o das telas visitadas quando algo deu errado — nao
+         * parte do trabalho do dia. Por isso no fim, separadas. A B2 acrescentou
+         * as contestacoes (5.4) e os pagamentos que nao viraram pedido (4.2):
+         * os dois chegam por alerta critico.
          */
         {
-          rota: '/admin/entregas',
-          rotulo: 'Entregas',
-          icone: 'mensagem',
+          rota: '/admin/contestacoes',
+          rotulo: 'Contestações',
+          icone: 'escudo',
           grupo: 'Quando algo falha',
         },
+        { rota: '/admin/pagamentos', rotulo: 'Pagamentos', icone: 'alerta' },
+        { rota: '/admin/entregas', rotulo: 'Entregas', icone: 'mensagem' },
         { rota: '/admin/reunioes', rotulo: 'Reuniões', icone: 'video' },
       ];
     }

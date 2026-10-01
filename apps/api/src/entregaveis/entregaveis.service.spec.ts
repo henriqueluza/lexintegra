@@ -124,6 +124,35 @@ describe('EntregaveisService', () => {
       expect(estado(banco)).toBe('entregue');
     });
 
+    /**
+     * O FIM DO CONTRATO, para a retencao (decisoes.md, 2.2): a confirmacao do
+     * ULTIMO entregavel marca o pedido na mesma transacao. Ate o Bloco D da B2
+     * ninguem marcava, e o job de retencao nunca encontrou pedido nenhum.
+     */
+    it('a confirmacao do ultimo entregavel inicia a retencao do pedido', async () => {
+      const { banco, entregaveis } = await ateAguardandoCliente();
+
+      await entregaveis.confirmarEntrega(ALVO, CLIENTE);
+
+      expect(banco.documentos.get('pedidos/pedido-1')).toMatchObject({
+        retencaoPendente: true,
+        avisoDeExclusaoEnviado: false,
+      });
+    });
+
+    it('com outro entregavel em aberto, a retencao nao comeca', async () => {
+      const { banco, entregaveis } = await ateAguardandoCliente();
+      banco.documentos.set('pedidos/pedido-1/entregaveis/999', {
+        estado: 'em_elaboracao',
+      });
+
+      await entregaveis.confirmarEntrega(ALVO, CLIENTE);
+
+      expect(
+        banco.documentos.get('pedidos/pedido-1')?.['retencaoPendente'],
+      ).toBeUndefined();
+    });
+
     it('percorre o ciclo de revisao e volta a elaboracao', async () => {
       const { banco, entregaveis } = await ateAguardandoCliente();
 

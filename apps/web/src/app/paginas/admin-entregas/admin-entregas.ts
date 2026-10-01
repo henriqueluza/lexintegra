@@ -38,6 +38,10 @@ const ROTULO_DO_TIPO: Readonly<Record<string, string>> = {
   'criar-sala-reuniao': 'Sala da reunião no Teams',
   'convite-reuniao': 'Convite de reunião',
   'cancelamento-reuniao': 'Cancelamento de reunião',
+  'pausa-contestacao': 'Pedido pausado por contestação',
+  'reuniao-desmarcada-escritorio': 'Reunião desmarcada pelo escritório',
+  'acesso-advogado-atualizado': 'Novo acesso do advogado',
+  'convite-administrador': 'Convite de administrador',
 };
 
 /**

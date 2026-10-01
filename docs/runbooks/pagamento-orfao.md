@@ -6,8 +6,11 @@
 
 **Nos três casos, o cliente pagou e nenhum pedido foi criado.** O sistema
 registra o pagamento, dispara o alerta e para. Não existe caminho automático
-que resolva nem tela para isso (ADR-19). A resolução é uma decisão do
-escritório.
+que resolva (ADR-19). A resolução é uma decisão do escritório. A tela
+**`/admin/pagamentos`** (B2, decisões 4.2) lista os três casos, com valor,
+data, id da cobrança e — enquanto o checkout existir — nome, e-mail e
+produtos do comprador; e é lá que o caso é **marcado como resolvido**, com
+nota obrigatória e linha no log de auditoria. A tela não move dinheiro.
 
 **Quem executa:** a análise, quem atende a operação, com leitura no Firestore.
 A decisão e o estorno, o escritório, no painel do AbacatePay.
@@ -25,8 +28,10 @@ A decisão e o estorno, o escritório, no painel do AbacatePay.
 ## Como confirmar
 
 1. Pegue o id da cobrança no detalhe do alerta
-   (`cobranca <id> (checkout <id>): <situacao>`).
-2. No console do Firestore, **só leitura**, abra `pagamentos/{cobrancaId}`. O
+   (`cobranca <id> (checkout <id>): <situacao>`), ou na lista de
+   `/admin/pagamentos`.
+2. Na tela, ou no console do Firestore, **só leitura**, em
+   `pagamentos/{cobrancaId}`. O
    documento anômalo guarda só isto (`registrarAnomalia` em
    `apps/api/src/pagamentos/webhook/confirmacao.service.ts`):
    - `situacao`;
@@ -49,7 +54,16 @@ A decisão e o estorno, o escritório, no painel do AbacatePay.
 ## O que fazer
 
 1. **Leve o caso ao escritório** com o id da cobrança, o valor e a situação.
-   `[CONFIRMAR: quem no escritório decide, e em quanto tempo]`.
+   Decidido em `docs/decisoes.md`, 5.3:
+   - **Quem mexe no dinheiro é só o dono**, no painel do AbacatePay. O advogado
+     responsável pelo pedido confirma se ele é elegível a estorno (nada
+     entregue, nenhuma reunião ocorrida), mas não tem acesso ao financeiro.
+   - **Pagamento órfão:** identificado e associado ao pedido em até **2 dias
+     úteis**. Se em **30 dias** não for possível identificar a quem pertence, o
+     valor é devolvido à origem.
+   - **Estorno:** iniciado em até **5 dias úteis** depois de aprovado. No PIX o
+     valor volta na hora em que o estorno é feito; no cartão segue o prazo da
+     operadora. Os termos dizem isso ao cliente.
 2. **Caminhos possíveis.** O código não oferece outro:
    - **Estornar no painel do AbacatePay.** Esse estorno é feito por uma pessoa
      no painel. O botão de estorno da plataforma só existe para **pedidos**, e
@@ -81,7 +95,9 @@ A decisão e o estorno, o escritório, no painel do AbacatePay.
 
 ## Como saber que resolveu
 
-- O escritório registrou a decisão.
+- O caso está **marcado como resolvido** em `/admin/pagamentos`, com a nota
+  do que foi feito (`resolucao` no documento e `pagamento.resolvido` em
+  `auditoria/`).
 - Se houve estorno, ele aparece como concluído no painel do AbacatePay, e
   o log da API tem a linha do webhook `*.refunded` daquela cobrança
   (`jsonPayload.sinal="webhook.recebido"`).

@@ -195,9 +195,12 @@ Arquivos versionados em `apps/web/public/`:
 | `favicon.ico` | Derivado de `favicon.png` no Bloco E (16, 32, 48 e 64 px). Substituiu o ícone padrão do Angular CLI que vinha do esqueleto da Etapa 2 | [`docs/imagens-landing.md`](../imagens-landing.md) |
 | Ícones do sistema (`apps/web/src/app/ui/icone/`) | Cópia literal dos traços do protótipo `docs/prototipos/direcao-B-pauta.html` (Etapa 1). **A origem do desenho no protótipo não está registrada**: nenhuma biblioteca é citada em lugar nenhum do repositório | [`docs/imagens-landing.md`](../imagens-landing.md) |
 
-Os arquivos `imagens/arquitetura-lexintegra.jpg` e `.png` existem na cópia de
-trabalho do desenvolvedor, mas **não estão versionados**, e por isso não entram
-nesta lista.
+As ilustrações de arquitetura `docs/imagens/arquitetura-lexintegra.jpg` e
+`.png` estão **versionadas em `docs/imagens/`** e ilustram o `README.md` da
+raiz (B2, decisões 6.2). Foram **geradas por IA** (ferramenta `imagegen`), com
+prompt original registrado em [`docs/revisao-frontend.md`](../revisao-frontend.md),
+e não usam material de terceiros. Saíram de `apps/web/public/` porque lá seriam
+servidas publicamente pelo site.
 
 ## 6. O que foi produzido no projeto
 

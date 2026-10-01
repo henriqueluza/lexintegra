@@ -75,12 +75,12 @@ export const routes: Routes = [
   {
     path: 'privacidade',
     loadComponent: () => import('./paginas/legal/legal').then((m) => m.Legal),
-    title: 'Privacidade — LexIntegra',
+    title: 'Política de privacidade — LexIntegra',
   },
   {
     path: 'termos',
     loadComponent: () => import('./paginas/legal/legal').then((m) => m.Legal),
-    title: 'Termos de contratação — LexIntegra',
+    title: 'Termos de uso — LexIntegra',
     data: { termos: true },
   },
 
@@ -267,6 +267,30 @@ export const routes: Routes = [
             (m) => m.AdminEstornos,
           ),
         title: 'Estornos — LexIntegra',
+      },
+      {
+        path: 'contestacoes',
+        loadComponent: () =>
+          import('./paginas/admin-contestacoes/admin-contestacoes').then(
+            (m) => m.AdminContestacoes,
+          ),
+        title: 'Contestações — LexIntegra',
+      },
+      {
+        path: 'pagamentos',
+        loadComponent: () =>
+          import('./paginas/admin-pagamentos/admin-pagamentos').then(
+            (m) => m.AdminPagamentos,
+          ),
+        title: 'Pagamentos com problema — LexIntegra',
+      },
+      {
+        path: 'administradores',
+        loadComponent: () =>
+          import('./paginas/admin-administradores/admin-administradores').then(
+            (m) => m.AdminAdministradores,
+          ),
+        title: 'Administradores — LexIntegra',
       },
       {
         path: 'entregas',

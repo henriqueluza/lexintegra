@@ -1,340 +1,192 @@
-/*
- * Catalogo publico (ADR-22): busca, grade de cartoes com faixa superior, e o
- * resumo do carrinho fixo no rodape da tela enquanto houver item. Antes do
- * cadastro, cartoes de exemplo borrados atras do aviso de cadeado.
- */
 :host {
   display: block;
 }
-
 h2 {
-  font-size: var(--t-t3);
-  font-weight: var(--peso-maximo);
-  line-height: var(--altura-titulo);
-  letter-spacing: var(--letra-titulo);
+  font-size: var(--lex-text-title);
+  font-weight: var(--lex-weight-medium);
+  line-height: var(--lex-leading-heading);
 }
-
-/* ------------------------------ ferramentas ------------------------------- */
 .ferramentas {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: var(--s4);
-  margin-bottom: var(--s5);
+  gap: var(--lex-space-5);
+  margin-bottom: var(--lex-space-6);
 }
-
 .busca {
   display: flex;
   align-items: center;
-  gap: var(--s2);
+  gap: var(--lex-space-3);
   width: 100%;
-  max-width: 360px;
-  padding: 0 var(--s4);
-  background: var(--campo-fundo);
-  border: var(--borda-fina) solid var(--campo-borda-cor);
-  border-radius: var(--raio);
-  color: var(--texto-3);
+  max-width: 460px;
+  padding: 0 var(--lex-space-4);
+  border: var(--borda-fina) solid var(--lex-text-muted);
+  border-radius: var(--lex-radius-sm);
+  background: var(--lex-surface);
+  color: var(--lex-text-secondary);
 }
-
 .busca:focus-within {
-  outline: var(--borda-media) solid var(--foco);
+  outline: var(--borda-media) solid var(--lex-border-focus);
   outline-offset: var(--foco-deslocamento);
 }
-
 .busca input {
   flex: 1;
   min-width: 0;
-  padding: var(--s3) 0;
+  min-height: var(--lex-control-h-lg);
   border: 0;
-  background: transparent;
-  color: var(--texto);
-  font-family: var(--fonte-interface);
-  font-size: var(--t-menor);
   outline: none;
+  color: var(--lex-text-primary);
+  background: transparent;
+  font-family: var(--lex-font-text);
+  font-size: var(--lex-text-body);
 }
-
-.ferramentas__contagem {
-  flex: none;
-  font-size: var(--t-mini);
-  color: var(--texto-3);
+.busca input::placeholder {
+  color: var(--lex-text-muted);
 }
-
-.sem-resultado {
-  padding: var(--s6);
-  text-align: center;
-  color: var(--texto-3);
-  background: var(--superficie-elevada);
-  border-radius: var(--raio-grande);
+.ferramentas__contagem,
+.exemplo-rotulo {
+  color: var(--lex-text-muted);
+  font-size: var(--lex-text-caption);
 }
-
-/* -------------------------------- vitrine --------------------------------- */
 .vitrine,
 .trava__fundo {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--s5);
+  grid-template-columns: minmax(0, 1fr);
 }
-
 .produto {
-  display: flex;
-  flex-direction: column;
-  background: var(--superficie-elevada);
-  border: var(--borda-fina) solid var(--divisor);
-  border-radius: var(--raio-grande);
-  overflow: hidden;
+  border-top: var(--borda-fina) solid var(--lex-border-hairline);
+  padding-block: var(--lex-space-6);
 }
-
-/* Faixa de areia com um quadrado dourado girado: textura, nao informacao. */
-.produto__faixa {
-  position: relative;
-  display: flex;
-  align-items: center;
-  height: 96px;
-  padding: 0 var(--s5);
-  background: var(--dourado-fundo);
-  color: var(--acento);
-  overflow: hidden;
+.produto:last-child {
+  border-bottom: var(--borda-fina) solid var(--lex-border-hairline);
 }
-
-.produto__faixa::after {
-  content: '';
-  position: absolute;
-  top: -36px;
-  right: -20px;
-  width: 145px;
-  height: 145px;
-  border: var(--borda-fina) solid var(--dourado-linha);
-  border-radius: var(--raio-destaque);
-  transform: rotate(35deg);
-}
-
 .produto__corpo {
-  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.5fr);
+  gap: var(--lex-space-3) var(--lex-space-7);
+  align-items: start;
+}
+.produto__corpo > :not(.produto__rodape) {
+  grid-column: 1;
+}
+.produto__corpo > p {
+  color: var(--lex-text-secondary);
+  font-size: var(--lex-text-body);
+  max-width: 65ch;
+}
+.produto__rodape {
+  grid-column: 2;
+  grid-row: 1 / span 4;
   display: flex;
   flex-direction: column;
-  gap: var(--s3);
-  padding: var(--s5);
+  align-items: flex-end;
+  gap: var(--lex-space-5);
 }
-
-.produto__corpo > p {
-  color: var(--texto-3);
-  font-size: var(--t-menor);
-  line-height: var(--altura-corpo);
+.produto__preco {
+  font-size: var(--lex-text-title);
+  color: var(--lex-text-primary);
+  font-weight: var(--lex-weight-medium);
 }
-
+.produto__preco small {
+  display: block;
+  color: var(--lex-text-muted);
+  font-size: var(--lex-text-caption);
+  font-weight: var(--lex-weight-regular);
+}
 .produto__entregaveis {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--s1);
-  font-size: var(--t-mini);
-  color: var(--texto-2);
+  gap: var(--lex-space-2);
+  color: var(--lex-text-secondary);
+  font-size: var(--lex-text-small);
 }
-
 .produto__entregaveis li {
   display: flex;
-  gap: var(--s2);
+  align-items: baseline;
+  gap: var(--lex-space-2);
 }
-
 .produto__entregaveis app-icone {
-  color: var(--acento);
-  margin-top: var(--s1);
+  color: var(--lex-accent);
 }
-
 .produto__inclui {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s2) var(--s4);
-  margin-top: auto;
-  padding-top: var(--s2);
-  font-size: var(--t-micro);
-  color: var(--texto-3);
+  gap: var(--lex-space-3) var(--lex-space-5);
 }
-
 .produto__inclui span {
   display: inline-flex;
   align-items: center;
-  gap: var(--s1);
+  gap: var(--lex-space-2);
+  font-size: var(--lex-text-small);
 }
-
-.produto__rodape {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: var(--s3);
-  padding-top: var(--s4);
-  border-top: var(--borda-fina) solid var(--divisor);
-}
-
-.produto__preco {
-  font-size: var(--t-numeral);
-  font-weight: var(--peso-maximo);
-  letter-spacing: var(--letra-titulo);
-  color: var(--texto);
-}
-
-.produto__preco small {
-  display: block;
-  font-size: var(--t-micro);
-  font-weight: var(--peso-normal);
-  letter-spacing: var(--letra-normal);
-  color: var(--texto-3);
-}
-
-/* ---------------------------------- trava --------------------------------- */
-.trava {
-  position: relative;
-  min-height: 420px;
-}
-
-.trava__fundo {
-  filter: blur(6px);
-  pointer-events: none;
-  user-select: none;
-}
-
-.produto--exemplo .produto__preco {
-  margin-top: auto;
-}
-
-.trava__fundo {
-  opacity: 0.55;
-}
-
-/*
- * A camada do aviso cobre a area INTEIRA dos exemplos, e o cartao fica no
- * centro dela. Cobrir tudo nao e so visual: os exemplos borrados passam a estar
- * atras de outro elemento, e o axe deixa de medir contraste de texto que ninguem
- * deve ler (eles ja sao `aria-hidden`).
- */
 .trava__aviso {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: var(--s4);
-}
-
-.trava__cartao {
-  width: min(460px, 100%);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: var(--s3);
-  padding: var(--s6);
-  text-align: center;
-  background: var(--superficie-elevada);
-  border: var(--borda-fina) solid var(--divisor);
-  border-radius: var(--raio-grande);
-  box-shadow: var(--sombra-forte);
+  gap: var(--lex-space-5);
+  padding-block: var(--lex-space-6);
+  border-top: var(--borda-fina) solid var(--lex-border-hairline);
+  margin-bottom: var(--lex-space-5);
 }
-
+.trava__aviso > app-icone {
+  color: var(--lex-accent);
+}
+.trava__aviso > div {
+  flex: 1;
+}
 .trava__aviso p {
-  color: var(--texto-3);
-  font-size: var(--t-menor);
-  line-height: var(--altura-corpo);
-  margin-bottom: var(--s2);
+  margin-top: var(--lex-space-3);
+  color: var(--lex-text-secondary);
 }
-
-.trava__icone {
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: var(--raio-cartao);
-  background: var(--acento-fundo);
-  color: var(--acento);
+.produto--exemplo .produto__corpo {
+  grid-template-columns: minmax(0, 1fr);
 }
-
-/* ------------------------------- vazio e falha ---------------------------- */
 .vazio,
-.falha {
+.falha,
+.sem-resultado {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--s4);
-  padding: var(--s7) var(--s5);
-  text-align: center;
-  background: var(--superficie-elevada);
-  border: var(--borda-fina) solid var(--divisor);
-  border-radius: var(--raio-grande);
+  align-items: flex-start;
+  gap: var(--lex-space-5);
+  padding: var(--lex-space-7) 0;
+  border-block: var(--borda-fina) solid var(--lex-border-hairline);
+  color: var(--lex-text-secondary);
 }
-
-.vazio p {
-  max-width: 44ch;
-  color: var(--texto-3);
-  font-size: var(--t-menor);
-}
-
-/* ------------------------------- carrinho --------------------------------- */
 .carrinho {
   position: sticky;
-  bottom: var(--s4);
-  z-index: var(--camada-fixa);
+  bottom: var(--lex-space-4);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: var(--s4);
-  margin-top: var(--s6);
-  padding: var(--s4) var(--s5);
-  background: var(--marca-superficie);
-  color: var(--marca-texto);
-  border-radius: var(--raio-grande);
-  box-shadow: var(--sombra-forte);
-  --acento: var(--marca-texto);
-  --acento-forte: var(--superficie-elevada);
-  --texto-sobre-acento: var(--marca-superficie);
-  --foco: var(--marca-acento);
+  gap: var(--lex-space-5);
+  margin-top: var(--lex-space-7);
+  padding: var(--lex-space-5);
+  border: var(--borda-fina) solid var(--lex-border-strong);
+  border-radius: var(--lex-radius-sm);
+  background: var(--lex-surface);
+  color: var(--lex-text-primary);
+  z-index: var(--lex-z-sticky);
 }
-
-.carrinho h2 {
-  font-size: var(--t-corpo);
-}
-
 .carrinho p {
-  color: var(--marca-texto-2);
-  font-size: var(--t-mini);
+  font-size: var(--lex-text-small);
+  margin-top: var(--lex-space-2);
+  color: var(--lex-text-secondary);
 }
-
-.carrinho strong {
-  color: var(--marca-texto);
-}
-
-@media (max-width: 1000px) {
-  .vitrine,
-  .trava__fundo {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .vitrine,
-  .trava__fundo {
+@media (max-width: 700px) {
+  .produto__corpo {
     grid-template-columns: minmax(0, 1fr);
   }
-
-  .ferramentas {
-    flex-direction: column;
-    align-items: stretch;
+  .produto__rodape {
+    grid-column: 1;
+    grid-row: auto;
+    align-items: flex-start;
+    padding-top: var(--lex-space-4);
   }
-
-  .busca {
-    max-width: none;
-  }
-
-  .produto__faixa {
-    height: 72px;
-  }
-
+  .trava__aviso,
+  .ferramentas,
   .carrinho {
     flex-direction: column;
     align-items: stretch;
-    bottom: var(--s2);
-  }
-
-  .trava {
-    min-height: 520px;
   }
 }

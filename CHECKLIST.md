@@ -206,6 +206,30 @@ e passe a lista ao Claude como "ajustes finais".
 
 ### B1. Já pode fazer (passo 2)
 
+**Frontend público Névoa — etapa de 30/09 a 01/10/2026**
+
+- [x] Aplicar o handoff à landing e às páginas públicas, com fontes, fotografias,
+  navegação, catálogo em página separada e layout responsivo.
+- [x] Preservar os módulos de administração, advogados e área do cliente.
+- [x] Adicionar rodapé público com CNPJ, e-mail, telefone e links para termos
+  de uso e política de privacidade; preencher e estilizar as páginas legais
+  (a revisão jurídica permanece no item específico abaixo).
+- [x] Restaurar as animações do modelo: hero, capítulos, títulos, faixa de passos,
+  revelações, arraste do Line-up e menu móvel; respeitar movimento reduzido.
+- [x] Navbar pública por estado: visitante vê Entrar/Cadastro; pré-cadastrado
+  sem sessão vê apenas Catálogo; cliente autenticado vê Minha área (`/painel`).
+  O menu acompanha a mesma regra e mantém os destinos de admin/advogado.
+  O pré-cadastro salvo é restaurado sem consultar a API na landing.
+- [x] Remover os exemplos de serviços do Line-up e colocar placeholders
+  decorativos borrados, sem nomes, preços ou ofertas fictícias. A home mantém
+  apenas a prévia reservada e links de cadastro/acesso; os serviços ficam em
+  outra página (`/servicos`). Nenhuma consulta à API foi adicionada à landing.
+- [ ] Adicionar o catálogo real de serviços em `/servicos`: o escritório deve
+  cadastrar e publicar os produtos pelo módulo administrativo, com escopo,
+  entregáveis e preços definitivos. Validar a exibição para usuários com acesso
+  e o fluxo de contratação. Os placeholders da landing não são produtos reais.
+
+
 **Alertas e ClamAV (achados de 29/09)**
 
 Ordem: métrica de idade do `daily` antes ou junto do binding, senão cada
@@ -471,71 +495,95 @@ constroem**. As decisões vão para um `decisoes.md`.
   no Bloco A** (`feat/anamnese-definitiva`): `definitiva-v1` em
   `packages/shared/src/anamnese.ts`, tela, testes e mapa LGPD. A guarda segue
   a política (2.1, pendente).
-- [ ] Texto final das minutas:
-  - termos;
-  - checkout;
-  - regra de estorno;
-  - cancelamento;
-  - privacidade;
-  - termo de download;
-  - e-mail de aviso de exclusão;
-  - e-mail de acesso do cliente.
-
-  → Substituir os textos, subir as versões e ajustar os testes que travam os
-  marcadores.
-- [ ] Encarregado (DPO) e canal de contato. → Política de privacidade e
-  `lgpd.md`.
-- [ ] Prazo para atender os demais direitos do art. 18. → `lgpd.md`.
+- [x] Texto final das minutas: termos, checkout, regra de estorno,
+  cancelamento, privacidade, termo de download, aviso de exclusão e acesso do
+  cliente, mais os e-mails novos (pausa por contestação, reunião desmarcada
+  pelo escritório, convite de administrador, novo acesso do advogado).
+  Redigidos no Bloco I (decisoes.md, 1.2), também nas páginas públicas do
+  redesign Névoa. A regra de estorno vive numa constante só
+  (`packages/shared/src/regra-estorno.ts`). Versões novas:
+  `checkout-v3-2026-10` e `v3-2026-10` (download).
+- [ ] 👤 Revisar os textos do Bloco I e levar ao escritório para aprovação.
+- [x] Encarregado (DPO) e canal de contato: Auan Bastos e
+  `privacidade@lexintegra.com.br` (decisoes.md, 1.3), na política de
+  privacidade, no rodapé dos e-mails e em `lgpd.md` (Bloco I).
+- [ ] Prazo para atender os demais direitos do art. 18. → `lgpd.md` e trocar o
+  marcador `[PENDENTE-ESCRITORIO: …]` da política (`pendencias-escritorio.ts`).
 
 **LGPD e retenção**
 
 - [ ] Política de guarda: prazos e exceções. → Construir o executor de
-  eliminação e o envio do aviso, que hoje estão bloqueados.
-- [ ] Retenção dos entregáveis: hoje são 30 dias a partir de `entregue`. →
-  Confirmar ou ajustar o job.
-- [ ] Retenção dos anexos do cliente: não existe hoje. → Estender o job de
-  retenção.
+  eliminação e o envio do aviso, que hoje estão bloqueados, e trocar o
+  marcador `[PENDENTE-ESCRITORIO: …]` da política de privacidade.
+- [x] Retenção dos entregáveis: 30 dias a partir de `entregue`, com lembrete
+  7 dias antes (decisoes.md, 2.2). Bloco D: o job passou a rodar de verdade (a
+  marca de fechamento não era escrita por ninguém), o aviso é por pedido e a
+  exclusão nunca vem antes do aviso.
+- [x] Retenção dos anexos do cliente: no mesmo ciclo dos entregáveis
+  (decisoes.md, 2.3). Construído no Bloco D.
 
 **Regras de produto**
 
-- [ ] Tipos e tamanho do upload do advogado: hoje o ponto de partida é PDF de
-  até 20 MB. → Tirar o marcador `A-CONFIRMAR-COM-A-CONTRATANTE`.
-- [ ] As oito decisões provisórias do ADR-21, em especial a antecedência de
-  24 h e a devolução do crédito quando o escritório cancela. → Ajustar o código
-  e o ADR.
-- [ ] `produtosContratados` do cliente perde o produto cancelado ou estornado?
-  → Ajustar.
-- [ ] Enquanto o cartão não for homologado: esconder a opção ou lançar só com
-  PIX? → Implementar.
+- [x] Tipos e tamanho do upload do advogado: PDF e DOCX, 20 MB (decisoes.md,
+  3.1). Bloco E: DOCX validado pela estrutura, `.doc` e `.docm` recusados, e
+  o marcador `A-CONFIRMAR-COM-A-CONTRATANTE` saiu.
+- [x] As oito decisões provisórias do ADR-21, em especial a antecedência de
+  24 h e a devolução do crédito quando o escritório cancela. Confirmadas
+  (decisoes.md, 3.2 e Anexo B); ADR-21 confirmado e e-mail de convite a
+  remarcar no Bloco C. Sem job de aviso de vencimento.
+- [x] `produtosContratados` do cliente perde o produto cancelado ou estornado?
+  Decidido (decisoes.md, 3.3) e construído no Bloco B: só pedidos ativos, e a
+  regra de estorno ganhou as três condições.
+- [x] Enquanto o cartão não for homologado: cartão desabilitado com "em breve",
+  lançamento só com PIX (decisoes.md, 3.4). Construído no Bloco G:
+  `PAGAMENTOS_CARTAO` (Terraform `pagamentos_cartao`, padrão `desabilitado`),
+  422 no servidor e `GET /api/checkout/metodos` para a tela.
 
 **Escopo novo**
 
-- [ ] Construir a edição de advogado já criado, incluindo `usuarioTeams`? →
-  Endpoint admin, tela e testes. Sem isso, o campo é gravado à mão no console
-  do Firestore.
-- [ ] Construir a tela do admin para pagamentos `orfao`, `divergente` e
-  `conflito_de_conta`? → Tela e endpoint.
+- [x] Construir a edição de advogado já criado, incluindo `usuarioTeams`.
+  Decidido (decisoes.md, 4.1) e construído no Bloco F1: `PUT
+  /api/admin/advogados/{uid}`, tela, log de auditoria (`auditoria/`), novo
+  link de acesso quando o e-mail muda e conferência do `usuarioTeams` no Graph
+  (que pede `User.Read.All`, em C › Microsoft).
+- [x] Construir a tela do admin para pagamentos `orfao`, `divergente` e
+  `conflito_de_conta`. Decidido (decisoes.md, 4.2) e construído no Bloco F2:
+  `/admin/pagamentos`, filtro por tipo e situação, "marcar como resolvido"
+  com nota e auditoria, índice `pagamentos_problematicos`.
 
 **Operação**
 
-- [ ] Endereço do remetente de e-mail. → `EMAIL_FROM` e `operacao.md`.
+- [x] Endereço do remetente de e-mail: `LexIntegra
+  <nao-responda@notificacoes.lexintegra.com.br>` (decisoes.md, 5.1). Bloco G:
+  `email_remetente`, rodapé em todo e-mail com `privacidade@` e os e-mails de
+  senha em texto versionado.
 - [ ] Destinatários dos alertas, e quais acordam alguém. →
   `alertas-roteamento.json` e Terraform.
-- [ ] Quem resolve um pagamento órfão, quem devolve o dinheiro no estorno
-  manual, e em quanto tempo. → Runbooks.
-- [ ] Processo de contestação (chargeback). → `alerta-critico.md`.
-- [ ] Como será provisionado o próximo administrador. → `operacao.md` §8.
+- [x] Quem resolve um pagamento órfão, quem devolve o dinheiro no estorno
+  manual, e em quanto tempo. Decidido (decisoes.md, 5.3); runbook
+  `pagamento-orfao.md` no Bloco B. O texto dos termos é o Bloco I.
+- [x] Processo de contestação (chargeback). Decidido (decisoes.md, 5.4) e
+  construído no Bloco B: pausa dos pedidos, `/admin/contestacoes`,
+  `alerta-critico.md`.
+- [x] Como será provisionado o próximo administrador. Decidido (decisoes.md,
+  5.5) e construído no Bloco F3: `/admin/administradores`, convite por e-mail,
+  regra 17 emendada (terceiro escritor de claim, só `admin`), último
+  administrador e a si mesmo protegidos, auditoria e `operacao.md` §8.
 - [x] Tipografia: Plus Jakarta Sans, família única (ADR-22).
 
 **Repositório**
 
 - [ ] Nome do repositório de destino. → PR que faz o WIF aceitar os dois
   repositórios (`transferencia.md` 2.1).
-- [ ] Destino de `apps/web/public/imagens/arquitetura-lexintegra.{jpg,png}`:
-  versionar com a origem registrada, ou descartar.
-- [ ] Pode apagar a branch morta `feat/modelo-produtos`?
-- [ ] A regra `deny` de `scripts/manual-only/` no `.claude/settings.json` fica?
-  Recomendação: manter.
+- [x] Destino de `arquitetura-lexintegra.{jpg,png}`: movidas para
+  `docs/imagens/`, ilustrando o `README.md` da raiz, origem "geradas por IA"
+  registrada (decisoes.md, 6.2; Bloco H).
+- [ ] 👤 Branch `feat/modelo-produtos`: **não apagar por enquanto** (Anexo B).
+  Ela tem o commit `be2217b` fora da `main`, com
+  `scripts/manual-only/atribuir-admin.js` e dois scripts de teste de e-mail
+  (sem chave escrita neles, conferido no Bloco H). O Henrique guarda o que
+  quiser e apaga depois.
+- [x] A regra `deny` de `scripts/manual-only/` fica (decisoes.md, 6.4).
 
 ---
 
@@ -555,10 +603,18 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
   48 h).
 - [ ] Object ID do Entra de cada advogado. É esse o valor do `usuarioTeams`,
   não o e-mail.
+- [ ] Domínio `lexintegra.com.br` no tenant da B&C e caixa compartilhada
+  `privacidade@lexintegra.com.br` (decisoes.md, 1.3). O endereço já está
+  publicado na política de privacidade e no rodapé dos e-mails.
+- [ ] Permissão de aplicação `User.Read.All` no mesmo aplicativo, com
+  consentimento de administrador. É ela que deixa a edição do advogado conferir
+  o `usuarioTeams` antes de salvar (Bloco F1 da B2). Sem ela a conferência
+  responde "indisponível" e a tela salva assim mesmo.
 
 **Construir**
 
-- [ ] Preencher o `usuarioTeams` de cada advogado.
+- [ ] Preencher o `usuarioTeams` de cada advogado, pela edição em
+  `/admin/advogados` (Bloco F1 da B2).
 - [ ] Ligar `REUNIOES_MODO=graph` em commit próprio, com uma chamada manual de
   teste antes.
 
@@ -603,8 +659,10 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
 
 **Construir**
 
-- [ ] `EMAIL_FROM` com o remetente decidido em B2.
-- [ ] Atualizar `operacao.md` 4.1 e `entrega-de-email-falhando.md`.
+- [x] `EMAIL_FROM` com o remetente decidido em B2 (Bloco G). Antes do merge:
+  confirmar que a chave `resend-api-key` é da conta onde o domínio foi
+  verificado.
+- [x] Atualizar `operacao.md` 4.1 e `entrega-de-email-falhando.md` (Bloco G).
 - [ ] 👤 E-mail real de teste em Gmail, Outlook e Apple Mail.
 - [ ] 👤 Conferir que o `traceparent` sobrevive ao Cloud Tasks (roteiro completo na
   seção 4.4 de `docs/runbooks/limpeza-infra.md`): pedir
@@ -644,6 +702,9 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
 - [ ] 👤 Disparar o alerta artificial depois de trocar o destinatário.
 - [ ] 👤 Remover seus acessos pessoais, ou registrar por escrito quais ficam
   nos 30 dias de garantia e por quê.
+- [ ] 👤 O Henrique convida o Auan em `/admin/administradores`; depois que o
+  Auan entrar, **o Auan remove o acesso de administrador do Henrique**
+  (`operacao.md` §8, `transferencia.md` 6.4a).
 
 **Encerramento**
 

@@ -2,7 +2,8 @@ import {
   conferirPolitica,
   ESTADOS_ARQUIVO,
   esquemaPedidoDeUpload,
-  MARCADOR_POLITICA_A_CONFIRMAR,
+  TIPO_DOCX,
+  tipoPelaExtensao,
   podeSerServido,
   POLITICA_UPLOAD,
   prefixoDoFluxo,
@@ -27,31 +28,24 @@ describe('a politica do cliente foi confirmada na reuniao', () => {
       tipos: ['image/jpeg', 'application/pdf'],
       tamanhoMaximoBytes: 5 * 1024 * 1024,
       maximoPorEnvio: 3,
-      pendencia: null,
     });
   });
 });
 
-/**
- * ESTE TESTE EXISTE PARA QUE CONFIRMAR SEJA UM ATO.
- *
- * O plano de execucao (0.2, item 6) registra que jpg/pdf/5 MB/3 arquivos vale
- * para o CLIENTE e nao necessariamente para o advogado. Os valores do fluxo do
- * advogado sao um ponto de partida plausivel, nao uma decisao tomada.
- *
- * Enquanto a confirmacao nao vier, `pendencia` carrega o marcador. Apagar o
- * marcador exige editar este teste junto — e e isso que impede a pendencia de
- * sumir por distracao.
- */
-describe('a politica do advogado NAO foi confirmada', () => {
-  it('carrega o marcador de pendencia', () => {
-    expect(POLITICA_UPLOAD['entregavel-advogado'].pendencia).toBe(
-      MARCADOR_POLITICA_A_CONFIRMAR,
-    );
-  });
+const DOCX: PedidoDeUpload = {
+  nome: 'parecer.docx',
+  tipo: TIPO_DOCX,
+  tamanhoBytes: 1_000_000,
+};
 
-  it('e a do cliente nao carrega', () => {
-    expect(POLITICA_UPLOAD['anexo-cliente'].pendencia).toBeNull();
+/** decisoes.md, 3.1: PDF e DOCX, 20 MB, um por envio. */
+describe('a politica do advogado foi confirmada', () => {
+  it('e pdf/docx, 20 MB, 1 arquivo', () => {
+    expect(POLITICA_UPLOAD['entregavel-advogado']).toEqual({
+      tipos: ['application/pdf', TIPO_DOCX],
+      tamanhoMaximoBytes: 20 * 1024 * 1024,
+      maximoPorEnvio: 1,
+    });
   });
 
   /** As duas sao DIFERENTES. Se um dia ficarem iguais, que seja por decisao. */
@@ -66,6 +60,37 @@ describe('conferirPolitica', () => {
   it('aceita o que a politica do fluxo permite', () => {
     expect(conferirPolitica('anexo-cliente', [PDF, JPG])).toBeNull();
     expect(conferirPolitica('entregavel-advogado', [PDF])).toBeNull();
+  });
+
+  it('o advogado envia DOCX; o cliente nao', () => {
+    expect(conferirPolitica('entregavel-advogado', [DOCX])).toBeNull();
+    expect(conferirPolitica('anexo-cliente', [DOCX])).toContain(
+      'Envie JPG ou PDF',
+    );
+  });
+
+  /** `.doc` e `.docm` continuam recusados, pelo tipo e pela extensao. */
+  it.each([
+    ['DOC pelo tipo', { nome: 'a.doc', tipo: 'application/msword' }],
+    [
+      'DOCM pelo tipo',
+      {
+        nome: 'a.docm',
+        tipo: 'application/vnd.ms-word.document.macroEnabled.12',
+      },
+    ],
+    ['DOCM declarado como DOCX', { nome: 'a.docm', tipo: TIPO_DOCX }],
+    ['PDF com extensao de DOCX', { nome: 'a.docx', tipo: 'application/pdf' }],
+  ])('recusa %s', (_caso, arquivo) => {
+    expect(
+      conferirPolitica('entregavel-advogado', [{ ...DOCX, ...arquivo }]),
+    ).toContain('Envie PDF ou DOCX');
+  });
+
+  it('a extensao e conferida sem diferenciar maiusculas', () => {
+    expect(
+      conferirPolitica('entregavel-advogado', [{ ...DOCX, nome: 'A.DOCX' }]),
+    ).toBeNull();
   });
 
   it('recusa envio vazio', () => {
@@ -111,6 +136,18 @@ describe('conferirPolitica', () => {
   });
 });
 
+describe('tipoPelaExtensao', () => {
+  it.each([
+    ['parecer.DOCX', TIPO_DOCX],
+    ['a.pdf', 'application/pdf'],
+    ['foto.jpeg', 'image/jpeg'],
+    ['a.docm', ''],
+    ['a.doc', ''],
+  ])('%s', (nome, tipo) => {
+    expect(tipoPelaExtensao(nome)).toBe(tipo);
+  });
+});
+
 describe('podeSerServido', () => {
   /** Regra inviolavel 6: nada e servido com status diferente de `limpo`. */
   it('so `limpo` pode', () => {
@@ -121,13 +158,14 @@ describe('podeSerServido', () => {
 
   /** A lista inteira, nominal: um estado novo que alguem acrescente sem pensar
    * na regra 6 faz este teste falhar. */
-  it('sao cinco estados, e apenas um serve', () => {
+  it('sao seis estados, e apenas um serve', () => {
     expect(ESTADOS_ARQUIVO).toEqual([
       'pendente_upload',
       'pendente_scan',
       'limpo',
       'infectado',
       'rejeitado',
+      'excluido',
     ]);
     expect(ESTADOS_ARQUIVO.filter(podeSerServido)).toEqual(['limpo']);
   });

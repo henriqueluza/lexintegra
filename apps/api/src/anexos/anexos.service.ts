@@ -74,7 +74,10 @@ export class AnexosService {
     quem: QuemAcessa,
     arquivos: readonly PedidoDeUpload[],
   ): Promise<{ id: string; url: string; validoPorSegundos: number }[]> {
-    const { referencia, pedido } = await this.acesso.exigir(pedidoId, quem);
+    const { referencia, pedido } = await this.acesso.exigirParaAlterar(
+      pedidoId,
+      quem,
+    );
 
     /*
      * `exigir` deixa passar o advogado atribuido e o administrador, que PODEM LER
@@ -144,7 +147,10 @@ export class AnexosService {
     anexoId: string,
     quem: QuemAcessa,
   ): Promise<void> {
-    const { referencia, pedido } = await this.acesso.exigir(pedidoId, quem);
+    const { referencia, pedido } = await this.acesso.exigirParaAlterar(
+      pedidoId,
+      quem,
+    );
 
     if (quem.uid !== pedido.clienteId) {
       throw new ForbiddenException(

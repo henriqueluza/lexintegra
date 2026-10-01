@@ -371,6 +371,13 @@ Os eventos de domínio, com a aresta de cada um, vivem em `packages/shared/src/e
 
 **A situação do pedido é um eixo separado do estado dos entregáveis.** `pedidos.situacao` ∈ `ativo | cancelado | estornado`, sempre escrita; documento anterior à Etapa 8 sem o campo é lido como `ativo`. O ADR-11 continua intacto: cancelar não é transição de entregável. O outro lado da corrida está em `EntregaveisService`, que recusa `iniciar-trabalho` em pedido que não esteja `ativo`, também dentro da transação — o estorno e o início do trabalho leem o mesmo pedido, e um dos dois reexecuta.
 
+**B2 (`docs/decisoes.md`, 3.3 e 5.4, construída no Bloco B) — três condições, o que vai junto, e a pausa.**
+
+- **Estorno exige as três condições juntas:** pedido em `solicitado` (nenhum trabalho iniciado — e portanto nenhum entregável enviado, porque o upload só existe em `em_elaboracao`), **nenhuma reunião com início já passado** (realizada ou não comparecimento), e o pedido **fora de contestação**. Anexos enviados pelo cliente não bloqueiam. O **cancelamento pelo cliente segue as mesmas condições** (regra inviolável 15; decisoes.md, Anexo B). As duas elegibilidades vivem em `packages/shared/src/situacao-pedido.ts` (`impedimentoDoEstorno`, `impedimentoDoCancelamento`), devolvem o **motivo** e não um booleano, e o 409 carrega esse motivo (`motivo` no corpo, ao lado de `message`) — a recusa diz qual condição falhou.
+- **Reunião futura não bloqueia: vai junto.** Na mesma transação do cancelamento ou do estorno, as reuniões ativas que ainda não começaram viram `cancelada_com_devolucao`, o slot é liberado e o `METHOD:CANCEL` sai pelo outbox para quem recebeu o convite.
+- **`produtosContratados` reflete só pedidos ativos.** Cancelar ou estornar tira o produto, a não ser que outro pedido ativo do mesmo cliente tenha o mesmo produto. Recalculado na mesma transação, a partir dos pedidos do cliente (`pedidos/encerramento.ts`).
+- **Contestação (chargeback) pausa o pedido.** É um **marcador** (`pedidos.contestacao`), e não uma situação nova: a contestação provável é a de um pedido já cancelado, porque cancelar não devolve dinheiro, e uma situação `pausado` apagaria o que ele era. O webhook `*.disputed` abre a contestação em `contestacoes/{cobrancaId}` e pausa **todos os pedidos da cobrança** na mesma transação: reuniões futuras canceladas com devolução, e e-mail ao cliente (`pausa-contestacao`, outbox). Enquanto aberta, **nenhuma alteração** passa — cliente, advogado ou administrador: cancelamento, estorno, devolução manual, agendar/remarcar/cancelar reunião, observação, anexo, aceite de termos, eventos de entregável e upload, distribuição. Cada ponto de entrada confere no servidor (`pedidos/pausa.ts`); ler continua livre. O administrador registra o resultado em `/admin/contestacoes`: **ganha** tira a pausa; **perdida** leva os pedidos a `estornado` com estorno de execução `contestacao` (o dinheiro já voltou pelo meio de pagamento, então não há devolução manual nem pelo gateway) e tira o produto de `produtosContratados`. Estorno que o escritório **já tinha devolvido** e contestação perdida na mesma cobrança vira alerta crítico (`pagamento.contestacao-sobre-estorno`). Contestação aberta também impede a eliminação de dados do titular (`lgpd/politica.ts`, `temContestacaoAberta`).
+
 **O texto jurídico da regra ainda não existe.** O aceite no checkout sai com o marcador literal `{{TODO-TEXTO-REGRA-ESTORNO-ADR-12}}` e a versão `checkout-v0-pendente-adr-12`, e o cancelamento com `{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}`, cada um com teste que cai quando o marcador for substituído. A evidência do aceite (`termosVersao`, `termosAceitosEm`) é **copiada para o pagamento** na confirmação: o checkout some pela TTL, e a prova de que o cliente aceitou a regra não pode sumir com ele.
 
 ### ADR-13 — Projeto Google Cloud/Firebase no nome do CONTRATADO, faturamento separado
@@ -513,7 +520,7 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
    - sem chave e fora de produção, o gateway é o **falso**, com segredos de webhook de desenvolvimento que só valem nesse caso;
    - o Terraform declara `PAGAMENTOS_MODO = "desligado"` sem referenciar secret novo, e o hook do agente bloqueia `abc_prod_`.
 6. **O webhook recusa antes de ler.** `AssinaturaWebhookGuard` confere o segredo e o HMAC do corpo cru em tempo constante, e qualquer falha é 401 sem nenhuma escrita. O corpo cru chega porque `rawBody: true` está em `OPCOES_DA_APLICACAO`, usada por `main.ts` e por todo arnês HTTP de teste — uma opção só em `main.ts` faria a suíte validar um HMAC que produção nunca veria. Evento assinado e ilegível responde 422 com alerta crítico.
-7. **A confirmação é uma transação, com a conta resolvida antes dela.** A conta no Auth é criada fora da transação (efeito externo, regra 2), de forma idempotente, por `ContasClienteService` — o segundo escritor de claim da regra 17 emendada. Dentro da transação: o pagamento (`create`), os pedidos a partir do snapshot, o documento do cliente, o evento `acesso-cliente` no outbox e o checkout em `pago`.
+7. **A confirmação é uma transação, com a conta resolvida antes dela.** A conta no Auth é criada fora da transação (efeito externo, regra 2), de forma idempotente, por `ContasClienteService` — o segundo escritor de claim da regra 17 emendada (o terceiro, só de `admin`, é `AdministradoresService`, da B2). Dentro da transação: o pagamento (`create`), os pedidos a partir do snapshot, o documento do cliente, o evento `acesso-cliente` no outbox e o checkout em `pago`.
 
 **Casos anômalos**, todos gravando o pagamento e nenhum respondendo 200 em silêncio:
 
@@ -529,7 +536,7 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 | Evento | Resposta | Alerta |
 |---|---|---|
 | documentado e alheio a este sistema (`subscription.*`, `transfer.*`, `payout.*`) | 200, `ignorado` | nenhum |
-| chargeback (`checkout.disputed`, `transparent.disputed`) | 200, `alertado` — nenhum estado muda | crítico, `pagamento.contestacao`, com o id da cobrança |
+| chargeback (`checkout.disputed`, `transparent.disputed`) | 200, `alertado` — **desde a B2, pausa os pedidos da cobrança** (errata do ADR-12) | crítico, `pagamento.contestacao`, com o id da cobrança |
 | qualquer outro nome | 200, `alertado` | crítico, `pagamento.webhook-evento-desconhecido`, com nome, id do log e da cobrança |
 
 200 e não 5xx: reentregar não faria o código entender o evento, e um webhook que recusa em série pode ser desativado pelo gateway. O nome do evento de conclusão do cartão é o **item 1** do roteiro do sandbox; se ele desmentir a documentação, a correção é uma linha em `EVENTOS` (`pagamentos/webhook/evento.ts`).
@@ -593,17 +600,18 @@ roteiro.
 - **A validade do link do checkout hospedado não está documentada.** Vinte e quatro horas foi o valor conservador (`VALIDADE_CHECKOUT_HOSPEDADO_MS`); ele só decide quando a tela para de oferecer o link e quando a TTL apaga o documento.
 - **A resposta a um segundo estorno da mesma cobrança não está documentada.** Quando o gateway recusa, o adaptador consulta a cobrança e trata `REFUNDED` como "já estornado".
 - **O cartão redireciona**, e a experiência deixa a plataforma no momento mais sensível da compra.
-- **O cartão depende de homologação da conta pelo AbacatePay, e isso não está no nosso controle.** Na rodada do sandbox (16/09/2026), o checkout hospedado com cartão foi recusado com `HTTP 400: CARD is not available for this store`. Não há endpoint para consultar ou pedir a habilitação, e nenhuma configuração visível no painel resolve — é processo da conta, com prazo de terceiro. Sem ela, **o cartão não funciona em ambiente nenhum, nem em produção**; o PIX não é afetado, e foi validado de ponta a ponta. Consequência para esta decisão: o caminho do cartão segue **não testado** contra o gateway, e com ele o nome do evento de conclusão (`checkout.completed` ou outro). A proteção enquanto isso é o alerta crítico de evento desconhecido, acima. O que fazer — quem pede a homologação, se ela vale por conta ou por ambiente, e o que a tela mostra se o lançamento chegar antes dela — está no "Só você" da Etapa 8, em `docs/plano-de-execucao.md`.
+- **O cartão depende de homologação da conta pelo AbacatePay, e isso não está no nosso controle.** Na rodada do sandbox (16/09/2026), o checkout hospedado com cartão foi recusado com `HTTP 400: CARD is not available for this store`. Não há endpoint para consultar ou pedir a habilitação, e nenhuma configuração visível no painel resolve — é processo da conta, com prazo de terceiro. Sem ela, **o cartão não funciona em ambiente nenhum, nem em produção**; o PIX não é afetado, e foi validado de ponta a ponta. Consequência para esta decisão: o caminho do cartão segue **não testado** contra o gateway, e com ele o nome do evento de conclusão (`checkout.completed` ou outro). A proteção enquanto isso é o alerta crítico de evento desconhecido, acima. O que fazer — quem pede a homologação, se ela vale por conta ou por ambiente, e o que a tela mostra se o lançamento chegar antes dela — está no "Só você" da Etapa 8, em `docs/plano-de-execucao.md`. **Decidido na B2 (decisões 3.4): se a homologação não sair antes do lançamento, o cartão aparece desabilitado com "em breve" e o lançamento segue só com PIX.** O interruptor é `PAGAMENTOS_CARTAO` (`habilitado | desabilitado`, obrigatória em produção, Terraform `pagamentos_cartao` com padrão `desabilitado`, `pagamentos/gateway/cartao.ts`). O servidor recusa `metodo: cartao` com 422 antes de qualquer leitura; a tela lê `GET /api/checkout/metodos` (pública no mesmo sentido do checkout: token do pré-cadastro e App Check) só para não oferecer o que vai ser recusado. Ligar é trocar o padrão da variável em PR, sem mudar código.
 
 ---
 
 ### ADR-21 — Agendamento de reunião: as regras que o contrato não fixa
 
-**Estado: PROVISÓRIO, a confirmar com a CONTRATANTE.** O ADR-05 decidiu *como* a sala
-nasce (Graph API, app-only) e o ADR-12 decidiu a janela de 24 horas do cancelamento. Entre
-os dois sobra um conjunto de regras que a Etapa 10 precisa responder para existir e que
-nenhum documento fixa. Elas estão aqui, cada uma isolada o suficiente para mudar sem
-reescrever o módulo, e cada uma na lista de confirmação do "Só você" da Etapa 10.
+**Estado: CONFIRMADO em 29/09/2026** (`docs/decisoes.md`, 3.2 e Anexo B): as oito decisões
+de produto abaixo, a antecedência mínima para marcar (**F**) e o cancelamento pelo escritório
+(**H**), que ganhou o e-mail de convite a remarcar. O ADR-05 decidiu *como* a sala nasce
+(Graph API, app-only) e o ADR-12 decidiu a janela de 24 horas do cancelamento; entre os dois
+sobrava um conjunto de regras que a Etapa 10 precisava responder para existir e que nenhum
+documento fixava. Elas continuam isoladas o suficiente para mudar sem reescrever o módulo.
 
 #### As oito decisões de produto
 
@@ -623,8 +631,8 @@ reescrever o módulo, e cada uma na lista de confirmação do "Só você" da Eta
    disponibilidade (seção 8). O job de "expiração da janela de 12 meses" que a seção 8
    listava **deixa de existir**: ele não tem nada a fazer que a leitura não faça, e um job
    a mais é uma peça móvel que falha em silêncio. Já são cinco jobs; um sexto só se
-   justifica se o escritório quiser um **e-mail de aviso de vencimento** — que é
-   funcionalidade nova, não infraestrutura, e é pergunta ao Marcos.
+   justificaria com um **e-mail de aviso de vencimento**, e **ele não entra no
+   lançamento** (decisoes.md, 3.2): sem sexto job.
 
 4. **Consumo do saldo.** Saldo = `quantidadeReunioes` do snapshot menos as reuniões do
    pedido em qualquer estado **exceto** `cancelada_com_devolucao`. Não comparecimento
@@ -714,10 +722,10 @@ os clientes de calendário a aplicariam — deslocando reuniões em uma hora num
 Se o horário de verão voltar, **este** é o ponto único a mudar, como o `hora + 3` da grade
 de disponibilidade.
 
-**F. Antecedência mínima para agendar: 24 horas. PROVISÓRIO.** Marcar para daqui a dez
-minutos não dá ao advogado tempo de se preparar nem à sala tempo de ser criada — a criação
-passa pelo outbox e pode ser reentregue. O número não veio de lugar nenhum: é **pergunta ao
-Marcos**, e vive numa constante em `packages/shared/src/regras-reuniao.ts`.
+**F. Antecedência mínima para agendar: 24 horas. Confirmada em 29/09/2026.** Marcar para
+daqui a dez minutos não dá ao advogado tempo de se preparar nem à sala tempo de ser criada —
+a criação passa pelo outbox e pode ser reentregue. Vive numa constante em
+`packages/shared/src/regras-reuniao.ts`.
 
 **G. Advogado suspenso não recebe reunião.** A transação de agendar e a de remarcar leem
 `advogados/{advogadoId}` e recusam se estiver suspenso. É o outro lado de **D**: sem as
@@ -725,11 +733,13 @@ duas, marcar na agenda de quem acabou de perder o acesso seria o caso comum, e n
 As duas juntas **estreitam** a corrida entre "suspender" e "marcar", mas não a fecham — ver
 "Um risco aceito", abaixo.
 
-**H. Cancelamento pelo administrador, sempre com devolução. PROVISÓRIO.** O escritório
-precisa poder desmarcar — advogado doente, agenda remanejada — e nesse caso a culpa não é
-do cliente: a reunião volta ao saldo **mesmo dentro das 24 horas**. Reaproveita o mesmo
-serviço do cancelamento do cliente, com o ator vindo do token. A regra de devolução nesse
-caso **não está no contrato**, e é **pergunta ao Marcos**.
+**H. Cancelamento pelo escritório, sempre com devolução. Confirmada em 29/09/2026.** O
+escritório precisa poder desmarcar — advogado doente, agenda remanejada — e nesse caso a culpa
+não é do cliente: a reunião volta ao saldo (`cancelada_com_devolucao`) **com qualquer
+antecedência**, inclusive dentro das 24 horas. Reaproveita o mesmo serviço do cancelamento do
+cliente, com o ator vindo do token. **O cliente recebe e-mail** (`reuniao-desmarcada-escritorio`,
+pelo outbox) avisando e convidando a remarcar — sempre, inclusive quando a reunião nunca ganhou
+sala e não há `METHOD:CANCEL` a mandar.
 
 #### O que fica fora desta branch
 
@@ -822,6 +832,7 @@ problema de leitura.
 | `pagamentos` | Um por cobrança do gateway, com a situação da confirmação (Etapa 8, ADR-19) |
 | `pedidos` | Um por produto comprado; snapshot imutável |
 | `estornos` | Um por pedido estornado, com a forma de execução (Etapa 8, ADR-12) |
+| `contestacoes` | Uma por cobrança contestada (chargeback): a pausa e o resultado (B2, ADR-12) |
 | `produtos-gateway` | Cache do produto cadastrado no gateway para o cartão (Etapa 8) |
 | `advogados` | Perfil e licença Microsoft confirmada |
 | `disponibilidades` | Slots com ID determinístico |
@@ -832,7 +843,7 @@ problema de leitura.
 
 **Conferido no Bloco B (23/09/2026): todo caminho que escreve em `checkouts` deixa `apagarApos` no documento.** `abrir` grava o documento inteiro com o prazo; `registrar` regrava o prazo pelo vencimento real da cobrança; `substituir`, `falhar` e a confirmação fazem `update` e o preservam. Um teste de integração passa pelos cinco e confere o campo em todos os documentos, e morde se um `update` o apagar. Nada do checkout fica fora dele com dado pessoal: os pagamentos `orfao`, `divergente` e `conflito_de_conta` guardam só ids e valor, o `confirmado` se liga ao cliente e não ao checkout, o checkout não gera evento de outbox, `produtos-gateway` não tem dado pessoal e o PIX sai sem `customer`. O que o comprador digita na página hospedada do cartão fica no AbacatePay, com a retenção dele.
 
-**Sobre `pagamentos` e `pedidos` (Etapa 8).** O id do pagamento é o da cobrança, e o do pedido é `{cobrançaId}_{nnn}` (errata do ADR-04). O pedido ganhou `situacao` (`ativo | cancelado | estornado`), sempre escrita, e os carimbos de quem cancelou. O pagamento carrega a situação da confirmação (`confirmado | divergente | conflito_de_conta | orfao`), a evidência do aceite dos termos e, quando houver, o estado do estorno integral (`estornoGateway`).
+**Sobre `pagamentos` e `pedidos` (Etapa 8).** O id do pagamento é o da cobrança, e o do pedido é `{cobrançaId}_{nnn}` (errata do ADR-04). O pedido ganhou `situacao` (`ativo | cancelado | estornado`), sempre escrita, e os carimbos de quem cancelou. O pagamento carrega a situação da confirmação (`confirmado | divergente | conflito_de_conta | orfao`), a evidência do aceite dos termos e, quando houver, o estado do estorno integral (`estornoGateway`). **B2 (decisões 4.2):** os três anômalos ganham `resolucao: {em, por, nota}` quando o administrador os marca como resolvidos em `/admin/pagamentos` (`pagamentos/admin/`), com linha de auditoria na mesma transação. A tela lê o comprador do checkout enquanto ele existir — nada é copiado para o pagamento — e a consulta usa o índice `situacao + registradoEm`; aberto e resolvido são filtrados em memória, porque os registros anteriores não têm o campo.
 
 **Sobre `estornos` (Etapa 8).** Id do pedido — um segundo pedido de estorno do mesmo pedido estoura no `create`. Coleção raiz e não subcoleção do pagamento, porque o painel lista os pendentes de todas as cobranças, e consulta sobre subcoleção exigiria índice de grupo de coleções. Um índice composto novo, `estornos_pendentes` (`execucao` + `solicitadoEm`), para essa lista.
 
@@ -953,7 +964,7 @@ Quatro fronteiras, cada uma com forma distinta de autenticação:
 
 **3. Autenticada** — cliente e advogado, separados por custom claim no token do Firebase Auth. Pelos itens 2.6.1 e 2.6.2, o advogado só enxerga o que lhe foi distribuído — e a **Etapa 4 fixou onde isso é verificado**: nos guards e serviços da API, não nas regras do Firestore. A razão está em 6.1.
 
-**4. Administrativa** — administrador global, provisionado fora da aplicação conforme o 2.4.2, sem autocadastro possível.
+**4. Administrativa** — administrador global, provisionado fora da aplicação conforme o 2.4.2, sem autocadastro possível. **Emenda da B2 (decisões 5.5):** um administrador pode convidar outro dentro da plataforma (`/admin/administradores`, `AdministradoresService`, o terceiro escritor de claim da regra 17, só de `admin`). O convidado define a própria senha por link (ADR-07). Remover tira a claim e revoga os tokens; a plataforma recusa remover o último administrador e remover a si mesmo, com a contagem sobre `administradores/{uid}` lida na transação. Convite e remoção ficam em `auditoria/`. Continua sem autocadastro: só quem já é administrador convida.
 
 ### 6.1 Regras do Firestore
 
@@ -1030,9 +1041,11 @@ Concluído o envio, a API enfileira a varredura. O scanner baixa, analisa e move
 
 **Regra de ouro, codificada em um único lugar:** nada é servido enquanto o status não for `limpo`. O documento nasce como `pendente_scan`.
 
+**Tipos do advogado: PDF e DOCX, até 20 MB** (`docs/decisoes.md`, 3.1, construído no Bloco E da B2). `.doc` e `.docm` continuam recusados — pelo tipo e pela extensão já no pedido da URL, e pela estrutura na varredura. O tipo não é confiado à extensão nem ao `Content-Type`: depois do ClamAV e do magic bytes, o DOCX passa por uma conferência estrutural (`apps/api/src/varredura/docx.ts`) que lê por faixa o diretório central do ZIP e o `[Content_Types].xml`, exige `wordprocessingml.document.main+xml` e `word/document.xml`, e recusa `macroEnabled`, `vbaProject.bin`, entrada cifrada e ZIP64. Sem dependência nova. **O ClamAV cobre o DOCX como cobre o PDF:** a imagem usa a configuração padrão do `clamav-daemon` do Debian, com `ScanArchive` e `ScanOLE2` ligados e limite de 25 MB por arquivo, acima dos 20 MB do upload — o conteúdo do ZIP é varrido por dentro.
+
 **Regras de negócio, definidas na reunião com o Marcos.** Tipos aceitos: `jpg` e `pdf` apenas. Máximo de 3 arquivos por envio do cliente (documentos de apoio como RG, cartão de CNPJ e afins). Tamanho máximo de 5 MB por arquivo. Essas regras valem para o upload do **cliente**; o upload do **advogado** (entregável) pode precisar de tipo diferente — a ser confirmado, mas a validação de tipo e tamanho deve ser parametrizada por perfil de quem envia, não hardcoded uma vez só.
 
-**Retenção: 30 dias.** Entregáveis ficam disponíveis por um mês. **[PENDENTE DE CONFIRMAÇÃO]** — o ponto de partida da contagem (a partir do upload, ou a partir da confirmação de `entregue` pelo cliente conforme o ADR-11) não ficou explícito na reunião; assumir a partir de `entregue` até confirmação em contrário, porque é o momento em que o arquivo passa a ter valor para o cliente.
+**Retenção: 30 dias a partir de `entregue`** — confirmado em `docs/decisoes.md`, 2.2: conta de quando o **último** entregável do pedido chega a `entregue`, com lembrete por e-mail 7 dias antes da remoção. O escritório guarda a própria cópia fora da plataforma. A marca é escrita pela transação da confirmação (`EntregaveisService`), e a exclusão nunca acontece antes de 7 dias depois do aviso; contestação aberta suspende as duas (B2, Bloco D).
 
 **Gate de termos antes do download.** Antes de baixar um entregável, a interface exibe um botão de aceite dos termos de serviço, que precisa ser clicado para o link assinado de leitura ser emitido. O aceite deve ser registrado com timestamp e associado ao usuário e ao arquivo específico — é evidência de conformidade, não só UX.
 
@@ -1040,13 +1053,17 @@ Defesas complementares ao ClamAV: verificação de magic bytes contra a extensã
 
 **Falha operacional prevista.** Com `min-instances = 0`, a instância do scanner morre e a base de assinaturas envelhece. Um job diário atualiza a base num bucket, de onde o scanner carrega no boot.
 
-**Retenção dos anexos do cliente: não definida.** Os 30 dias são dos **entregáveis**. A retenção dos arquivos de apoio que o cliente envia não foi decidida em lugar nenhum — e apagar documento de identificação por conta própria não é um default que se inventa. O job de retenção não os toca; fica como pendência do controlador (Etapa 11).
+**Retenção dos anexos do cliente: 30 dias, no mesmo ciclo** (`docs/decisoes.md`, 2.3). Os arquivos de apoio saem 30 dias depois de todos os entregáveis do pedido chegarem a `entregue`, avisados no mesmo e-mail dos entregáveis. Anexo ligado ao cliente, e não ao pedido, contaria do fim do último pedido do cliente — mas não existe hoje: todo anexo pende de um pedido.
 
 **Observação contratual.** Upload de arquivos não consta na cláusula 2ª. É acréscimo de escopo.
 
 ### 7.4 Provisionamento de advogados
 
 Pelos itens 2.4.3 a 2.4.7, apenas o administrador global cria acessos de advogado. Com o ADR-07, em vez de senha inicial, o advogado recebe link de definição de senha. O administrador mantém a capacidade de editar, suspender, excluir e redefinir.
+
+**Edição (B2, decisões 4.1).** `PUT /api/admin/advogados/{uid}` edita nome, e-mail e `usuarioTeams` (`advogados/edicao.service.ts`). O `usuarioTeams` novo é conferido no Graph (`GET /users/{id}`, permissão `User.Read.All`) antes de qualquer escrita: inexistente é 422, Graph indisponível não bloqueia. Trocar o e-mail atualiza o Auth **antes** da transação (efeito externo, regra 2; 409 se o endereço é de outra conta) e, na transação, grava o documento, a linha de auditoria e o evento `acesso-advogado-atualizado`, com a chave na versão do acesso — cada troca, o seu e-mail. Não mexe na claim, no status nem na distribuição: a atribuição mora no pedido, pelo uid, e o uid não muda.
+
+**Log de auditoria (B2).** `auditoria/{id}` guarda `acao`, `atorUid`, `alvo`, `antes`, `depois` e `em`, escrito na mesma transação da ação administrativa (`auditoria/auditoria.ts`). É append-only: nenhuma rota altera ou apaga. Está no mapa da LGPD pelo `alvo`.
 
 Suspensão precisa revogar tokens ativos, não apenas marcar um campo — senão o advogado suspenso continua acessando até o token expirar.
 

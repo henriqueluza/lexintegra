@@ -1,4 +1,5 @@
 import type { Transaction } from 'firebase-admin/firestore';
+import type { NovoEvento } from '../outbox/evento.js';
 import type { OutboxService } from '../outbox/outbox.service.js';
 import type { DocumentoReuniao } from './reuniao.js';
 
@@ -48,31 +49,23 @@ export async function registrarConvitesDaReuniao(
 }
 
 /**
- * Escreve os DOIS `METHOD:CANCEL` de uma reuniao cancelada.
+ * Os DOIS `METHOD:CANCEL` de uma reuniao cancelada, sem gravar nada: quem chama
+ * os junta aos outros eventos da transacao num lote so de
+ * `registrarSeAusenteEmLote` — dois lotes seguidos poriam a leitura do segundo
+ * depois da escrita do primeiro.
  *
  * SO FAZ SENTIDO SE ALGUM CONVITE FOI EMITIDO, e quem decide isso e o chamador,
- * por `sequenceComunicada`. A funcao nao repete essa conferencia de proposito:
- * ela seria a segunda copia de uma regra que o `ConvitesService` ja aplica na
- * montagem, e duas copias divergem.
- *
- * Simetrica a `registrarConvitesDaReuniao`, e separada dela porque o que o
- * destinatario faz com cada uma e o oposto — uma poe o compromisso no
- * calendario, a outra o tira.
+ * por `sequenceComunicada`. Simetrica a `registrarConvitesDaReuniao`, e separada
+ * dela porque o que o destinatario faz com cada uma e o oposto.
  */
-export async function registrarCancelamentosDaReuniao(
-  outbox: OutboxService,
-  transacao: Transaction,
+export function eventosDeCancelamento(
   alvo: { readonly pedidoId: string; readonly reuniaoId: string },
   reuniao: Pick<DocumentoReuniao, 'sequence' | 'clienteId' | 'advogadoId'>,
-): Promise<string[]> {
+): NovoEvento[] {
   const carga = { ...alvo, sequence: reuniao.sequence };
-
-  return outbox.registrarSeAusenteEmLote(
-    transacao,
-    [reuniao.clienteId, reuniao.advogadoId].map((destinatarioUid) => ({
-      tipo: 'cancelamento-reuniao' as const,
-      destinatarioUid,
-      reuniao: carga,
-    })),
-  );
+  return [reuniao.clienteId, reuniao.advogadoId].map((destinatarioUid) => ({
+    tipo: 'cancelamento-reuniao' as const,
+    destinatarioUid,
+    reuniao: carga,
+  }));
 }

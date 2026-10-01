@@ -1,0 +1,43 @@
+/* Direcao B (Pauta) por heranca da shell autenticada. */
+.administradores {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+.administradores__titulo {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t1);
+  font-weight: var(--peso-titulo);
+  line-height: var(--altura-titulo);
+  letter-spacing: var(--letra-titulo);
+}
+
+.administradores__formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.administradores__campos {
+  display: grid;
+  gap: var(--s4);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 48rem) {
+  .administradores__campos {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.administradores__aviso {
+  color: var(--texto-2);
+  font-size: var(--t-menor);
+  max-width: var(--medida-texto);
+}
+
+.administradores__voce {
+  color: var(--texto-3);
+  font-size: var(--t-menor);
+}

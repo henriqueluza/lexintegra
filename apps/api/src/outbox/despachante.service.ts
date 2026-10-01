@@ -3,10 +3,15 @@ import type { Auth } from 'firebase-admin/auth';
 import { AUTH_FIREBASE } from '../firebase/firebase.module.js';
 import {
   EMAIL_TRANSPORT,
-  type EmailMensagem,
+  type EmailRedigido,
   type EmailResultado,
   type EmailTransport,
 } from '../email/email-transport.js';
+import { comRodape } from '../email/rodape.js';
+import {
+  ehTipoComLinkDeSenha,
+  mensagemDeAcesso,
+} from '../email/textos-de-acesso.js';
 import { descreverErro } from '../email/redigir.js';
 import { traceIdDe } from '../observabilidade/rastreio.js';
 import { ALERTAS, type CanalDeAlerta } from '../alertas/alerta.js';
@@ -14,11 +19,14 @@ import {
   GATEWAY_PAGAMENTO,
   type GatewayPagamento,
 } from '../pagamentos/gateway/gateway.js';
+import type { TipoEvento } from 'shared';
 import type { RegistroOutbox } from './evento.js';
 import { montarLinkDeSenha, urlDaAplicacao } from './link-de-senha.js';
 import {
   ASSUNTO_AVISO_EXCLUSAO,
+  ASSUNTO_PAUSA_CONTESTACAO,
   TEXTO_AVISO_EXCLUSAO,
+  TEXTO_PAUSA_CONTESTACAO,
 } from '../termos/termos.textos.js';
 import {
   ConvitesService,
@@ -26,17 +34,6 @@ import {
 } from '../reunioes/convites.service.js';
 import { OutboxService } from './outbox.service.js';
 import { POLITICA } from './politica.js';
-
-/**
- * Alias do modelo publicado no painel do Resend, com a variavel `LINK`.
- *
- * Os dois tipos de evento desta etapa usam o MESMO modelo. Nao e descuido: so um
- * modelo esta publicado, e o texto dele serve as duas situacoes. Quando a Etapa 7
- * escrever a copia especifica de "seu acesso foi criado", basta publicar outro
- * alias e ramificar aqui — o dominio nao muda, porque ja distingue os dois
- * eventos.
- */
-const MODELO_SENHA = 'password-reset';
 
 /**
  * O tipo que nao tem montador. NAO ALCANCAVEL: o `never` faz o compilador
@@ -48,6 +45,42 @@ const MODELO_SENHA = 'password-reset';
  * e-mail para trocar a propria senha, e nada falharia. Agora o compilador cobra
  * o ramo.
  */
+/**
+ * Os e-mails de TEXTO FIXO, sem link e sem dado do pedido: o aviso previo de
+ * exclusao (Etapa 11, arquitetura secao 13) e a pausa por contestacao (B2,
+ * decisoes.md 5.4). Os textos sao minutas, e saem assim mesmo, de proposito: a
+ * alternativa seria uma rotina de conformidade que nao roda ate alguem lembrar
+ * de aprovar um texto.
+ */
+const TEXTOS_FIXOS = {
+  'aviso-exclusao-arquivos': {
+    assunto: ASSUNTO_AVISO_EXCLUSAO,
+    corpoTexto: TEXTO_AVISO_EXCLUSAO,
+  },
+  'pausa-contestacao': {
+    assunto: ASSUNTO_PAUSA_CONTESTACAO,
+    corpoTexto: TEXTO_PAUSA_CONTESTACAO,
+  },
+} as const;
+
+function ehTextoFixo(tipo: TipoEvento): tipo is keyof typeof TEXTOS_FIXOS {
+  return tipo in TEXTOS_FIXOS;
+}
+
+const NAO_SAO_EMAIL_DE_MODELO = [
+  'estorno-integral',
+  'criar-sala-reuniao',
+  'convite-reuniao',
+  'cancelamento-reuniao',
+  'reuniao-desmarcada-escritorio',
+] as const;
+
+function naoEhEmailDeModelo(
+  tipo: TipoEvento,
+): tipo is (typeof NAO_SAO_EMAIL_DE_MODELO)[number] {
+  return (NAO_SAO_EMAIL_DE_MODELO as readonly TipoEvento[]).includes(tipo);
+}
+
 function semMontador(tipo: never): never {
   throw new Error(`Tipo de evento sem montador: ${String(tipo)}`);
 }
@@ -200,12 +233,22 @@ export class DespachanteOutbox {
     }
     if (
       registro.tipo === 'convite-reuniao' ||
-      registro.tipo === 'cancelamento-reuniao'
+      registro.tipo === 'cancelamento-reuniao' ||
+      registro.tipo === 'reuniao-desmarcada-escritorio'
     ) {
       return this.entregarConvite(id, registro);
     }
 
-    return this.transporte.enviar(await this.montarComChave(id, registro));
+    return this.enviar(await this.montarComChave(id, registro));
+  }
+
+  /**
+   * A UNICA SAIDA DE E-MAIL DO DESPACHANTE, e e ela que poe o rodape (B2,
+   * decisoes.md 5.1): a caixa do remetente nao e lida, e todo e-mail diz isso e
+   * aponta `privacidade@`. Nenhum montador precisa lembrar.
+   */
+  private enviar(mensagem: EmailRedigido): Promise<EmailResultado> {
+    return this.transporte.enviar(comRodape(mensagem));
   }
 
   /**
@@ -252,10 +295,11 @@ export class DespachanteOutbox {
     }
 
     const destinatario = await this.destinatarioDe(registro.destinatarioUid);
-    const convite =
-      registro.tipo === 'cancelamento-reuniao'
-        ? await this.convites.montarCancelamento(registro.reuniao, destinatario)
-        : await this.convites.montarConvite(registro.reuniao, destinatario);
+    const convite = await this.montarDaReuniao(
+      registro.tipo,
+      registro.reuniao,
+      destinatario,
+    );
 
     if (!convite.enviar) {
       this.log.log(`registro ${id} nao precisa sair: ${convite.motivo}`, {
@@ -266,10 +310,25 @@ export class DespachanteOutbox {
       return { sucesso: true, idProvedor: 'pulado' };
     }
 
-    return this.transporte.enviar({
+    return this.enviar({
       ...convite.mensagem,
       chaveIdempotencia: `${id}-c${String(registro.ciclo)}`,
     });
+  }
+
+  /** Qual dos tres e-mails de reuniao; o convite e o padrao, como antes. */
+  private montarDaReuniao(
+    tipo: TipoEvento,
+    evento: NonNullable<RegistroOutbox['reuniao']>,
+    destinatario: Destinatario,
+  ): ReturnType<ConvitesService['montarConvite']> {
+    if (tipo === 'cancelamento-reuniao') {
+      return this.convites.montarCancelamento(evento, destinatario);
+    }
+    if (tipo === 'reuniao-desmarcada-escritorio') {
+      return this.convites.montarAvisoDoEscritorio(evento, destinatario);
+    }
+    return this.convites.montarConvite(evento, destinatario);
   }
 
   /** O nome vai para o `CN` do iCalendar; o endereco, para o `mailto:`. */
@@ -329,7 +388,7 @@ export class DespachanteOutbox {
   private async montarComChave(
     id: string,
     registro: RegistroOutbox,
-  ): Promise<EmailMensagem> {
+  ): Promise<EmailRedigido> {
     const mensagem = await this.montar(registro);
     return {
       ...mensagem,
@@ -342,7 +401,7 @@ export class DespachanteOutbox {
    * nao aparece na resposta HTTP: e credencial viva — quem o tiver troca a senha
    * da conta.
    */
-  private async montar(registro: RegistroOutbox): Promise<EmailMensagem> {
+  private async montar(registro: RegistroOutbox): Promise<EmailRedigido> {
     const usuario = await this.auth.getUser(registro.destinatarioUid);
     if (usuario.email === undefined) {
       throw new Error(`usuario ${registro.destinatarioUid} nao tem e-mail`);
@@ -350,59 +409,42 @@ export class DespachanteOutbox {
 
     const para = [usuario.email];
 
-    switch (registro.tipo) {
-      /*
-       * O AVISO PREVIO DE EXCLUSAO (Etapa 11, arquitetura secao 13). Nao gera
-       * link de senha nenhum.
-       *
-       * ⚠️ O TEXTO NAO FOI APROVADO pela CONTRATANTE. `TEXTO_AVISO_EXCLUSAO` e
-       * um marcador literal, e ha teste que cai quando ele for substituido — ver
-       * `termos/termos.textos.ts`. O e-mail SAI mesmo assim, de propósito: a
-       * alternativa seria uma rotina de conformidade que nao roda ate alguem
-       * lembrar de aprovar um texto.
-       */
-      case 'aviso-exclusao-arquivos':
-        return {
-          para,
-          assunto: ASSUNTO_AVISO_EXCLUSAO,
-          corpoTexto: TEXTO_AVISO_EXCLUSAO,
-        };
-
-      /*
-       * Os tres que levam link de senha. Sao eventos DIFERENTES — "o
-       * administrador criou um acesso de advogado", "alguem esqueceu a senha" e
-       * "um cliente pagou e ganhou conta" sao fatos distintos, com trilhas
-       * proprias — e hoje compartilham o unico modelo publicado no Resend.
-       */
-      case 'definir-senha':
-      case 'redefinir-senha':
-      case 'acesso-cliente':
-        return { para, modelo: await this.modeloDeSenha(usuario.email) };
-
-      /*
-       * `estorno-integral` nao chega aqui: ele nao e e-mail, e `executar` o
-       * desvia antes. O ramo existe para o `switch` ser exaustivo — e para
-       * alguem que o remova descobrir o outro caminho em vez de mandar um
-       * e-mail de senha a quem pediu estorno.
-       */
-      case 'estorno-integral':
-        throw new Error('estorno-integral nao produz e-mail');
-
-      /*
-       * Os tres da Etapa 10 nao chegam aqui: `executar` os desvia antes, porque
-       * a sala nao e e-mail e os convites precisam RELER a reuniao para decidir
-       * se ainda valem. Os ramos existem para o `switch` ser exaustivo — e para
-       * quem os remover descobrir o outro caminho em vez de mandar um e-mail de
-       * senha a quem esperava um convite.
-       */
-      case 'criar-sala-reuniao':
-      case 'convite-reuniao':
-      case 'cancelamento-reuniao':
-        throw new Error(`${registro.tipo} nao produz e-mail de senha`);
-
-      default:
-        return semMontador(registro.tipo);
+    /*
+     * Os que NAO SAO e-mail de modelo nao chegam aqui: `executar` os desvia
+     * antes — o estorno vai ao gateway, a sala ao Graph, e os de reuniao
+     * precisam RELER a reuniao para decidir se ainda valem. A guarda existe para
+     * o `switch` abaixo ser exaustivo, e para quem tirar o desvio de `executar`
+     * descobrir o outro caminho em vez de mandar um e-mail de senha a quem
+     * esperava um convite ou um estorno.
+     */
+    if (naoEhEmailDeModelo(registro.tipo)) {
+      throw new Error(`${registro.tipo} nao produz e-mail de modelo`);
     }
+
+    if (ehTextoFixo(registro.tipo)) {
+      const { assunto, corpoTexto } = TEXTOS_FIXOS[registro.tipo];
+      return { para, assunto, corpoTexto };
+    }
+
+    /*
+     * Os cinco que levam link de senha (B2, decisoes.md 5.1). Sao eventos
+     * DIFERENTES — o administrador criou um advogado, alguem esqueceu a senha,
+     * um cliente pagou, o e-mail do advogado mudou, um administrador foi
+     * convidado — e desde a B2 cada um tem o seu texto, versionado no
+     * repositorio (`email/textos-de-acesso.ts`), e nao mais o modelo unico do
+     * painel do Resend.
+     */
+    if (ehTipoComLinkDeSenha(registro.tipo)) {
+      return {
+        para,
+        ...mensagemDeAcesso(
+          registro.tipo,
+          await this.linkDeSenha(usuario.email),
+        ),
+      };
+    }
+
+    return semMontador(registro.tipo);
   }
 
   /**
@@ -410,10 +452,7 @@ export class DespachanteOutbox {
    * nao aparece na resposta HTTP: e credencial viva — quem o tiver troca a senha
    * da conta.
    */
-  private async modeloDeSenha(email: string): Promise<{
-    alias: string;
-    variaveis: Record<string, string>;
-  }> {
+  private async linkDeSenha(email: string): Promise<string> {
     const linkDoFirebase = await this.auth.generatePasswordResetLink(email);
     const link = montarLinkDeSenha(linkDoFirebase, urlDaAplicacao());
     if (!link.proprio) {
@@ -421,7 +460,6 @@ export class DespachanteOutbox {
         'nao foi possivel extrair o oobCode; usando a pagina de acao do Firebase',
       );
     }
-
-    return { alias: MODELO_SENHA, variaveis: { LINK: link.url } };
+    return link.url;
   }
 }

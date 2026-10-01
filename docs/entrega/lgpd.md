@@ -73,7 +73,10 @@ dado eliminado.**
 Tirado da seção *Aviso e executor* do runbook:
 
 1. Registrar a versão aprovada da política e a decisão do controlador para cada
-   categoria: conservação identificável, minimização e prazo.
+   categoria: conservação identificável, minimização e prazo. Contestação
+   (chargeback) aberta já é impedimento na simulação, e
+   `temContestacaoAberta` (`apps/api/src/lgpd/politica.ts`) está exportada para
+   o executor conferir de novo, dentro da própria trava (`decisoes.md`, 5.4).
 2. Uma trava transacional contra novas escritas, pagamentos, uploads, reuniões
    e tarefas durante o processamento.
 3. Reaproveitar o evento `aviso-exclusao-arquivos` do outbox, com chave por
@@ -88,12 +91,22 @@ Tirado da seção *Aviso e executor* do runbook:
 Tudo isso é código, teste e revisão. `[CONFIRMAR: quem constrói o executor, e
 quando]`.
 
-### A rotina de 30 dias dos entregáveis é outra coisa
+### A rotina de 30 dias dos arquivos é outra coisa
 
-`retencao-diaria` ([`operacao.md`](operacao.md), seções 5 e 6) avisa e exclui
-**arquivos de entregável** 30 dias depois de `entregue`: todas as versões do
-entregável, e não só a atual. Ela não elimina o titular, e o prazo dela é
-provisório.
+`retencao-diaria` ([`operacao.md`](operacao.md), seções 5 e 6) avisa e exclui os
+**arquivos do pedido** 30 dias depois de o último entregável chegar a
+`entregue` (`docs/decisoes.md`, 2.2 e 2.3):
+
+| O quê | Prazo | Aviso |
+|---|---|---|
+| Entregáveis (todas as versões, não só a atual) | 30 dias depois de `entregue` | e-mail 7 dias antes da remoção, um por pedido |
+| Anexos do cliente (RG, cartão CNPJ e afins) | o mesmo: 30 dias depois de todos os entregáveis do pedido em `entregue` | no mesmo e-mail |
+| Anexo ligado ao cliente, e não ao pedido | contaria do fim do último pedido do cliente — **não existe hoje**: todo anexo pende de um pedido | — |
+
+A exclusão nunca acontece antes de 7 dias depois do aviso: o pedido que a
+rotina só encontrou atrasada é avisado primeiro. **Contestação aberta suspende
+aviso e exclusão.** O documento do entregável e o do anexo ficam, como trilha
+(`arquivoAtual: null` e `estado: excluido`). A rotina não elimina o titular.
 
 **Quanto tempo um arquivo sobrevive depois de excluído: até 7 dias.** Desde o
 Bloco E (achado 4.1), o bucket `lexintegra-arquivos-36bda` **não tem
@@ -127,20 +140,25 @@ um dia depois do deploy que a aplicou.
 | **Cópias baixadas pelo escritório** | Entregáveis e anexos baixados por advogados ficam nas máquinas deles, fora do sistema |
 | **Pagamentos órfãos** | `pagamentos/{cobrancaId}` com `situacao` anômala guarda só ids e valor. Sem vínculo recuperável, o sistema não sabe de qual titular é, e a conciliação é humana (runbook do titular e [`pagamento-orfao.md`](../runbooks/pagamento-orfao.md)) |
 | **Ficha de anamnese** | `clientes/{uid}/anamnese/definitiva-v1` (e a `provisoria-v0`, de quem respondeu o stub). Dados da **empresa**, sem dado sensível do art. 5º, II; faturamento, passivo trabalhista, autuações e reclamações são confidenciais. Lida só pelo advogado atribuído e pelo administrador; entra na exportação do titular. Prazo de guarda: o da política (decisoes.md, 2.1) |
-| **Anexos do cliente** | Sem retenção definida. A rotina de 30 dias não os toca (arquitetura, 7.3) |
+| **Anexos do cliente** | 30 dias depois de todos os entregáveis do pedido em `entregue`, no mesmo ciclo dos entregáveis (seção 3) |
+| **Equipe (advogados e administradores)** | `advogados/{uid}` e `administradores/{uid}` guardam nome e e-mail de quem trabalha na plataforma, fora do mapa do **cliente** (`lgpd/mapa.ts`). O log de auditoria (`auditoria/`, B2) guarda quem fez cada ação administrativa e, na edição de advogado, o e-mail antes e depois; está no mapa pelo `alvo`. Prazo de guarda: o da política (decisoes.md, 2.1) |
 | **Pré-cadastros que nunca compraram** | Sem prazo. A arquitetura (seção 8) lista a limpeza como rotina candidata |
 
 ## 5. Quem atende um pedido de titular hoje
 
-- **Canal de entrada e encarregado (DPO):**
-  `[CONFIRMAR: nome e contato do encarregado indicado pelo escritório]`.
-  `[CONFIRMAR: canal publicado na política de privacidade]`.
+- **Canal de entrada e encarregado (DPO):** Auan Bastos, dono do escritório,
+  pelo e-mail `privacidade@lexintegra.com.br` (decisões 1.3), caixa
+  compartilhada no Microsoft 365 da B&C. Publicados na política de privacidade
+  (`/privacidade`) e no rodapé de todo e-mail, a partir de uma constante só
+  (`packages/shared/src/encarregado.ts`). **A caixa ainda precisa ser criada**
+  (C › Microsoft do CHECKLIST): até lá, o endereço publicado não recebe.
 - **Quem executa a exportação:** um administrador global da plataforma, a
   pedido do encarregado.
 - **Prazo legal:** a LGPD, art. 19, II, fixa até **15 dias** do requerimento
   para confirmar a existência dos dados e dar acesso completo. Para os demais
-  direitos do art. 18: `[CONFIRMAR: prazo adotado pelo escritório, com o
-  jurídico]`.
+  direitos do art. 18, o prazo ainda é decisão do escritório (decisões 1.4); a
+  política publicada mostra o marcador `[PENDENTE-ESCRITORIO: …]` no lugar,
+  com teste que trava a lista (`pendencias-escritorio.ts`).
 - **Eliminação pedida hoje:** registre a solicitação
   (`POST .../eliminacao`), informe ao titular que ela está registrada e
   **não** diga que os dados foram eliminados. A resposta ao titular é do

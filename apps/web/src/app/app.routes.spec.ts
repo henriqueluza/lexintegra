@@ -223,6 +223,12 @@ describe('rotas', () => {
     'entregas',
     /* Etapa 10, arquitetura 7.2: a fila de reunioes sem sala. */
     'reunioes',
+    /* B2, decisoes.md 5.4: as contestacoes abertas e o resultado. */
+    'contestacoes',
+    /* B2, decisoes.md 4.2: pagamentos que nao viraram pedido. */
+    'pagamentos',
+    /* B2, decisoes.md 5.5: convidar e remover administradores. */
+    'administradores',
   ])('registra a tela administrativa %s sob admin', (caminho) => {
     const admin = routes.find((r) => r.path === 'admin');
 

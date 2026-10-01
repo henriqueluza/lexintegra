@@ -1,7 +1,11 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import type { AdvogadoResumo, NovoAdvogado } from 'shared/esquemas/advogado';
+import type {
+  AdvogadoResumo,
+  EdicaoAdvogado,
+  NovoAdvogado,
+} from 'shared/esquemas/advogado';
 import type {
   NovoPreCadastro,
   PreCadastroLiberado,
@@ -91,6 +95,15 @@ export class ApiService {
   criarAdvogado(dados: NovoAdvogado): Promise<AdvogadoResumo> {
     return firstValueFrom(
       this.http.post<AdvogadoResumo>('/api/admin/advogados', dados),
+    );
+  }
+
+  editarAdvogado(uid: string, dados: EdicaoAdvogado): Promise<AdvogadoResumo> {
+    return firstValueFrom(
+      this.http.put<AdvogadoResumo>(
+        `/api/admin/advogados/${encodeURIComponent(uid)}`,
+        dados,
+      ),
     );
   }
 

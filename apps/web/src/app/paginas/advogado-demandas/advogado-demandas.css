@@ -105,3 +105,14 @@
   gap: var(--s2);
   font-size: var(--t-mini);
 }
+
+/* B2 (decisoes.md, 5.4): pedido pausado por contestacao. */
+.demandas__pausa {
+  margin: 0;
+  padding: var(--s2) var(--s3);
+  border-left: var(--borda-media) solid var(--estado-alerta);
+  border-radius: var(--raio);
+  background: var(--estado-alerta-fundo);
+  color: var(--texto);
+  font-size: var(--t-menor);
+}

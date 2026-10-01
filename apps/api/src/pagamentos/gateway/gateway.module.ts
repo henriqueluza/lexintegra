@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { CARTAO_HABILITADO, cartaoHabilitado } from './cartao.js';
 import { criarGateway } from './criar-gateway.js';
 import { GATEWAY_PAGAMENTO } from './gateway.js';
 import {
@@ -30,7 +31,9 @@ import {
         criarGateway(configuracao),
       inject: [CONFIGURACAO_PAGAMENTOS],
     },
+    /* B2 (decisoes.md 3.4): o interruptor do cartao, lido no boot. */
+    { provide: CARTAO_HABILITADO, useFactory: () => cartaoHabilitado() },
   ],
-  exports: [CONFIGURACAO_PAGAMENTOS, GATEWAY_PAGAMENTO],
+  exports: [CONFIGURACAO_PAGAMENTOS, GATEWAY_PAGAMENTO, CARTAO_HABILITADO],
 })
 export class GatewayPagamentoModule {}

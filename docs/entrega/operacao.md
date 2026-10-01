@@ -77,7 +77,7 @@ servindo.
 | `URL_APLICACAO` | sim | `https://lexintegra.com.br` | Recusa subir (filas). É também a audiência do OIDC das rotas internas e a base do link de senha | `tarefas/criar-fila.ts`, `tarefas/tarefa.guard.ts`, `outbox/link-de-senha.ts` |
 | `COMMIT_SHA` | não | SHA do commit publicado | `/api/health` responde `desconhecido` e o smoke test do deploy falha | `health/health.service.ts` |
 | `PORT` | não | definida pelo Cloud Run | Padrão `8080` | `main.ts` |
-| `EMAIL_FROM` | sim | `onboarding@resend.dev` (remetente de desenvolvimento do Resend) | Recusa subir | `email/email.module.ts`, `reunioes/convites.service.ts` |
+| `EMAIL_FROM` | sim | `onboarding@resend.dev` até o deploy da B2; depois, `LexIntegra <nao-responda@notificacoes.lexintegra.com.br>` (decisões 5.1) | Recusa subir | `email/email.module.ts`, `reunioes/convites.service.ts` |
 | `RESEND_API_KEY` | sim | secret `resend-api-key`, versão `latest` | Recusa subir. **Secret sem versão impede a revisão de subir** | `email/email.module.ts` |
 | `BUCKET_QUARENTENA` | sim | `lexintegra-quarentena-36bda` | Recusa subir | `armazenamento/armazenamento.module.ts` |
 | `BUCKET_ARQUIVOS` | sim | `lexintegra-arquivos-36bda` | Recusa subir | `armazenamento/armazenamento.module.ts` |
@@ -91,6 +91,7 @@ servindo.
 | `APP_CHECK_ENFORCE` | sim | `true` | Fora de `"true"`/`"false"`, **recusa subir** em produção | `app-check/exigencia.ts` |
 | `PROXIES_CONFIAVEIS` | não | `2` | Inválido, usa 0. Com o número errado, o limitador conta todo mundo como um visitante só, **sem falhar** | `configurar.ts` |
 | `PAGAMENTOS_MODO` | sim | `desligado` | Ausente ou inválido, recusa subir. `producao` **sempre** recusa (regra 20) | `pagamentos/gateway/modo.ts` |
+| `PAGAMENTOS_CARTAO` | sim | `desabilitado` (B2, decisões 3.4) | Ausente ou inválido, recusa subir. `desabilitado`: o checkout recusa cartão com 422 e a tela mostra "em breve" | `pagamentos/gateway/cartao.ts` |
 | `ABACATEPAY_API_KEY` | só com `sandbox` | não definida | Em `sandbox`, recusa subir sem ela e recusa chave sem o prefixo `abc_dev_` | `pagamentos/gateway/modo.ts` |
 | `ABACATEPAY_WEBHOOK_SECRET` | com a chave | não definida | Com a chave e sem ela, recusa subir | `pagamentos/gateway/modo.ts` |
 | `ABACATEPAY_WEBHOOK_CHAVE_HMAC` | com a chave | não definida | Com a chave e sem ela, recusa subir | `pagamentos/gateway/modo.ts` |
@@ -124,7 +125,8 @@ delas: commit, PR e deploy. Nunca um `apply` local.
 
 | Variável | Hoje | Efeito |
 |---|---|---|
-| `email_remetente` | `onboarding@resend.dev` | Vira `EMAIL_FROM` |
+| `email_remetente` | `LexIntegra <nao-responda@notificacoes.lexintegra.com.br>` | Vira `EMAIL_FROM` |
+| `pagamentos_cartao` | `desabilitado` | Vira `PAGAMENTOS_CARTAO`. Trocar para `habilitado` quando a homologação do cartão sair (seção 4.2) |
 | `app_check_enforce` | `"true"` (padrão; o deploy não sobrescreve) | Vira `APP_CHECK_ENFORCE` |
 | `proxies_confiaveis` | `2` | Vira `PROXIES_CONFIAVEIS` |
 | `rastreio_amostragem` | `"0.1"` | Vira `RASTREIO_AMOSTRAGEM` |
@@ -156,9 +158,18 @@ dentro dela não são.
 
 ### 4.1 Resend com domínio verificado
 
-Hoje o remetente é `onboarding@resend.dev`. O Resend só entrega esse remetente
-ao endereço da conta dona da chave. **Nenhum cliente real recebe e-mail
-enquanto isso não mudar.**
+O remetente é `LexIntegra <nao-responda@notificacoes.lexintegra.com.br>`
+(decisões 5.1), no `default` de `email_remetente`. **Esta caixa não existe para
+leitura**: o Resend só exige o domínio verificado, e o rodapé de todo e-mail
+(`apps/api/src/email/rodape.ts`) avisa que respostas não chegam a ninguém e
+indica `privacidade@lexintegra.com.br` para dados pessoais. Até o deploy da
+B2, era `onboarding@resend.dev`, que o Resend só entrega à própria conta.
+
+Os e-mails com link de senha (acesso do cliente, acesso do advogado,
+redefinição, troca de e-mail do advogado e convite de administrador) saem com
+texto versionado em `apps/api/src/email/textos-de-acesso.ts`. O modelo
+`password-reset` do painel do Resend **deixou de ser usado** e pode ser
+arquivado lá.
 
 1. **Confirmar a verificação do domínio.** No painel do Resend, em *Domains*,
    `notificacoes.lexintegra.com.br` precisa aparecer como *Verified*. Os
@@ -174,13 +185,11 @@ enquanto isso não mudar.**
    ser de uma chave da conta onde o domínio foi verificado. Se a conta mudar de
    dono, gere a chave nova na conta nova e siga
    [`credenciais.md`](credenciais.md).
-3. **Trocar o remetente.** Mude o `default` de `email_remetente` em
-   [`variables.tf`](../../infra/terraform/variables.tf) para um endereço no
-   domínio verificado. A descrição da variável sugere
-   `notificacoes@notificacoes.lexintegra.com.br`
-   `[CONFIRMAR: endereço escolhido pelo escritório]`. Abra PR e faça o merge. O
-   deploy aplica. Nenhum código muda: o remetente não aparece em lugar nenhum
-   do código (ADR-07.1).
+3. **O remetente já foi trocado** na B2 (Bloco G): `default` de
+   `email_remetente` em [`variables.tf`](../../infra/terraform/variables.tf). O
+   deploy do merge aplica. Nenhum código muda com ele: o remetente não aparece
+   em lugar nenhum do código (ADR-07.1). **Antes do merge, confira o passo 2**:
+   com a chave de outra conta, o Resend recusa o remetente e nenhum e-mail sai.
 4. **Testar a entrega.** Em `https://lexintegra.com.br/recuperar-senha`, peça a
    redefinição para uma conta de advogado de teste cujo e-mail **não** seja o
    da conta do Resend. Confira nesta ordem:
@@ -200,11 +209,13 @@ enquanto isso não mudar.**
 **Pré-requisitos**, todos de terceiros:
 
 - a conta do escritório aprovada, com chave `abc_prod_`;
-- a homologação de cartão, ou a decisão de lançar só com PIX (plano de
-  execução, "Só você — Etapa 8");
-- os textos jurídicos que hoje são marcadores
-  (`{{TODO-TEXTO-REGRA-ESTORNO-ADR-12}}`, `{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}`);
-- a ficha de anamnese definitiva.
+- a homologação de cartão. **Decidido (decisões 3.4): se ela não sair antes
+  do lançamento, lança só com PIX** — `pagamentos_cartao = "desabilitado"` (o
+  padrão), o checkout recusa cartão com 422 e a tela mostra o cartão
+  desabilitado com "em breve". Quando a homologação sair, um PR troca o padrão
+  para `habilitado`; nenhum código muda;
+- os textos jurídicos (Bloco I da B2) aprovados pelo escritório;
+- a ficha de anamnese definitiva (construída no Bloco A da B2).
 
 1. **Destravar o código, em PR próprio.** `PAGAMENTOS_MODO=producao` recusa
    subir por construção (`apps/api/src/pagamentos/gateway/modo.ts`, regra
@@ -288,6 +299,10 @@ Confira nos *Webhook Logs* do painel antes de desligar com cobrança em aberto.
    - registra o aplicativo;
    - concede a permissão **de aplicação** `OnlineMeetings.ReadWrite.All`, com
      consentimento do administrador;
+   - concede também `User.Read.All` (de aplicação). É só leitura do
+     diretório, e é o que deixa a edição do advogado conferir o `usuarioTeams`
+     antes de salvar (`GET /users/{id}`). Sem ela a conferência responde
+     "indisponível" e a tela salva sem conferir;
    - cria um client secret.
 
    Nada de `Calendars.ReadWrite`: não é necessária (ADR-05). Guarde o tenant
@@ -301,9 +316,9 @@ Confira nos *Webhook Logs* do painel antes de desligar com cobrança em aberto.
    risco 1).
 4. **Preencher `usuarioTeams` de cada advogado.** É o **object ID do Entra**, um
    GUID, e não o e-mail nem o uid do Firebase (ADR-21, decisão B). O formulário
-   de criação em `/admin/advogados` aceita o campo. **A API não tem endpoint
-   para editar um advogado que já existe.** Para os que já existem:
-   `[CONFIRMAR: construir a edição, ou preencher advogados/{uid}.usuarioTeams à mão no console do Firestore]`.
+   de criação e o de edição em `/admin/advogados` aceitam o campo. Para os que
+   já existem, use **Editar** na linha do advogado (B2, Bloco F1). Com o
+   Graph ligado, um id que não existe no tenant é recusado antes de salvar.
 5. **Chamada de teste manual**, fora da aplicação. Com as credenciais do passo
    2, crie uma reunião para um advogado por
    `POST /users/{usuarioTeams}/onlineMeetings/createOrGet`. Se responder 403
@@ -321,9 +336,9 @@ Confira nos *Webhook Logs* do painel antes de desligar com cobrança em aberto.
 **Voltar atrás:** `REUNIOES_MODO = "desligado"`. As reuniões já marcadas
 continuam, e as sem sala aparecem em `/admin/reunioes`.
 
-Antes de ligar, confirme com o escritório as oito decisões provisórias do
-ADR-21. As duas principais: antecedência mínima de 24 horas e devolução do
-crédito quando é o escritório que cancela.
+As regras do agendamento estão confirmadas (ADR-21, confirmado em
+29/09/2026: as oito decisões, a antecedência mínima de 24 horas e a devolução
+quando o escritório cancela). Não há pendência de produto para ligar.
 
 ---
 
@@ -336,7 +351,7 @@ Conferidas em 24/09/2026 com `gcloud scheduler jobs list` e
 |---|---|---|---|---|
 | `varredor-outbox` | Scheduler, em [`outbox.tf`](../../infra/terraform/outbox.tf) | a cada minuto | `POST /api/interno/outbox/varredura`: reenfileira o que ficou sem tarefa | Registro perdido entre gravar e enfileirar não é mais entregue. Alerta *Outbox parado* |
 | `clamav-base-diaria` | Scheduler, em [`varredura.tf`](../../infra/terraform/varredura.tf) | 4h e 16h | Executa o job `clamav-atualizar-base`, que publica a base no bucket | A base envelhece e o scanner continua dizendo "limpo". Alertas *Base do ClamAV velha* e *sem publicação* |
-| `retencao-diaria` | Scheduler, em `varredura.tf` | 5h e 17h | `POST /api/interno/retencao`: aviso no 23º dia e exclusão de todas as versões do entregável no 30º dia depois de `entregue`. Duas vezes por dia por causa do alerta de ausência | Arquivos ficam além dos 30 dias. Alerta *Retencao parada* |
+| `retencao-diaria` | Scheduler, em `varredura.tf` | 5h e 17h | `POST /api/interno/retencao`: aviso 7 dias antes (um por pedido) e, 30 dias depois de o último entregável chegar a `entregue` — nunca antes de 7 dias depois do aviso —, exclusão de todas as versões dos entregáveis e dos anexos do cliente. Pula pedido com contestação aberta. Duas vezes por dia por causa do alerta de ausência | Arquivos ficam além dos 30 dias. Alerta *Retencao parada* |
 | `sinais-operacionais` | Scheduler, em [`sinais.tf`](../../infra/terraform/sinais.tf) | a cada 5 minutos | `POST /api/interno/sinais`: mede e grava em log a idade do outbox, da quarentena e da reunião sem sala, e os advogados sem `usuarioTeams` | As métricas ficam sem dado, e os alertas que dependem delas **não disparam**. Alerta *Sonda de sinais parada* |
 | fila `eventos` | Cloud Tasks, em `outbox.tf` | sob demanda | Entrega o outbox em `POST /api/interno/outbox`. Até 12 tentativas em 1 hora, backoff de 10 a 300 s | E-mail, sala e estorno param. Alerta *Outbox parado* |
 | fila `varredura` | Cloud Tasks, em `varredura.tf` | sob demanda | Chama `POST /api/interno/varredura`, que chama o scanner. Até 10 tentativas em 1 hora | Arquivo parado em quarentena. Alerta *Arquivo parado em quarentena* |
@@ -382,14 +397,14 @@ precisa entrar na política de retenção que o escritório aprovar
 revisão é um objeto próprio (`caminhoDaVersao`, em
 `apps/api/src/entregaveis/entregavel.ts`).
 
-**O prazo de retenção dos arquivos é provisório.** Hoje é 30 dias contados de
-quando o entregável chega a `entregue`, com aviso 7 dias antes
-(`DIAS_DE_RETENCAO` e `DIAS_DE_AVISO_PREVIO` em
-[`packages/shared/src/retencao.ts`](../../packages/shared/src/retencao.ts)). O
-ponto de partida da contagem nunca foi confirmado pelo escritório (arquitetura,
-7.3). **Os anexos do cliente não têm retenção definida**, e a rotina não os
-toca. Mudar o prazo é mudar essas constantes, com teste, em PR.
-`[CONFIRMAR: prazo e ponto de partida decididos pelo escritório]`.
+**O prazo de retenção dos arquivos está decidido** (`docs/decisoes.md`, 2.2 e
+2.3): 30 dias contados de quando o **último** entregável do pedido chega a
+`entregue`, com lembrete 7 dias antes, e os **anexos do cliente saem no mesmo
+ciclo**, avisados no mesmo e-mail (`DIAS_DE_RETENCAO` e `DIAS_DE_AVISO_PREVIO`
+em [`packages/shared/src/retencao.ts`](../../packages/shared/src/retencao.ts)).
+Contestação aberta suspende a exclusão. O escritório guarda a própria cópia dos
+entregáveis fora da plataforma. Mudar o prazo é mudar essas constantes, com
+teste, em PR.
 
 O Firestore tem **PITR ligado** (`point_in_time_recovery_enablement` em
 [`firestore.tf`](../../infra/terraform/firestore.tf)): um documento apagado
@@ -452,22 +467,46 @@ guard escreve a cada `401` (`jsonPayload.sinal="webhook.recusado"`).
 ## 8. Tarefas do administrador global
 
 Tudo pelo painel em `https://lexintegra.com.br`, com uma conta que tenha a
-claim `role: admin`. **A aplicação não cria administrador.** A claim é gravada
-à mão, fora da aplicação (regra 17), e o repositório não traz o script para
-isso. `[CONFIRMAR: como e por quem o próximo administrador será provisionado]`.
+claim `role: admin`.
+
+**Próximo administrador (B2, decisões 5.5).** Um administrador convida outro
+em **`/admin/administradores`**: nome e e-mail. O convidado recebe por e-mail
+(outbox, `convite-administrador`) o link para definir a própria senha; a
+plataforma grava a claim `admin` (regra 17, emendada na B2) e a linha
+`administrador.convidado` no log de auditoria. Recusas:
+
+- e-mail que já é de **cliente ou advogado** (409): use outro endereço;
+- remover **a si mesmo** (409) e remover o **último** administrador (409).
+
+Remover tira a claim e revoga as sessões na hora. O primeiro uso previsto é o
+Henrique (administrador atual, provisionado à mão) convidar o Auan.
+
+**Na entrega final do projeto**, depois que o Auan estiver ativo e tiver
+entrado ao menos uma vez:
+
+1. O Auan abre `/admin/administradores` e remove o acesso do Henrique.
+2. Conferir que a linha `administrador.removido` está em `auditoria/` e que o
+   Henrique não entra mais no painel administrativo.
+3. Registrar a data em `transferencia.md`.
+
+O primeiro administrador ganha o seu documento em `administradores/` no
+primeiro acesso a essa tela; até lá, ele não aparece na contagem.
 
 | Tarefa | Tela | Rota da API | Observação |
 |---|---|---|---|
+| Convidar e remover administrador | `/admin/administradores` | `GET`/`POST /api/admin/administradores`, `DELETE /api/admin/administradores/{uid}` | Recusa e-mail de cliente ou advogado, remover a si mesmo e remover o último. Fica no log de auditoria |
 | Criar advogado | `/admin/advogados` | `POST /api/admin/advogados` | Grava a claim `advogado` e manda por e-mail (outbox) o link de definição de senha |
+| Editar advogado (nome, e-mail, ID do Teams) | `/admin/advogados` | `PUT /api/admin/advogados/{uid}` | Trocar o e-mail atualiza o login e manda link de acesso ao endereço novo (outbox). Não redistribui pedidos. Fica no log de auditoria |
 | Suspender e reativar acesso | `/admin/advogados` | `POST`/`DELETE /api/admin/advogados/{uid}/suspensao` | Revoga tokens na hora. Responde 409 se houver reunião futura (ADR-21, D) |
 | Distribuir pedido | `/admin/distribuicao` | `POST`/`DELETE /api/admin/pedidos/{id}/atribuicao` | 409 com reunião futura marcada |
 | Produtos | `/admin/produtos` | `/api/admin/produtos` | Não há exclusão, só desativação |
-| Estornar pedido | `/admin/estornos` | `POST /api/admin/pedidos/{id}/estorno` | Só sem trabalho iniciado. Isolado: a devolução é **manual**. Registre com `POST /api/admin/estornos/{id}/execucao-manual` |
+| Estornar pedido | `/admin/estornos` | `POST /api/admin/pedidos/{id}/estorno` | Só sem trabalho iniciado, sem reunião já realizada e fora de contestação; a recusa diz o motivo. Reunião futura é cancelada junto. Isolado: a devolução é **manual**. Registre com `POST /api/admin/estornos/{id}/execucao-manual` |
 | Reenviar e-mail ou evento | `/admin/entregas` | `POST /api/admin/outbox/{id}/reenvio` | Só `falhou` ou `abandonado`. Passa pelo mesmo arrendamento (regra 3). Ver [`outbox-parado.md`](../runbooks/outbox-parado.md) |
 | Reunião sem sala | `/admin/reunioes` | `GET /api/admin/reunioes` e o reenvio do outbox | Ver [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
-| Cancelar reunião pelo escritório | `/admin/reunioes` | `POST /api/admin/reunioes/{pedidoId}/{reuniaoId}/cancelamento` | Sempre devolve o crédito (ADR-21, H, provisório) |
+| Cancelar reunião pelo escritório | `/admin/reunioes` | `POST /api/admin/reunioes/{pedidoId}/{reuniaoId}/cancelamento` | Sempre devolve o crédito, com qualquer antecedência, e o cliente recebe e-mail convidando a remarcar (ADR-21, H) |
 | Buscar cliente e ver anamnese | `/admin/clientes` | `GET /api/admin/clientes`, `GET .../{uid}/anamnese` | |
-| Conciliar pagamento órfão | **sem tela** | — | Ver [`pagamento-orfao.md`](../runbooks/pagamento-orfao.md) |
+| Pagamentos com problema (órfão, divergente, conflito de conta) | `/admin/pagamentos` | `GET /api/admin/pagamentos?situacao=&tipo=`, `POST /api/admin/pagamentos/{cobrancaId}/resolucao` | A correção é no painel do AbacatePay; a tela marca como resolvido, com nota obrigatória e auditoria. O comprador só aparece enquanto o checkout existir. Ver [`pagamento-orfao.md`](../runbooks/pagamento-orfao.md) (prazos do `decisoes.md`, 5.3) |
+| Registrar resultado de contestação | `/admin/contestacoes` | `GET /api/admin/contestacoes`, `POST /api/admin/contestacoes/{cobrancaId}/resultado` | Ganha tira a pausa; perdida estorna sem devolução. Ver [`alerta-critico.md`](../runbooks/alerta-critico.md) |
 | Exportar dados de um titular | **sem tela** | `POST /api/admin/lgpd/{clientes\|pre-cadastros}/{id}/exportacao` | Ver [`lgpd.md`](lgpd.md) e [`runbooks/lgpd-titular.md`](../runbooks/lgpd-titular.md) |
 
 **Chamar uma rota sem tela.** Com a sessão administrativa aberta no navegador,

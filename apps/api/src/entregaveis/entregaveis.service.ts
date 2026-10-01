@@ -18,7 +18,8 @@ import {
   type EntregavelResumo,
   type EventoDeTransicao,
 } from 'shared';
-import { COLECAO_PEDIDOS } from '../pedidos/pedido.js';
+import { exigirSemContestacao } from '../pedidos/pausa.js';
+import { COLECAO_PEDIDOS, type DocumentoPedido } from '../pedidos/pedido.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import {
   idDaTransicao,
@@ -186,6 +187,8 @@ export class EntregaveisService {
       }
 
       this.conferirGuardas(evento, contexto, atorUid);
+      const fechou =
+        para === 'entregue' && (await this.ultimoAEntregar(transacao, alvo));
 
       const sequencia = entregavel.transicoes + 1;
       const referencia = this.referencia(alvo);
@@ -219,6 +222,8 @@ export class EntregaveisService {
         } satisfies DocumentoTransicao,
       );
 
+      if (fechou) this.iniciarRetencao(transacao, alvo.pedidoId);
+
       this.log.log(
         `entregavel ${alvo.pedidoId}/${alvo.entregavelId}: ${de} -> ${para} por ${evento}`,
       );
@@ -231,6 +236,42 @@ export class EntregaveisService {
             ? entregavel.revisoesUsadas + 1
             : entregavel.revisoesUsadas,
       });
+    });
+  }
+
+  /**
+   * Este e o ULTIMO entregavel do pedido a chegar a `entregue`? Le os irmaos
+   * dentro da transacao, antes de qualquer escrita.
+   */
+  private async ultimoAEntregar(
+    transacao: Transaction,
+    alvo: Alvo,
+  ): Promise<boolean> {
+    const irmaos = await transacao.get(
+      this.db
+        .collection(COLECAO_PEDIDOS)
+        .doc(alvo.pedidoId)
+        .collection(SUBCOLECAO_ENTREGAVEIS),
+    );
+    return irmaos.docs.every(
+      (documento) =>
+        documento.id === alvo.entregavelId ||
+        (documento.data() as DocumentoEntregavel).estado === 'entregue',
+    );
+  }
+
+  /**
+   * O fim do contrato, para a retencao (arquitetura 13; decisoes.md, 2.2 e
+   * 2.3): TODOS os entregaveis em `entregue`. Escrito NA MESMA TRANSACAO da
+   * confirmacao — ate o Bloco D da B2 isto era `RetencaoService.marcarSeFechou`,
+   * que ninguem chamava, e o job de retencao nunca encontrou pedido nenhum.
+   * `retencaoPendente` e o booleano que o job consulta (ver `pedido.ts`).
+   */
+  private iniciarRetencao(transacao: Transaction, pedidoId: string): void {
+    transacao.update(this.db.collection(COLECAO_PEDIDOS).doc(pedidoId), {
+      retencaoEm: FieldValue.serverTimestamp(),
+      retencaoPendente: true,
+      avisoDeExclusaoEnviado: false,
     });
   }
 
@@ -324,12 +365,13 @@ export class EntregaveisService {
       throw new NotFoundException('Entregavel nao encontrado.');
     }
 
-    const dadosPedido = documentoPedido.data() as {
-      clienteId: string;
-      advogadoId?: string | null;
-      situacao?: string;
-      snapshot: { numeroRevisoesPermitidas: number };
-    };
+    const dadosPedido = documentoPedido.data() as DocumentoPedido;
+    /*
+     * Pedido pausado por contestacao nao muda (decisoes.md, 5.4): nem inicio,
+     * nem retomada, nem upload, nem confirmacao, nem revisao. Aqui, dentro da
+     * transacao, porque todo evento de entregavel passa por esta leitura.
+     */
+    exigirSemContestacao(dadosPedido);
 
     return {
       entregavel: documento.data() as DocumentoEntregavel,

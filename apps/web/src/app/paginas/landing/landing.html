@@ -1,261 +1,339 @@
-<p class="aviso">
-  <strong>{{ textos.aviso.destaque }}</strong> {{ textos.aviso.texto }}
-  <a href="/cadastro">{{ textos.aviso.acao }}</a>
-</p>
-
-<main>
-  <!-- ============================== HERO ============================== -->
-  <section class="hero" id="inicio">
-    <div class="faixa">
-      <div class="hero__texto">
-        <h1>
-          @for (linha of textos.hero.titulo; track linha) {
-          <span>{{ linha }} </span>
-          }
-        </h1>
-        <p class="hero__apoio">{{ textos.hero.apoio }}</p>
+<main id="conteudo">
+  <section class="hero" id="inicio" aria-labelledby="titulo-home">
+    <div class="foto foto--hero" aria-hidden="true">
+      <img
+        src="/imagens/nevoa/hero-martelo-1600.jpg"
+        srcset="
+          /imagens/nevoa/hero-martelo-800.jpg   800w,
+          /imagens/nevoa/hero-martelo-1600.jpg 1600w,
+          /imagens/nevoa/hero-martelo-2400.jpg 2400w
+        "
+        sizes="100vw"
+        alt=""
+        width="2400"
+        height="1600"
+        fetchpriority="high"
+        decoding="async"
+      />
+    </div>
+    <div class="faixa hero__texto">
+      <h1 id="titulo-home"><span>Contrate.</span><span>Receba.</span></h1>
+      <div class="hero__linha">
+        <p class="apoio">
+          A plataforma para <strong>contratar serviços jurídicos</strong> com
+          preço fechado antes de pagar e
+          <strong>advogado responsável</strong> em cada pedido. Do primeiro
+          passo ao documento entregue.
+        </p>
         <div class="hero__acoes">
-          <app-link-acao
-            destino="/servicos"
-            variante="primario"
-            iconeFinal="seta-direita"
-            >{{ textos.hero.acaoPrincipal }}</app-link-acao
-          >
-          <app-link-acao destino="#como" variante="secundario"
-            >{{ textos.hero.acaoSecundaria }}</app-link-acao
-          >
+          <a class="pill" href="/servicos"
+            >Ver serviços e preços<svg class="icone" aria-hidden="true">
+              <use href="/icones/nevoa.svg#i-arrow-right" /></svg
+          ></a>
+          <a class="link" href="#como"
+            >Como funciona<svg class="icone" aria-hidden="true">
+              <use href="/icones/nevoa.svg#i-arrow-down" /></svg
+          ></a>
+          <p class="nota">
+            <svg class="icone" aria-hidden="true">
+              <use href="/icones/nevoa.svg#i-lock-simple" /></svg
+            >Preços liberados após cadastro gratuito: só nome, e-mail e
+            telefone.
+          </p>
         </div>
       </div>
-
-      <!--
-        Ilustracao do produto, nao dado real: a janela mostra como um pedido e
-        acompanhado. Nenhuma chamada de rede (regra inviolavel 10).
-      -->
-      <div class="palco">
-        @for (ramo of textos.hero.ramos; track ramo.texto; let i = $index) {
-        <span class="ramo ramo--{{ i + 1 }}"
-          ><span class="ramo__icone"
-            ><app-icone [nome]="ramo.icone" tamanho="p" /></span
-          >{{ ramo.texto }}</span
+    </div>
+    <div class="faixa percurso">
+      <p class="label">
+        O pedido, do início à entrega
+        <span class="contagem" aria-hidden="true"
+          >Passo <span data-contador>05</span> / 05</span
         >
-        }
-        <app-janela-produto [recortada]="true" />
-      </div>
-    </div>
-  </section>
-
-  <!-- ========================== DIFERENCIAIS ========================== -->
-  <section class="diferenciais" aria-label="Diferenciais">
-    <ul class="faixa">
-      @for (item of textos.diferenciais; track item.texto) {
-      <li><app-icone [nome]="item.icone" tamanho="p" />{{ item.texto }}</li>
-      }
-    </ul>
-  </section>
-
-  <!-- ============================ PROPOSTA ============================ -->
-  <section class="secao">
-    <div class="faixa">
-      <header class="secao__cabecalho">
-        <h2>
-          @for (linha of textos.proposta.titulo; track linha) {
-          <span>{{ linha }} </span>
-          }
-        </h2>
-        <p>{{ textos.proposta.apoio }}</p>
-      </header>
-      <div class="proposta">
-        <article class="proposta__item proposta__item--destaque">
-          <span class="ladrilho"><app-icone nome="grade" /></span>
-          <h3>
-            @for (linha of textos.proposta.destaque.titulo; track linha) {
-            <span>{{ linha }} </span>
-            }
-          </h3>
-          <p>{{ textos.proposta.destaque.texto }}</p>
-          <app-link-acao
-            destino="/servicos"
-            variante="primario"
-            tamanho="p"
-            iconeFinal="seta-direita"
-            >{{ textos.proposta.destaque.acao }}</app-link-acao
-          >
-        </article>
-        @for (item of textos.proposta.itens; track item.titulo) {
-        <article class="proposta__item">
-          <span class="ladrilho"><app-icone [nome]="item.icone" /></span>
-          <h3>{{ item.titulo }}</h3>
-          <p>{{ item.texto }}</p>
-        </article>
-        }
-      </div>
-    </div>
-  </section>
-
-  <!-- ========================== COMO FUNCIONA ========================= -->
-  <section class="secao secao--branca" id="como">
-    <div class="faixa">
-      <header class="secao__cabecalho">
-        <h2>
-          @for (linha of textos.como.titulo; track linha) {
-          <span>{{ linha }} </span>
-          }
-        </h2>
-        <p>{{ textos.como.apoio }}</p>
-      </header>
-      <ol class="passos">
-        @for (passo of textos.como.passos; track passo.titulo; let i = $index) {
-        <li>
-          <span class="passo__numero" aria-hidden="true">{{ i + 1 }}</span>
-          <h3>{{ passo.titulo }}</h3>
-          <p>{{ passo.texto }}</p>
-        </li>
-        }
-      </ol>
-    </div>
-  </section>
-
-  <!-- ============================ SERVICOS ============================ -->
-  <section class="secao" id="servicos">
-    <div class="faixa">
-      <header class="secao__cabecalho">
-        <h2>
-          @for (linha of textos.planos.titulo; track linha) {
-          <span>{{ linha }} </span>
-          }
-        </h2>
-        <p>{{ textos.planos.apoio }}</p>
-      </header>
-      <div class="planos">
-        @for (plano of textos.planos.exemplos; track plano.nome; let i = $index)
-        {
-        <article class="plano" [class.plano--destaque]="i === 1">
-          <span class="plano__categoria">{{ plano.categoria }}</span>
-          <h3>{{ plano.nome }}</h3>
-          <p class="plano__preco">
-            <span class="plano__borrado" aria-hidden="true">R$ 0.000</span>
-            <span class="visualmente-oculto"
-              >{{ textos.planos.precoOculto }}</span
-            >
-          </p>
-          <ul>
-            @for (item of plano.itens; track item) {
-            <li><app-icone nome="confere" tamanho="p" />{{ item }}</li>
-            }
-          </ul>
-          <app-link-acao
-            destino="/cadastro"
-            [variante]="i === 1 ? 'primario' : 'secundario'"
-            >{{ textos.planos.acao }}</app-link-acao
-          >
-        </article>
-        }
-      </div>
-      <p class="planos__nota">{{ textos.planos.nota }}</p>
-      <div class="trava">
-        <p>
-          <strong>{{ textos.planos.trava.titulo }}</strong>
-          {{ textos.planos.trava.texto }}
-        </p>
-        <app-link-acao destino="/cadastro" variante="primario" tamanho="p"
-          >{{ textos.planos.trava.acao }}</app-link-acao
-        >
-      </div>
-    </div>
-  </section>
-
-  <!-- =========================== ATENDIMENTO ========================== -->
-  <section class="secao secao--branca">
-    <div class="faixa atendimento">
-      <div class="atendimento__foto">
-        <img
-          src="/imagens/confianca-lexintegra.jpg"
-          alt="Advogado e cliente se cumprimentam numa mesa de reunião, com uma balança ao lado"
-          width="1200"
-          height="800"
-          loading="lazy"
-        />
-      </div>
-      <div>
-        <h2>{{ textos.atendimento.titulo }}</h2>
-        <p class="atendimento__apoio">{{ textos.atendimento.apoio }}</p>
-        <ul class="recursos">
-          @for (recurso of textos.atendimento.recursos; track recurso.titulo) {
+      </p>
+      <div class="telemetria">
+        <span class="piloto" aria-hidden="true"></span
+        ><span class="volta" aria-hidden="true"></span>
+        <ol aria-label="Como funciona em cinco passos">
+          @for (passo of nevoa.passos; track passo.titulo; let i = $index) {
           <li>
-            <span class="ladrilho ladrilho--p"
-              ><app-icone [nome]="recurso.icone" tamanho="p"
-            /></span>
-            <div>
-              <strong>{{ recurso.titulo }}</strong>
-              <span>{{ recurso.texto }}</span>
-            </div>
+            <a [href]="'#passo-' + i"
+              ><span class="numero">0{{ i + 1 }}</span
+              ><strong>{{ passo.etapa }}</strong
+              ><small>{{ passo.resumo }}</small></a
+            >
           </li>
           }
-        </ul>
+        </ol>
       </div>
+      <p class="passo-atual" data-atual aria-hidden="true">
+        Receba o documento
+      </p>
     </div>
   </section>
 
-  <!-- ============================= DUVIDAS ============================ -->
-  <section class="secao" id="duvidas">
-    <div class="faixa duvidas">
-      <div>
-        <h2>
-          @for (linha of textos.duvidas.titulo; track linha) {
-          <span>{{ linha }} </span>
-          }
-        </h2>
-        <p>{{ textos.duvidas.apoio }}</p>
+  <section id="como" aria-labelledby="titulo-como">
+    <header class="faixa secao introducao">
+      <h2 id="titulo-como">Cinco passos.<br />Uma volta só.</h2>
+      <p>
+        Escolha, contrate, envie as informações e receba. A elaboração é do
+        advogado responsável, e você acompanha tudo na sua área.
+      </p>
+    </header>
+    @for (passo of nevoa.passos; track passo.titulo; let i = $index) {
+    <article
+      class="capitulo"
+      [id]="'passo-' + i"
+      [attr.aria-labelledby]="'capitulo-' + i"
+    >
+      <div class="corte" aria-hidden="true"></div>
+      <div class="foto" aria-hidden="true">
+        <img
+          [src]="'/imagens/nevoa/' + passo.foto + '-1600.jpg'"
+          [srcset]="'/imagens/nevoa/' + passo.foto + '-800.jpg 800w, /imagens/nevoa/' + passo.foto + '-1600.jpg 1600w, /imagens/nevoa/' + passo.foto + '-2400.jpg 2400w'"
+          sizes="100vw"
+          alt=""
+          width="2400"
+          height="1600"
+          loading="lazy"
+          decoding="async"
+        /><span class="iris"><i></i><i></i><i></i><i></i></span>
       </div>
-      <div>
-        @for (item of textos.duvidas.perguntas; track item.pergunta; let i =
-        $index) {
-        <article class="pergunta">
-          <h3>
-            <button
-              type="button"
-              [id]="'pergunta-' + i"
-              [attr.aria-expanded]="perguntasAbertas().has(i)"
-              [attr.aria-controls]="'resposta-' + i"
-              (click)="alternar(i)"
-            >
-              {{ item.pergunta }}<span aria-hidden="true"
-                >{{ perguntasAbertas().has(i) ? '−' : '+' }}</span
-              >
-            </button>
-          </h3>
-          <div
-            class="resposta"
-            [id]="'resposta-' + i"
-            role="region"
-            [attr.aria-labelledby]="'pergunta-' + i"
-            [class.resposta--aberta]="perguntasAbertas().has(i)"
-            [attr.inert]="perguntasAbertas().has(i) ? null : ''"
-          >
-            <div>
-              <p>{{ item.resposta }}</p>
-            </div>
+      <div class="faixa capitulo__conteudo">
+        <h3 [id]="'capitulo-' + i">{{ passo.titulo }}</h3>
+        <div class="regua label">
+          <i class="medidor" aria-hidden="true"></i>
+          <span>Passo 0{{ i + 1 }} / 05</span><span>{{ passo.pessoa }}</span>
+        </div>
+        <div class="capitulo__linha">
+          <p>{{ passo.texto }}</p>
+          @if (i === 4) {
+          <div class="exemplo" aria-label="Exemplo ilustrativo de pedido">
+            <p class="exemplo__topo label">
+              Exemplo <span>Pedido nº 0418</span>
+            </p>
+            <dl>
+              <div>
+                <dt>Serviço</dt>
+                <dd>Revisão de contrato comercial</dd>
+              </div>
+              <div>
+                <dt>Etapa</dt>
+                <dd>Revisão do documento</dd>
+              </div>
+              <div>
+                <dt>Arquivo</dt>
+                <dd>Verificado por antivírus</dd>
+              </div>
+              <div>
+                <dt>Revisões restantes</dt>
+                <dd>1 de 2</dd>
+              </div>
+            </dl>
           </div>
-        </article>
-        }
+          } @else {
+          <p class="detalhe">
+            <svg class="icone" aria-hidden="true">
+              <use [attr.href]="'/icones/nevoa.svg#i-' + passo.icone" /></svg
+            >{{ passo.detalhe }}
+          </p>
+          }
+        </div>
       </div>
+    </article>
+    }
+  </section>
+
+  <section class="faixa secao ficha" id="ficha" aria-labelledby="titulo-ficha">
+    <div>
+      <h2 id="titulo-ficha">Ficha técnica do pedido.</h2>
+      <p class="apoio">
+        Tudo acontece dentro do pedido: documentos, reuniões, revisões e
+        entregas. Cada pedido tem seu espaço, com um advogado responsável.
+      </p>
+    </div>
+    <dl class="especificacoes">
+      @for (item of nevoa.especificacoes; track item[0]) {
+      <div>
+        <dt class="label">{{ item[0] }}</dt>
+        <dd>{{ item[1] }}<small>{{ item[2] }}</small></dd>
+      </div>
+      }
+    </dl>
+  </section>
+
+  <section
+    class="secao servicos"
+    id="servicos"
+    aria-labelledby="titulo-servicos"
+  >
+    <header class="faixa servicos__cabecalho">
+      <div>
+        <h2 id="titulo-servicos">O line-up.</h2>
+        <p class="apoio">
+          Encontre o serviço jurídico para o seu próximo passo. Consulte os
+          serviços e preços na página do catálogo.
+        </p>
+        <p class="nota">Catálogo disponível após cadastro gratuito.</p>
+      </div>
+      <div class="controles">
+        <button
+          type="button"
+          class="util"
+          aria-label="Serviço anterior"
+          aria-controls="trilho-servicos"
+          (click)="deslizar(trilho, -1)"
+        >
+          <svg class="icone reversa" aria-hidden="true">
+            <use href="/icones/nevoa.svg#i-arrow-right" />
+          </svg></button
+        ><button
+          type="button"
+          class="util"
+          aria-label="Próximo serviço"
+          aria-controls="trilho-servicos"
+          (click)="deslizar(trilho, 1)"
+        >
+          <svg class="icone" aria-hidden="true">
+            <use href="/icones/nevoa.svg#i-arrow-right" />
+          </svg>
+        </button>
+      </div>
+    </header>
+    <ul
+      class="trilho"
+      id="trilho-servicos"
+      data-lenis-prevent-horizontal
+      #trilho
+      tabindex="0"
+      aria-label="Prévia reservada do catálogo, role na horizontal"
+      aria-describedby="aviso-catalogo"
+    >
+      @for (placeholder of nevoa.placeholders; track placeholder) {
+      <li class="servico-reservado" aria-hidden="true">
+        <div class="servico-reservado__conteudo">
+          <span class="esqueleto esqueleto--rotulo"></span>
+          <span class="esqueleto esqueleto--titulo"></span>
+          <span class="esqueleto esqueleto--titulo esqueleto--curto"></span>
+          <span class="esqueleto"></span>
+          <span class="esqueleto esqueleto--curto"></span>
+          <div class="servico-reservado__base">
+            <span class="esqueleto"></span>
+            <span class="esqueleto esqueleto--curto"></span>
+          </div>
+        </div>
+      </li>
+      }
+    </ul>
+    <div class="faixa servicos__base">
+      <div id="aviso-catalogo">
+        <p>Cadastre-se para acessar os serviços.</p>
+        <p class="nota">
+          Já tem acesso? <a class="link" href="/servicos">Ir para o catálogo</a>
+        </p>
+      </div>
+      <a class="pill" href="/cadastro"
+        >Liberar catálogo<svg class="icone" aria-hidden="true">
+          <use href="/icones/nevoa.svg#i-arrow-right" /></svg
+      ></a>
     </div>
   </section>
 
-  <!-- ============================= CONVITE ============================ -->
-  <section class="faixa convite-envelope">
-    <div class="convite">
-      <div>
-        <h2>{{ textos.convite.titulo }}</h2>
-        <p>{{ textos.convite.texto }}</p>
+  <section class="faixa secao comparacao" aria-labelledby="titulo-comparacao">
+    <div class="introducao">
+      <h2 id="titulo-comparacao">Do pedido ao documento.</h2>
+      <p>
+        Um percurso com contexto. O que você envia, conversa e recebe fica junto
+        do serviço contratado.
+      </p>
+    </div>
+    <ol>
+      @for (passo of nevoa.passos; track passo.titulo) {
+      <li>{{ passo.etapa }}</li>
+      }
+    </ol>
+    <p class="nota">
+      As etapas mostram o fluxo do atendimento, não um prazo de entrega.
+    </p>
+  </section>
+
+  <section
+    class="faixa secao duvidas"
+    id="duvidas"
+    aria-labelledby="titulo-duvidas"
+  >
+    <div>
+      <h2 id="titulo-duvidas">Dúvidas.</h2>
+      <p class="apoio">Tudo acontece dentro do pedido.</p>
+    </div>
+    <div>
+      @for (item of textos.duvidas.perguntas; track item.pergunta; let i =
+      $index) {
+      <article class="pergunta">
+        <h3>
+          <button
+            type="button"
+            [id]="'pergunta-' + i"
+            [attr.aria-expanded]="perguntasAbertas().has(i)"
+            [attr.aria-controls]="'resposta-' + i"
+            (click)="alternar(i)"
+          >
+            {{ item.pergunta }}<svg class="icone" aria-hidden="true">
+              <use
+                [attr.href]="perguntasAbertas().has(i) ? '/icones/nevoa.svg#i-minus' : '/icones/nevoa.svg#i-plus'"
+              />
+            </svg>
+          </button>
+        </h3>
+        <div
+          class="resposta"
+          [id]="'resposta-' + i"
+          role="region"
+          [attr.aria-labelledby]="'pergunta-' + i"
+          [hidden]="!perguntasAbertas().has(i)"
+          [attr.inert]="perguntasAbertas().has(i) ? null : ''"
+        >
+          <p>{{ item.resposta }}</p>
+        </div>
+      </article>
+      }
+    </div>
+  </section>
+
+  <section class="fechamento" aria-labelledby="titulo-fechamento">
+    <div class="foto" aria-hidden="true">
+      <img
+        src="/imagens/nevoa/fechamento-torres-escuras-1600.jpg"
+        srcset="
+          /imagens/nevoa/fechamento-torres-escuras-800.jpg   800w,
+          /imagens/nevoa/fechamento-torres-escuras-1600.jpg 1600w,
+          /imagens/nevoa/fechamento-torres-escuras-2400.jpg 2400w
+        "
+        sizes="100vw"
+        alt=""
+        width="2400"
+        height="1600"
+        loading="lazy"
+        decoding="async"
+      />
+    </div>
+    <div class="faixa fechamento__conteudo">
+      <h2 id="titulo-fechamento" aria-label="Agora.">
+        @for (letra of "Agora."; track $index) {<span
+          class="letra"
+          aria-hidden="true"
+          >{{ letra }}</span
+        >}
+      </h2>
+      <div class="fechamento__linha">
+        <p>
+          Veja o catálogo com escopo e preço fechados. O cadastro é gratuito e
+          pede só nome, e-mail e telefone, sem documento e sem cartão.
+        </p>
+        <a class="pill" href="/servicos"
+          >Ver serviços e preços<svg class="icone" aria-hidden="true">
+            <use href="/icones/nevoa.svg#i-arrow-right" /></svg
+        ></a>
       </div>
-      <app-link-acao
-        destino="/cadastro"
-        variante="primario"
-        iconeFinal="seta-direita"
-        >{{ textos.convite.acao }}</app-link-acao
-      >
     </div>
   </section>
 </main>
-<app-rodape-publico />

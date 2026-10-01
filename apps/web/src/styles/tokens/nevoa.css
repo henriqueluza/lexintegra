@@ -1,0 +1,205 @@
+/* =====================================================================
+   LexIntegra — Design Tokens · Tema NÉVOA (padrão) + NOITE (alternativo)
+   Direção: Bugatti traduzido para a marca (monumental, austero, hairlines).
+   Uso: importe este arquivo UMA vez, antes de qualquer CSS do sistema.
+   Todos os tokens estão em @layer lex-tokens para não brigar com o CSS
+   existente (camadas perdem para CSS sem camada — integração segura).
+   Contrastes (WCAG) medidos sobre --lex-bg #e2e8ee, --lex-surface #edf1f5
+   e --lex-surface-2 #d6dde5 — ver comentários.
+   ===================================================================== */
+@layer lex-tokens {
+  .publica-nevoa {
+    /* ---------- 1. PRIMITIVOS (não use direto em componentes) ---------- */
+    --lex-mist-50: #f4f6f8;
+    --lex-mist-100: #edf1f5;
+    --lex-mist-200: #e2e8ee; /* fundo da página */
+    --lex-mist-300: #d6dde5;
+    --lex-mist-400: #b6c0cc;
+    --lex-mist-500: #8d99a8;
+    --lex-slate-600: #4f5e72;
+    --lex-slate-700: #425164;
+    --lex-slate-800: #2d3a4a;
+    --lex-slate-900: #1f2a36; /* tinta */
+
+    --lex-wine-500: #962c36; /* bordô claro (hover) */
+    --lex-wine-600: #7a1a24; /* bordô da marca (ação primária) */
+    --lex-wine-700: #5e121b; /* bordô pressionado */
+    --lex-wine-brand: #7c1a20; /* bordô do logo */
+
+    --lex-gold-300: #c9a35e; /* dourado da marca (joia, só decorativo em fundo claro) */
+    --lex-gold-400: #a2865a; /* filetes/barras decorativas no Névoa (3:1 não garantido → não usar em texto) */
+    --lex-gold-600: #735a2e; /* dourado legível para TEXTO pequeno (≥4.5:1 em bg/surface/surface-2) */
+
+    /* ---------- 2. SEMÂNTICOS · superfícies ---------- */
+    --lex-bg: #e2e8ee; /* fundo da aplicação */
+    --lex-surface: #edf1f5; /* áreas de conteúdo, tabelas, formulários */
+    --lex-surface-2: #d6dde5; /* faixas, cabeçalho de tabela, hover de linha */
+    --lex-elevated: #f4f6f8; /* modais, drawers, popovers, sheet */
+    --lex-overlay: rgba(31, 42, 54, 0.32); /* scrim atrás de modal/sheet */
+    --lex-veil: #e2e8ee; /* véu sobre fotos (gradientes) */
+
+    /* ---------- 3. SEMÂNTICOS · texto ---------- */
+    --lex-text-primary: #1f2a36; /* 11.8:1 bg · 12.8:1 surface */
+    --lex-text-secondary: #425164; /* 6.6:1 bg · 5.9:1 surface-2 */
+    --lex-text-muted: #4f5e72; /* 5.3:1 bg · 4.8:1 surface-2 (mín. 12px) */
+    --lex-text-inverse: #f4f6f8; /* texto sobre fundo escuro/bordô */
+    --lex-text-on-accent: #f4f6f8; /* 9.7:1 sobre --lex-accent */
+    --lex-text-accent: #7a1a24; /* links/labels de destaque: 8.5:1 bg */
+    --lex-text-gold: #735a2e; /* numeração/"joias" em texto: 5.3:1 bg */
+
+    /* ---------- 4. SEMÂNTICOS · bordas ---------- */
+    --lex-border-hairline: rgba(
+      31,
+      42,
+      54,
+      0.18
+    ); /* divisórias, tabelas, cards */
+    --lex-border-strong: rgba(31, 42, 54, 0.42); /* inputs, botão contornado */
+    --lex-border-focus: #7a1a24; /* anel de foco */
+    --lex-focus-ring:
+      0 0 0 1px var(--lex-bg), 0 0 0 3px var(--lex-border-focus);
+
+    /* ---------- 5. SEMÂNTICOS · marca / ação ---------- */
+    --lex-wine: #7a1a24;
+    --lex-gold: #a2865a; /* SÓ decorativo: filetes, barras de progresso, marcador ativo */
+    --lex-accent: #7a1a24; /* botão primário, link, seleção */
+    --lex-accent-hover: #962c36;
+    --lex-accent-active: #5e121b;
+    --lex-accent-subtle: #ecdfe1; /* fundo de item selecionado (texto primary: 11:1) */
+    --lex-selection-bg: #7a1a24;
+    --lex-selection-fg: #f4f6f8;
+
+    /* ---------- 6. SEMÂNTICOS · estados (sóbrios, AA em bg/surface e no fundo suave) ---------- */
+    --lex-success: #2c6149;
+    --lex-success-bg: #dce8e1; /* 5.8:1 · 5.7:1 */
+    --lex-warning: #80520f;
+    --lex-warning-bg: #efe4d0; /* 5.4:1 · 5.3:1 */
+    --lex-danger: #a0242d;
+    --lex-danger-bg: #f1dcdd; /* 6.1:1 · 5.8:1 */
+    --lex-info: #2c5783;
+    --lex-info-bg: #dae4ef; /* 6.1:1 · 5.8:1 */
+
+    /* ---------- 7. Fotografia (tratamento Névoa) ---------- */
+    --lex-photo-filter: grayscale(1) contrast(0.92) brightness(1.06);
+    --lex-photo-opacity: 0.74; /* foto sobre --lex-bg: sobe as sombras */
+    --lex-photo-tint: #7c1a20; /* só hero e fechamento: mix-blend-mode:color */
+    --lex-photo-tint-opacity: 0.12;
+    --lex-logo-filter: none; /* logo colorido em fundo claro */
+    --lex-scrollbar-thumb: #b6c0cc;
+
+    color-scheme: light;
+  }
+
+  .publica-nevoa {
+    /* ---------- 8. Tipografia ---------- */
+    --lex-font-display:
+      'Panchang', 'Supreme', ui-sans-serif, sans-serif; /* SÓ títulos, caixa alta, peso 400 */
+    --lex-font-text:
+      'Supreme', ui-sans-serif, system-ui, sans-serif; /* corpo, UI, labels */
+    --lex-font-mono:
+      ui-monospace, 'SFMono-Regular', Consolas, monospace; /* SÓ dados reais: nº de pedido, horas */
+
+    --lex-weight-regular: 400;
+    --lex-weight-medium: 500; /* labels, botões, ênfase em texto — nunca 700 */
+
+    /* escala (display → caption). Hierarquia por ESCALA, não por peso. */
+    --lex-text-monumental: clamp(
+      3rem,
+      14.2vw,
+      19rem
+    ); /* 1 palavra por página, landing */
+    --lex-text-display-1: min(6rem, 11.5vh, 8.2vw); /* hero landing */
+    --lex-text-display-2: clamp(
+      1.7rem,
+      4.6vw,
+      3.75rem
+    ); /* h2 landing / título de página interna grande */
+    --lex-text-display-3: clamp(
+      1.35rem,
+      1.9vw,
+      2rem
+    ); /* título de página interna / h3 display */
+    --lex-text-title: clamp(
+      1.125rem,
+      1rem + 0.35vw,
+      1.35rem
+    ); /* títulos de seção/card (fonte texto) */
+    --lex-text-lead: clamp(1rem, 0.9rem + 0.35vw, 1.25rem);
+    --lex-text-body: 1rem; /* 16px */
+    --lex-text-small: 0.9375rem; /* 15px */
+    --lex-text-caption: 0.875rem; /* 14px */
+    --lex-text-label: 0.8125rem; /* 13px, CAIXA ALTA + tracking */
+    --lex-text-min: 0.75rem; /* 12px — nunca menor */
+
+    --lex-leading-display: 1; /* 0.95–1.05 em display */
+    --lex-leading-heading: 1.12;
+    --lex-leading-body: 1.5;
+    --lex-leading-tight: 1.3;
+
+    --lex-tracking-display: -0.01em;
+    --lex-tracking-label: 0.14em; /* labels/botões em caixa alta */
+    --lex-tracking-body: 0;
+
+    /* ---------- 9. Espaço (base 4/8) ---------- */
+    --lex-space-1: 0.25rem; /* 4 */
+    --lex-space-2: 0.5rem; /* 8 */
+    --lex-space-3: 0.75rem; /* 12 */
+    --lex-space-4: 1rem; /* 16 */
+    --lex-space-5: 1.5rem; /* 24 */
+    --lex-space-6: 2rem; /* 32 */
+    --lex-space-7: 3rem; /* 48 */
+    --lex-space-8: 4rem; /* 64 */
+    --lex-space-9: 6rem; /* 96 */
+    --lex-gutter: clamp(1rem, 4vw, 4rem); /* margem lateral de página */
+    --lex-section-y: clamp(
+      4rem,
+      12vh,
+      10rem
+    ); /* respiro vertical de seção (landing) */
+    --lex-control-h: 44px; /* alvo mínimo de toque/controle */
+    --lex-control-h-lg: 48px;
+
+    /* ---------- 10. Raios (sistema Bugatti: só três) ---------- */
+    --lex-radius-0: 0; /* padrão: mídia, seções, tabelas */
+    --lex-radius-sm: 6px; /* inputs, painéis, modais, botões utilitários */
+    --lex-radius-pill: 9999px; /* botões primários, badges */
+
+    /* ---------- 11. Elevação (mínima: hairline antes de sombra) ---------- */
+    --lex-shadow-none: none;
+    --lex-shadow-popover: 0 8px 24px -12px rgba(31, 42, 54, 0.28); /* só menus/popovers flutuantes */
+    --lex-shadow-modal: 0 24px 48px -24px rgba(31, 42, 54, 0.35); /* só modal/drawer */
+
+    /* ---------- 12. Camadas ---------- */
+    --lex-z-base: 0;
+    --lex-z-sticky: 20;
+    --lex-z-header: 50;
+    --lex-z-overlay: 55;
+    --lex-z-drawer: 60;
+    --lex-z-modal: 70;
+    --lex-z-toast: 80;
+    --lex-z-tooltip: 90;
+
+    /* ---------- 13. Movimento ---------- */
+    --lex-ease-out: cubic-bezier(
+      0.16,
+      1,
+      0.3,
+      1
+    ); /* padrão: entradas, hovers (expo-out) */
+    --lex-ease-in-out: cubic-bezier(
+      0.65,
+      0,
+      0.35,
+      1
+    ); /* percursos (barras, trilhos) */
+    --lex-ease-linear: linear; /* scroll-linked */
+    --lex-dur-instant: 100ms; /* feedback de clique */
+    --lex-dur-fast: 200ms; /* hover, cor */
+    --lex-dur-base: 350ms; /* botões, abas, toasts (saída) */
+    --lex-dur-slow: 600ms; /* entradas de conteúdo */
+    --lex-dur-cinema: 1100ms; /* máscaras/revelações da landing */
+    /* springs (Motion): bounce 0 — nada de overshoot */
+    --lex-spring-ui: 'type: spring, bounce: 0, visualDuration: .42';
+    --lex-spring-drag: 'type: spring, bounce: 0, visualDuration: .55';
+  }
+} /* @layer lex-tokens */

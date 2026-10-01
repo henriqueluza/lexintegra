@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ALERTAS, type CanalDeAlerta } from '../../alertas/alerta.js';
+import { ContestacoesService } from '../../contestacoes/contestacoes.service.js';
 import { ConfirmacaoDeEstornoService } from '../../estornos/confirmacao-estorno.service.js';
 import { ConfirmacaoService } from './confirmacao.service.js';
 import type { EventoDoGateway } from './evento.js';
@@ -10,6 +11,11 @@ import type { EventoDoGateway } from './evento.js';
  * UM LUGAR SO decide o que um evento significa, e o controlador nao sabe nada de
  * pagamento nem de estorno. O que volta daqui e so rotulo para a resposta e o log
  * — o gateway recebe 200 em todos os casos, e 5xx so quando algo lanca.
+ *
+ * CHARGEBACK PAUSA OS PEDIDOS da cobranca (`docs/decisoes.md`, 5.4) ANTES do
+ * alerta: a pausa e a parte que protege o escritorio, e o alerta e a que chama
+ * alguem. Se a pausa falhar, a excecao sobe, o gateway recebe 5xx e reentrega —
+ * e a abertura e idempotente.
  *
  * NENHUM EVENTO QUE PODE SER DINHEIRO E IGNORADO EM SILENCIO. Chargeback e nome
  * de evento desconhecido respondem 200 — reentregar nao faria o codigo passar a
@@ -25,6 +31,7 @@ export class ProcessadorDeEventos {
   constructor(
     private readonly confirmacao: ConfirmacaoService,
     private readonly estornos: ConfirmacaoDeEstornoService,
+    private readonly contestacoes: ContestacoesService,
     @Inject(ALERTAS) private readonly alertas: CanalDeAlerta,
   ) {}
 
@@ -34,7 +41,12 @@ export class ProcessadorDeEventos {
      * `tipo: 'pagamento' | 'estorno'`, e o TypeScript nao a descarta depois de
      * dois `if` que retornam — so o teste do discriminante unico estreita a uniao.
      */
-    if (evento.tipo === 'ignorado') return this.naoTratado(evento);
+    if (evento.tipo === 'ignorado') {
+      if (evento.motivo === 'contestacao' && evento.cobrancaId !== null) {
+        await this.contestacoes.abrir(evento.cobrancaId, evento.eventoId);
+      }
+      return this.naoTratado(evento);
+    }
 
     if (evento.tipo === 'pagamento') {
       return this.confirmacao.confirmar({
@@ -64,7 +76,8 @@ export class ProcessadorDeEventos {
             assunto: 'pagamento.contestacao',
             detalhe:
               `${evento.nome} (${evento.eventoId}) na cobranca ${cobranca}. ` +
-              'Nenhum estado mudou: conferir no painel do gateway e decidir o pedido.',
+              'Os pedidos da cobranca foram pausados; responder no painel do ' +
+              'gateway e registrar o resultado em /admin/contestacoes.',
           }
         : {
             nivel: 'critico',

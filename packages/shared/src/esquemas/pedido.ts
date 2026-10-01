@@ -65,6 +65,11 @@ export type CartaoPedido = {
   readonly distribuido: boolean;
   /** Etapa 8 (ADR-12): cancelado e estornado ficam na tela, com o selo. */
   readonly situacao: SituacaoPedido;
+  /**
+   * B2 (decisoes.md, 5.4): contestacao do pagamento aberta. O pedido esta
+   * pausado, e a tela esconde as acoes — quem recusa e o servidor.
+   */
+  readonly contestacaoAberta: boolean;
   /** ISO 8601, ou `null` enquanto o carimbo do servidor nao materializou. */
   readonly criadoEm: string | null;
   /**
@@ -115,6 +120,8 @@ export type DemandaResumo = {
   readonly entregaveis: readonly EntregavelResumo[];
   readonly cliente: { readonly uid: string; readonly nome: string };
   readonly criadoEm: string | null;
+  /** Pausado por contestacao (decisoes.md, 5.4): o advogado ve, e nao age. */
+  readonly contestacaoAberta: boolean;
 };
 
 /**

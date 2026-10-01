@@ -1,16 +1,40 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { esperarHidratacao } from './hidratacao';
 
+// Capturas estáticas; o movimento real é verificado em movimento.spec.ts.
+test.beforeEach(async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+});
+
 /**
- * Espera a pagina ASSENTAR, sem tocar nela.
- *
- * `esperarHidratacao` prova que o Angular assumiu CLICANDO no botao — e o jeito
- * certo de provar isso, e inutil aqui: o clique deixa tres avisos de campo
- * obrigatorio na tela, e a imagem de referencia da home travada passaria a ser a
- * de um formulario com erro. Para captura, o que importa e fonte carregada e um
- * quadro desenhado, que e o mesmo criterio de `abrirPeca` no catalogo.
+ * As FOTOGRAFIAS da landing ficam mascaradas na captura. Com tudo igual, o
+ * Chrome as vezes rasteriza uma foto grande com outra qualidade de escala, e a
+ * textura (nuvens, fachadas) muda alguns milhares de pixels de uma execucao
+ * para a outra — no CI, `home travada` e `landing-todas-imagens` falhavam uma
+ * vez em tres. A mascara pinta a caixa de cada foto: posicao e tamanho continuam
+ * conferidos, e o texto e o layout da pagina seguem estritos. Fora da landing a
+ * locator nao casa com nada, e a captura nao muda.
  */
+const fotosDaLanding = (page: Page): Locator[] => [
+  page.locator('app-landing img'),
+];
+
+/** Espera hidratação, fontes e imagens antes da captura estática. */
 async function assentar(page: Page): Promise<void> {
+  if (await page.locator('app-landing').count()) {
+    // A rota e seus estilos chegam depois do HTML inicial. Abrir e fechar uma
+    // resposta prova que o componente está vivo sem deixar marcas na captura.
+    const pergunta = page.locator('.pergunta button').first();
+    await expect(async () => {
+      await pergunta.click();
+      await expect(pergunta).toHaveAttribute('aria-expanded', 'true', {
+        timeout: 500,
+      });
+    }).toPass({ timeout: 15_000 });
+    await pergunta.click();
+    await expect(pergunta).toHaveAttribute('aria-expanded', 'false');
+    await page.evaluate(() => window.scrollTo(0, 0));
+  }
   await page.evaluate(() => document.fonts.ready);
   /*
    * Imagem com `loading="lazy"` abaixo da dobra carrega ou nao conforme o tempo,
@@ -50,9 +74,7 @@ async function assentar(page: Page): Promise<void> {
  * As telas autenticadas ficam em `paineis.visual.spec.ts`, que roda sobre a
  * pilha por precisar de sessao.
  *
- * `fullPage` de proposito aqui, ao contrario do catalogo: o que se quer verificar
- * e a pagina inteira, e nao ha casca de desenvolvimento em volta para sujar o
- * diff.
+ * fullPage cobre a composição inteira de cada página pública.
  */
 const VITRINE = [
   {
@@ -98,8 +120,10 @@ test.describe('regressao visual das telas publicas', () => {
     await page.goto('/');
     await assentar(page);
 
+    await expect(page.locator('.corte').first()).toHaveCSS('opacity', '0');
     await expect(page).toHaveScreenshot('home-travada.png', {
       fullPage: true,
+      mask: fotosDaLanding(page),
     });
   });
 
@@ -154,7 +178,9 @@ test.describe('regressao visual das telas publicas', () => {
     await page.goto('/entrar');
     await assentar(page);
 
-    await expect(page).toHaveScreenshot('entrar.png', { fullPage: true });
+    await expect(page).toHaveScreenshot('entrar.png', {
+      fullPage: true,
+    });
   });
 
   test('recuperar senha', async ({ page }) => {
@@ -216,6 +242,9 @@ for (const [nome, caminho] of [
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto(caminho);
     await assentar(page);
-    await expect(page).toHaveScreenshot(nome + '.png', { fullPage: true });
+    await expect(page).toHaveScreenshot(nome + '.png', {
+      fullPage: true,
+      mask: fotosDaLanding(page),
+    });
   });
 }

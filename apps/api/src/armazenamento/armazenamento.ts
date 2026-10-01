@@ -71,6 +71,20 @@ export interface Armazenamento {
    */
   lerPrimeirosBytes(objeto: Objeto, quantidade: number): Promise<Uint8Array>;
 
+  /**
+   * Uma FAIXA do objeto, por `Range`, sem baixar o resto. Existe para a
+   * conferencia estrutural do DOCX (`varredura/docx.ts`), que precisa do fim do
+   * ZIP (o diretorio central) e de uma entrada no meio.
+   */
+  lerFaixa(
+    objeto: Objeto,
+    inicio: number,
+    quantidade: number,
+  ): Promise<Uint8Array>;
+
+  /** O tamanho do objeto em bytes, dos metadados, sem ler o conteudo. */
+  tamanho(objeto: Objeto): Promise<number>;
+
   mover(origem: Objeto, destino: Objeto): Promise<void>;
 
   excluir(objeto: Objeto): Promise<void>;

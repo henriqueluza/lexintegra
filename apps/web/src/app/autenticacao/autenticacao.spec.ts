@@ -403,6 +403,22 @@ describe('ApiService', () => {
     await promessa;
   });
 
+  /** B2, decisoes.md 4.1: o cadastro inteiro, por `PUT`, no uid codificado. */
+  it('edita advogado pelo uid, com o cadastro inteiro', async () => {
+    const dados = {
+      nome: 'Ana Souza',
+      email: 'ana.nova@escritorio.test',
+      usuarioTeams: null,
+    };
+    const promessa = api.editarAdvogado('uid/1', dados);
+    const chamada = http.expectOne('/api/admin/advogados/uid%2F1');
+
+    expect(chamada.request.method).toBe('PUT');
+    expect(chamada.request.body).toEqual(dados);
+    chamada.flush({ uid: 'uid/1' });
+    await promessa;
+  });
+
   /**
    * Suspensao como recurso: `POST` cria, `DELETE` remove. O uid vai codificado —
    * uid do Firebase nao costuma ter caractere especial, mas o caminho e montado

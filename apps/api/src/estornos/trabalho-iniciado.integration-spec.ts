@@ -257,8 +257,10 @@ describe('estorno e cancelamento com trabalho iniciado (ADR-12)', () => {
         .set('Authorization', `Bearer ${tokenCliente}`)
         .expect(409);
 
-      expect(estorno.body.message).toMatch(/ADR-12/);
-      expect(cancelamento.body.message).toMatch(/ADR-12/);
+      expect(estorno.body).toMatchObject({ motivo: 'trabalho-iniciado' });
+      expect(cancelamento.body).toMatchObject({
+        motivo: 'trabalho-iniciado',
+      });
       const depois = await retrato();
       expect(depois).toEqual(antes);
       expect(app.get<GatewayPagamentoFalso>(GATEWAY_PAGAMENTO).estornos).toEqual(

@@ -45,6 +45,11 @@ export const MAPA_TITULAR = {
     campo: 'clienteId',
     guarda: 'definir_guarda',
   },
+  contestacoes: {
+    colecao: 'contestacoes',
+    campo: 'clienteId',
+    guarda: 'definir_guarda',
+  },
   preCadastros: {
     colecao: 'pre-cadastros',
     vinculo: 'email',
@@ -64,6 +69,17 @@ export const MAPA_TITULAR = {
     colecao: 'disponibilidades',
     campo: 'reserva.pedidoId',
     guarda: 'limpar_referencia',
+  },
+  /*
+   * B2 (decisoes.md 4.1, 4.2 e 5.5): o log de auditoria das acoes
+   * administrativas. O `alvo` e o uid de quem foi editado (advogado,
+   * administrador) ou a cobranca do pagamento resolvido; `antes`/`depois` podem
+   * levar e-mail. Guarda a definir como as outras trilhas (2.1).
+   */
+  auditoria: {
+    colecao: 'auditoria',
+    campo: 'alvo',
+    guarda: 'definir_guarda',
   },
   solicitacoes: {
     colecao: 'solicitacoes-lgpd',

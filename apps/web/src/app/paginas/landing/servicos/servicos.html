@@ -1,31 +1,32 @@
 @if (!liberado()) {
 <div class="trava">
-  <div class="trava__fundo" aria-hidden="true">
+  <div class="trava__aviso">
+    <app-icone nome="cadeado" />
+    <div>
+      <h2>{{ textos.servicos.travado.titulo }}</h2>
+      <p>{{ textos.servicos.travado.texto }}</p>
+    </div>
+    <app-link-acao
+      destino="/cadastro"
+      variante="primario"
+      iconeFinal="seta-direita"
+      >{{ textos.servicos.travado.acao }}</app-link-acao
+    >
+  </div>
+  <div class="trava__fundo">
     @for (exemplo of textos.servicos.travado.exemplos; track exemplo) {
     <article class="produto produto--exemplo">
-      <div class="produto__faixa"><app-icone nome="documento" /></div>
       <div class="produto__corpo">
+        <span class="exemplo-rotulo">Exemplo de serviço</span>
         <h2>{{ exemplo }}</h2>
-        <p>Escopo fechado, prazo e preço definidos antes de começar.</p>
-        <p class="produto__preco">R$ 0.000</p>
+        <p>
+          Consulte o catálogo após o cadastro para conhecer os serviços
+          publicados pelo escritório.
+        </p>
+        <p class="produto__preco">Liberado após cadastro</p>
       </div>
     </article>
     }
-  </div>
-
-  <div class="trava__aviso">
-    <div class="trava__cartao">
-      <span class="trava__icone"><app-icone nome="cadeado" /></span>
-      <h2>{{ textos.servicos.travado.titulo }}</h2>
-      <p>{{ textos.servicos.travado.texto }}</p>
-      <app-link-acao
-        destino="/cadastro"
-        variante="primario"
-        iconeFinal="seta-direita"
-      >
-        {{ textos.servicos.travado.acao }}
-      </app-link-acao>
-    </div>
   </div>
 </div>
 } @else if (carregando()) {
@@ -69,7 +70,6 @@
 <div class="vitrine">
   @for (produto of filtrados(); track produto.id) {
   <article class="produto">
-    <div class="produto__faixa"><app-icone nome="documento" /></div>
     <div class="produto__corpo">
       <h2>{{ produto.nome }}</h2>
       <p>{{ produto.descricao }}</p>

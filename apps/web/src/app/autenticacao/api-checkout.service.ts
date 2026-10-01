@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import type {
   CheckoutIniciado,
+  MetodosDisponiveis,
   NovoCheckout,
   SituacaoCheckout,
 } from 'shared/esquemas/checkout';
@@ -43,6 +44,18 @@ export class ApiCheckoutService {
         `/api/checkout/${encodeURIComponent(checkoutId)}`,
         { headers: await this.cabecalhos(tokenPreCadastro) },
       ),
+    );
+  }
+
+  /**
+   * B2 (decisoes.md 3.4): se o cartao esta no ar. A tela mostra o cartao
+   * desabilitado com "em breve" quando nao esta; quem recusa e o servidor.
+   */
+  async metodos(tokenPreCadastro: string): Promise<MetodosDisponiveis> {
+    return firstValueFrom(
+      this.http.get<MetodosDisponiveis>('/api/checkout/metodos', {
+        headers: await this.cabecalhos(tokenPreCadastro),
+      }),
     );
   }
 

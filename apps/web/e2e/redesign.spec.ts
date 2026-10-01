@@ -12,6 +12,15 @@ for (const caminho of [
   '/termos',
 ]) {
   test(`redesign responsivo e acessível: ${caminho}`, async ({ page }) => {
+    /*
+     * O axe mede a cor CALCULADA, e a landing anima a entrada dos blocos
+     * (opacidade). Com o movimento ligado, a medição às vezes cai no meio da
+     * animação e lê a mistura da cor com o fundo — o rótulo do percurso, com
+     * token de 5,3:1, já foi medido a 3,25:1 assim, num CI sim e no seguinte
+     * não, com a mesma árvore. Movimento reduzido mostra o estado final, que é
+     * o que a regra de contraste avalia; a suíte visual já faz o mesmo.
+     */
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     const chamadas: string[] = [];
     page.on('request', (r) => {
       if (new URL(r.url()).pathname.startsWith('/api')) chamadas.push(r.url());
@@ -41,10 +50,10 @@ test('a home carrega a fotografia e as rotas antigas redirecionam', async ({
 }) => {
   await page.goto('/com-movimento');
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator('main img')).toHaveCount(1);
+  await expect(page.locator('main img')).toHaveCount(7);
   await page.goto('/todas-as-imagens');
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator('main img')).toHaveCount(1);
+  await expect(page.locator('main img')).toHaveCount(7);
   for (const foto of await page.locator('main img').all()) {
     await foto.scrollIntoViewIfNeeded();
     await expect(foto).toBeVisible();
@@ -58,7 +67,7 @@ test('a navegação oferece acesso independente aos fluxos', async ({ page }) =>
   await page.goto('/');
   const menu = page.getByRole('button', { name: 'Menu', exact: true });
   if (await menu.isVisible()) await menu.click();
-  const nav = page.getByRole('navigation', { name: 'Navegação principal' });
+  const nav = page.getByRole('dialog', { name: 'Navegação principal' });
   await expect(nav.getByRole('link', { name: 'Cadastre-se' })).toHaveAttribute(
     'href',
     '/cadastro',
@@ -74,7 +83,7 @@ test('a navegação oferece acesso independente aos fluxos', async ({ page }) =>
   ).toBeVisible();
 });
 
-test('as quatro perguntas animam abertura e fechamento com redução de movimento', async ({
+test('as perguntas animam abertura e fechamento com redução de movimento', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });

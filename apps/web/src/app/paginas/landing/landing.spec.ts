@@ -1,7 +1,7 @@
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Landing } from './landing';
-import { TEXTOS } from './textos';
+import { NEVOA } from './conteudo-nevoa';
 async function montar(): Promise<HTMLElement> {
   await TestBed.configureTestingModule({
     imports: [Landing],
@@ -15,10 +15,10 @@ describe('Landing institucional', () => {
   it('entrega conteúdo completo no primeiro render, com uma h1', async () => {
     const pagina = await montar();
     expect(pagina.querySelectorAll('h1')).toHaveLength(1);
-    for (const linha of TEXTOS.hero.titulo) {
+    for (const linha of ['Contrate.', 'Receba.']) {
       expect(pagina.querySelector('h1')?.textContent).toContain(linha);
     }
-    expect(pagina.textContent).toContain(TEXTOS.como.passos[0].titulo);
+    expect(pagina.textContent).toContain(NEVOA.passos[0].titulo);
   });
   it('mantém cadastro, catálogo e carrinho fora da landing', async () => {
     const pagina = await montar();
@@ -26,24 +26,26 @@ describe('Landing institucional', () => {
     expect(pagina.querySelector('a[href="/cadastro"]')).not.toBeNull();
     expect(pagina.querySelector('a[href="/servicos"]')).not.toBeNull();
   });
-  it('não monta animação e mostra uma fotografia só, com texto alternativo', async () => {
+  it('entrega fotos responsivas decorativas sem bloquear o conteúdo', async () => {
     const pagina = await montar();
-    expect(pagina.querySelector('app-martelo')).toBeNull();
     const fotos = pagina.querySelectorAll('main img');
-    expect(fotos).toHaveLength(1);
-    expect(fotos[0].getAttribute('src')).toContain('confianca-lexintegra.jpg');
-    expect(fotos[0].getAttribute('alt')?.length).toBeGreaterThan(10);
+    expect(fotos).toHaveLength(7);
+    expect(fotos[0].getAttribute('fetchpriority')).toBe('high');
+    for (const foto of fotos) {
+      expect(foto.getAttribute('srcset')).toContain('800w');
+      expect(foto.closest('[aria-hidden="true"]')).not.toBeNull();
+    }
   });
-  it('ilustra o produto sem prometer preço', async () => {
+  it('reserva o line-up com placeholders sem oferecer serviços fictícios', async () => {
     const pagina = await montar();
     expect(
-      pagina.querySelector('.janela[role="img"]')?.getAttribute('aria-label'),
-    ).toBeTruthy();
-    // O unico "preco" e o marcador borrado R$ 0.000, escondido do leitor de tela.
-    const semMarcador = (pagina.textContent ?? '').replaceAll('R$ 0.000', '');
-    expect(semMarcador).not.toMatch(/R\$ ?\d/);
-    for (const borrado of pagina.querySelectorAll('.plano__borrado')) {
-      expect(borrado.getAttribute('aria-hidden')).toBe('true');
+      pagina.querySelector('[aria-label="Exemplo ilustrativo de pedido"]'),
+    ).not.toBeNull();
+    expect(pagina.textContent).not.toMatch(/R\$ ?\d|mais contratado/i);
+    for (const item of pagina.querySelectorAll('.trilho li')) {
+      expect(item.getAttribute('aria-hidden')).toBe('true');
+      expect(item.textContent?.trim()).toBe('');
+      expect(item.querySelector('.esqueleto')).not.toBeNull();
     }
   });
   it('abre e fecha cada resposta por botão acessível', async () => {
@@ -68,4 +70,36 @@ describe('Landing institucional', () => {
       /HttpClient|ApiService|PreCadastroService/,
     );
   });
+});
+
+describe('Trilho de placeholders', () => {
+  afterEach(() => TestBed.resetTestingModule());
+  for (const reduzido of [true, false]) {
+    it(`respeita a preferência de movimento (${reduzido})`, async () => {
+      const pagina = await montar();
+      const trilho = pagina.querySelector<HTMLElement>('#trilho-servicos')!;
+      const original = window.matchMedia;
+      window.matchMedia = jest.fn().mockReturnValue({ matches: reduzido });
+      trilho.scrollBy = jest.fn();
+      Object.defineProperty(trilho, 'clientWidth', { value: 500 });
+      try {
+        pagina
+          .querySelector<HTMLButtonElement>('[aria-label="Próximo serviço"]')!
+          .click();
+        expect(trilho.scrollBy).toHaveBeenCalledWith({
+          left: 400,
+          behavior: reduzido ? 'instant' : 'smooth',
+        });
+        pagina
+          .querySelector<HTMLButtonElement>('[aria-label="Serviço anterior"]')!
+          .click();
+        expect(trilho.scrollBy).toHaveBeenCalledWith({
+          left: -400,
+          behavior: reduzido ? 'instant' : 'smooth',
+        });
+      } finally {
+        window.matchMedia = original;
+      }
+    });
+  }
 });

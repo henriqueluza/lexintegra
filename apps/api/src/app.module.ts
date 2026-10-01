@@ -11,6 +11,9 @@ import { ClientesModule } from './clientes/clientes.module.js';
 import { DisponibilidadesModule } from './disponibilidades/disponibilidades.module.js';
 import { SenhaModule } from './autenticacao/senha/senha.module.js';
 import { EntregaveisModule } from './entregaveis/entregaveis.module.js';
+import { ContestacoesModule } from './contestacoes/contestacoes.module.js';
+import { PagamentosAdminModule } from './pagamentos/admin/pagamentos-admin.module.js';
+import { AdministradoresModule } from './administradores/administradores.module.js';
 import { EstornosModule } from './estornos/estornos.module.js';
 import { FirebaseModule } from './firebase/firebase.module.js';
 import { GatewayPagamentoModule } from './pagamentos/gateway/gateway.module.js';
@@ -91,6 +94,11 @@ import { LgpdModule } from './lgpd/lgpd.module.js';
     WebhookModule,
     AnamneseModule,
     EstornosModule,
+    ContestacoesModule,
+    // B2 (decisoes.md 4.2): pagamentos orfao, divergente e conflito_de_conta.
+    PagamentosAdminModule,
+    // B2 (decisoes.md 5.5): o terceiro escritor de claim, so de `admin`.
+    AdministradoresModule,
     ClientesModule,
     PedidosModule,
     EntregaveisModule,

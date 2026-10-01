@@ -13,8 +13,11 @@ describe('minutas de documentos', () => {
     },
   );
   it('versiona o novo aceite e informa os prazos', () => {
-    expect(VERSAO_DO_TERMO).toBe('v2-minuta-2026-09');
-    expect(TEXTO_AVISO_EXCLUSAO).toContain('23º');
+    expect(VERSAO_DO_TERMO).toBe('v3-2026-10');
+    /* decisoes.md, 2.2 e 2.3: 30 dias, aviso 7 dias antes, anexos no mesmo aviso. */
+    expect(TEXTO_AVISO_EXCLUSAO).toContain('30 dias');
+    expect(TEXTO_AVISO_EXCLUSAO).toContain('7 dias');
+    expect(TEXTO_AVISO_EXCLUSAO).toContain('arquivos de apoio');
     expect(TEXTO_TERMO_DOWNLOAD).toContain('30 dias');
   });
 });

@@ -1,72 +1,73 @@
+.legal .cabecalho > div {
+  max-width: 1080px;
+}
+.legal .cabecalho h1 {
+  overflow-wrap: anywhere;
+}
+.legal .apoio {
+  max-width: 60ch;
+}
+.legal .auxiliar {
+  margin-top: var(--lex-space-5);
+}
 .legal__grade {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr);
-  gap: var(--s6);
+  gap: var(--lex-space-8);
   align-items: start;
+  border-top: var(--borda-fina) solid var(--lex-border-hairline);
+  padding-top: var(--lex-space-7);
 }
-
 .legal nav {
   position: sticky;
-  top: calc(var(--altura-topo-publico) + var(--s4));
+  top: calc(var(--altura-topo-publico) + var(--lex-space-5));
   display: flex;
   flex-direction: column;
-  gap: var(--s2);
-  padding: var(--s5);
-  background: var(--superficie-elevada);
-  border: var(--borda-fina) solid var(--divisor);
-  border-radius: var(--raio-cartao);
 }
-
 .legal nav h2 {
-  font-size: var(--t-menor);
-  margin-bottom: var(--s2);
+  font-size: var(--lex-text-label);
+  font-weight: var(--lex-weight-medium);
+  letter-spacing: var(--lex-tracking-label);
+  text-transform: uppercase;
+  margin-bottom: var(--lex-space-4);
 }
-
 .legal nav a {
-  color: var(--texto-2);
-  font-size: var(--t-mini);
+  display: flex;
+  align-items: center;
+  min-height: var(--lex-control-h);
+  color: var(--lex-text-secondary);
+  font-size: var(--lex-text-small);
   text-decoration: none;
+  padding-block: var(--lex-space-2);
 }
-
 .legal nav a:hover {
-  color: var(--acento);
+  color: var(--lex-accent);
   text-decoration: underline;
 }
-
-.legal__grade > div {
-  padding: var(--s6);
-  background: var(--superficie-elevada);
-  border: var(--borda-fina) solid var(--divisor);
-  border-radius: var(--raio-grande);
-}
-
 .legal section {
-  padding-bottom: var(--s5);
-  margin-bottom: var(--s5);
-  border-bottom: var(--borda-fina) solid var(--divisor);
-  scroll-margin-top: calc(var(--altura-topo-publico) + var(--s4));
+  padding-bottom: var(--lex-space-7);
+  margin-bottom: var(--lex-space-7);
+  border-bottom: var(--borda-fina) solid var(--lex-border-hairline);
+  scroll-margin-top: calc(var(--altura-topo-publico) + var(--lex-space-5));
 }
-
 .legal section h2 {
-  margin-bottom: var(--s3);
+  font-size: var(--lex-text-title);
+  font-weight: var(--lex-weight-medium);
+  margin-bottom: var(--lex-space-4);
 }
-
 .legal section p {
-  color: var(--texto-2);
+  color: var(--lex-text-secondary);
   line-height: var(--altura-solta);
   white-space: pre-line;
+  overflow-wrap: anywhere;
+  max-width: 72ch;
 }
-
 @media (max-width: 800px) {
   .legal__grade {
     grid-template-columns: minmax(0, 1fr);
+    gap: var(--lex-space-7);
   }
-
   .legal nav {
     position: static;
-  }
-
-  .legal__grade > div {
-    padding: var(--s5) var(--s4);
   }
 }

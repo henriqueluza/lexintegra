@@ -40,6 +40,8 @@ interface Opcoes {
   itens?: number;
   retorno?: string | null;
   resposta?: CheckoutIniciado | Error | HttpErrorResponse;
+  /** B2, decisoes.md 3.4: o que `GET /api/checkout/metodos` responde. */
+  cartao?: boolean | Error;
 }
 
 async function montar(opcoes: Opcoes = {}): Promise<Cenario> {
@@ -84,6 +86,12 @@ async function montar(opcoes: Opcoes = {}): Promise<Cenario> {
             return 'checkoutId' in resposta
               ? Promise.resolve(resposta)
               : Promise.reject(resposta);
+          },
+          metodos: () => {
+            const cartao = opcoes.cartao ?? true;
+            return cartao instanceof Error
+              ? Promise.reject(cartao)
+              : Promise.resolve({ pix: true, cartao });
           },
           situacao: (id: string) => {
             consultas.push(id);
@@ -476,5 +484,42 @@ describe('Checkout', () => {
         PIX.metodo === 'pix' ? PIX.pix.expiraEm : '',
       ),
     ).toMatch(/^\d{2}:\d{2}$/);
+  });
+
+  describe('cartao fora do ar (B2, decisoes.md 3.4)', () => {
+    function radioDoCartao(
+      fixture: ComponentFixture<Checkout>,
+    ): HTMLInputElement {
+      return (fixture.nativeElement as HTMLElement).querySelector(
+        'input[value="cartao"]',
+      ) as HTMLInputElement;
+    }
+
+    it('mostra o cartao desabilitado, com "em breve"', async () => {
+      const { fixture } = await montar({ cartao: false });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(radioDoCartao(fixture).disabled).toBe(true);
+      expect(texto(fixture)).toContain('Em breve');
+      expect(texto(fixture)).toContain('Por enquanto, pague com PIX.');
+    });
+
+    it('com o cartao no ar, a opcao fica livre e sem selo', async () => {
+      const { fixture } = await montar({ cartao: true });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(radioDoCartao(fixture).disabled).toBe(false);
+      expect(texto(fixture)).not.toContain('Em breve');
+    });
+
+    it('falha ao perguntar deixa o cartao como esta', async () => {
+      const { fixture } = await montar({ cartao: new Error('rede') });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(radioDoCartao(fixture).disabled).toBe(false);
+    });
   });
 });

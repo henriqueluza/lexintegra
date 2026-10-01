@@ -204,3 +204,19 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* B2 (decisoes.md 3.4): o cartao fora do ar aparece, desabilitado, com selo. */
+.checkout__metodos .checkout__opcao--indisponivel {
+  color: var(--texto-3);
+  cursor: not-allowed;
+}
+
+.checkout__selo {
+  margin-inline-start: auto;
+  padding: var(--selo-preenchimento);
+  border-radius: var(--selo-raio);
+  background: var(--selo-sol-fundo);
+  color: var(--selo-sol-cor);
+  font-size: var(--t-micro);
+  font-weight: var(--peso-medio);
+}

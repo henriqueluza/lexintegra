@@ -8,21 +8,35 @@ import {
   signal,
 } from '@angular/core';
 import type { CartaoPedido } from 'shared/esquemas/pedido';
+import {
+  TEXTO_CANCELAR_NAO_DEVOLVE,
+  TEXTO_DIREITOS_PRESERVADOS,
+  TEXTO_PRAZOS_ESTORNO,
+} from 'shared/regra-estorno';
 import { podeCancelar } from 'shared/situacao-pedido';
 import { ApiClienteService } from '../../autenticacao/api-cliente.service';
 import { Botao } from '../../ui/botao/botao';
 import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
 import { mensagemDoErro } from '../erros';
 
-/** Redação da interface; decisões de aprovação estão em docs/revisao-frontend.md. */
-export const TEXTO_CANCELAMENTO_JURIDICO =
-  'Ao confirmar, este pedido será cancelado e não seguirá para elaboração. Esta ação não gera devolução automática do pagamento. Para solicitar estorno, procure o atendimento do escritório responsável. Permanecem preservados os direitos previstos na legislação aplicável.';
+/**
+ * O texto da confirmação (B2, decisoes.md 1.2 e 3.3). A parte da regra vem de
+ * `shared/regra-estorno`, a mesma dos termos: cancelar e estornar são atos
+ * diferentes, e quem cancela precisa ler isso antes de confirmar.
+ */
+export const TEXTO_CANCELAMENTO_JURIDICO = [
+  'Ao confirmar, este pedido será cancelado: ele não seguirá para elaboração, e as reuniões ainda futuras dele serão desmarcadas.',
+  TEXTO_CANCELAR_NAO_DEVOLVE,
+  TEXTO_PRAZOS_ESTORNO,
+  TEXTO_DIREITOS_PRESERVADOS,
+].join(' ');
 
 /**
  * O cancelamento de um pedido pelo cliente (ADR-12), dentro do cartao dele.
  *
- * O BOTAO SO APARECE com o pedido ativo e sem trabalho iniciado — `podeCancelar`,
- * a mesma funcao que o servidor usa dentro da transacao. Mas esconder o botao nao
+ * O BOTAO SO APARECE com o pedido ativo, sem trabalho iniciado, sem reuniao ja
+ * realizada e fora de contestacao — `podeCancelar`, a mesma funcao que o
+ * servidor usa dentro da transacao. Mas esconder o botao nao
  * impede a chamada: quem decide e o servidor, e a recusa dele aparece aqui.
  *
  * A CONFIRMACAO DIZ QUE CANCELAR NAO DEVOLVE O VALOR. Devolucao e estorno, e
@@ -47,12 +61,16 @@ export class CancelamentoPedido {
   protected readonly processando = signal(false);
   protected readonly falha = signal<string | null>(null);
 
-  protected readonly disponivel = computed(() =>
-    podeCancelar(
-      this.pedido().situacao,
-      this.pedido().entregaveis.map((entregavel) => entregavel.estado),
-    ),
-  );
+  protected readonly disponivel = computed(() => {
+    const pedido = this.pedido();
+    return podeCancelar({
+      situacao: pedido.situacao,
+      estados: pedido.entregaveis.map((entregavel) => entregavel.estado),
+      reunioes: pedido.reunioes,
+      contestacaoAberta: pedido.contestacaoAberta,
+      agora: Date.now(),
+    });
+  });
 
   protected async confirmar(): Promise<void> {
     if (this.processando()) return;

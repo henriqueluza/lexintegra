@@ -1,135 +1,159 @@
-/** Minutas ampliadas; identificação e canal formal dependem da revisão do escritório. */
+import { pendente } from './pendencias-escritorio.js';
+import {
+  TEXTO_CANCELAR_NAO_DEVOLVE,
+  TEXTO_DIREITOS_PRESERVADOS,
+  TEXTO_PRAZOS_ESTORNO,
+  TEXTO_REGRA_ESTORNO,
+} from './regra-estorno.js';
+
+/**
+ * Termos de uso e política de privacidade (B2, decisoes.md 1.2), redigidos a
+ * partir das decisões fechadas na B2: regra de estorno (3.3), prazos (5.3),
+ * contestação (5.4), reuniões (ADR-21, confirmado), retenção (2.2 e 2.3),
+ * encarregado e canal (1.3), remetente (5.1) e cartão (3.4). O escritório não
+ * enviou texto próprio: o Henrique revisa e leva para aprovação.
+ *
+ * O QUE AINDA DEPENDE DO ESCRITÓRIO aparece como `[PENDENTE-ESCRITORIO: …]`,
+ * pela função `pendente` — nunca escrito à mão (ver `pendencias-escritorio.ts`).
+ *
+ * A ORDEM DAS SEÇÕES IMPORTA: a página pública (`apps/web/.../conteudo-legal.ts`)
+ * troca a última seção dos termos e a primeira e as duas últimas da
+ * privacidade pelas versões com os contatos do rodapé.
+ */
 export const SECOES_TERMOS = [
   {
     titulo: 'A plataforma e o atendimento',
     texto:
-      'A LexIntegra organiza a consulta, a contratação e o acompanhamento de serviços jurídicos. O escopo escolhido define o trabalho a ser realizado pelo escritório responsável. O conteúdo institucional explica a plataforma e não substitui a análise individual do seu caso. A navegação no site, por si só, não constitui contratação de serviço jurídico.',
+      'A LexIntegra organiza a consulta, a contratação e o acompanhamento de serviços jurídicos com escopo definido. O trabalho jurídico de cada pedido é realizado pelo escritório responsável, por meio do advogado a quem o pedido é distribuído. O conteúdo institucional do site explica a plataforma e não substitui a análise individual do seu caso. Navegar no site não constitui contratação.',
   },
   {
-    titulo: 'Cadastro e responsabilidade pelas informações',
+    titulo: 'Cadastro inicial e responsabilidade pelas informações',
     texto:
-      'O cadastro inicial solicita nome, e-mail e telefone e libera a consulta ao catálogo. Ele não cria uma senha nem representa obrigação de compra. Informe dados corretos e um endereço de e-mail ao qual você tenha acesso. Quem atua em nome de uma empresa deve estar autorizado a compartilhar informações e contratar o serviço correspondente.',
+      'O cadastro inicial pede nome, e-mail e telefone e libera a consulta ao catálogo por sete dias neste navegador. Ele não cria senha nem obriga a compra. Informe dados corretos e um e-mail ao qual você tenha acesso. Quem contrata em nome de uma empresa declara estar autorizado a fazê-lo e a compartilhar as informações do serviço.',
   },
   {
-    titulo: 'Conta e acesso à área reservada',
+    titulo: 'Conta e acesso à área do cliente',
     texto:
-      'Após a confirmação da primeira compra, o fluxo prevê o envio de um link para definição da senha. A conta reúne os pedidos associados ao cliente. Mantenha a senha e os links de acesso sob seu controle; não os compartilhe com terceiros. Se perder o acesso, utilize a recuperação de senha. Contate o responsável pelo atendimento ao identificar uso indevido ou dados desatualizados.',
+      'A conta nasce com a confirmação do primeiro pagamento: você recebe por e-mail um link pessoal para criar a sua senha. A conta reúne todos os pedidos feitos com o mesmo e-mail. Não compartilhe a senha nem os links recebidos. Se perder o acesso, use "Esqueci minha senha" na página de entrada. Os e-mails da plataforma saem de um endereço que não recebe respostas; use os canais indicados nesta página.',
   },
   {
     titulo: 'Escopo, entregáveis e condições da oferta',
     texto:
-      'Antes de contratar, leia o nome e a descrição do serviço, os entregáveis, o valor e as condições de reuniões e revisões. Um produto pode conter mais de um documento ou etapa. Atividades não descritas no escopo não devem ser presumidas como incluídas. Necessidades adicionais precisam ser discutidas com o escritório, inclusive quanto a viabilidade, prazo e eventual contratação específica.',
+      'Cada serviço do catálogo informa o que será entregue, o valor, a quantidade de reuniões e de revisões e o prazo de validade das reuniões. Essas condições são registradas no pedido no momento da contratação, e mudanças posteriores do catálogo não alteram o que você já contratou. Atividades fora do escopo descrito não estão incluídas e dependem de conversa e contratação específicas.',
   },
   {
     titulo: 'Carrinho e confirmação da compra',
     texto:
-      'O carrinho permite revisar e remover serviços antes de prosseguir. O total apresentado é estimado até a validação no checkout. Cada item pago gera um pedido independente, com as condições registradas no momento da contratação. Alterações posteriores do catálogo não reescrevem o escopo já registrado para aquele pedido. Confira seus dados, a forma de pagamento e o resumo antes de confirmar.',
+      'O carrinho permite revisar os serviços antes de pagar. O total é confirmado no checkout. Cada serviço pago gera um pedido independente, com suas próprias reuniões, revisões e documentos. Confira seus dados e o resumo antes de confirmar.',
   },
   {
-    titulo: 'Pagamento e disponibilidade dos meios',
+    titulo: 'Pagamento',
     texto:
-      'As opções de pagamento dependem da disponibilidade apresentada no checkout e da habilitação do prestador de pagamentos. No PIX, observe a validade da cobrança. Quando o cartão estiver disponível, seu processamento ocorre na página do prestador, com redirecionamento. A exibição de uma cobrança não equivale à confirmação do pagamento. Evite repetir o pagamento enquanto uma confirmação estiver pendente; procure o atendimento em caso de divergência.',
+      'O pagamento é processado pelo prestador de pagamentos contratado pela plataforma. No PIX, observe a validade do código; o pedido nasce quando o prestador confirma o pagamento. O cartão de crédito, quando estiver disponível, é processado na página segura do prestador, com redirecionamento; enquanto não estiver, a opção aparece indicada como "em breve". A exibição de uma cobrança não equivale à confirmação do pagamento: evite pagar duas vezes enquanto a confirmação estiver pendente e procure o atendimento em caso de divergência.',
   },
   {
     titulo: 'Início do trabalho e colaboração do cliente',
     texto:
-      'O atendimento depende da confirmação do pagamento, da distribuição do pedido e das informações necessárias à análise. Preencha a ficha inicial e envie documentos relevantes, legíveis e atualizados. Indique fatos, datas e necessidades importantes; a equipe poderá solicitar esclarecimentos. A ausência de informações essenciais pode impedir o avanço do trabalho. Prazos específicos devem ser confirmados no contexto do serviço e não são presumidos a partir de uma imagem ou texto institucional.',
+      'O trabalho começa depois da confirmação do pagamento e da distribuição do pedido a um advogado. Preencha a ficha inicial e envie, se quiser, até três arquivos de apoio por pedido (JPG ou PDF, até 5 MB cada). Informações incompletas podem atrasar ou impedir o andamento. Prazos específicos são combinados no contexto do serviço e não decorrem do conteúdo institucional do site.',
   },
   {
-    titulo: 'Comunicação, documentos e revisões',
+    titulo: 'Documentos, revisões e confirmação de entrega',
     texto:
-      'Utilize a área do pedido para consultar andamento, documentos e observações. As revisões seguem a quantidade e o escopo contratados; uma revisão não equivale automaticamente a um novo serviço. Ao receber um documento, verifique seu conteúdo e comunique as dúvidas ao responsável. A confirmação de recebimento registra a entrega na plataforma, sem afastar direitos legais. Mantenha uma cópia dos documentos que precisar conservar.',
+      'Os documentos do pedido ficam disponíveis na sua área. Você pode pedir as revisões incluídas no serviço, até o saldo indicado no pedido; uma revisão não é um serviço novo. Ao receber a versão final, confirme a entrega: a confirmação registra o recebimento na plataforma e não afasta os seus direitos legais. Antes de baixar cada versão, você aceita o termo de download daquela versão.',
   },
   {
-    titulo: 'Reuniões e agenda',
+    titulo: 'Reuniões',
     texto:
-      'As reuniões dependem do saldo, do período de validade, dos intervalos e da disponibilidade previstos no pedido. Agendamento e participação on-line estão sujeitos à habilitação dessas funcionalidades. Consulte as regras e os horários exibidos antes de marcar, remarcar ou cancelar. A compra não assegura atendimento imediato nem qualquer horário fora da agenda disponibilizada. Alterações devem ser tratadas pelos canais do atendimento e pelas ações disponíveis no pedido.',
+      'As reuniões são marcadas na sua área, nos horários disponíveis do advogado do pedido, dentro do saldo e do prazo de validade do serviço, contados da confirmação do pagamento, e respeitando o intervalo mínimo entre reuniões do mesmo pedido. A sala on-line e o convite chegam por e-mail. Cancelar ou remarcar com pelo menos 24 horas de antecedência devolve a reunião ao saldo; com menos de 24 horas, só é possível cancelar, e a reunião é consumida. A reunião em que você não comparece também é consumida. Se o escritório desmarcar, a reunião volta ao saldo, com qualquer antecedência, e você recebe um e-mail para marcar de novo. O agendamento on-line depende da habilitação da integração de reuniões.',
   },
   {
     titulo: 'Cancelamento, estorno e direitos legais',
-    texto:
-      'No fluxo da plataforma, o cancelamento e a solicitação de estorno estão disponíveis antes de começar a elaboração. Cancelar o pedido não devolve automaticamente o valor; o estorno é analisado e processado pelo escritório responsável. Casos com trabalho iniciado exigem avaliação individual. Estas condições preservam os direitos assegurados pela legislação aplicável, inclusive o direito de arrependimento nas hipóteses em que for cabível. Uma limitação da interface não impede a apresentação de uma solicitação ao responsável pelo atendimento.',
+    texto: [
+      TEXTO_REGRA_ESTORNO,
+      TEXTO_CANCELAR_NAO_DEVOLVE,
+      TEXTO_PRAZOS_ESTORNO,
+      TEXTO_DIREITOS_PRESERVADOS,
+    ].join(' '),
   },
   {
-    titulo: 'Arquivos e conservação',
+    titulo: 'Contestação do pagamento',
     texto:
-      'Envie apenas arquivos relacionados ao serviço e que você esteja autorizado a compartilhar. Arquivos passam por verificações antes de ficarem disponíveis. O acesso pode ser limitado durante essa análise ou quando houver problema de segurança. Observe os avisos de disponibilidade e exclusão; a plataforma não deve ser utilizada como arquivo permanente ou única cópia dos seus documentos. A conservação de registros administrativos e jurídicos pode seguir critérios diferentes dos arquivos para download.',
+      'Se o pagamento for contestado junto ao meio de pagamento, todos os pedidos daquela compra ficam pausados até a conclusão: nada muda neles, e as reuniões futuras são desmarcadas com devolução ao saldo. Você recebe um e-mail avisando. Se a contestação for encerrada a favor do escritório, os pedidos voltam ao normal. Se for encerrada a seu favor, os pedidos são encerrados como estornados, sem nova devolução, porque o valor já voltou pelo meio de pagamento.',
   },
   {
-    titulo: 'Uso adequado e segurança',
+    titulo: 'Arquivos e prazo de armazenamento',
     texto:
-      'Não utilize a plataforma para enviar material ilícito, prejudicar outras pessoas, tentar acessar pedidos alheios ou interferir no funcionamento do serviço. O acesso é limitado pelo perfil e pelas atribuições de cada usuário. Restrições técnicas ou de conta podem ser aplicadas para proteger o atendimento, sem eliminar obrigações ou direitos relacionados aos serviços contratados. Nenhum sistema é imune a falhas; comunique ocorrências ao responsável pelo atendimento.',
+      'Envie apenas arquivos relacionados ao serviço e que você esteja autorizado a compartilhar. Todo arquivo passa por verificação antes de ficar disponível. Os documentos entregues e os arquivos de apoio de um pedido são excluídos da plataforma 30 dias depois de todos os documentos do pedido terem a entrega confirmada, e nunca antes de 7 dias após um e-mail de aviso. Baixe e guarde as suas cópias: a plataforma não é arquivo permanente. A exclusão dos arquivos não apaga o histórico do pedido, os pagamentos nem os registros de aceite.',
   },
   {
-    titulo: 'Limites do serviço e resultado jurídico',
+    titulo: 'Uso adequado e limites do serviço',
     texto:
-      'A contratação depende do escopo escolhido. A prestação de serviços jurídicos não representa garantia de resultado. O trabalho jurídico envolve avaliação técnica e circunstâncias que podem depender de documentos, terceiros, autoridades e mudanças de contexto. A contratação não representa garantia de resultado jurídico, decisão favorável ou êxito econômico. A plataforma não é canal de plantão: situações urgentes ou com prazo próximo devem ser informadas diretamente ao profissional responsável, sem presumir leitura imediata de uma mensagem.',
+      'Não use a plataforma para enviar material ilícito, prejudicar outras pessoas, tentar acessar pedidos alheios ou interferir no funcionamento do serviço. A prestação de serviços jurídicos não garante resultado, decisão favorável ou êxito econômico. A plataforma não é canal de plantão: situações urgentes ou com prazo próximo devem ser comunicadas diretamente ao atendimento.',
   },
   {
-    titulo: 'Atualizações, dúvidas e documentos da contratação',
+    titulo: 'Atualizações e dúvidas',
     texto:
-      'Consulte estes termos junto com o escopo do produto, os registros do pedido e eventuais instrumentos específicos do serviço. Versões novas não alteram retroativamente o texto associado a um aceite anterior. Dúvidas sobre contratação, acesso, cancelamento ou documentos devem ser encaminhadas ao responsável pelo atendimento. A identificação jurídica completa do prestador e seus canais formais devem integrar os documentos da contratação; esta página não os substitui.',
+      'Estes termos valem junto com as condições registradas em cada pedido. Uma versão nova não altera o texto que você aceitou numa contratação anterior. Dúvidas sobre contratação, acesso, cancelamento ou documentos devem ser enviadas ao atendimento.',
   },
 ] as const;
+
 export const SECOES_PRIVACIDADE = [
   {
-    titulo: 'O que este aviso abrange',
+    titulo: 'O que esta política abrange',
     texto:
-      'Este aviso descreve o tratamento de dados na consulta ao catálogo, no cadastro, na contratação e no acompanhamento de serviços pela LexIntegra. As responsabilidades concretas pelo tratamento dependem das atividades do escritório e dos prestadores envolvidos. A identificação jurídica do responsável e o canal formal para solicitações devem ser confirmados nos documentos e nas comunicações do atendimento.',
+      'Esta política explica como a LexIntegra trata dados pessoais na navegação, no cadastro inicial, na consulta ao catálogo, na contratação e no acompanhamento dos serviços jurídicos.',
   },
   {
-    titulo: 'Informações do cadastro',
+    titulo: 'Dados do cadastro inicial',
     texto:
-      'Nome, e-mail e telefone são utilizados para registrar o interesse e liberar a consulta ao catálogo. O cadastro inicial não exige documentos do caso nem dados de cartão. Informe somente os dados solicitados; não inclua informações sensíveis em campos destinados a identificação ou contato.',
+      'Nome, e-mail e telefone, usados para registrar o seu interesse e liberar o catálogo. O cadastro inicial não pede documento nem dado de cartão. Não registramos endereço IP, navegador ou origem da visita junto com o cadastro.',
   },
   {
-    titulo: 'Informações de conta e contratação',
+    titulo: 'Dados da conta e da contratação',
     texto:
-      'Quando há contratação, são tratados identificadores da conta, pedidos, condições adquiridas, situação dos pagamentos e registros de aceite. Esses dados permitem vincular o serviço ao cliente, controlar o acesso e manter o histórico da contratação. A senha é gerenciada pelo serviço de autenticação; não deve ser enviada ao escritório em mensagens ou anexos.',
+      'Na compra: nome, e-mail, os pedidos com as condições contratadas, a situação dos pagamentos e os registros de aceite dos termos (versão aceita e data). A senha é guardada pelo serviço de autenticação e nunca é vista pelo escritório. Dados de cartão são digitados na página do prestador de pagamentos e não passam pela plataforma.',
   },
   {
-    titulo: 'Dados do atendimento e de terceiros',
+    titulo: 'Dados do atendimento',
     texto:
-      'A ficha inicial, os documentos, as observações e as informações de reuniões podem conter dados pessoais do cliente e de outras pessoas. Compartilhe apenas o necessário para o serviço e informe ao responsável quando o material exigir cuidado específico. Dados sensíveis e informações de terceiros devem ser avaliados conforme sua necessidade e a hipótese legal aplicável ao caso, sem presumir autorização irrestrita pelo simples envio.',
+      'A ficha inicial traz informações da sua empresa — cadastro, operação, faturamento, passivo trabalhista, autuações e reclamações —, que são tratadas como confidenciais e lidas apenas pelo advogado do pedido e pela administração. A ficha não pede dado pessoal sensível. Documentos, observações e informações de reuniões podem conter dados de outras pessoas: envie apenas o necessário para o serviço.',
   },
   {
-    titulo: 'Finalidades e fundamentos',
+    titulo: 'Para que usamos os dados',
     texto:
-      'O tratamento pode atender a procedimentos preliminares e à execução do contrato, ao cumprimento de obrigações legais e ao exercício regular de direitos. Outras hipóteses, como interesse legítimo ou consentimento, exigem avaliação da finalidade e dos requisitos aplicáveis. Nem toda operação depende de consentimento, e aceitar os termos não significa autorizar qualquer uso futuro dos seus dados.',
+      'Para executar o contrato e os procedimentos que o antecedem (cadastro, compra, atendimento, reuniões e entrega), cumprir obrigações legais e exercer direitos em processos e contestações. Não usamos os seus dados para publicidade nem os vendemos. Aceitar os termos não autoriza usos diferentes dos descritos aqui.',
   },
   {
-    titulo: 'Quem pode acessar os dados',
+    titulo: 'Quem acessa',
     texto:
-      'O acesso ao atendimento é limitado aos usuários autorizados e às atribuições necessárias à execução do serviço. O cliente consulta seus próprios pedidos; o profissional acessa os pedidos que lhe foram atribuídos; a administração utiliza informações necessárias à gestão. Essas restrições não tornam os documentos públicos nem autorizam uso fora da finalidade do atendimento.',
+      'Você vê os seus próprios pedidos. O advogado vê apenas os pedidos distribuídos a ele. A administração vê o necessário para gerir a plataforma, e cada ação administrativa sobre contas e pagamentos fica registrada.',
   },
   {
-    titulo: 'Prestadores de tecnologia e compartilhamento',
+    titulo: 'Prestadores de tecnologia',
     texto:
-      'A operação utiliza serviços de infraestrutura e autenticação Firebase/Google Cloud, comunicação por e-mail e processamento de pagamentos. Os prestadores recebem os dados necessários às respectivas funções. Informações também podem ser compartilhadas para cumprir obrigações legais ou atender determinações válidas. Quando uma integração adicional, como reuniões on-line, estiver habilitada, seu uso envolve os dados necessários à realização do atendimento.',
+      'A plataforma usa Google Cloud e Firebase (infraestrutura, banco de dados no Brasil e autenticação), Resend (envio de e-mails), AbacatePay (pagamentos) e, quando as reuniões on-line estiverem habilitadas, Microsoft Teams. Cada prestador recebe só o necessário à sua função. A autenticação e o envio de e-mails são processados fora do Brasil, pelos prestadores, sob as salvaguardas contratuais deles.',
   },
   {
-    titulo: 'Navegação e armazenamento no dispositivo',
+    titulo: 'Armazenamento no seu navegador',
     texto:
-      'O navegador conserva informações necessárias ao funcionamento, como a liberação temporária do catálogo, os itens do carrinho e a persistência da sessão. Excluir o armazenamento local pode encerrar o acesso ou remover preferências e itens ainda não contratados. Mecanismos de proteção contra abuso podem processar sinais técnicos. Esta redação não representa autorização genérica para publicidade ou rastreamento não relacionado ao serviço.',
+      'O navegador guarda o necessário para o site funcionar: a liberação do catálogo por sete dias, os itens do carrinho e a sessão da sua conta. Não usamos cookies de publicidade nem rastreamento de terceiros. Apagar esses dados do navegador encerra a sessão e esvazia o carrinho.',
   },
   {
-    titulo: 'Segurança e incidentes',
+    titulo: 'Segurança',
     texto:
-      'São utilizados controles de acesso, verificação de identidade, restrições por perfil e análise de arquivos. Registros técnicos apoiam a operação e a identificação de falhas. Essas medidas reduzem riscos, mas não constituem garantia de segurança absoluta. Ao suspeitar de uso indevido da conta ou exposição de informações, procure o responsável pelo atendimento e evite reenviar material sensível sem necessidade.',
+      'Usamos controle de acesso por perfil, verificação de identidade em cada requisição, verificação de arquivos contra vírus e registros técnicos sem conteúdo dos documentos. Nenhuma medida garante segurança absoluta. Se suspeitar de uso indevido da sua conta, troque a senha e avise o atendimento.',
   },
   {
-    titulo: 'Prazos de conservação e exclusão',
-    texto:
-      'Os prazos variam conforme a finalidade, o tipo de registro e as obrigações aplicáveis. Arquivos disponíveis para download seguem avisos próprios de retenção e podem ser excluídos; salve sua cópia quando necessário. Excluir um arquivo não significa apagar simultaneamente o histórico do pedido, registros de pagamento ou aceites. Solicitações de eliminação são avaliadas considerando hipóteses legítimas de conservação e obrigações de guarda.',
+    titulo: 'Por quanto tempo guardamos',
+    texto: `Os documentos entregues e os arquivos de apoio de cada pedido são excluídos 30 dias depois de todos os documentos do pedido terem a entrega confirmada, com aviso por e-mail pelo menos 7 dias antes; durante uma contestação do pagamento, a exclusão fica suspensa. Os demais registros — cadastro, pedidos, pagamentos e aceites — seguem a política de guarda do escritório: ${pendente('politica-de-guarda')}.`,
   },
   {
-    titulo: 'Seus direitos e como solicitar',
-    texto:
-      'Você pode solicitar confirmação de tratamento, acesso, correção e informações sobre compartilhamento, além de exercer os demais direitos previstos na LGPD conforme o caso. Pedidos de eliminação, oposição e revogação de consentimento são avaliados segundo a base e a finalidade do tratamento. Procure o responsável pelo atendimento; poderá ser necessária uma verificação proporcional de identidade para evitar a entrega de dados a terceiros. Também é possível recorrer à autoridade de proteção de dados e aos órgãos competentes.',
+    titulo: 'Seus direitos',
+    texto: `Você pode pedir confirmação de que tratamos seus dados, acesso, correção, anonimização ou eliminação do que for desnecessário, portabilidade, informação sobre compartilhamento e revisão de decisões, além de revogar consentimentos. A confirmação e o acesso em formato simplificado são respondidos imediatamente, e a declaração completa em até 15 dias, como prevê a LGPD. Para os demais pedidos: ${pendente('prazo-direitos-art-18')}. Poderemos pedir uma confirmação proporcional de identidade. Você também pode peticionar à Autoridade Nacional de Proteção de Dados.`,
   },
   {
-    titulo: 'Serviços externos, transferências e atualizações',
+    titulo: 'Atualizações',
     texto:
-      'Prestadores podem utilizar infraestrutura fora do Brasil. O responsável deve avaliar as salvaguardas e os requisitos aplicáveis às transferências internacionais, quando ocorrerem. Páginas externas de pagamento ou outros serviços possuem seus próprios avisos, que devem ser consultados. Este documento pode ser atualizado para refletir mudanças do serviço; a versão e a data identificam a redação disponível, sem apagar os registros de aceites anteriores.',
+      'Esta política pode mudar para refletir mudanças do serviço. A data no topo identifica a versão em vigor, e as versões anteriores aceitas continuam registradas.',
   },
 ] as const;

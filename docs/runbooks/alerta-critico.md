@@ -46,20 +46,46 @@ um incidente aberto em Monitoring → Alerting → Incidents.
 | `pagamento.conflito_de_conta` | O e-mail do comprador já é de um advogado ou administrador | [pagamento-orfao.md](pagamento-orfao.md) |
 | `pagamento.webhook-ilegivel` | Evento com assinatura válida que o parser não entende | [webhook-fora-do-ar.md](webhook-fora-do-ar.md) |
 | `pagamento.webhook-evento-desconhecido` | Evento assinado com nome que o código não conhece. Suspeito principal: a conclusão do cartão com outro nome | [webhook-fora-do-ar.md](webhook-fora-do-ar.md) |
-| `pagamento.contestacao` | Chargeback (`checkout.disputed` ou `transparent.disputed`) | abaixo |
+| `pagamento.contestacao` | Chargeback (`checkout.disputed` ou `transparent.disputed`). Os pedidos da cobrança foram pausados | abaixo |
+| `pagamento.contestacao-sobre-estorno` | Contestação perdida sobre pedido que o escritório já tinha devolvido | abaixo |
 
 ### `pagamento.contestacao`
 
-O cliente contestou a cobrança no meio de pagamento. **O sistema não muda
-estado nenhum**, só avisa (`apps/api/src/pagamentos/webhook/processador.service.ts`).
-A disputa é tratada no painel do AbacatePay, pelo escritório. O id da cobrança
-está no detalhe do alerta. Localize o pagamento em
-`pagamentos/{cobrancaId}` e os pedidos em `pedidos/{cobrancaId}_001`,
-`_002`… para saber o que foi comprado. Se o escritório decidir estornar, siga
-o estorno pelo painel do administrador (`/admin/estornos`), que é o único
-caminho que chega ao gateway (regra 20).
+O cliente contestou a cobrança no meio de pagamento (chargeback). **Desde a B2
+o sistema pausa os pedidos da cobrança sozinho** (`docs/decisoes.md`, 5.4;
+ADR-12): cada pedido ganha o marcador `contestacao`, as reuniões futuras são
+canceladas **com devolução ao saldo**, e o cliente recebe e-mail
+(`pausa-contestacao`). Enquanto a contestação estiver aberta, **nada no pedido
+muda** — cliente, advogado e administrador recebem 409 em qualquer ação.
 
-`[CONFIRMAR: processo do escritório para contestação]`.
+**Quem cuida: o dono do escritório**, que é quem tem acesso ao financeiro.
+
+1. Abra `/admin/contestacoes` e ache a cobrança (o id está no detalhe do
+   alerta). A linha mostra os pedidos pausados.
+2. **Responda à contestação no painel do AbacatePay**, no prazo que o painel
+   indicar, com as provas da plataforma:
+   - os **termos aceitos** no checkout (`pagamentos/{cobrancaId}`: `termosVersao`
+     e `termosAceitosEm`);
+   - o **registro de downloads** (`aceites-de-termos`, um por versão de arquivo
+     baixada, com data);
+   - as **reuniões realizadas** (`pedidos/{id}/reunioes`, as `confirmada` com
+     início no passado);
+   - a trilha dos entregáveis (`pedidos/{id}/entregaveis/{id}/transicoes`).
+   A exportação do titular (`docs/entrega/lgpd.md`) junta tudo num arquivo só.
+3. **Quando o AbacatePay decidir, registre o resultado** em
+   `/admin/contestacoes`, com uma nota (o número do caso, a data da decisão):
+   - **Ganha** (a favor do escritório): a pausa sai e os pedidos seguem
+     normais. As reuniões desmarcadas voltaram ao saldo, e o cliente remarca.
+   - **Perdida**: os pedidos viram `estornado`, com estorno de execução
+     `contestacao`, e o produto sai de `produtosContratados`. **Não devolva
+     nada**: o dinheiro já voltou ao cliente pelo meio de pagamento.
+4. Se aparecer o alerta **`pagamento.contestacao-sobre-estorno`**, o escritório
+   já tinha devolvido aquele pedido (à mão ou pelo gateway) e o cliente também
+   ganhou o chargeback: o valor saiu duas vezes. A plataforma não desfaz isso;
+   a cobrança da diferença é do escritório, por fora.
+
+Contestação aberta também **impede a eliminação** de dados do titular
+(`lgpd/politica.ts`).
 
 ### Alertas de nível `aviso`
 

@@ -3,6 +3,7 @@ import {
   conteudoBateComTipo,
   tipoTemAssinaturaConhecida,
 } from './magic-bytes.js';
+import { POLITICA_UPLOAD, TIPO_DOCX } from './esquemas/upload.js';
 
 const PDF = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37]);
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
@@ -62,9 +63,18 @@ describe('conteudoBateComTipo', () => {
     expect(conteudoBateComTipo(comLixo, 'application/pdf')).toBe(false);
   });
 
-  it('os tipos da politica do cliente tem assinatura', () => {
-    expect(tipoTemAssinaturaConhecida('application/pdf')).toBe(true);
-    expect(tipoTemAssinaturaConhecida('image/jpeg')).toBe(true);
+  it('os tipos das duas politicas tem assinatura', () => {
+    for (const fluxo of ['anexo-cliente', 'entregavel-advogado'] as const) {
+      for (const tipo of POLITICA_UPLOAD[fluxo].tipos) {
+        expect(tipoTemAssinaturaConhecida(tipo)).toBe(true);
+      }
+    }
+  });
+
+  /** A primeira peneira do DOCX: o cabecalho de ZIP. A estrutural e na API. */
+  it('DOCX comeca como ZIP, e PDF nao passa por DOCX', () => {
+    expect(conteudoBateComTipo(ZIP, TIPO_DOCX)).toBe(true);
+    expect(conteudoBateComTipo(PDF, TIPO_DOCX)).toBe(false);
   });
 
   it('doze bytes bastam para toda assinatura conhecida', () => {

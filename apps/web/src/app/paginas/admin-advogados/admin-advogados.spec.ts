@@ -26,6 +26,7 @@ interface ApiDeTeste {
   lista: AdvogadoResumo[];
   chamadas: string[];
   erroAoCriar: unknown;
+  erroAoEditar: unknown;
   erroAoListar: unknown;
 }
 
@@ -37,6 +38,7 @@ async function montar(opcoes: Partial<ApiDeTeste> = {}): Promise<{
     lista: opcoes.lista ?? [],
     chamadas: [],
     erroAoCriar: opcoes.erroAoCriar ?? null,
+    erroAoEditar: opcoes.erroAoEditar ?? null,
     erroAoListar: opcoes.erroAoListar ?? null,
   };
 
@@ -57,6 +59,12 @@ async function montar(opcoes: Partial<ApiDeTeste> = {}): Promise<{
             return api.erroAoCriar === null
               ? Promise.resolve(ANA)
               : Promise.reject(api.erroAoCriar);
+          },
+          editarAdvogado: (uid: string, dados: { email: string }) => {
+            api.chamadas.push(`editar ${uid} ${dados.email}`);
+            return api.erroAoEditar === null
+              ? Promise.resolve(ANA)
+              : Promise.reject(api.erroAoEditar);
           },
           suspenderAdvogado: (uid: string) => {
             api.chamadas.push(`suspender ${uid}`);
@@ -113,6 +121,15 @@ async function enviar(
   formulario.dispatchEvent(new Event('submit'));
   await fixture.whenStable();
   fixture.detectChanges();
+}
+
+/** Os botoes da tabela, na ordem: por linha, Editar e depois Suspender/Reativar. */
+function botoesDaTabela(
+  fixture: ComponentFixture<AdminAdvogados>,
+): HTMLButtonElement[] {
+  return [
+    ...fixture.nativeElement.querySelectorAll('app-tabela button'),
+  ] as HTMLButtonElement[];
 }
 
 function erroHttp(status: number, corpo: unknown = null): HttpErrorResponse {
@@ -252,9 +269,7 @@ describe('AdminAdvogados', () => {
   it('suspende um advogado ativo e recarrega', async () => {
     const { fixture, api } = await montar({ lista: [ANA] });
 
-    const botao = [
-      ...fixture.nativeElement.querySelectorAll('app-tabela button'),
-    ][0] as HTMLButtonElement;
+    const botao = botoesDaTabela(fixture)[1];
     botao.click();
     await fixture.whenStable();
 
@@ -264,9 +279,7 @@ describe('AdminAdvogados', () => {
   it('reativa um advogado suspenso', async () => {
     const { fixture, api } = await montar({ lista: [BRUNO] });
 
-    const botao = [
-      ...fixture.nativeElement.querySelectorAll('app-tabela button'),
-    ][0] as HTMLButtonElement;
+    const botao = botoesDaTabela(fixture)[1];
     expect(botao.textContent?.trim()).toBe('Reativar');
 
     botao.click();
@@ -281,14 +294,79 @@ describe('AdminAdvogados', () => {
    */
   it('ignora o segundo clique enquanto o primeiro esta em curso', async () => {
     const { fixture, api } = await montar({ lista: [ANA, BRUNO] });
-    const botoes = [
-      ...fixture.nativeElement.querySelectorAll('app-tabela button'),
-    ] as HTMLButtonElement[];
+    const botoes = botoesDaTabela(fixture);
 
-    botoes[0].click();
     botoes[1].click();
+    botoes[3].click();
     await fixture.whenStable();
 
     expect(api.chamadas).toEqual(['listar', 'suspender uid-ana', 'listar']);
+  });
+
+  describe('edicao (B2, decisoes.md 4.1)', () => {
+    async function abrirEdicao(
+      erroAoEditar: unknown = null,
+    ): Promise<{ fixture: ComponentFixture<AdminAdvogados>; api: ApiDeTeste }> {
+      const montado = await montar({ lista: [ANA], erroAoEditar });
+      botoesDaTabela(montado.fixture)[0].click();
+      montado.fixture.detectChanges();
+      return montado;
+    }
+
+    it('abre o formulario preenchido, com o aviso da edicao', async () => {
+      const { fixture } = await abrirEdicao();
+      const texto = fixture.nativeElement.textContent as string;
+
+      expect(texto).toContain('Editar advogado');
+      expect(texto).toContain('continuam com este advogado');
+      const email = fixture.nativeElement.querySelector(
+        'input[type="email"]',
+      ) as HTMLInputElement;
+      expect(email.value).toBe('ana@escritorio.test');
+    });
+
+    it('salva pelo uid e volta ao cadastro', async () => {
+      const { fixture, api } = await abrirEdicao();
+      preencher(fixture, 'Ana Souza', 'ana.nova@escritorio.test');
+
+      await enviar(fixture);
+
+      expect(api.chamadas).toEqual([
+        'listar',
+        'editar uid-ana ana.nova@escritorio.test',
+        'listar',
+      ]);
+      expect(fixture.nativeElement.textContent).toContain('Cadastrar advogado');
+    });
+
+    it('traduz o e-mail de outra conta e o Teams inexistente', async () => {
+      const conflito = await abrirEdicao(erroHttp(409));
+      preencher(conflito.fixture, 'Ana Souza', 'ocupado@escritorio.test');
+      await enviar(conflito.fixture);
+      expect(conflito.fixture.nativeElement.textContent).toContain(
+        'Este e-mail já é usado por outra conta.',
+      );
+
+      TestBed.resetTestingModule();
+      const teams = await abrirEdicao(erroHttp(422));
+      preencher(teams.fixture, 'Ana Souza', 'ana@escritorio.test');
+      await enviar(teams.fixture);
+      expect(teams.fixture.nativeElement.textContent).toContain(
+        'não existe no Microsoft 365',
+      );
+    });
+
+    it('cancelar volta ao cadastro sem chamar a API', async () => {
+      const { fixture, api } = await abrirEdicao();
+      const cancelar = [
+        ...fixture.nativeElement.querySelectorAll('form button'),
+      ].find((b) => (b as HTMLElement).textContent?.includes('Cancelar')) as
+        HTMLButtonElement | undefined;
+      cancelar?.click();
+      fixture.detectChanges();
+
+      expect(api.chamadas).toEqual(['listar']);
+      expect(fixture.nativeElement.textContent).toContain('Cadastrar advogado');
+    });
   });
 });

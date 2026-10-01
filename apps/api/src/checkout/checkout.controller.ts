@@ -4,17 +4,21 @@ import {
   Get,
   Headers,
   HttpCode,
+  Inject,
   Param,
   Post,
   UnauthorizedException,
+  UnprocessableEntityException,
   UseGuards,
 } from '@nestjs/common';
 import {
   esquemaNovoCheckout,
   type CheckoutIniciado,
+  type MetodosDisponiveis,
   type NovoCheckout,
   type SituacaoCheckout,
 } from 'shared';
+import { CARTAO_HABILITADO } from '../pagamentos/gateway/cartao.js';
 import { Publico } from '../autenticacao/decoradores.js';
 import { Limite } from '../limite/decoradores.js';
 import { separarToken } from '../pre-cadastros/liberacao.js';
@@ -37,7 +41,21 @@ import { CheckoutService } from './checkout.service.js';
 @UseGuards(PreCadastroGuard)
 @Controller('checkout')
 export class CheckoutController {
-  constructor(private readonly checkout: CheckoutService) {}
+  constructor(
+    private readonly checkout: CheckoutService,
+    @Inject(CARTAO_HABILITADO) private readonly cartaoHabilitado: boolean,
+  ) {}
+
+  /**
+   * B2 (decisoes.md 3.4): o que a tela pode oferecer. Declarada ANTES de
+   * `:checkoutId`, senao o Nest casaria "metodos" como id de checkout.
+   */
+  @Limite({ janelaMs: 60_000, maximo: 30 })
+  @Publico()
+  @Get('metodos')
+  metodos(): MetodosDisponiveis {
+    return { pix: true, cartao: this.cartaoHabilitado };
+  }
 
   /*
    * Dez por dez minutos, por endereco. Cada chamada pode criar uma cobranca no
@@ -52,6 +70,16 @@ export class CheckoutController {
     @Body(new ZodPipe(esquemaNovoCheckout)) dados: NovoCheckout,
     @Headers(CABECALHO_PRE_CADASTRO) token: string | undefined,
   ): Promise<CheckoutIniciado> {
+    /*
+     * A trava do cartao (decisoes.md 3.4), ANTES de qualquer leitura ou
+     * cobranca: a tela ja mostra o cartao desabilitado, mas o POST e alcancavel
+     * por qualquer um com o token do pre-cadastro.
+     */
+    if (dados.metodo === 'cartao' && !this.cartaoHabilitado) {
+      throw new UnprocessableEntityException(
+        'O pagamento com cartão ainda não está disponível. Use o PIX.',
+      );
+    }
     return this.checkout.iniciar(dados, preCadastroDoToken(token));
   }
 

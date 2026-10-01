@@ -126,6 +126,7 @@ export class InventarioTitular {
       'estornos',
       'outbox',
       'aceites',
+      'auditoria',
     ] as const) {
       const mapa = MAPA_TITULAR[grupo];
       await this.consultar(

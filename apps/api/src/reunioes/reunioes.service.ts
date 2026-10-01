@@ -27,6 +27,7 @@ import { FIRESTORE } from '../firebase/firebase.module.js';
 import { agora as agora_ } from '../relogio.js';
 import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
+import { contestacaoAberta, exigirSemContestacao } from '../pedidos/pausa.js';
 import {
   COLECAO_PEDIDOS,
   reunioesEmitidasDe,
@@ -103,11 +104,19 @@ export class ReunioesService {
 
     const { resumo, idEvento } = await this.db.runTransaction(
       async (transacao) => {
-        const contexto = await this.ler(transacao, pedidoId, slotId, clienteUid);
+        const contexto = await this.ler(
+          transacao,
+          pedidoId,
+          slotId,
+          clienteUid,
+        );
 
         const jaMarcada = this.reuniaoDoMesmoPedido(contexto, pedidoId);
         if (jaMarcada !== null) {
-          return { resumo: paraResumo(jaMarcada.id, jaMarcada), idEvento: null };
+          return {
+            resumo: paraResumo(jaMarcada.id, jaMarcada),
+            idEvento: null,
+          };
         }
 
         this.conferir(contexto, slotId, agora);
@@ -232,6 +241,8 @@ export class ReunioesService {
 
   private conferir(contexto: Contexto, slotId: string, agora: number): void {
     const { pedido, slot } = contexto;
+    /* Pausado por contestacao, primeiro: nada no pedido muda (5.4). */
+    exigirSemContestacao(pedido);
 
     if (slot.advogadoId !== pedido.advogadoId) {
       throw new ConflictException(
@@ -249,6 +260,7 @@ export class ReunioesService {
 
     const impedimento = impedimentoParaAgendar({
       situacao: situacaoDe(pedido),
+      contestacaoAberta: contestacaoAberta(pedido),
       distribuido: pedido.distribuido,
       quantidadeContratada: pedido.snapshot.quantidadeReunioes,
       intervaloMinimoDias: pedido.snapshot.intervaloMinimoReunioesDias,

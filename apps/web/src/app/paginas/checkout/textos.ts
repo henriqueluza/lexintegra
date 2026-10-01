@@ -41,6 +41,10 @@ export const TEXTOS_CHECKOUT = {
     metodo: 'Forma de pagamento',
     pix: 'PIX',
     cartao: 'Cartão de crédito',
+    /* B2, decisoes.md 3.4: enquanto a homologacao do cartao nao sai. */
+    cartaoEmBreve: 'Em breve',
+    dicaCartaoIndisponivel:
+      'O pagamento com cartão estará disponível em breve. Por enquanto, pague com PIX.',
     dicaCartao:
       'O cartão é processado na página segura do gateway de pagamento. Você volta para cá ao terminar.',
     aceite: 'Li e aceito os termos de contratação',

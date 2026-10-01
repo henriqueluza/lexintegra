@@ -279,6 +279,44 @@ resource "google_firestore_index" "estornos_pendentes" {
   }
 }
 
+# B2, Bloco B (docs/decisoes.md, 5.4): o painel lista as contestacoes ABERTAS,
+# da mais recente para a mais antiga (`ContestacoesService.listar`).
+resource "google_firestore_index" "contestacoes_abertas" {
+  project    = var.project_id
+  database   = google_firestore_database.default.name
+  collection = "contestacoes"
+
+  fields {
+    field_path = "estado"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "abertaEm"
+    order      = "DESCENDING"
+  }
+}
+
+# B2 (decisoes.md 4.2): a lista de pagamentos problematicos do administrador.
+# `situacao` por igualdade (ou `in` sobre os tres tipos) e o mais recente
+# primeiro. Aberto e resolvido sao filtrados em memoria sobre o resultado — o
+# volume e o de anomalias, que cada uma dispara alerta critico.
+resource "google_firestore_index" "pagamentos_problematicos" {
+  project    = var.project_id
+  database   = google_firestore_database.default.name
+  collection = "pagamentos"
+
+  fields {
+    field_path = "situacao"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "registradoEm"
+    order      = "DESCENDING"
+  }
+}
+
 # ------------------------------------------------------------------------------
 # Etapa 10 — agendamento de reunioes
 # ------------------------------------------------------------------------------

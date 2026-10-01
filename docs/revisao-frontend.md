@@ -49,11 +49,11 @@ Todos os marcadores de conteúdo visíveis foram substituídos. As minutas descr
 
 Referências consultadas: [LGPD](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm) e [CDC](https://planalto.gov.br/ccivil_03/leis/l8078compilado.htm). A limitação operacional de estorno não é apresentada como renúncia a direitos legais.
 
-Checkout: versão `checkout-v1-minuta-2026-09`. Download: `v2-minuta-2026-09`. O termo de download e o aviso de exclusão estão centralizados em `packages/shared/src/textos-documentos.ts`, impedindo divergência entre API e tela. Aceites anteriores não são migrados. A ficha inicial recebe orientação legível, mas mantém o modelo provisório; o questionário definitivo depende da contratante.
+Checkout: versão `checkout-v3-2026-10` (B2, Bloco I; antes, `checkout-v2-minuta-2026-09`). Download: `v3-2026-10` (antes, `v2-minuta-2026-09`). A regra de estorno vive em `packages/shared/src/regra-estorno.ts`, e o que depende do escritório aparece como `[PENDENTE-ESCRITORIO: …]`, com lista travada por teste. O termo de download e o aviso de exclusão estão centralizados em `packages/shared/src/textos-documentos.ts`, impedindo divergência entre API e tela. Aceites anteriores não são migrados. A ficha inicial recebe orientação legível, mas mantém o modelo provisório; o questionário definitivo depende da contratante.
 
 ## Imagem e movimento
 
-Imagem gerada com a ferramenta nativa `imagegen`, armazenada no repositório em `apps/web/public/imagens/arquitetura-lexintegra.jpg`. Não representa um escritório ou tribunal real. A origem PNG é mantida junto à imagem.
+Imagem gerada com a ferramenta nativa `imagegen`, armazenada no repositório em `docs/imagens/arquitetura-lexintegra.jpg` (movida de `apps/web/public/imagens/` na B2, decisões 6.2: dentro de `public/` ela seria servida pelo site). Hoje ilustra o `README.md` da raiz e não é usada por nenhuma página. Não representa um escritório ou tribunal real. A origem PNG é mantida junto à imagem.
 
 Prompt: “Create a photorealistic editorial architectural photograph for LexIntegra, a Brazilian legal services digital platform. No text, no logos, no people. Portrait-ish landscape 3:2 composition, a sculptural modern Brazilian courthouse interior, warm travertine columns on the right, curved staircase and daylight falling across deep burgundy polished stone and warm ivory walls, small understated brass details. Monumental but welcoming, precision and quiet confidence, premium architectural magazine photography, natural warm light, physically believable materials, subtle film grain. Full bleed image, not a webpage mockup.”
 

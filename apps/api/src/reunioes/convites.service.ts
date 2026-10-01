@@ -1,11 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 import { reuniaoAtiva } from 'shared';
-import type { EmailAnexo, EmailMensagem } from '../email/email-transport.js';
+import type { EmailAnexo, EmailRedigido } from '../email/email-transport.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import type { ReuniaoDoEvento } from '../outbox/evento.js';
 import { COLECAO_PEDIDOS, type DocumentoPedido } from '../pedidos/pedido.js';
+import { urlDaAplicacao } from '../outbox/link-de-senha.js';
 import { registrarConvitesDaReuniao } from './convites-no-outbox.js';
 import {
   cancelamentoDeReuniao,
@@ -24,7 +25,7 @@ const COLECAO_ADVOGADOS = 'advogados';
 
 /** O que sai de uma montagem: um e-mail para enviar, ou a razao de nao enviar. */
 export type Convite =
-  | { readonly enviar: true; readonly mensagem: EmailMensagem }
+  | { readonly enviar: true; readonly mensagem: EmailRedigido }
   | { readonly enviar: false; readonly motivo: string };
 
 /** Quem recebe. O nome vai para o `CN` do iCalendar; o e-mail, para o `mailto:`. */
@@ -191,7 +192,7 @@ export class ConvitesService {
       enviar: true,
       mensagem: {
         para: [destinatario.email],
-        assunto: `Reuniao marcada: ${pedido.snapshot.nome}`,
+        assunto: `Reunião marcada: ${pedido.snapshot.nome}`,
         corpoTexto: TEXTO_CONVITE,
         anexos: [anexoDeCalendario(ics)],
       },
@@ -227,9 +228,44 @@ export class ConvitesService {
       enviar: true,
       mensagem: {
         para: [destinatario.email],
-        assunto: `Reuniao cancelada: ${pedido.snapshot.nome}`,
+        assunto: `Reunião cancelada: ${pedido.snapshot.nome}`,
         corpoTexto: TEXTO_CANCELAMENTO,
         anexos: [anexoDeCalendario(ics)],
+      },
+    };
+  }
+
+  /**
+   * O aviso de que o ESCRITORIO desmarcou (ADR-21, decisao H): o credito voltou
+   * ao saldo, e o cliente pode marcar outro horario. Sem anexo — quem tira o
+   * compromisso do calendario e o `METHOD:CANCEL`, que sai a parte e so se
+   * algum convite foi emitido. Este sai sempre: o cliente precisa saber mesmo
+   * da reuniao que nunca ganhou sala.
+   *
+   * Reuniao que nao esta `cancelada_com_devolucao` nao gera aviso: o registro
+   * e de outro cancelamento, ou de dado que mudou por baixo.
+   */
+  async montarAvisoDoEscritorio(
+    evento: ReuniaoDoEvento,
+    destinatario: Destinatario,
+  ): Promise<Convite> {
+    const lido = await this.lerReuniao(evento);
+    if (lido === null) return { enviar: false, motivo: 'reuniao inexistente' };
+
+    const { reuniao, pedido } = lido;
+    if (reuniao.estado !== 'cancelada_com_devolucao') {
+      return {
+        enviar: false,
+        motivo: 'reuniao nao foi desmarcada com devolucao',
+      };
+    }
+
+    return {
+      enviar: true,
+      mensagem: {
+        para: [destinatario.email],
+        assunto: `Reunião desmarcada pelo escritório: ${pedido.snapshot.nome}`,
+        corpoTexto: textoDaReuniaoDesmarcada(reuniao.inicio, urlDaAplicacao()),
       },
     };
   }
@@ -306,7 +342,7 @@ export class ConvitesService {
 
 /** O assunto do evento no calendario. Vem do SNAPSHOT (regra inviolavel 5). */
 function assuntoDa(pedido: DocumentoPedido): string {
-  return `Reuniao: ${pedido.snapshot.nome}`;
+  return `Reunião: ${pedido.snapshot.nome}`;
 }
 
 /**
@@ -337,16 +373,34 @@ export function remetenteDoConvite(
 }
 
 /**
- * ⚠️ TEXTOS PROVISORIOS, escritos pelo agente e pendentes de revisao humana
- * ("So voce — Etapa 10"). Nao sao marcadores literais como
- * `{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}`: nao ha obrigacao juridica no corpo de
- * um convite, e um marcador aqui sairia no e-mail que o cliente le.
+ * Os textos dos e-mails de reunião (B2, decisoes.md 1.2). Sem obrigação
+ * jurídica no corpo de um convite: o que importa é dizer o que o anexo faz. O
+ * rodapé de todo e-mail é acrescentado pelo despachante.
  */
 const TEXTO_CONVITE =
-  'Sua reuniao foi marcada. O convite em anexo pode ser adicionado ao seu ' +
-  'calendario, e o link da sala esta na descricao do evento.';
+  'Sua reunião foi marcada. Abra o convite em anexo para adicioná-la ao seu ' +
+  'calendário; o link da sala está na descrição do evento. Para remarcar ou ' +
+  'cancelar, use a sua área: com pelo menos 24 horas de antecedência, a ' +
+  'reunião volta ao saldo do pedido.';
 
 const TEXTO_CANCELAMENTO =
-  'Sua reuniao foi cancelada. O anexo remove o compromisso do seu calendario.';
+  'Sua reunião foi cancelada. O anexo remove o compromisso do seu calendário.';
 
-const TEXTO_DESCRICAO = 'Reuniao do seu pedido na LexIntegra.';
+const TEXTO_DESCRICAO = 'Reunião do seu pedido na LexIntegra.';
+
+/**
+ * O escritório desmarcou (ADR-21, decisão H). A data sai no fuso do escritório
+ * (decisão 8), por extenso.
+ */
+export function textoDaReuniaoDesmarcada(inicio: string, base: string): string {
+  const quando = new Date(inicio).toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    dateStyle: 'full',
+    timeStyle: 'short',
+  });
+  return (
+    `O escritório precisou desmarcar a sua reunião de ${quando}. ` +
+    'A reunião voltou ao saldo do seu pedido, e você pode marcar outro ' +
+    `horário na sua área do cliente: ${base}/painel`
+  );
+}

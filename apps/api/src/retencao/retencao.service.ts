@@ -2,9 +2,10 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   FieldValue,
   Timestamp,
+  type DocumentReference,
   type Firestore,
 } from 'firebase-admin/firestore';
-import { acaoDeRetencao, podeSerServido } from 'shared';
+import { acaoDeRetencao, avisarEm, podeSerServido } from 'shared';
 import {
   ARMAZENAMENTO,
   type Armazenamento,
@@ -19,7 +20,12 @@ import {
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import { DespachanteOutbox } from '../outbox/despachante.service.js';
-import { COLECAO_PEDIDOS, type DocumentoPedido } from '../pedidos/pedido.js';
+import { contestacaoAberta } from '../pedidos/pausa.js';
+import {
+  COLECAO_PEDIDOS,
+  SUBCOLECAO_ANEXOS,
+  type DocumentoPedido,
+} from '../pedidos/pedido.js';
 
 const TETO_POR_PASSAGEM = 200;
 
@@ -38,14 +44,23 @@ export interface ResumoDaPassagem {
  * `entregue` (ADR-11, decidido na reuniao).
  *
  * O AVISO VEM ANTES DA EXCLUSAO, e nao junto. A secao 13 e explicita. Sao duas
- * passagens do mesmo job, em dias diferentes: `avisar` no 23o dia, `excluir` no
- * 30o. `acaoDeRetencao`, em `packages/shared`, e quem decide — funcao pura,
+ * passagens do mesmo job, em dias diferentes: `avisar` no 23o dia (7 antes),
+ * `excluir` no 30o — e NUNCA sem aviso: o pedido visto atrasado e avisado
+ * primeiro e excluido sete dias depois. `acaoDeRetencao`, em `packages/shared`, e quem decide — funcao pura,
  * testada, porque aritmetica de data e onde este tipo de rotina erra em silencio.
  *
- * OS ANEXOS DO CLIENTE NAO SAO TOCADOS. Os 30 dias sao dos ENTREGAVEIS
- * (arquitetura 7.3); a retencao dos arquivos de apoio do cliente nao esta
- * definida em lugar nenhum, e apagar documento de identificacao por conta propria
- * nao e um default que se inventa. Fica como pendencia do controlador.
+ * OS ANEXOS DO CLIENTE SAEM NO MESMO CICLO (decisoes.md, 2.3): 30 dias depois
+ * de todos os entregaveis do pedido chegarem a `entregue`, avisados no mesmo
+ * e-mail. Anexo ligado ao cliente, e nao ao pedido, nao existe hoje — so ha
+ * `pedidos/{id}/anexos`; se um dia existir, a regra decidida e contar do fim do
+ * ultimo pedido do cliente.
+ *
+ * O PONTO DE PARTIDA E `pedidos.retencaoEm`, escrito pela transacao que leva o
+ * ULTIMO entregavel a `entregue` (`EntregaveisService`). Ate o Bloco D da B2
+ * ninguem o escrevia, e a retencao nunca rodou sobre pedido nenhum.
+ *
+ * CONTESTACAO ABERTA SUSPENDE TUDO (decisoes.md, 5.4): o pedido pausado nao e
+ * avisado nem tem arquivo excluido. Os arquivos sao parte da prova.
  */
 @Injectable()
 export class RetencaoService {
@@ -81,11 +96,11 @@ export class RetencaoService {
 
     for (const documento of pagina.docs) {
       const pedido = documento.data() as DocumentoPedido;
-      const entregueEm = paraData(pedido.retencaoEm);
+      if (contestacaoAberta(pedido)) continue;
 
       const acao = acaoDeRetencao(
-        entregueEm,
-        pedido.avisoDeExclusaoEnviado === true,
+        paraData(pedido.retencaoEm),
+        avisadoEm(pedido),
         agora,
       );
 
@@ -129,6 +144,7 @@ export class RetencaoService {
       const id = await this.outbox.registrarSeAusente(transacao, {
         tipo: 'aviso-exclusao-arquivos',
         destinatarioUid: clienteId,
+        pedidoId,
       });
 
       transacao.update(referencia, {
@@ -144,7 +160,8 @@ export class RetencaoService {
   }
 
   /**
-   * Apaga os OBJETOS dos entregaveis e zera o `arquivoAtual`.
+   * Apaga os OBJETOS dos entregaveis e dos anexos do cliente, e zera o
+   * `arquivoAtual`.
    *
    * O DOCUMENTO DO PEDIDO E DO ENTREGAVEL FICAM. O que a politica de retencao
    * cobre e o ARQUIVO — o registro de que houve um entregavel, quando foi
@@ -168,6 +185,8 @@ export class RetencaoService {
         arquivoExcluidoEm: FieldValue.serverTimestamp(),
       });
     }
+
+    await this.excluirAnexos(referencia);
 
     await referencia.update({
       retencaoPendente: false,
@@ -208,33 +227,26 @@ export class RetencaoService {
   }
 
   /**
-   * Marca o pedido como fechado quando TODOS os entregaveis chegam a `entregue`.
-   *
-   * Chamado pelo fluxo de confirmacao, e nao calculado pelo job: varrer todos os
-   * pedidos abertos a cada passagem para descobrir quais fecharam seria trabalho
-   * proporcional ao total, e nao ao que mudou.
+   * Os anexos do cliente (RG, cartao CNPJ e afins), nos dois baldes: o que
+   * passou pela varredura esta em `arquivos`, o que nao passou ficou na
+   * quarentena. `excluir` ignora objeto ausente, entao a passagem repetida e
+   * inofensiva. O documento fica, com `excluido`, como trilha.
    */
-  async marcarSeFechou(pedidoId: string): Promise<boolean> {
-    const referencia = this.db.collection(COLECAO_PEDIDOS).doc(pedidoId);
-    const entregaveis = await referencia
-      .collection(SUBCOLECAO_ENTREGAVEIS)
-      .get();
-
-    const todosEntregues =
-      entregaveis.size > 0 &&
-      entregaveis.docs.every(
-        (documento) =>
-          (documento.data() as DocumentoEntregavel).estado === 'entregue',
-      );
-
-    if (!todosEntregues) return false;
-
-    await referencia.update({
-      retencaoEm: FieldValue.serverTimestamp(),
-      retencaoPendente: true,
-    });
-    this.log.log(`pedido ${pedidoId} fechou; retencao de 30 dias iniciada`);
-    return true;
+  private async excluirAnexos(pedido: DocumentReference): Promise<void> {
+    const anexos = await pedido.collection(SUBCOLECAO_ANEXOS).get();
+    for (const documento of anexos.docs) {
+      const anexo = documento.data() as { caminho?: string; estado?: string };
+      if (anexo.estado === 'excluido') continue;
+      if (anexo.caminho !== undefined) {
+        for (const balde of ['arquivos', 'quarentena'] as const) {
+          await this.armazenamento.excluir({ balde, caminho: anexo.caminho });
+        }
+      }
+      await documento.ref.update({
+        estado: 'excluido',
+        arquivoExcluidoEm: FieldValue.serverTimestamp(),
+      });
+    }
   }
 
   /** Só para o painel: quantos arquivos estao parados em quarentena. */
@@ -258,4 +270,14 @@ export class RetencaoService {
 
 function paraData(valor: unknown): Date | null {
   return valor instanceof Timestamp ? valor.toDate() : null;
+}
+
+/**
+ * Quando o aviso saiu. Marcado como avisado sem o carimbo (dado anterior a este
+ * campo) conta como avisado na data em que o aviso devia sair: usar "agora" no
+ * lugar adiaria a exclusao a cada passagem, para sempre.
+ */
+function avisadoEm(pedido: DocumentoPedido): Date | null {
+  if (pedido.avisoDeExclusaoEnviado !== true) return null;
+  return paraData(pedido.avisadoEm) ?? avisarEm(paraData(pedido.retencaoEm));
 }

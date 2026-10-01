@@ -49,9 +49,14 @@ describe('saldoDeReunioes', () => {
     ['confirmada', 1],
     ['cancelada_sem_devolucao', 1],
     ['cancelada_com_devolucao', 2],
-  ] as const)('com uma reuniao %s, o saldo de 2 fica %i', (estado, esperado) => {
-    expect(saldoDeReunioes(2, [reuniao('r001', INICIO, estado)])).toBe(esperado);
-  });
+  ] as const)(
+    'com uma reuniao %s, o saldo de 2 fica %i',
+    (estado, esperado) => {
+      expect(saldoDeReunioes(2, [reuniao('r001', INICIO, estado)])).toBe(
+        esperado,
+      );
+    },
+  );
 
   /**
    * NAO COMPARECIMENTO CONSOME SEM MARCACAO MANUAL (ADR-12). Uma reuniao
@@ -162,7 +167,10 @@ describe('respeitaIntervalo', () => {
   });
 
   it('mas continua olhando as OUTRAS reunioes do pedido', () => {
-    const reunioes = [reuniao('r001', INICIO), reuniao('r002', iso(INICIO_MS + 2 * DIA))];
+    const reunioes = [
+      reuniao('r001', INICIO),
+      reuniao('r002', iso(INICIO_MS + 2 * DIA)),
+    ];
     expect(respeitaIntervalo(iso(INICIO_MS + DIA), reunioes, 7, 'r001')).toBe(
       false,
     );
@@ -299,9 +307,9 @@ describe('reuniaoFuturaAtiva', () => {
 
   /** Reuniao PASSADA nao trava decisao administrativa de hoje. */
   it('reuniao ja realizada nao conta', () => {
-    expect(
-      reuniaoFuturaAtiva([reuniao('r001', iso(agora - DIA))], agora),
-    ).toBe(false);
+    expect(reuniaoFuturaAtiva([reuniao('r001', iso(agora - DIA))], agora)).toBe(
+      false,
+    );
   });
 
   it('o instante exato de agora nao e futuro', () => {
@@ -331,14 +339,12 @@ describe('impedimentoParaAgendar', () => {
   it.each([
     ['pedido-inativo', { situacao: 'cancelado' as const }],
     ['pedido-inativo', { situacao: 'estornado' as const }],
+    ['pedido-pausado', { contestacaoAberta: true }],
     ['pedido-nao-distribuido', { distribuido: false }],
     ['saldo-esgotado', { quantidadeContratada: 0 }],
     ['fora-da-janela', { fimDaJanelaMs: INICIO_MS - 1 }],
     ['antecedencia-minima', { agoraMs: INICIO_MS - 1000 }],
-    [
-      'intervalo-minimo',
-      { reunioes: [reuniao('r001', iso(INICIO_MS + DIA))] },
-    ],
+    ['intervalo-minimo', { reunioes: [reuniao('r001', iso(INICIO_MS + DIA))] }],
   ])('devolve %s', (esperado, alteracao) => {
     expect(impedimentoParaAgendar({ ...base, ...alteracao })).toBe(esperado);
   });
@@ -382,9 +388,7 @@ describe('impedimentoParaAgendar', () => {
    * servidor. Ela deixa passar, e o servidor decide.
    */
   it('sem carimbo de criacao, a janela nao impede', () => {
-    expect(
-      impedimentoParaAgendar({ ...base, fimDaJanelaMs: null }),
-    ).toBeNull();
+    expect(impedimentoParaAgendar({ ...base, fimDaJanelaMs: null })).toBeNull();
   });
 
   /** Todo impedimento tem texto: um `undefined` na tela seria um botao mudo. */
@@ -411,10 +415,11 @@ describe('msDe', () => {
     expect(msDe(INICIO)).toBe(INICIO_MS);
   });
 
-  it.each([['vazio', ''], ['texto', 'quinta'], ['quase ISO', '2026-13-45']])(
-    'devolve null para %s',
-    (_caso, entrada) => {
-      expect(msDe(entrada)).toBeNull();
-    },
-  );
+  it.each([
+    ['vazio', ''],
+    ['texto', 'quinta'],
+    ['quase ISO', '2026-13-45'],
+  ])('devolve null para %s', (_caso, entrada) => {
+    expect(msDe(entrada)).toBeNull();
+  });
 });

@@ -25,8 +25,10 @@ import { FIRESTORE } from '../firebase/firebase.module.js';
 import { agora as agora_ } from '../relogio.js';
 import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
+import { exigirSemContestacao } from '../pedidos/pausa.js';
 import { COLECAO_PEDIDOS, type DocumentoPedido } from '../pedidos/pedido.js';
-import { registrarCancelamentosDaReuniao } from './convites-no-outbox.js';
+import type { NovoEvento } from '../outbox/evento.js';
+import { eventosDeCancelamento } from './convites-no-outbox.js';
 import {
   paraResumo,
   SUBCOLECAO_REUNIOES,
@@ -56,10 +58,12 @@ export interface AtorDoCancelamento {
  * agravante de liberar um slot que nao existe mais. Cancelar TARDE continua
  * valendo: o que muda e a devolucao, nao a permissao.
  *
- * QUANDO QUEM CANCELA E O ESCRITORIO, DEVOLVE SEMPRE (ADR-21, decisao H —
- * PROVISORIO). O administrador precisa poder desmarcar (advogado doente, agenda
- * remanejada), e nesse caso a culpa nao e do cliente: a reuniao volta ao saldo
- * mesmo dentro das 24 horas. A regra nao esta no contrato e e pergunta ao Marcos.
+ * QUANDO QUEM CANCELA E O ESCRITORIO, DEVOLVE SEMPRE (ADR-21, decisao H,
+ * confirmada em 29/09/2026 — `docs/decisoes.md`, 3.2), com qualquer
+ * antecedencia, e o cliente recebe e-mail avisando e convidando a remarcar. O
+ * administrador precisa poder desmarcar (advogado doente, agenda remanejada), e
+ * nesse caso a culpa nao e do cliente: a reuniao volta ao saldo mesmo dentro
+ * das 24 horas.
  */
 @Injectable()
 export class CancelamentoDeReuniaoService {
@@ -113,6 +117,11 @@ export class CancelamentoDeReuniaoService {
       throw new NotFoundException('Reuniao nao encontrada.');
     }
     this.exigirAcesso(pedido, ator);
+    /*
+     * Pausado por contestacao, nem o cancelamento passa (decisoes.md, 5.4): as
+     * futuras ja foram canceladas, com devolucao, quando a pausa abriu.
+     */
+    exigirSemContestacao(pedido);
 
     if (!reuniaoAtiva(reuniao.estado)) {
       throw new ConflictException('Esta reuniao ja foi cancelada.');
@@ -126,19 +135,12 @@ export class CancelamentoDeReuniaoService {
     const estado = estadoDoCancelamento(reuniao.inicio, ator, agora);
     const sequence = reuniao.sequence + 1;
 
-    /*
-     * O `METHOD:CANCEL` SO SAI SE ALGUM CONVITE FOI EMITIDO. `sequenceComunicada`
-     * nula significa que a reuniao nunca chegou ao calendario de ninguem — quase
-     * sempre porque ficou em `reservada_sem_link` e foi cancelada antes de a sala
-     * existir. E a ULTIMA leitura da transacao, antes das escritas.
-     */
+    /* A ULTIMA leitura da transacao, antes das escritas: ver a funcao. */
+    const novos = eventosDoCancelamento(alvo, reuniao, sequence, ator);
     const eventos =
-      reuniao.sequenceComunicada === null
+      novos.length === 0
         ? []
-        : await registrarCancelamentosDaReuniao(this.outbox, transacao, alvo, {
-            ...reuniao,
-            sequence,
-          });
+        : await this.outbox.registrarSeAusenteEmLote(transacao, novos);
 
     transacao.update(reuniaoRef, {
       estado,
@@ -197,4 +199,37 @@ function estadoDoCancelamento(
   return cancelamentoDevolve(inicio, agora)
     ? 'cancelada_com_devolucao'
     : 'cancelada_sem_devolucao';
+}
+
+/**
+ * O que o cancelamento escreve no outbox, num lote so (leitura antes da
+ * escrita):
+ *
+ * - os dois `METHOD:CANCEL`, SO SE ALGUM CONVITE FOI EMITIDO. `sequenceComunicada`
+ *   nula significa que a reuniao nunca chegou ao calendario de ninguem — quase
+ *   sempre porque ficou em `reservada_sem_link`;
+ * - o aviso ao cliente quando quem desmarcou foi o ESCRITORIO (ADR-21, decisao
+ *   H): sempre, inclusive da reuniao que nunca ganhou sala, convidando a
+ *   remarcar.
+ */
+function eventosDoCancelamento(
+  alvo: Alvo,
+  reuniao: DocumentoReuniao,
+  sequence: number,
+  ator: AtorDoCancelamento,
+): NovoEvento[] {
+  const cancelamentos =
+    reuniao.sequenceComunicada === null
+      ? []
+      : eventosDeCancelamento(alvo, { ...reuniao, sequence });
+  if (ator.perfil !== 'admin') return cancelamentos;
+
+  return [
+    ...cancelamentos,
+    {
+      tipo: 'reuniao-desmarcada-escritorio',
+      destinatarioUid: reuniao.clienteId,
+      reuniao: { ...alvo, sequence },
+    },
+  ];
 }

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { CredenciaisGraph } from './modo.js';
 import type {
+  ConferenciaDoUsuario,
   NovaSala,
   ResultadoDaSala,
   SalaDeReuniao,
@@ -128,6 +129,30 @@ export class GraphSalaDeReuniao implements SalaDeReuniao {
     };
   }
 
+  /**
+   * `GET /users/{id}`: 200 existe, 404 nao existe, o resto e indisponivel.
+   * Exige a permissao de aplicacao `User.Read.All` no Entra — a mais, alem de
+   * `OnlineMeetings.ReadWrite.All` (CHECKLIST, C > Microsoft).
+   */
+  async conferirUsuario(usuarioTeams: string): Promise<ConferenciaDoUsuario> {
+    const token = await this.obterToken();
+    if (!token.ok) return 'indisponivel';
+    try {
+      const resposta = await this.executar(
+        `${this.base}/users/${encodeURIComponent(usuarioTeams)}?$select=id`,
+        {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token.dados as string}` },
+          signal: AbortSignal.timeout(this.timeoutMs),
+        },
+      );
+      if (resposta.ok) return 'encontrado';
+      return resposta.status === 404 ? 'nao_encontrado' : 'indisponivel';
+    } catch {
+      return 'indisponivel';
+    }
+  }
+
   private async chamarComToken(
     sala: NovaSala,
     usuarioTeams: string,
@@ -218,7 +243,10 @@ export class GraphSalaDeReuniao implements SalaDeReuniao {
         signal: AbortSignal.timeout(this.timeoutMs),
       });
     } catch (erro) {
-      return { ok: false, motivo: `sem resposta do Graph: ${this.limpar(erro)}` };
+      return {
+        ok: false,
+        motivo: `sem resposta do Graph: ${this.limpar(erro)}`,
+      };
     }
 
     let bruto: unknown;
