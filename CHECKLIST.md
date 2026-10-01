@@ -495,28 +495,26 @@ constroem**. As decisões vão para um `decisoes.md`.
   no Bloco A** (`feat/anamnese-definitiva`): `definitiva-v1` em
   `packages/shared/src/anamnese.ts`, tela, testes e mapa LGPD. A guarda segue
   a política (2.1, pendente).
-- [ ] Texto final das minutas (páginas públicas de termos e privacidade
-  preenchidas no redesign Névoa de 30/09, com CNPJ e contatos fornecidos;
-  revisão jurídica e atualização dos aceites continuam neste item):
-  - termos;
-  - checkout;
-  - regra de estorno;
-  - cancelamento;
-  - privacidade;
-  - termo de download;
-  - e-mail de aviso de exclusão;
-  - e-mail de acesso do cliente.
-
-  → Substituir os textos, subir as versões e ajustar os testes que travam os
-  marcadores.
-- [ ] Encarregado (DPO) e canal de contato. → Política de privacidade e
-  `lgpd.md`.
-- [ ] Prazo para atender os demais direitos do art. 18. → `lgpd.md`.
+- [x] Texto final das minutas: termos, checkout, regra de estorno,
+  cancelamento, privacidade, termo de download, aviso de exclusão e acesso do
+  cliente, mais os e-mails novos (pausa por contestação, reunião desmarcada
+  pelo escritório, convite de administrador, novo acesso do advogado).
+  Redigidos no Bloco I (decisoes.md, 1.2), também nas páginas públicas do
+  redesign Névoa. A regra de estorno vive numa constante só
+  (`packages/shared/src/regra-estorno.ts`). Versões novas:
+  `checkout-v3-2026-10` e `v3-2026-10` (download).
+- [ ] 👤 Revisar os textos do Bloco I e levar ao escritório para aprovação.
+- [x] Encarregado (DPO) e canal de contato: Auan Bastos e
+  `privacidade@lexintegra.com.br` (decisoes.md, 1.3), na política de
+  privacidade, no rodapé dos e-mails e em `lgpd.md` (Bloco I).
+- [ ] Prazo para atender os demais direitos do art. 18. → `lgpd.md` e trocar o
+  marcador `[PENDENTE-ESCRITORIO: …]` da política (`pendencias-escritorio.ts`).
 
 **LGPD e retenção**
 
 - [ ] Política de guarda: prazos e exceções. → Construir o executor de
-  eliminação e o envio do aviso, que hoje estão bloqueados.
+  eliminação e o envio do aviso, que hoje estão bloqueados, e trocar o
+  marcador `[PENDENTE-ESCRITORIO: …]` da política de privacidade.
 - [x] Retenção dos entregáveis: 30 dias a partir de `entregue`, com lembrete
   7 dias antes (decisoes.md, 2.2). Bloco D: o job passou a rodar de verdade (a
   marca de fechamento não era escrita por ninguém), o aviso é por pedido e a
@@ -605,6 +603,9 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
   48 h).
 - [ ] Object ID do Entra de cada advogado. É esse o valor do `usuarioTeams`,
   não o e-mail.
+- [ ] Domínio `lexintegra.com.br` no tenant da B&C e caixa compartilhada
+  `privacidade@lexintegra.com.br` (decisoes.md, 1.3). O endereço já está
+  publicado na política de privacidade e no rodapé dos e-mails.
 - [ ] Permissão de aplicação `User.Read.All` no mesmo aplicativo, com
   consentimento de administrador. É ela que deixa a edição do advogado conferir
   o `usuarioTeams` antes de salvar (Bloco F1 da B2). Sem ela a conferência

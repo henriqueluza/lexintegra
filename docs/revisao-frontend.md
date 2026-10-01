@@ -49,7 +49,7 @@ Todos os marcadores de conteúdo visíveis foram substituídos. As minutas descr
 
 Referências consultadas: [LGPD](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm) e [CDC](https://planalto.gov.br/ccivil_03/leis/l8078compilado.htm). A limitação operacional de estorno não é apresentada como renúncia a direitos legais.
 
-Checkout: versão `checkout-v1-minuta-2026-09`. Download: `v2-minuta-2026-09`. O termo de download e o aviso de exclusão estão centralizados em `packages/shared/src/textos-documentos.ts`, impedindo divergência entre API e tela. Aceites anteriores não são migrados. A ficha inicial recebe orientação legível, mas mantém o modelo provisório; o questionário definitivo depende da contratante.
+Checkout: versão `checkout-v3-2026-10` (B2, Bloco I; antes, `checkout-v2-minuta-2026-09`). Download: `v3-2026-10` (antes, `v2-minuta-2026-09`). A regra de estorno vive em `packages/shared/src/regra-estorno.ts`, e o que depende do escritório aparece como `[PENDENTE-ESCRITORIO: …]`, com lista travada por teste. O termo de download e o aviso de exclusão estão centralizados em `packages/shared/src/textos-documentos.ts`, impedindo divergência entre API e tela. Aceites anteriores não são migrados. A ficha inicial recebe orientação legível, mas mantém o modelo provisório; o questionário definitivo depende da contratante.
 
 ## Imagem e movimento
 
