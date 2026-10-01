@@ -126,15 +126,50 @@ describe('CancelamentoDeReuniaoService.cancelar', () => {
   });
 
   /**
-   * ADR-21, decisao H (PROVISORIO). Quando quem desmarca e o escritorio, a culpa
-   * nao e do cliente: a reuniao volta ao saldo mesmo dentro das 24 horas.
+   * ADR-21, decisao H (confirmada em 29/09/2026). Quando quem desmarca e o
+   * escritorio, a culpa nao e do cliente: a reuniao volta ao saldo mesmo dentro
+   * das 24 horas, e o cliente recebe o aviso convidando a remarcar.
    */
-  it('o administrador devolve o credito mesmo dentro das 24h', async () => {
-    const { servico } = montar();
+  it('o administrador devolve o credito mesmo dentro das 24h, e avisa o cliente', async () => {
+    const { servico, banco, fila } = montar();
 
     const resumo = await servico.cancelar(ALVO, COMO_ADMIN, EM_CIMA);
 
     expect(resumo.estado).toBe('cancelada_com_devolucao');
+    expect(
+      banco.documentos.get(
+        `outbox/reuniao-desmarcada-escritorio_${PEDIDO}_r001_s1_${CLIENTE}`,
+      ),
+    ).toMatchObject({ destinatarioUid: CLIENTE });
+    /* Os dois CANCEL e o aviso. */
+    expect(fila.tarefas).toHaveLength(3);
+  });
+
+  /** O cliente dentro das 24h consome o credito, e nao recebe aviso de desmarcacao. */
+  it('o cliente dentro das 24h consome, sem aviso do escritorio', async () => {
+    const { servico, banco } = montar();
+
+    const resumo = await servico.cancelar(ALVO, COMO_CLIENTE, EM_CIMA);
+
+    expect(resumo.estado).toBe('cancelada_sem_devolucao');
+    expect(
+      [...banco.documentos.keys()].some((k) =>
+        k.startsWith('outbox/reuniao-desmarcada-escritorio'),
+      ),
+    ).toBe(false);
+  });
+
+  /** O aviso sai mesmo da reuniao que nunca ganhou sala — sem CANCEL. */
+  it('o escritorio avisa ate da reuniao sem sala', async () => {
+    const { servico, fila } = montar({
+      estado: 'reservada_sem_link',
+      link: null,
+      sequenceComunicada: null,
+    });
+
+    await servico.cancelar(ALVO, COMO_ADMIN, COM_FOLGA);
+
+    expect(fila.tarefas).toHaveLength(1);
   });
 
   /* ---------------------------------------------------------------------- */
@@ -243,7 +278,11 @@ describe('CancelamentoDeReuniaoService.cancelar', () => {
     const { servico } = montar();
 
     await expect(
-      servico.cancelar(ALVO, { uid: 'uid-bruno', perfil: 'cliente' }, COM_FOLGA),
+      servico.cancelar(
+        ALVO,
+        { uid: 'uid-bruno', perfil: 'cliente' },
+        COM_FOLGA,
+      ),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 

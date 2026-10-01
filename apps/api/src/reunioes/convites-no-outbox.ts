@@ -49,36 +49,14 @@ export async function registrarConvitesDaReuniao(
 }
 
 /**
- * Escreve os DOIS `METHOD:CANCEL` de uma reuniao cancelada.
+ * Os DOIS `METHOD:CANCEL` de uma reuniao cancelada, sem gravar nada: quem chama
+ * os junta aos outros eventos da transacao num lote so de
+ * `registrarSeAusenteEmLote` — dois lotes seguidos poriam a leitura do segundo
+ * depois da escrita do primeiro.
  *
  * SO FAZ SENTIDO SE ALGUM CONVITE FOI EMITIDO, e quem decide isso e o chamador,
- * por `sequenceComunicada`. A funcao nao repete essa conferencia de proposito:
- * ela seria a segunda copia de uma regra que o `ConvitesService` ja aplica na
- * montagem, e duas copias divergem.
- *
- * Simetrica a `registrarConvitesDaReuniao`, e separada dela porque o que o
- * destinatario faz com cada uma e o oposto — uma poe o compromisso no
- * calendario, a outra o tira.
- */
-export async function registrarCancelamentosDaReuniao(
-  outbox: OutboxService,
-  transacao: Transaction,
-  alvo: { readonly pedidoId: string; readonly reuniaoId: string },
-  reuniao: Pick<DocumentoReuniao, 'sequence' | 'clienteId' | 'advogadoId'>,
-): Promise<string[]> {
-  return outbox.registrarSeAusenteEmLote(
-    transacao,
-    eventosDeCancelamento(alvo, reuniao),
-  );
-}
-
-/**
- * Os dois `cancelamento-reuniao` de uma reuniao, sem gravar nada.
- *
- * Existe para quem cancela VARIAS reunioes na mesma transacao — o cancelamento
- * e o estorno do pedido, e a pausa por contestacao (B2). Elas juntam todos os
- * eventos num lote so de `registrarSeAusenteEmLote`, porque dois lotes seguidos
- * poriam a leitura do segundo depois da escrita do primeiro.
+ * por `sequenceComunicada`. Simetrica a `registrarConvitesDaReuniao`, e separada
+ * dela porque o que o destinatario faz com cada uma e o oposto.
  */
 export function eventosDeCancelamento(
   alvo: { readonly pedidoId: string; readonly reuniaoId: string },

@@ -39,6 +39,7 @@ const ROTULO_DO_TIPO: Readonly<Record<string, string>> = {
   'convite-reuniao': 'Convite de reunião',
   'cancelamento-reuniao': 'Cancelamento de reunião',
   'pausa-contestacao': 'Pedido pausado por contestação',
+  'reuniao-desmarcada-escritorio': 'Reunião desmarcada pelo escritório',
 };
 
 /**

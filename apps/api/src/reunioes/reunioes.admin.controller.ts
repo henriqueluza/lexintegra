@@ -42,11 +42,11 @@ export class ReunioesAdminController {
   }
 
   /**
-   * O cancelamento pelo escritorio (ADR-21, decisao H — PROVISORIO).
+   * O cancelamento pelo escritorio (ADR-21, decisao H, confirmada em
+   * 29/09/2026). O cliente recebe o aviso `reuniao-desmarcada-escritorio`.
    *
    * SEMPRE DEVOLVE O CREDITO, inclusive dentro das 24 horas: quando quem
-   * desmarca e o escritorio, a culpa nao e do cliente. A regra nao esta no
-   * contrato e e pergunta ao Marcos.
+   * desmarca e o escritorio, a culpa nao e do cliente.
    *
    * REAPROVEITA O SERVICO DO CLIENTE, com o ator vindo do token. Um caminho
    * proprio duplicaria a liberacao do slot, o incremento do `SEQUENCE` e o

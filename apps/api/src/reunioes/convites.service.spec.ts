@@ -2,7 +2,11 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { FirestoreFalso } from '../firestore-falso.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import type { ConfiguracaoDoOutbox } from '../outbox/politica.js';
-import { ConvitesService, type Destinatario } from './convites.service.js';
+import {
+  ConvitesService,
+  textoDaReuniaoDesmarcada,
+  type Destinatario,
+} from './convites.service.js';
 import { SalaDeReuniaoFalsa } from './sala/sala-de-reuniao-falsa.js';
 import type { DocumentoReuniao } from './reuniao.js';
 
@@ -64,7 +68,11 @@ function montar(reuniao: Partial<DocumentoReuniao> = {}): {
   const sala = new SalaDeReuniaoFalsa();
 
   return {
-    servico: new ConvitesService(db, sala, new OutboxService(db, CONFIG_OUTBOX)),
+    servico: new ConvitesService(
+      db,
+      sala,
+      new OutboxService(db, CONFIG_OUTBOX),
+    ),
     banco,
     sala,
   };
@@ -92,8 +100,16 @@ describe('ConvitesService.criarSala', () => {
 
     await servico.criarSala(EVENTO);
 
-    expect(banco.documentos.has(`outbox/convite-reuniao_${PEDIDO}_r001_s0_${CLIENTE}`)).toBe(true);
-    expect(banco.documentos.has(`outbox/convite-reuniao_${PEDIDO}_r001_s0_${ADVOGADO}`)).toBe(true);
+    expect(
+      banco.documentos.has(
+        `outbox/convite-reuniao_${PEDIDO}_r001_s0_${CLIENTE}`,
+      ),
+    ).toBe(true);
+    expect(
+      banco.documentos.has(
+        `outbox/convite-reuniao_${PEDIDO}_r001_s0_${ADVOGADO}`,
+      ),
+    ).toBe(true);
   });
 
   it('passa o usuarioTeams do advogado a porta', async () => {
@@ -148,8 +164,16 @@ describe('ConvitesService.criarSala', () => {
 
     await servico.criarSala(EVENTO);
 
-    expect(banco.documentos.has(`outbox/convite-reuniao_${PEDIDO}_r001_s2_${CLIENTE}`)).toBe(true);
-    expect(banco.documentos.has(`outbox/convite-reuniao_${PEDIDO}_r001_s0_${CLIENTE}`)).toBe(false);
+    expect(
+      banco.documentos.has(
+        `outbox/convite-reuniao_${PEDIDO}_r001_s2_${CLIENTE}`,
+      ),
+    ).toBe(true);
+    expect(
+      banco.documentos.has(
+        `outbox/convite-reuniao_${PEDIDO}_r001_s0_${CLIENTE}`,
+      ),
+    ).toBe(false);
     expect(
       banco.documentos.get(`pedidos/${PEDIDO}/reunioes/r001`),
     ).toMatchObject({ sequenceComunicada: 2 });
@@ -179,7 +203,9 @@ describe('ConvitesService.montarConvite', () => {
     if (!convite.enviar) return;
     expect(convite.mensagem.para).toEqual(['clara@exemplo.test']);
     expect(convite.mensagem.anexos?.[0].nomeArquivo).toBe('reuniao.ics');
-    expect(convite.mensagem.anexos?.[0].tipoConteudo).toContain('text/calendar');
+    expect(convite.mensagem.anexos?.[0].tipoConteudo).toContain(
+      'text/calendar',
+    );
   });
 
   it('o .ics leva o UID da reuniao e o link da sala', async () => {
@@ -258,9 +284,7 @@ describe('ConvitesService.montarCancelamento', () => {
       sequenceComunicada: null,
     });
 
-    await expect(
-      servico.montarCancelamento(EVENTO, CLARA),
-    ).resolves.toEqual({
+    await expect(servico.montarCancelamento(EVENTO, CLARA)).resolves.toEqual({
       enviar: false,
       motivo: expect.stringContaining('nenhum convite'),
     });
@@ -297,5 +321,42 @@ describe('ConvitesService.montarCancelamento', () => {
     expect(String(convite.mensagem.anexos?.[0].conteudo)).not.toContain(
       'teams.test',
     );
+  });
+});
+
+describe('ConvitesService.montarAvisoDoEscritorio', () => {
+  /** ADR-21, decisao H: o cliente sabe que o escritorio desmarcou, e remarca. */
+  it('avisa com o caminho para remarcar, sem anexo', async () => {
+    const { servico } = montar({
+      estado: 'cancelada_com_devolucao',
+      sequenceComunicada: null,
+    });
+
+    const aviso = await servico.montarAvisoDoEscritorio(EVENTO, CLARA);
+
+    if (!aviso.enviar) throw new Error('deveria enviar');
+    expect(aviso.mensagem.assunto).toMatch(/desmarcada pelo escritorio/);
+    expect(aviso.mensagem.corpoTexto).toContain('/painel');
+    expect(aviso.mensagem.anexos).toBeUndefined();
+  });
+
+  it('nao avisa reuniao que nao foi desmarcada com devolucao', async () => {
+    const { servico } = montar({ estado: 'cancelada_sem_devolucao' });
+
+    await expect(
+      servico.montarAvisoDoEscritorio(EVENTO, CLARA),
+    ).resolves.toEqual({ enviar: false, motivo: expect.any(String) });
+  });
+});
+
+describe('textoDaReuniaoDesmarcada', () => {
+  it('escreve a data por extenso no fuso de Sao Paulo', () => {
+    const texto = textoDaReuniaoDesmarcada(
+      '2026-10-02T17:00:00.000Z',
+      'https://lexintegra.com.br',
+    );
+    expect(texto).toContain('2 de outubro de 2026');
+    expect(texto).toContain('14:00');
+    expect(texto).toContain('https://lexintegra.com.br/painel');
   });
 });

@@ -213,6 +213,7 @@ const COM_CHAVE_COMPOSTA = [
   'convite-reuniao',
   'cancelamento-reuniao',
   'pausa-contestacao',
+  'reuniao-desmarcada-escritorio',
 ] as const;
 
 function temChaveComposta(

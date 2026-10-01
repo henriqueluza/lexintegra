@@ -78,6 +78,14 @@ export const POLITICA: Readonly<Record<TipoEvento, PoliticaDeEvento>> = {
    * cliente aparece numa sala que o escritorio ja desmarcou.
    */
   'pausa-contestacao': { criticidade: 'critico', maxTentativas: 10 },
+  /*
+   * O escritorio desmarcou (ADR-21, decisao H). Critico pelo mesmo motivo do
+   * cancelamento: sem ele, o cliente aparece numa reuniao que nao existe mais.
+   */
+  'reuniao-desmarcada-escritorio': {
+    criticidade: 'critico',
+    maxTentativas: 10,
+  },
 };
 
 export interface ConfiguracaoDoOutbox {
