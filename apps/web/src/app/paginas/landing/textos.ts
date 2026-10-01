@@ -73,7 +73,7 @@ export const TEXTOS = {
       {
         titulo: 'Contrate no seu tempo',
         texto:
-          'Revise o carrinho e pague por PIX ou cartão. Cada serviço vira um pedido próprio, e o acesso à sua área chega por e-mail.',
+          'Revise o carrinho e pague por PIX (o cartão entra em breve). Cada serviço vira um pedido próprio, e o acesso à sua área chega por e-mail.',
       },
       {
         titulo: 'Descreva o caso',
@@ -183,7 +183,7 @@ export const TEXTOS = {
       {
         pergunta: 'Quais formas de pagamento são aceitas?',
         resposta:
-          'PIX e cartão de crédito. No cartão, você conclui o pagamento numa página segura do meio de pagamento e volta para a LexIntegra.',
+          'PIX. O cartão de crédito entra assim que for liberado pelo meio de pagamento; quando estiver disponível, você conclui o pagamento numa página segura dele e volta para a LexIntegra.',
       },
       {
         pergunta: 'Onde acompanho meu pedido?',
@@ -198,7 +198,7 @@ export const TEXTOS = {
       {
         pergunta: 'E se eu desistir?',
         resposta:
-          'Enquanto o trabalho não começou, você pode cancelar o pedido pela sua área.',
+          'Enquanto o trabalho não começou, nenhum documento foi enviado e nenhuma reunião aconteceu, você pode cancelar o pedido pela sua área. Cancelar não devolve o valor automaticamente: o estorno é pedido ao atendimento, e as condições estão nos termos de uso.',
       },
     ],
   },
