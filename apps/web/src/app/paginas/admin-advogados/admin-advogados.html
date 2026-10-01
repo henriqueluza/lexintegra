@@ -6,8 +6,12 @@
   </p>
 
   <app-cartao
-    titulo="Cadastrar advogado"
-    descricao="O acesso é criado aqui e só aqui. Não há autocadastro."
+    [titulo]="editando() === null ? 'Cadastrar advogado' : 'Editar advogado'"
+    [descricao]="
+      editando() === null
+        ? 'O acesso é criado aqui e só aqui. Não há autocadastro.'
+        : 'Os pedidos já distribuídos continuam com este advogado.'
+    "
   >
     <form
       class="advogados__formulario"
@@ -37,22 +41,30 @@
       </div>
 
       <p class="advogados__aviso">
-        Nenhuma senha é definida aqui. O advogado recebe por e-mail um link de
-        uso único para escolher a própria senha.
+        @if (editando() === null) { Nenhuma senha é definida aqui. O advogado
+        recebe por e-mail um link de uso único para escolher a própria senha. }
+        @else { Se o e-mail mudar, o advogado recebe no endereço novo um link de
+        acesso. O ID do Teams é conferido no Microsoft 365 antes de salvar. }
       </p>
 
       @if (falhaDoCadastro(); as mensagem) {
       <app-mensagem-erro variante="bloco">{{ mensagem }}</app-mensagem-erro>
       }
 
-      <div>
+      <div class="advogados__botoes">
         <app-botao
           variante="primario"
           tipo="submit"
           [carregando]="cadastrando()"
         >
-          Cadastrar e enviar link
+          @if (editando() === null) { Cadastrar e enviar link } @else { Salvar
+          alterações }
         </app-botao>
+        @if (editando() !== null) {
+        <app-botao variante="fantasma" (click)="cancelarEdicao()">
+          Cancelar
+        </app-botao>
+        }
       </div>
     </form>
   </app-cartao>
@@ -79,14 +91,19 @@
         {{ linha.status === 'suspenso' ? 'Suspenso' : 'Ativo' }}
       </span>
       } @case ('acoes') {
-      <app-botao
-        tamanho="p"
-        [variante]="linha.status === 'suspenso' ? 'secundario' : 'fantasma'"
-        [carregando]="emCurso() === linha.uid"
-        (click)="alternarAcesso(linha)"
-      >
-        {{ linha.status === 'suspenso' ? 'Reativar' : 'Suspender' }}
-      </app-botao>
+      <span class="advogados__acoes">
+        <app-botao tamanho="p" variante="fantasma" (click)="editar(linha)">
+          Editar
+        </app-botao>
+        <app-botao
+          tamanho="p"
+          [variante]="linha.status === 'suspenso' ? 'secundario' : 'fantasma'"
+          [carregando]="emCurso() === linha.uid"
+          (click)="alternarAcesso(linha)"
+        >
+          {{ linha.status === 'suspenso' ? 'Reativar' : 'Suspender' }}
+        </app-botao>
+      </span>
       } @case ('usuarioTeams') {
       <span class="advogados__teams">{{ teamsDe(linha) }}</span>
       } @default { {{ linha[coluna.chave] }} } }

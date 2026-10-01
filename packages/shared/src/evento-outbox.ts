@@ -39,6 +39,7 @@ export const TIPOS_EVENTO = [
   'cancelamento-reuniao',
   'pausa-contestacao',
   'reuniao-desmarcada-escritorio',
+  'acesso-advogado-atualizado',
 ] as const;
 
 export type TipoEvento = (typeof TIPOS_EVENTO)[number];
@@ -70,6 +71,14 @@ export type TipoEvento = (typeof TIPOS_EVENTO)[number];
  * recebe e o oposto: remover o evento em vez de atualiza-lo. Colapsa-los daria
  * um so montador com um `if` no meio, e o `if` erraria no dia em que a ordem dos
  * campos do iCalendar importasse.
+ */
+
+/*
+ * `acesso-advogado-atualizado` (B2, decisoes.md 4.1) e o novo link de acesso
+ * quando o administrador troca o e-mail de um advogado. E evento DIFERENTE de
+ * `definir-senha` porque `definir-senha` acontece uma vez por conta — a chave e
+ * o uid —, e a troca de e-mail pode acontecer quantas vezes o administrador
+ * quiser: a chave leva a versao do acesso, e cada troca tem o seu registro.
  */
 
 /*

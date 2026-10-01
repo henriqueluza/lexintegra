@@ -288,6 +288,10 @@ Confira nos *Webhook Logs* do painel antes de desligar com cobrança em aberto.
    - registra o aplicativo;
    - concede a permissão **de aplicação** `OnlineMeetings.ReadWrite.All`, com
      consentimento do administrador;
+   - concede também `User.Read.All` (de aplicação). É só leitura do
+     diretório, e é o que deixa a edição do advogado conferir o `usuarioTeams`
+     antes de salvar (`GET /users/{id}`). Sem ela a conferência responde
+     "indisponível" e a tela salva sem conferir;
    - cria um client secret.
 
    Nada de `Calendars.ReadWrite`: não é necessária (ADR-05). Guarde o tenant
@@ -301,9 +305,9 @@ Confira nos *Webhook Logs* do painel antes de desligar com cobrança em aberto.
    risco 1).
 4. **Preencher `usuarioTeams` de cada advogado.** É o **object ID do Entra**, um
    GUID, e não o e-mail nem o uid do Firebase (ADR-21, decisão B). O formulário
-   de criação em `/admin/advogados` aceita o campo. **A API não tem endpoint
-   para editar um advogado que já existe.** Para os que já existem:
-   `[CONFIRMAR: construir a edição, ou preencher advogados/{uid}.usuarioTeams à mão no console do Firestore]`.
+   de criação e o de edição em `/admin/advogados` aceitam o campo. Para os que
+   já existem, use **Editar** na linha do advogado (B2, Bloco F1). Com o
+   Graph ligado, um id que não existe no tenant é recusado antes de salvar.
 5. **Chamada de teste manual**, fora da aplicação. Com as credenciais do passo
    2, crie uma reunião para um advogado por
    `POST /users/{usuarioTeams}/onlineMeetings/createOrGet`. Se responder 403
@@ -459,6 +463,7 @@ isso. `[CONFIRMAR: como e por quem o próximo administrador será provisionado]`
 | Tarefa | Tela | Rota da API | Observação |
 |---|---|---|---|
 | Criar advogado | `/admin/advogados` | `POST /api/admin/advogados` | Grava a claim `advogado` e manda por e-mail (outbox) o link de definição de senha |
+| Editar advogado (nome, e-mail, ID do Teams) | `/admin/advogados` | `PUT /api/admin/advogados/{uid}` | Trocar o e-mail atualiza o login e manda link de acesso ao endereço novo (outbox). Não redistribui pedidos. Fica no log de auditoria |
 | Suspender e reativar acesso | `/admin/advogados` | `POST`/`DELETE /api/admin/advogados/{uid}/suspensao` | Revoga tokens na hora. Responde 409 se houver reunião futura (ADR-21, D) |
 | Distribuir pedido | `/admin/distribuicao` | `POST`/`DELETE /api/admin/pedidos/{id}/atribuicao` | 409 com reunião futura marcada |
 | Produtos | `/admin/produtos` | `/api/admin/produtos` | Não há exclusão, só desativação |

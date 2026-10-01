@@ -66,9 +66,23 @@ export type ResultadoDaSala =
     }
   | { readonly sucesso: false; readonly motivo: string };
 
+/**
+ * O resultado de conferir um `usuarioTeams` no Microsoft 365 (decisoes.md,
+ * 4.1). `indisponivel` NAO e `nao_encontrado`: o Graph fora do ar nao pode
+ * travar a edicao do cadastro, nem fazer um ID certo parecer errado.
+ */
+export type ConferenciaDoUsuario =
+  'encontrado' | 'nao_encontrado' | 'indisponivel';
+
 export interface SalaDeReuniao {
   /** NUNCA lanca: reporta. Quem decide reentregar e o outbox (ADR-03). */
   criar(sala: NovaSala): Promise<ResultadoDaSala>;
+
+  /**
+   * O object ID do Entra existe no tenant? Usado ao editar o advogado, antes de
+   * gravar. NUNCA lanca.
+   */
+  conferirUsuario(usuarioTeams: string): Promise<ConferenciaDoUsuario>;
 }
 
 /**

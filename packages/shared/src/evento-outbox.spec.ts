@@ -24,6 +24,7 @@ describe('vocabulario do outbox', () => {
       'cancelamento-reuniao',
       'pausa-contestacao',
       'reuniao-desmarcada-escritorio',
+      'acesso-advogado-atualizado',
     ]);
   });
 

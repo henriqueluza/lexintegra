@@ -11,6 +11,7 @@ import { AnamneseController } from './anamnese/anamnese.controller.js';
 import { ContestacoesAdminController } from './contestacoes/contestacoes.admin.controller.js';
 import type { AnamneseService } from './anamnese/anamnese.service.js';
 import type { AdvogadosService } from './advogados/advogados.service.js';
+import type { EdicaoDeAdvogadoService } from './advogados/edicao.service.js';
 import {
   CHAVE_PERFIS,
   CHAVE_PUBLICO,
@@ -133,6 +134,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['criar', AdvogadosController.prototype.criar],
     ['suspender', AdvogadosController.prototype.suspender],
     ['reativar', AdvogadosController.prototype.reativar],
+    ['editar (B2)', AdvogadosController.prototype.editar],
     ['produtos.listar', ProdutosController.prototype.listar],
     ['produtos.obter', ProdutosController.prototype.obter],
     ['produtos.criar', ProdutosController.prototype.criar],
@@ -470,8 +472,14 @@ describe('AdvogadosController', () => {
         return Promise.resolve({});
       },
     } as unknown as AdvogadosService;
+    const edicao = {
+      editar: (uid: string, dados: { email: string }, admin: string) => {
+        chamadas.push(`editar ${uid} para ${dados.email} por ${admin}`);
+        return Promise.resolve({});
+      },
+    } as unknown as EdicaoDeAdvogadoService;
 
-    return { controlador: new AdvogadosController(servico), chamadas };
+    return { controlador: new AdvogadosController(servico, edicao), chamadas };
   }
 
   it('lista', async () => {
@@ -492,6 +500,18 @@ describe('AdvogadosController', () => {
       ADMIN,
     );
     expect(chamadas).toEqual(['criar ana@escritorio.test por uid-admin']);
+  });
+
+  it('edita pelo uid do caminho, com a autoria do token', async () => {
+    const { controlador, chamadas } = montar();
+    await controlador.editar(
+      'uid-advogado',
+      { nome: 'Ana Souza', email: 'nova@escritorio.test', usuarioTeams: null },
+      ADMIN,
+    );
+    expect(chamadas).toEqual([
+      'editar uid-advogado para nova@escritorio.test por uid-admin',
+    ]);
   });
 
   it('suspende e reativa pelo uid do caminho', async () => {

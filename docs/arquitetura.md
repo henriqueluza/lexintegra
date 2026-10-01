@@ -1061,6 +1061,10 @@ Defesas complementares ao ClamAV: verificação de magic bytes contra a extensã
 
 Pelos itens 2.4.3 a 2.4.7, apenas o administrador global cria acessos de advogado. Com o ADR-07, em vez de senha inicial, o advogado recebe link de definição de senha. O administrador mantém a capacidade de editar, suspender, excluir e redefinir.
 
+**Edição (B2, decisões 4.1).** `PUT /api/admin/advogados/{uid}` edita nome, e-mail e `usuarioTeams` (`advogados/edicao.service.ts`). O `usuarioTeams` novo é conferido no Graph (`GET /users/{id}`, permissão `User.Read.All`) antes de qualquer escrita: inexistente é 422, Graph indisponível não bloqueia. Trocar o e-mail atualiza o Auth **antes** da transação (efeito externo, regra 2; 409 se o endereço é de outra conta) e, na transação, grava o documento, a linha de auditoria e o evento `acesso-advogado-atualizado`, com a chave na versão do acesso — cada troca, o seu e-mail. Não mexe na claim, no status nem na distribuição: a atribuição mora no pedido, pelo uid, e o uid não muda.
+
+**Log de auditoria (B2).** `auditoria/{id}` guarda `acao`, `atorUid`, `alvo`, `antes`, `depois` e `em`, escrito na mesma transação da ação administrativa (`auditoria/auditoria.ts`). É append-only: nenhuma rota altera ou apaga. Está no mapa da LGPD pelo `alvo`.
+
 Suspensão precisa revogar tokens ativos, não apenas marcar um campo — senão o advogado suspenso continua acessando até o token expirar.
 
 ---
