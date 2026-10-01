@@ -9,16 +9,17 @@ export const COLECAO_ACEITES = 'aceites-de-termos';
 /**
  * A VERSAO DO TEXTO ACEITO.
  *
- * ⚠️ O TEXTO DO TERMO AINDA NAO FOI APROVADO. O plano de execucao, Etapa 11,
- * lista "aprovar o texto do termo de aceite exigido antes do download" como item
- * que so a CONTRATANTE pode fazer — e peca juridica, nao copy. O texto vive em
- * `termos.textos.ts`, marcado, e esta constante e a versao dele.
+ * O TEXTO E O DA B2 (decisoes.md 1.2): o escritorio nao enviou texto proprio, o
+ * agente redigiu e o Henrique leva para aprovacao. Ele vive em
+ * `shared/textos-documentos.ts`, e esta constante e a versao dele. Os aceites
+ * de `v2-minuta-2026-09` e anteriores continuam valendo para o texto daquela
+ * versao.
  *
  * Versionar o aceite nao e enfeite: se o termo mudar, os aceites antigos
  * continuam sendo prova do que foi aceito NAQUELE texto. Sem versao, uma revisao
  * do termo reescreveria retroativamente o que todo mundo concordou.
  */
-export const VERSAO_DO_TERMO = 'v2-minuta-2026-09';
+export const VERSAO_DO_TERMO = 'v3-2026-10';
 
 interface DocumentoAceite {
   usuarioUid: string;
