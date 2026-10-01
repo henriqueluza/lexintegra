@@ -103,3 +103,21 @@ export async function idTokenDe(uid: string): Promise<string> {
 export function passarUmSegundo(): Promise<void> {
   return new Promise((resolver) => setTimeout(resolver, 1100));
 }
+
+/**
+ * Prazo dos testes que disparam transacoes CONCORRENTES contra o emulador.
+ *
+ * O padrao do Jest (5 s) nao cabe neles, e nao por lentidao do codigo. Quando
+ * duas transacoes disputam o mesmo documento, o emulador do Firestore faz a que
+ * espera desistir com "Transaction lock timeout" depois de cerca de 3 s, e o
+ * Admin SDK a reexecuta. Uma disputa custa ~3 s; duas ou tres seguidas, o dobro
+ * ou o triplo. Medido em 30/09/2026, 30 execucoes de cada teste de concorrencia
+ * de reunioes: mediana de 3,1 a 3,3 s, maximo de 12,8 s, e todas passaram quando
+ * tiveram tempo. Com 5 s, uma em cada dez a quinze estourava — e a transacao que
+ * ficava em voo terminava depois de o Jest desmontar o ambiente, derrubando o
+ * ARQUIVO SEGUINTE com um erro que nao tinha nada a ver com ele.
+ *
+ * Producao nao tem essa espera: o Firestore real resolve a disputa sem prender
+ * a transacao por segundos. O prazo e do arnes, e as assercoes nao mudam.
+ */
+export const PRAZO_DE_CONCORRENCIA_NO_EMULADOR = 30_000;

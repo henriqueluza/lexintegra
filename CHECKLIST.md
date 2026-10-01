@@ -371,13 +371,18 @@ execução corrigida gera alarme falso.
   uma requisição com `traceparent` a `/api/teste-de-traco` gerou dois spans no
   mesmo trace, o do Cloud Run (`/component AppServer`) e o da aplicação
   (`service.name api-lexintegra`). O `telemetry.tracesWriter` basta.
-- [ ] Teste intermitente novo: `reunioes.integration-spec.ts › concorrencia › dois
-  clientes no MESMO slot: um marca, o outro recebe 409` estourou os 5 s do Jest no
-  CI (30/09, PR #57, tentativa 1; passou na tentativa 2). A chamada gRPC que ele
-  deixou em voo terminou depois de o Jest desmontar o ambiente, e o erro caiu no
-  arquivo seguinte (`outbox.integration-spec.ts`, "Test suite failed to run").
-  Investigar a espera pela transação no emulador e dar ao teste um prazo próprio,
-  sem enfraquecer a asserção.
+- [x] Teste intermitente novo: `reunioes.integration-spec.ts › concorrencia › dois
+  clientes no MESMO slot` estourou os 5 s do Jest no CI (30/09, PR #57, tentativa
+  1), e o erro tardio dele derrubou o arquivo seguinte. **Causa (30/09):** quando
+  duas transações disputam o mesmo documento, o emulador do Firestore faz a que
+  espera desistir com "Transaction lock timeout" depois de ~3 s, e o SDK a
+  reexecuta. Reproduzido em 1 de 30 execuções; medido sem o limite de 5 s, os dois
+  testes de concorrência de reuniões têm mediana de 3,1 a 3,3 s e máximo de
+  12,8 s, e os de outbox, webhook e LGPD, mediana de ~3 s (o do webhook passou de
+  5 s uma vez em 20). Todos passam quando têm tempo. Corrigido no PR
+  `fix/prazo-concorrencia-emulador`: os cinco testes de concorrência usam
+  `PRAZO_DE_CONCORRENCIA_NO_EMULADOR` (30 s, em `emulador.ts`), com asserções
+  intocadas. Depois: integração completa verde e 30 de 30 no arquivo de reuniões.
 - [x] `ci.yml` disparado por `workflow_dispatch` propõe um diff falso nas imagens
   (30/09, run 36663051297: `0 to add, 3 to change, 0 to destroy` logo depois de
   um deploy verde). Os três são `api-lexintegra`, `scanner-lexintegra` e o job
