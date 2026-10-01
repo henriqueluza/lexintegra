@@ -297,6 +297,26 @@ resource "google_firestore_index" "contestacoes_abertas" {
   }
 }
 
+# B2 (decisoes.md 4.2): a lista de pagamentos problematicos do administrador.
+# `situacao` por igualdade (ou `in` sobre os tres tipos) e o mais recente
+# primeiro. Aberto e resolvido sao filtrados em memoria sobre o resultado — o
+# volume e o de anomalias, que cada uma dispara alerta critico.
+resource "google_firestore_index" "pagamentos_problematicos" {
+  project    = var.project_id
+  database   = google_firestore_database.default.name
+  collection = "pagamentos"
+
+  fields {
+    field_path = "situacao"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "registradoEm"
+    order      = "DESCENDING"
+  }
+}
+
 # ------------------------------------------------------------------------------
 # Etapa 10 — agendamento de reunioes
 # ------------------------------------------------------------------------------

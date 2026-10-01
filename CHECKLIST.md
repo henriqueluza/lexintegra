@@ -520,8 +520,10 @@ constroem**. As decisões vão para um `decisoes.md`.
   /api/admin/advogados/{uid}`, tela, log de auditoria (`auditoria/`), novo
   link de acesso quando o e-mail muda e conferência do `usuarioTeams` no Graph
   (que pede `User.Read.All`, em C › Microsoft).
-- [ ] Construir a tela do admin para pagamentos `orfao`, `divergente` e
-  `conflito_de_conta`? → Tela e endpoint.
+- [x] Construir a tela do admin para pagamentos `orfao`, `divergente` e
+  `conflito_de_conta`. Decidido (decisoes.md, 4.2) e construído no Bloco F2:
+  `/admin/pagamentos`, filtro por tipo e situação, "marcar como resolvido"
+  com nota e auditoria, índice `pagamentos_problematicos`.
 
 **Operação**
 

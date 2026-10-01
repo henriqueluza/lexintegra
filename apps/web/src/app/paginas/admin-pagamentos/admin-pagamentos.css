@@ -1,0 +1,51 @@
+/* Direcao B (Pauta) por heranca da shell autenticada. */
+.pagamentos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+.pagamentos__titulo {
+  font-family: var(--fonte-display);
+  font-size: var(--t-t1);
+  font-weight: var(--peso-titulo);
+  line-height: var(--altura-titulo);
+  letter-spacing: var(--letra-titulo);
+}
+
+.pagamentos__nota {
+  margin: 0;
+  max-width: var(--medida-texto);
+  color: var(--texto-2);
+  font-size: var(--t-menor);
+}
+
+.pagamentos__filtros {
+  display: grid;
+  gap: var(--s4);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 48rem) {
+  .pagamentos__filtros {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.pagamentos__comprador {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+
+.pagamentos__detalhe {
+  color: var(--texto-3);
+  font-size: var(--t-micro);
+}
+
+/* O id da cobranca e o que se procura no painel do AbacatePay. */
+.pagamentos__id {
+  font-size: var(--t-micro);
+  font-variant-numeric: tabular-nums;
+  word-break: break-all;
+}

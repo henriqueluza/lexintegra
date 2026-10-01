@@ -472,7 +472,7 @@ isso. `[CONFIRMAR: como e por quem o próximo administrador será provisionado]`
 | Reunião sem sala | `/admin/reunioes` | `GET /api/admin/reunioes` e o reenvio do outbox | Ver [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
 | Cancelar reunião pelo escritório | `/admin/reunioes` | `POST /api/admin/reunioes/{pedidoId}/{reuniaoId}/cancelamento` | Sempre devolve o crédito, com qualquer antecedência, e o cliente recebe e-mail convidando a remarcar (ADR-21, H) |
 | Buscar cliente e ver anamnese | `/admin/clientes` | `GET /api/admin/clientes`, `GET .../{uid}/anamnese` | |
-| Conciliar pagamento órfão | **sem tela** | — | Ver [`pagamento-orfao.md`](../runbooks/pagamento-orfao.md) (prazos do `decisoes.md`, 5.3) |
+| Pagamentos com problema (órfão, divergente, conflito de conta) | `/admin/pagamentos` | `GET /api/admin/pagamentos?situacao=&tipo=`, `POST /api/admin/pagamentos/{cobrancaId}/resolucao` | A correção é no painel do AbacatePay; a tela marca como resolvido, com nota obrigatória e auditoria. O comprador só aparece enquanto o checkout existir. Ver [`pagamento-orfao.md`](../runbooks/pagamento-orfao.md) (prazos do `decisoes.md`, 5.3) |
 | Registrar resultado de contestação | `/admin/contestacoes` (sem item de menu até o Bloco F da B2) | `GET /api/admin/contestacoes`, `POST /api/admin/contestacoes/{cobrancaId}/resultado` | Ganha tira a pausa; perdida estorna sem devolução. Ver [`alerta-critico.md`](../runbooks/alerta-critico.md) |
 | Exportar dados de um titular | **sem tela** | `POST /api/admin/lgpd/{clientes\|pre-cadastros}/{id}/exportacao` | Ver [`lgpd.md`](lgpd.md) e [`runbooks/lgpd-titular.md`](../runbooks/lgpd-titular.md) |
 

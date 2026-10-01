@@ -12,6 +12,7 @@ import { DisponibilidadesModule } from './disponibilidades/disponibilidades.modu
 import { SenhaModule } from './autenticacao/senha/senha.module.js';
 import { EntregaveisModule } from './entregaveis/entregaveis.module.js';
 import { ContestacoesModule } from './contestacoes/contestacoes.module.js';
+import { PagamentosAdminModule } from './pagamentos/admin/pagamentos-admin.module.js';
 import { EstornosModule } from './estornos/estornos.module.js';
 import { FirebaseModule } from './firebase/firebase.module.js';
 import { GatewayPagamentoModule } from './pagamentos/gateway/gateway.module.js';
@@ -93,6 +94,8 @@ import { LgpdModule } from './lgpd/lgpd.module.js';
     AnamneseModule,
     EstornosModule,
     ContestacoesModule,
+    // B2 (decisoes.md 4.2): pagamentos orfao, divergente e conflito_de_conta.
+    PagamentosAdminModule,
     ClientesModule,
     PedidosModule,
     EntregaveisModule,

@@ -225,6 +225,8 @@ describe('rotas', () => {
     'reunioes',
     /* B2, decisoes.md 5.4: as contestacoes abertas e o resultado. */
     'contestacoes',
+    /* B2, decisoes.md 4.2: pagamentos que nao viraram pedido. */
+    'pagamentos',
   ])('registra a tela administrativa %s sob admin', (caminho) => {
     const admin = routes.find((r) => r.path === 'admin');
 

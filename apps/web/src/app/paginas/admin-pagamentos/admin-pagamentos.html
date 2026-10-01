@@ -1,0 +1,78 @@
+<section class="pagamentos">
+  <h1 class="pagamentos__titulo">Pagamentos com problema</h1>
+  <p class="pagina-descricao">
+    Pagamentos recebidos que não viraram pedido: sem checkout, com valor
+    diferente do carrinho ou com e-mail de outra conta.
+  </p>
+
+  <p class="pagamentos__nota">
+    A correção é feita no painel do AbacatePay, seguindo o runbook de pagamento
+    órfão: devolver o dinheiro ou associar o pagamento. Depois, marque aqui como
+    resolvido e escreva o que foi feito.
+  </p>
+
+  <div class="pagamentos__filtros">
+    <app-selecao
+      rotulo="Situação"
+      [opcoes]="opcoesDeSituacao"
+      [formControl]="situacao"
+    />
+    <app-selecao rotulo="Tipo" [opcoes]="opcoesDeTipo" [formControl]="tipo" />
+  </div>
+
+  @if (situacao.value === 'aberto') {
+  <app-campo
+    rotulo="O que foi feito (devolução, associação, contato)"
+    [formControl]="nota"
+    [obrigatorio]="true"
+  />
+  } @if (falha(); as mensagem) {
+  <app-mensagem-erro variante="bloco">{{ mensagem }}</app-mensagem-erro>
+  } @if (falhaDaLista()) {
+  <app-mensagem-erro variante="bloco">
+    Não foi possível carregar os pagamentos. Recarregue a página.
+  </app-mensagem-erro>
+  }
+
+  <app-tabela
+    legenda="Pagamentos que não viraram pedido"
+    [colunas]="colunas"
+    [linhas]="linhas()"
+    [carregando]="carregando()"
+    mensagemVazia="Nenhum pagamento com problema nesta situação."
+  >
+    <ng-template appCelulaTabela let-linha let-coluna="coluna">
+      @switch (coluna.chave) { @case ('tipo') { {{
+      rotuloDoTipo(comoPagamento(linha).tipo) }} } @case ('valor') { {{
+      valor(comoPagamento(linha)) }} } @case ('registradoEm') { {{
+      data(comoPagamento(linha).registradoEm) }} } @case ('comprador') { @if
+      (comoPagamento(linha).comprador; as comprador) {
+      <span class="pagamentos__comprador">
+        {{ comprador.nome }}
+        <span class="pagamentos__detalhe">{{ comprador.email }}</span>
+        <span class="pagamentos__detalhe"
+          >{{ comoPagamento(linha).produtos.join(', ') }}</span
+        >
+      </span>
+      } @else {
+      <span class="pagamentos__detalhe">Checkout já apagado</span>
+      } } @case ('cobranca') {
+      <span class="pagamentos__id">{{ comoPagamento(linha).cobrancaId }}</span>
+      } @case ('acoes') { @if (comoPagamento(linha).resolucao; as resolucao) {
+      <span class="pagamentos__comprador">
+        Resolvido em {{ data(resolucao.em) }}
+        <span class="pagamentos__detalhe">{{ resolucao.nota }}</span>
+      </span>
+      } @else {
+      <app-botao
+        variante="primario"
+        tamanho="p"
+        [carregando]="emCurso() === comoPagamento(linha).cobrancaId"
+        (click)="resolver(comoPagamento(linha))"
+      >
+        Marcar como resolvido
+      </app-botao>
+      } } }
+    </ng-template>
+  </app-tabela>
+</section>
