@@ -1,5 +1,7 @@
 import type { Firestore } from 'firebase-admin/firestore';
+import { TIPO_DOCX } from 'shared';
 import { ArmazenamentoFalso } from '../armazenamento/armazenamento-falso.js';
+import { DOCX, TIPOS_DOCM, zip } from '../arnes-docx.js';
 import { FirestoreFalso } from '../firestore-falso.js';
 import type { TarefaDeVarredura } from './fila.js';
 import { ScannerFalso } from './scanner.js';
@@ -194,6 +196,40 @@ describe('VarreduraService', () => {
       expect(armazenamento.caminhos).toContain(
         `arquivos:${TAREFA_ANEXO.caminho}`,
       );
+    });
+  });
+
+  /** B2, decisoes.md 3.1: o DOCX tem uma TERCEIRA conferencia, estrutural. */
+  describe('o DOCX do advogado', () => {
+    const DOCX_TIPO = TIPO_DOCX;
+
+    it('DOCX de verdade e liberado', async () => {
+      const { varredura } = montar(zip(DOCX), DOCX_TIPO);
+
+      expect(await varredura.processar(TAREFA_ENTREGAVEL)).toBe('limpo');
+    });
+
+    /** Todo ZIP passa pelo magic bytes; o DOCM cai na estrutura. */
+    it('DOCM disfarcado de DOCX e rejeitado com o motivo', async () => {
+      const { varredura, banco } = montar(
+        zip([{ nome: '[Content_Types].xml', conteudo: TIPOS_DOCM }, DOCX[1]]),
+        DOCX_TIPO,
+      );
+
+      expect(await varredura.processar(TAREFA_ENTREGAVEL)).toBe('rejeitado');
+      expect(
+        String(
+          banco.documentos.get('pedidos/pedido-1/entregaveis/001')?.[
+            'arquivoAtual.motivo'
+          ],
+        ),
+      ).toMatch(/macro/);
+    });
+
+    it('PDF declarado como DOCX nao passa nem do magic bytes', async () => {
+      const { varredura } = montar(PDF, DOCX_TIPO);
+
+      expect(await varredura.processar(TAREFA_ENTREGAVEL)).toBe('rejeitado');
     });
   });
 

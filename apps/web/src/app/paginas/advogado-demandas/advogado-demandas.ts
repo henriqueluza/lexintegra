@@ -10,6 +10,7 @@ import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import type { AnamneseResumo } from 'shared/esquemas/cliente';
 import type { ObservacaoResumo } from 'shared/esquemas/observacao';
 import type { DemandaResumo, EntregavelResumo } from 'shared/esquemas/pedido';
+import { POLITICA_UPLOAD, tipoPelaExtensao } from 'shared/esquemas/upload';
 import { ApiAdvogadoService } from '../../autenticacao/api-advogado.service';
 import { enviarParaUrlAssinada } from '../../comum/enviar-arquivo';
 import { Botao } from '../../ui/botao/botao';
@@ -37,6 +38,12 @@ import { mensagemDoErro } from '../erros';
 /** Redação da interface; o texto final é o Bloco I da B2. */
 export const AVISO_DE_PAUSA_ADVOGADO =
   'Pedido pausado por uma contestação do pagamento. Nada muda nele até o escritório registrar o resultado.';
+
+const ACEITOS_NO_SELETOR = [
+  '.pdf',
+  '.docx',
+  ...POLITICA_UPLOAD['entregavel-advogado'].tipos,
+].join(',');
 
 @Component({
   selector: 'app-advogado-demandas',
@@ -138,6 +145,9 @@ export class AdvogadoDemandas implements OnInit {
   /** O estado decide qual acao existe; o servidor decide se ela vale (ADR-11). */
   protected readonly avisoDePausa = AVISO_DE_PAUSA_ADVOGADO;
 
+  /** O seletor de arquivo ja filtra; quem recusa e o servidor (3.1). */
+  protected readonly tiposAceitos = ACEITOS_NO_SELETOR;
+
   protected acao(entregavel: EntregavelResumo): 'iniciar' | 'retomar' | null {
     if (entregavel.estado === 'solicitado') return 'iniciar';
     if (entregavel.estado === 'em_revisao') return 'retomar';
@@ -179,21 +189,22 @@ export class AdvogadoDemandas implements OnInit {
     const entrada = evento.target as HTMLInputElement;
     const arquivo = entrada.files?.[0];
     if (arquivo === undefined) return;
+    /*
+     * Alguns sistemas entregam o DOCX com `type` vazio. O tipo sai da extensao,
+     * e o MESMO tipo vai no pedido e no PUT — e ele que entra na assinatura.
+     */
+    const tipo = arquivo.type || tipoPelaExtensao(arquivo.name);
 
     await this.agir(entregavel.id, async () => {
       const { url } = await this.api.pedirEnvioDeEntregavel(
         pedidoId,
         entregavel.id,
-        {
-          nome: arquivo.name,
-          tipo: arquivo.type,
-          tamanhoBytes: arquivo.size,
-        },
+        { nome: arquivo.name, tipo, tamanhoBytes: arquivo.size },
       );
 
       // O PUT antes da confirmacao: confirmar primeiro enfileiraria a varredura
       // de um objeto que ainda nao existe.
-      await enviarParaUrlAssinada(url, arquivo);
+      await enviarParaUrlAssinada(url, arquivo, tipo);
       await this.api.confirmarEntregavel(pedidoId, entregavel.id);
     });
   }

@@ -19,10 +19,16 @@
 export async function enviarParaUrlAssinada(
   url: string,
   arquivo: File,
+  /**
+   * O tipo que foi DECLARADO ao pedir a URL. Igual a `arquivo.type` quase
+   * sempre; diferente quando o navegador nao soube o tipo (acontece com DOCX)
+   * e a tela o deduziu pela extensao (`tipoPelaExtensao`).
+   */
+  tipo: string = arquivo.type,
 ): Promise<void> {
   const resposta = await fetch(url, {
     method: 'PUT',
-    headers: { 'Content-Type': arquivo.type },
+    headers: { 'Content-Type': tipo },
     body: arquivo,
   });
 

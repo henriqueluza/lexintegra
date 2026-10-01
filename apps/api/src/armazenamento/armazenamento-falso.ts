@@ -158,6 +158,26 @@ export class ArmazenamentoFalso implements Armazenamento, OnModuleDestroy {
     return Promise.resolve(conteudo.slice(0, quantidade));
   }
 
+  lerFaixa(
+    objeto: Objeto,
+    inicio: number,
+    quantidade: number,
+  ): Promise<Uint8Array> {
+    const conteudo = this.objetos.get(chaveDe(objeto));
+    if (conteudo === undefined) {
+      return Promise.reject(new Error(`Objeto ausente: ${chaveDe(objeto)}`));
+    }
+    return Promise.resolve(conteudo.slice(inicio, inicio + quantidade));
+  }
+
+  tamanho(objeto: Objeto): Promise<number> {
+    const conteudo = this.objetos.get(chaveDe(objeto));
+    if (conteudo === undefined) {
+      return Promise.reject(new Error(`Objeto ausente: ${chaveDe(objeto)}`));
+    }
+    return Promise.resolve(conteudo.length);
+  }
+
   mover(origem: Objeto, destino: Objeto): Promise<void> {
     const conteudo = this.objetos.get(chaveDe(origem));
     if (conteudo === undefined) {

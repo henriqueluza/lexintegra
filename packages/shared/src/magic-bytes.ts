@@ -26,6 +26,10 @@ export const BYTES_NECESSARIOS = 12;
  *
  * JPEG: `FF D8 FF` — os tres primeiros bytes de todo JPEG, qualquer variante.
  * PDF: `%PDF-` em ASCII.
+ * DOCX: `PK 03 04`, o cabecalho de entrada de ZIP. NAO BASTA: todo ZIP comeca
+ * assim, inclusive o `.docm` com macro. A conferencia de verdade do DOCX e
+ * estrutural, na varredura (`apps/api/src/varredura/docx.ts`); esta e so a
+ * primeira peneira.
  *
  * O PDF permite lixo ANTES do `%PDF-` segundo a especificacao, e alguns leitores
  * aceitam. Nao aceitamos: um arquivo que precisa de tolerancia para ser
@@ -34,6 +38,9 @@ export const BYTES_NECESSARIOS = 12;
 const ASSINATURAS: Readonly<Record<string, readonly number[]>> = {
   'image/jpeg': [0xff, 0xd8, 0xff],
   'application/pdf': [0x25, 0x50, 0x44, 0x46, 0x2d],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [
+    0x50, 0x4b, 0x03, 0x04,
+  ],
 };
 
 export function tipoTemAssinaturaConhecida(tipo: string): boolean {
