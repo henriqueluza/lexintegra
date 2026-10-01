@@ -53,7 +53,7 @@ Checkout: versão `checkout-v1-minuta-2026-09`. Download: `v2-minuta-2026-09`. O
 
 ## Imagem e movimento
 
-Imagem gerada com a ferramenta nativa `imagegen`, armazenada no repositório em `apps/web/public/imagens/arquitetura-lexintegra.jpg`. Não representa um escritório ou tribunal real. A origem PNG é mantida junto à imagem.
+Imagem gerada com a ferramenta nativa `imagegen`, armazenada no repositório em `docs/imagens/arquitetura-lexintegra.jpg` (movida de `apps/web/public/imagens/` na B2, decisões 6.2: dentro de `public/` ela seria servida pelo site). Hoje ilustra o `README.md` da raiz e não é usada por nenhuma página. Não representa um escritório ou tribunal real. A origem PNG é mantida junto à imagem.
 
 Prompt: “Create a photorealistic editorial architectural photograph for LexIntegra, a Brazilian legal services digital platform. No text, no logos, no people. Portrait-ish landscape 3:2 composition, a sculptural modern Brazilian courthouse interior, warm travertine columns on the right, curved staircase and daylight falling across deep burgundy polished stone and warm ivory walls, small understated brass details. Monumental but welcoming, precision and quiet confidence, premium architectural magazine photography, natural warm light, physically believable materials, subtle film grain. Full bleed image, not a webpage mockup.”
 
