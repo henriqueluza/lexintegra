@@ -19,6 +19,17 @@ import { esquemaNovoPreCadastro } from './pre-cadastro.js';
 export const METODOS_PAGAMENTO = ['pix', 'cartao'] as const;
 export type MetodoPagamento = (typeof METODOS_PAGAMENTO)[number];
 
+/**
+ * Os metodos que o checkout aceita AGORA (B2, decisoes.md 3.4). O PIX esta
+ * sempre; o cartao depende do interruptor `PAGAMENTOS_CARTAO`, enquanto a
+ * homologacao no AbacatePay nao sai. A tela le isto para mostrar o cartao
+ * desabilitado com "em breve"; quem recusa e o servidor.
+ */
+export type MetodosDisponiveis = {
+  readonly pix: true;
+  readonly cartao: boolean;
+};
+
 export const esquemaNovoCheckout = z.object({
   itens: z
     .array(

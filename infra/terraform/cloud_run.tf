@@ -187,6 +187,13 @@ resource "google_cloud_run_v2_service" "api" {
         value = "desligado"
       }
 
+      # B2 (decisoes.md 3.4). Obrigatoria em producao, como `PAGAMENTOS_MODO`:
+      # ausente, a API RECUSA SUBIR (`pagamentos/gateway/cartao.ts`).
+      env {
+        name  = "PAGAMENTOS_CARTAO"
+        value = var.pagamentos_cartao
+      }
+
       # Etapa 10. Obrigatoria em producao pelo mesmo motivo de `PAGAMENTOS_MODO`:
       # ausente, a API RECUSA SUBIR (ver `reunioes/sala/modo.ts`). Faltava aqui, e
       # o efeito seria o pior possivel — a revisao nova nao passaria no startup

@@ -67,11 +67,30 @@
           <input type="radio" formControlName="metodo" value="pix" />
           {{ textos.formulario.pix }}
         </label>
-        <label class="checkout__opcao">
-          <input type="radio" formControlName="metodo" value="cartao" />
-          {{ textos.formulario.cartao }}
+        <label
+          class="checkout__opcao"
+          [class.checkout__opcao--indisponivel]="!cartaoDisponivel()"
+        >
+          <input
+            type="radio"
+            formControlName="metodo"
+            value="cartao"
+            [attr.disabled]="cartaoDisponivel() ? null : true"
+            [attr.aria-describedby]="
+              cartaoDisponivel() ? null : 'checkout-cartao-em-breve'
+            "
+          />
+          {{ textos.formulario.cartao }} @if (!cartaoDisponivel()) {
+          <span class="checkout__selo"
+            >{{ textos.formulario.cartaoEmBreve }}</span
+          >
+          }
         </label>
-        @if (formulario.controls.metodo.value === 'cartao') {
+        @if (!cartaoDisponivel()) {
+        <p class="checkout__auxiliar" id="checkout-cartao-em-breve">
+          {{ textos.formulario.dicaCartaoIndisponivel }}
+        </p>
+        } @if (formulario.controls.metodo.value === 'cartao') {
         <p class="checkout__auxiliar">{{ textos.formulario.dicaCartao }}</p>
         }
       </fieldset>

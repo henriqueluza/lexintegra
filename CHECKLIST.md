@@ -510,8 +510,10 @@ constroem**. As decisões vão para um `decisoes.md`.
 - [x] `produtosContratados` do cliente perde o produto cancelado ou estornado?
   Decidido (decisoes.md, 3.3) e construído no Bloco B: só pedidos ativos, e a
   regra de estorno ganhou as três condições.
-- [ ] Enquanto o cartão não for homologado: esconder a opção ou lançar só com
-  PIX? → Implementar.
+- [x] Enquanto o cartão não for homologado: cartão desabilitado com "em breve",
+  lançamento só com PIX (decisoes.md, 3.4). Construído no Bloco G:
+  `PAGAMENTOS_CARTAO` (Terraform `pagamentos_cartao`, padrão `desabilitado`),
+  422 no servidor e `GET /api/checkout/metodos` para a tela.
 
 **Escopo novo**
 
@@ -527,7 +529,10 @@ constroem**. As decisões vão para um `decisoes.md`.
 
 **Operação**
 
-- [ ] Endereço do remetente de e-mail. → `EMAIL_FROM` e `operacao.md`.
+- [x] Endereço do remetente de e-mail: `LexIntegra
+  <nao-responda@notificacoes.lexintegra.com.br>` (decisoes.md, 5.1). Bloco G:
+  `email_remetente`, rodapé em todo e-mail com `privacidade@` e os e-mails de
+  senha em texto versionado.
 - [ ] Destinatários dos alertas, e quais acordam alguém. →
   `alertas-roteamento.json` e Terraform.
 - [x] Quem resolve um pagamento órfão, quem devolve o dinheiro no estorno
@@ -623,8 +628,10 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
 
 **Construir**
 
-- [ ] `EMAIL_FROM` com o remetente decidido em B2.
-- [ ] Atualizar `operacao.md` 4.1 e `entrega-de-email-falhando.md`.
+- [x] `EMAIL_FROM` com o remetente decidido em B2 (Bloco G). Antes do merge:
+  confirmar que a chave `resend-api-key` é da conta onde o domínio foi
+  verificado.
+- [x] Atualizar `operacao.md` 4.1 e `entrega-de-email-falhando.md` (Bloco G).
 - [ ] 👤 E-mail real de teste em Gmail, Outlook e Apple Mail.
 - [ ] 👤 Conferir que o `traceparent` sobrevive ao Cloud Tasks (roteiro completo na
   seção 4.4 de `docs/runbooks/limpeza-infra.md`): pedir

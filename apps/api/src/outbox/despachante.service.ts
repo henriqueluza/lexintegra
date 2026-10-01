@@ -3,10 +3,15 @@ import type { Auth } from 'firebase-admin/auth';
 import { AUTH_FIREBASE } from '../firebase/firebase.module.js';
 import {
   EMAIL_TRANSPORT,
-  type EmailMensagem,
+  type EmailRedigido,
   type EmailResultado,
   type EmailTransport,
 } from '../email/email-transport.js';
+import { comRodape } from '../email/rodape.js';
+import {
+  ehTipoComLinkDeSenha,
+  mensagemDeAcesso,
+} from '../email/textos-de-acesso.js';
 import { descreverErro } from '../email/redigir.js';
 import { traceIdDe } from '../observabilidade/rastreio.js';
 import { ALERTAS, type CanalDeAlerta } from '../alertas/alerta.js';
@@ -29,17 +34,6 @@ import {
 } from '../reunioes/convites.service.js';
 import { OutboxService } from './outbox.service.js';
 import { POLITICA } from './politica.js';
-
-/**
- * Alias do modelo publicado no painel do Resend, com a variavel `LINK`.
- *
- * Os dois tipos de evento desta etapa usam o MESMO modelo. Nao e descuido: so um
- * modelo esta publicado, e o texto dele serve as duas situacoes. Quando a Etapa 7
- * escrever a copia especifica de "seu acesso foi criado", basta publicar outro
- * alias e ramificar aqui — o dominio nao muda, porque ja distingue os dois
- * eventos.
- */
-const MODELO_SENHA = 'password-reset';
 
 /**
  * O tipo que nao tem montador. NAO ALCANCAVEL: o `never` faz o compilador
@@ -245,7 +239,16 @@ export class DespachanteOutbox {
       return this.entregarConvite(id, registro);
     }
 
-    return this.transporte.enviar(await this.montarComChave(id, registro));
+    return this.enviar(await this.montarComChave(id, registro));
+  }
+
+  /**
+   * A UNICA SAIDA DE E-MAIL DO DESPACHANTE, e e ela que poe o rodape (B2,
+   * decisoes.md 5.1): a caixa do remetente nao e lida, e todo e-mail diz isso e
+   * aponta `privacidade@`. Nenhum montador precisa lembrar.
+   */
+  private enviar(mensagem: EmailRedigido): Promise<EmailResultado> {
+    return this.transporte.enviar(comRodape(mensagem));
   }
 
   /**
@@ -307,7 +310,7 @@ export class DespachanteOutbox {
       return { sucesso: true, idProvedor: 'pulado' };
     }
 
-    return this.transporte.enviar({
+    return this.enviar({
       ...convite.mensagem,
       chaveIdempotencia: `${id}-c${String(registro.ciclo)}`,
     });
@@ -385,7 +388,7 @@ export class DespachanteOutbox {
   private async montarComChave(
     id: string,
     registro: RegistroOutbox,
-  ): Promise<EmailMensagem> {
+  ): Promise<EmailRedigido> {
     const mensagem = await this.montar(registro);
     return {
       ...mensagem,
@@ -398,7 +401,7 @@ export class DespachanteOutbox {
    * nao aparece na resposta HTTP: e credencial viva — quem o tiver troca a senha
    * da conta.
    */
-  private async montar(registro: RegistroOutbox): Promise<EmailMensagem> {
+  private async montar(registro: RegistroOutbox): Promise<EmailRedigido> {
     const usuario = await this.auth.getUser(registro.destinatarioUid);
     if (usuario.email === undefined) {
       throw new Error(`usuario ${registro.destinatarioUid} nao tem e-mail`);
@@ -423,23 +426,25 @@ export class DespachanteOutbox {
       return { para, assunto, corpoTexto };
     }
 
-    switch (registro.tipo) {
-      /*
-       * Os tres que levam link de senha. Sao eventos DIFERENTES — "o
-       * administrador criou um acesso de advogado", "alguem esqueceu a senha" e
-       * "um cliente pagou e ganhou conta" sao fatos distintos, com trilhas
-       * proprias — e hoje compartilham o unico modelo publicado no Resend.
-       */
-      case 'definir-senha':
-      case 'redefinir-senha':
-      case 'acesso-cliente':
-      case 'acesso-advogado-atualizado':
-      case 'convite-administrador':
-        return { para, modelo: await this.modeloDeSenha(usuario.email) };
-
-      default:
-        return semMontador(registro.tipo);
+    /*
+     * Os cinco que levam link de senha (B2, decisoes.md 5.1). Sao eventos
+     * DIFERENTES — o administrador criou um advogado, alguem esqueceu a senha,
+     * um cliente pagou, o e-mail do advogado mudou, um administrador foi
+     * convidado — e desde a B2 cada um tem o seu texto, versionado no
+     * repositorio (`email/textos-de-acesso.ts`), e nao mais o modelo unico do
+     * painel do Resend.
+     */
+    if (ehTipoComLinkDeSenha(registro.tipo)) {
+      return {
+        para,
+        ...mensagemDeAcesso(
+          registro.tipo,
+          await this.linkDeSenha(usuario.email),
+        ),
+      };
     }
+
+    return semMontador(registro.tipo);
   }
 
   /**
@@ -447,10 +452,7 @@ export class DespachanteOutbox {
    * nao aparece na resposta HTTP: e credencial viva — quem o tiver troca a senha
    * da conta.
    */
-  private async modeloDeSenha(email: string): Promise<{
-    alias: string;
-    variaveis: Record<string, string>;
-  }> {
+  private async linkDeSenha(email: string): Promise<string> {
     const linkDoFirebase = await this.auth.generatePasswordResetLink(email);
     const link = montarLinkDeSenha(linkDoFirebase, urlDaAplicacao());
     if (!link.proprio) {
@@ -458,7 +460,6 @@ export class DespachanteOutbox {
         'nao foi possivel extrair o oobCode; usando a pagina de acao do Firebase',
       );
     }
-
-    return { alias: MODELO_SENHA, variaveis: { LINK: link.url } };
+    return link.url;
   }
 }

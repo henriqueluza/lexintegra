@@ -137,9 +137,7 @@ describe('compra completa (criterio de aceite da Etapa 8)', () => {
       }),
     );
     const { body: webhook } = await http()
-      .post(
-        caminhoDoWebhook(SEGREDO_WEBHOOK_DESENVOLVIMENTO),
-      )
+      .post(caminhoDoWebhook(SEGREDO_WEBHOOK_DESENVOLVIMENTO))
       .set('Content-Type', 'application/json')
       .set('X-Webhook-Signature', assinar(evento, CHAVE_HMAC_DESENVOLVIMENTO))
       .send(evento)
@@ -165,7 +163,10 @@ describe('compra completa (criterio de aceite da Etapa 8)', () => {
     const mensagem = transporte.enviadas.find((m) =>
       m.para.includes(ANA.email),
     );
-    const link = new URL(String(mensagem?.modelo?.variaveis['LINK']));
+    // Desde a B2 o link vai no corpo do texto versionado (decisoes.md 5.1).
+    const link = new URL(
+      /https?:\/\/\S+/u.exec(mensagem?.corpoTexto ?? '')?.[0] ?? '',
+    );
     expect(link.pathname).toBe('/definir-senha');
     const oobCode = link.searchParams.get('oobCode');
     expect(oobCode).not.toBeNull();

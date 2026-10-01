@@ -200,6 +200,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['vitrine', VitrineController.prototype.listar],
     ['checkout (Etapa 8)', CheckoutController.prototype.iniciar],
     ['situacao do checkout (Etapa 8)', CheckoutController.prototype.situacao],
+    ['metodos do checkout (B2)', CheckoutController.prototype.metodos],
     ['webhook do gateway (Etapa 8)', WebhookController.prototype.receber],
     [
       'relato de erro do navegador (Etapa 12)',
@@ -300,6 +301,7 @@ describe('limite de requisicoes das rotas publicas', () => {
     ['vitrine', VitrineController.prototype.listar],
     ['checkout', CheckoutController.prototype.iniciar],
     ['situacao do checkout', CheckoutController.prototype.situacao],
+    ['metodos do checkout', CheckoutController.prototype.metodos],
     ['webhook do gateway', WebhookController.prototype.receber],
     [
       'relato de erro do navegador',
@@ -436,6 +438,7 @@ describe('limite de requisicoes das rotas publicas', () => {
     ['vitrine', VitrineController.prototype.listar],
     ['checkout', CheckoutController.prototype.iniciar],
     ['situacao do checkout', CheckoutController.prototype.situacao],
+    ['metodos do checkout', CheckoutController.prototype.metodos],
   ])('%s e verificado pelo App Check', (_nome, metodo) => {
     expect(reflector.get(CHAVE_SEM_APP_CHECK, metodo)).toBeUndefined();
   });
@@ -787,20 +790,53 @@ describe('EstornosAdminController', () => {
 });
 
 describe('CheckoutController', () => {
-  function montar(): { controlador: CheckoutController; chamadas: string[] } {
+  function montar(cartao = true): {
+    controlador: CheckoutController;
+    chamadas: string[];
+  } {
     const chamadas: string[] = [];
-    const controlador = new CheckoutController({
-      iniciar: (_dados: unknown, preCadastroId: string) => {
-        chamadas.push(`iniciar ${preCadastroId}`);
-        return Promise.resolve({});
-      },
-      situacao: (checkoutId: string, preCadastroId: string) => {
-        chamadas.push(`situacao ${checkoutId} ${preCadastroId}`);
-        return Promise.resolve({ estado: 'pago' });
-      },
-    } as unknown as CheckoutService);
+    const controlador = new CheckoutController(
+      {
+        iniciar: (_dados: unknown, preCadastroId: string) => {
+          chamadas.push(`iniciar ${preCadastroId}`);
+          return Promise.resolve({});
+        },
+        situacao: (checkoutId: string, preCadastroId: string) => {
+          chamadas.push(`situacao ${checkoutId} ${preCadastroId}`);
+          return Promise.resolve({ estado: 'pago' });
+        },
+      } as unknown as CheckoutService,
+      cartao,
+    );
     return { controlador, chamadas };
   }
+
+  /** B2, decisoes.md 3.4: o interruptor do cartao, no servidor. */
+  it('recusa cartao com 422 quando o interruptor esta desligado', () => {
+    const { controlador, chamadas } = montar(false);
+
+    expect(() =>
+      controlador.iniciar({ metodo: 'cartao' } as never, 'id.segredo'),
+    ).toThrow('ainda não está disponível');
+    expect(chamadas).toEqual([]);
+  });
+
+  it('com o cartao desligado, o PIX continua', async () => {
+    const { controlador, chamadas } = montar(false);
+    await controlador.iniciar({ metodo: 'pix' } as never, 'id.segredo');
+    expect(chamadas).toEqual(['iniciar id']);
+  });
+
+  it('informa os metodos disponiveis', () => {
+    expect(montar(false).controlador.metodos()).toEqual({
+      pix: true,
+      cartao: false,
+    });
+    expect(montar(true).controlador.metodos()).toEqual({
+      pix: true,
+      cartao: true,
+    });
+  });
 
   /** O id sai do token que o guard ja validou — o segredo nunca chega ao servico. */
   it('passa ao servico so o id do pre-cadastro', async () => {

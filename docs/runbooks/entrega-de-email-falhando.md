@@ -10,11 +10,14 @@ significam que o provedor está recusando.
 **Quem executa:** quem atende a operação, com acesso ao painel do Resend da
 conta dona da chave `resend-api-key`.
 
-> **Estado de hoje:** o remetente é `onboarding@resend.dev` (`EMAIL_FROM`, em
-> `infra/terraform/variables.tf`). O Resend só entrega esse remetente ao
-> endereço da própria conta. **Todo e-mail para outro endereço falha até o
-> domínio verificado ser ligado.** Ver
-> [`docs/entrega/operacao.md`](../entrega/operacao.md), seção 4.1.
+> **Estado de hoje (B2):** o remetente é
+> `LexIntegra <nao-responda@notificacoes.lexintegra.com.br>` (`EMAIL_FROM`, em
+> `infra/terraform/variables.tf`), no domínio verificado em 29/09/2026. Se o
+> Resend recusar o remetente ("domain is not verified"), confira que a chave
+> `resend-api-key` é da **mesma conta** em que o domínio foi verificado. Ver
+> [`docs/entrega/operacao.md`](../entrega/operacao.md), seção 4.1. Os e-mails
+> de senha não usam mais o modelo do painel: o texto está no código
+> (`apps/api/src/email/textos-de-acesso.ts`).
 
 ---
 

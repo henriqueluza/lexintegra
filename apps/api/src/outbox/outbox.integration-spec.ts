@@ -215,7 +215,9 @@ describe('resiliencia da entrega, fim a fim', () => {
     await expect(entregarFila()).resolves.toEqual([200]);
 
     expect(transporte.enviadas).toHaveLength(1);
-    expect(transporte.enviadas[0].modelo?.alias).toBe('password-reset');
+    expect(transporte.enviadas[0].corpoTexto).toContain(
+      '/definir-senha?oobCode=',
+    );
     await expect(linhasDoPainel()).resolves.toMatchObject([
       { estado: 'enviado' },
     ]);
