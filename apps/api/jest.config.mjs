@@ -53,6 +53,8 @@ export default {
     '!arnes-webhook.ts',
     // `arnes-anamnese.ts` monta a menor ficha valida a partir da declaracao.
     '!arnes-anamnese.ts',
+    // `arnes-docx.ts` monta ZIPs de teste para a conferencia do DOCX.
+    '!arnes-docx.ts',
   ],
   coverageDirectory: '../coverage',
   coverageReporters: ['text-summary', 'lcov', 'json-summary'],

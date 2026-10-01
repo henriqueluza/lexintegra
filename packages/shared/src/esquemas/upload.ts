@@ -15,31 +15,52 @@ import { z } from 'zod';
  * │ quem envia   │ o cliente DO PEDIDO       │ o advogado ATRIBUIDO         │
  * │ efeito       │ nenhum sobre o estado     │ grava `arquivoAtual`         │
  * │ prefixo      │ anexos/{pedidoId}/        │ entregaveis/{pedidoId}/{id}/ │
- * │ retencao     │ NAO DEFINIDA (ver abaixo) │ 30 dias a partir de entregue │
- * │ politica     │ CONFIRMADA na reuniao     │ PROVISORIA                   │
+ * │ retencao     │ 30 dias, mesmo ciclo      │ 30 dias a partir de entregue │
+ * │ tipos        │ JPG e PDF, 5 MB, ate 3    │ PDF e DOCX, 20 MB, um        │
+ * │ politica     │ CONFIRMADA na reuniao     │ CONFIRMADA (decisoes.md 3.1) │
  * └──────────────┴───────────────────────────┴──────────────────────────────┘
  */
 
-/* ========================================================================== */
-/* ⚠️  A POLITICA DO ADVOGADO NAO FOI CONFIRMADA  ⚠️                          */
-/* ========================================================================== */
-/*
- * O plano de execucao, secao 0.2, item 6, registra a pendencia com todas as
- * letras: jpg/pdf, 5 MB e 3 arquivos foram confirmados na reuniao para o upload
- * do CLIENTE — "nao necessariamente para o do advogado". A arquitetura 7.3 diz o
- * mesmo e acrescenta o que fazer enquanto isso: "a validacao de tipo e tamanho
- * deve ser parametrizada por perfil de quem envia, nao hardcoded uma vez so".
- *
- * Os valores de `entregavel-advogado` abaixo sao um PONTO DE PARTIDA plausivel —
- * um entregavel juridico e um PDF, e 20 MB cobre um parecer com anexos — e nao
- * uma decisao tomada. Eles precisam da confirmacao do Marcos antes de producao.
- *
- * `MARCADOR_POLITICA_A_CONFIRMAR` existe para que confirmar seja um ATO: ele e
- * afirmado por teste, entao remove-lo exige editar o teste junto, e ninguem
- * apaga a pendencia por distracao. Mesmo padrao dos `{{TODO-TEXTO-...}}` da
- * Etapa 6.
+/**
+ * O DOCX (Word moderno). `.doc` (Word 97) e `.docm` (com macro) continuam
+ * recusados: o primeiro e um formato binario que o portao nao sabe conferir, e o
+ * segundo carrega codigo (decisoes.md, 3.1). A conferencia vai alem da extensao
+ * e do `Content-Type`: a varredura le a estrutura do arquivo
+ * (`apps/api/src/varredura/docx.ts`).
  */
-export const MARCADOR_POLITICA_A_CONFIRMAR = 'A-CONFIRMAR-COM-A-CONTRATANTE';
+export const TIPO_DOCX =
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+/**
+ * As extensoes que cada tipo aceita, em minusculas. O nome do arquivo precisa
+ * terminar numa delas: um `.docm` declarado como DOCX e recusado aqui, antes de
+ * qualquer URL ser emitida.
+ */
+export const EXTENSOES_DO_TIPO: Readonly<Record<string, readonly string[]>> = {
+  'image/jpeg': ['.jpg', '.jpeg'],
+  'application/pdf': ['.pdf'],
+  [TIPO_DOCX]: ['.docx'],
+};
+
+/** O nome curto do tipo, para a mensagem de recusa. */
+const NOME_DO_TIPO: Readonly<Record<string, string>> = {
+  'image/jpeg': 'JPG',
+  'application/pdf': 'PDF',
+  [TIPO_DOCX]: 'DOCX',
+};
+
+/**
+ * O tipo que a extensao indica, para o navegador que manda `file.type` vazio —
+ * acontece com DOCX em alguns sistemas. `''` quando a extensao nao e aceita em
+ * fluxo nenhum: o servidor recusa com a mensagem certa.
+ */
+export function tipoPelaExtensao(nome: string): string {
+  const minusculo = nome.toLowerCase();
+  for (const [tipo, extensoes] of Object.entries(EXTENSOES_DO_TIPO)) {
+    if (extensoes.some((extensao) => minusculo.endsWith(extensao))) return tipo;
+  }
+  return '';
+}
 
 export const FLUXOS_UPLOAD = ['anexo-cliente', 'entregavel-advogado'] as const;
 export type FluxoUpload = (typeof FLUXOS_UPLOAD)[number];
@@ -48,8 +69,6 @@ export interface PoliticaUpload {
   readonly tipos: readonly string[];
   readonly tamanhoMaximoBytes: number;
   readonly maximoPorEnvio: number;
-  /** `null` quando a regra ja foi confirmada pela CONTRATANTE. */
-  readonly pendencia: string | null;
 }
 
 const MB = 1024 * 1024;
@@ -59,15 +78,14 @@ export const POLITICA_UPLOAD: Readonly<Record<FluxoUpload, PoliticaUpload>> = {
     tipos: ['image/jpeg', 'application/pdf'],
     tamanhoMaximoBytes: 5 * MB,
     maximoPorEnvio: 3,
-    pendencia: null,
   },
+  /* Confirmada em decisoes.md, 3.1: PDF e DOCX, 20 MB. */
   'entregavel-advogado': {
-    tipos: ['application/pdf'],
+    tipos: ['application/pdf', TIPO_DOCX],
     tamanhoMaximoBytes: 20 * MB,
     // Um entregavel por envio: cada upload e uma VERSAO nova de um entregavel
     // especifico (ADR-11), nao um lote.
     maximoPorEnvio: 1,
-    pendencia: MARCADOR_POLITICA_A_CONFIRMAR,
   },
 };
 
@@ -154,9 +172,14 @@ export function conferirPolitica(
     return `Sao no maximo ${String(politica.maximoPorEnvio)} arquivo(s) por envio.`;
   }
 
+  const aceitos = politica.tipos.map((tipo) => NOME_DO_TIPO[tipo]).join(' ou ');
   for (const arquivo of arquivos) {
     if (!politica.tipos.includes(arquivo.tipo)) {
-      return `Tipo nao aceito neste envio: ${arquivo.tipo}.`;
+      return `Tipo nao aceito neste envio. Envie ${aceitos}.`;
+    }
+    const nome = arquivo.nome.toLowerCase();
+    if (!EXTENSOES_DO_TIPO[arquivo.tipo].some((ext) => nome.endsWith(ext))) {
+      return `A extensao do arquivo nao corresponde ao tipo. Envie ${aceitos}.`;
     }
     if (arquivo.tamanhoBytes > politica.tamanhoMaximoBytes) {
       const mb = Math.floor(politica.tamanhoMaximoBytes / MB);

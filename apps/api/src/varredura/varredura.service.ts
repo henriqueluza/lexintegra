@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import {
+  TIPO_DOCX,
   BYTES_NECESSARIOS,
   conteudoBateComTipo,
   type EstadoArquivo,
@@ -17,6 +18,7 @@ import {
 } from '../entregaveis/entregavel.js';
 import { COLECAO_PEDIDOS, SUBCOLECAO_ANEXOS } from '../pedidos/pedido.js';
 import type { TarefaDeVarredura } from './fila.js';
+import { problemaDoDocx } from './docx.js';
 import { SCANNER, type Scanner } from './scanner.js';
 
 /**
@@ -144,6 +146,14 @@ export class VarreduraService {
       );
     }
 
+    const estrutural = await this.problemaEstrutural(
+      registro.tipo,
+      emQuarentena,
+    );
+    if (estrutural !== null) {
+      return this.reprovar(tarefa, emQuarentena, 'rejeitado', estrutural);
+    }
+
     await this.armazenamento.mover(emQuarentena, {
       balde: 'arquivos',
       caminho: tarefa.caminho,
@@ -152,6 +162,23 @@ export class VarreduraService {
     await this.gravarEstado(tarefa, 'limpo');
     this.log.log(`arquivo liberado: ${tarefa.caminho}`);
     return 'limpo';
+  }
+
+  /**
+   * A TERCEIRA conferencia, so para o DOCX (decisoes.md, 3.1): todo ZIP passa
+   * pelo magic bytes, inclusive o `.docm` com macro. Le a estrutura por faixa
+   * (`docx.ts`). Os outros tipos nao tem o que conferir aqui.
+   */
+  private async problemaEstrutural(
+    tipo: string,
+    objeto: Objeto,
+  ): Promise<string | null> {
+    if (tipo !== TIPO_DOCX) return null;
+    return problemaDoDocx(
+      (inicio, quantidade) =>
+        this.armazenamento.lerFaixa(objeto, inicio, quantidade),
+      await this.armazenamento.tamanho(objeto),
+    );
   }
 
   /** Descarta o objeto e registra o motivo. O documento FICA — e a trilha. */
