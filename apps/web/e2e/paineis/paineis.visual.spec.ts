@@ -65,6 +65,22 @@ const TELAS = [
   { nome: 'admin-estornos', rota: '/admin/estornos', conta: CONTAS.admin },
   { nome: 'admin-entregas', rota: '/admin/entregas', conta: CONTAS.admin },
   { nome: 'admin-reunioes', rota: '/admin/reunioes', conta: CONTAS.admin },
+  /* B2: as tres telas administrativas novas (5.4, 4.2 e 5.5). */
+  {
+    nome: 'admin-contestacoes',
+    rota: '/admin/contestacoes',
+    conta: CONTAS.admin,
+  },
+  {
+    nome: 'admin-pagamentos',
+    rota: '/admin/pagamentos',
+    conta: CONTAS.admin,
+  },
+  {
+    nome: 'admin-administradores',
+    rota: '/admin/administradores',
+    conta: CONTAS.admin,
+  },
 ] as const;
 
 test.describe('regressao visual dos paineis', () => {

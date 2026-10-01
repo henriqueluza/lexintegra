@@ -285,6 +285,14 @@ export const routes: Routes = [
         title: 'Pagamentos com problema — LexIntegra',
       },
       {
+        path: 'administradores',
+        loadComponent: () =>
+          import('./paginas/admin-administradores/admin-administradores').then(
+            (m) => m.AdminAdministradores,
+          ),
+        title: 'Administradores — LexIntegra',
+      },
+      {
         path: 'entregas',
         loadComponent: () =>
           import('./paginas/admin-entregas/admin-entregas').then(

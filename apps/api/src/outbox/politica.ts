@@ -91,6 +91,8 @@ export const POLITICA: Readonly<Record<TipoEvento, PoliticaDeEvento>> = {
    * sem ele o advogado nao entra pelo endereco novo.
    */
   'acesso-advogado-atualizado': { criticidade: 'critico', maxTentativas: 10 },
+  /* O administrador convidado nao entra sem este e-mail (decisoes.md 5.5). */
+  'convite-administrador': { criticidade: 'critico', maxTentativas: 10 },
 };
 
 export interface ConfiguracaoDoOutbox {

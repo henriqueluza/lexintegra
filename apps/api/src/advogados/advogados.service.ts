@@ -101,9 +101,9 @@ export class AdvogadosService {
 
     /*
      * A escrita de claim mais sensivel do sistema. Acontece SO aqui, so para o
-     * perfil `advogado`, e so a pedido de um administrador autenticado. Nenhum
-     * caminho desta aplicacao escreve `admin` — o administrador global e
-     * provisionado fora dela (item 2.4.2), por script manual.
+     * perfil `advogado`, e so a pedido de um administrador autenticado. `admin`
+     * so e escrito por `AdministradoresService` (B2, decisoes.md 5.5), por
+     * convite de outro administrador; o primeiro foi provisionado a mao.
      */
     await this.auth.setCustomUserClaims(usuario.uid, {
       [NOME_CLAIM_PERFIL]: 'advogado',

@@ -141,6 +141,7 @@ um dia depois do deploy que a aplicou.
 | **Pagamentos órfãos** | `pagamentos/{cobrancaId}` com `situacao` anômala guarda só ids e valor. Sem vínculo recuperável, o sistema não sabe de qual titular é, e a conciliação é humana (runbook do titular e [`pagamento-orfao.md`](../runbooks/pagamento-orfao.md)) |
 | **Ficha de anamnese** | `clientes/{uid}/anamnese/definitiva-v1` (e a `provisoria-v0`, de quem respondeu o stub). Dados da **empresa**, sem dado sensível do art. 5º, II; faturamento, passivo trabalhista, autuações e reclamações são confidenciais. Lida só pelo advogado atribuído e pelo administrador; entra na exportação do titular. Prazo de guarda: o da política (decisoes.md, 2.1) |
 | **Anexos do cliente** | 30 dias depois de todos os entregáveis do pedido em `entregue`, no mesmo ciclo dos entregáveis (seção 3) |
+| **Equipe (advogados e administradores)** | `advogados/{uid}` e `administradores/{uid}` guardam nome e e-mail de quem trabalha na plataforma, fora do mapa do **cliente** (`lgpd/mapa.ts`). O log de auditoria (`auditoria/`, B2) guarda quem fez cada ação administrativa e, na edição de advogado, o e-mail antes e depois; está no mapa pelo `alvo`. Prazo de guarda: o da política (decisoes.md, 2.1) |
 | **Pré-cadastros que nunca compraram** | Sem prazo. A arquitetura (seção 8) lista a limpeza como rotina candidata |
 
 ## 5. Quem atende um pedido de titular hoje

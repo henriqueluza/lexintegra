@@ -83,8 +83,9 @@ export interface NovoEvento {
    */
   readonly pedidoId?: string;
   /**
-   * So em `acesso-advogado-atualizado`: a versao do acesso do advogado, que
-   * sobe a cada troca de e-mail (decisoes.md 4.1). Sem ela, a segunda troca
+   * Em `acesso-advogado-atualizado` e `convite-administrador`: a versao do
+   * acesso, que sobe a cada troca de e-mail do advogado (decisoes.md 4.1) e a
+   * cada convite de administrador (5.5). Sem ela, a segunda troca
    * cairia no documento da primeira, ja entregue, e o endereco novo nunca
    * receberia o link.
    */
@@ -230,6 +231,7 @@ const COM_CHAVE_COMPOSTA = [
   'pausa-contestacao',
   'reuniao-desmarcada-escritorio',
   'acesso-advogado-atualizado',
+  'convite-administrador',
 ] as const;
 
 function temChaveComposta(
