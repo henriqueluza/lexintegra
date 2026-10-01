@@ -78,7 +78,10 @@ function fetchFalso(respostas: readonly Resposta[]): {
   return { executar, requisicoes };
 }
 
-function montar(respostas: readonly Resposta[], agora = () => 1_000_000): {
+function montar(
+  respostas: readonly Resposta[],
+  agora = () => 1_000_000,
+): {
   sala: GraphSalaDeReuniao;
   requisicoes: Requisicao[];
 } {

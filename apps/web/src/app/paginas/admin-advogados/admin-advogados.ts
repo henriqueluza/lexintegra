@@ -26,6 +26,16 @@ import {
 const CONFLITO_DE_EMAIL = { 409: 'Já existe um advogado com este e-mail.' };
 
 /**
+ * Na edicao (B2, decisoes.md 4.1) o 409 e e-mail de OUTRA conta — cliente,
+ * advogado ou administrador —, e o 422 e um `usuarioTeams` que o Microsoft 365
+ * do escritorio nao conhece.
+ */
+const ERROS_DA_EDICAO = {
+  409: 'Este e-mail já é usado por outra conta.',
+  422: 'Este ID de objeto não existe no Microsoft 365 do escritório.',
+};
+
+/**
  * Provisionamento de advogados pelo administrador global (item 2.4.3).
  *
  * A TELA NAO E A FRONTEIRA. `@Perfis('admin')` no controlador da API e quem
@@ -68,6 +78,11 @@ export class AdminAdvogados implements OnInit {
   protected readonly falhaDaLista = signal(false);
   protected readonly cadastrando = signal(false);
   protected readonly falhaDoCadastro = signal<string | null>(null);
+  /**
+   * O advogado em edicao, ou `null` no cadastro. O mesmo formulario serve aos
+   * dois: o contrato da edicao e o da criacao (`esquemaEdicaoAdvogado`).
+   */
+  protected readonly editando = signal<AdvogadoResumo | null>(null);
   /** uid do advogado cuja suspensao esta em curso, para o botao certo girar. */
   protected readonly emCurso = signal<string | null>(null);
 
@@ -113,18 +128,48 @@ export class AdminAdvogados implements OnInit {
     }
   }
 
+  protected editar(advogado: AdvogadoResumo): void {
+    this.editando.set(advogado);
+    this.falhaDoCadastro.set(null);
+    this.formulario.reset({
+      nome: advogado.nome,
+      email: advogado.email,
+      usuarioTeams: advogado.usuarioTeams ?? '',
+    });
+  }
+
+  protected cancelarEdicao(): void {
+    this.editando.set(null);
+    this.falhaDoCadastro.set(null);
+    this.formulario.reset();
+  }
+
+  /**
+   * Cadastro ou edicao, conforme `editando`. Trocar o e-mail manda um novo link
+   * de acesso ao endereco novo; os pedidos ja distribuidos continuam com o mesmo
+   * advogado — a tela diz isso antes do envio.
+   */
   protected async cadastrar(): Promise<void> {
     this.formulario.markAllAsTouched();
     if (this.formulario.invalid || this.cadastrando()) return;
 
+    const alvo = this.editando();
     this.cadastrando.set(true);
     this.falhaDoCadastro.set(null);
     try {
-      await this.api.criarAdvogado(this.formulario.getRawValue());
+      const dados = this.formulario.getRawValue();
+      if (alvo === null) await this.api.criarAdvogado(dados);
+      else await this.api.editarAdvogado(alvo.uid, dados);
+      this.editando.set(null);
       this.formulario.reset();
       await this.recarregar();
     } catch (erro) {
-      this.falhaDoCadastro.set(mensagemDoErro(erro, CONFLITO_DE_EMAIL));
+      this.falhaDoCadastro.set(
+        mensagemDoErro(
+          erro,
+          alvo === null ? CONFLITO_DE_EMAIL : ERROS_DA_EDICAO,
+        ),
+      );
     } finally {
       this.cadastrando.set(false);
     }

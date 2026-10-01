@@ -86,6 +86,11 @@ export const POLITICA: Readonly<Record<TipoEvento, PoliticaDeEvento>> = {
     criticidade: 'critico',
     maxTentativas: 10,
   },
+  /*
+   * O e-mail do advogado mudou (decisoes.md 4.1). Critico como `definir-senha`:
+   * sem ele o advogado nao entra pelo endereco novo.
+   */
+  'acesso-advogado-atualizado': { criticidade: 'critico', maxTentativas: 10 },
 };
 
 export interface ConfiguracaoDoOutbox {

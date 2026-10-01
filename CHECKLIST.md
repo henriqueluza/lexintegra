@@ -515,9 +515,11 @@ constroem**. As decisões vão para um `decisoes.md`.
 
 **Escopo novo**
 
-- [ ] Construir a edição de advogado já criado, incluindo `usuarioTeams`? →
-  Endpoint admin, tela e testes. Sem isso, o campo é gravado à mão no console
-  do Firestore.
+- [x] Construir a edição de advogado já criado, incluindo `usuarioTeams`.
+  Decidido (decisoes.md, 4.1) e construído no Bloco F1: `PUT
+  /api/admin/advogados/{uid}`, tela, log de auditoria (`auditoria/`), novo
+  link de acesso quando o e-mail muda e conferência do `usuarioTeams` no Graph
+  (que pede `User.Read.All`, em C › Microsoft).
 - [ ] Construir a tela do admin para pagamentos `orfao`, `divergente` e
   `conflito_de_conta`? → Tela e endpoint.
 
@@ -563,10 +565,15 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
   48 h).
 - [ ] Object ID do Entra de cada advogado. É esse o valor do `usuarioTeams`,
   não o e-mail.
+- [ ] Permissão de aplicação `User.Read.All` no mesmo aplicativo, com
+  consentimento de administrador. É ela que deixa a edição do advogado conferir
+  o `usuarioTeams` antes de salvar (Bloco F1 da B2). Sem ela a conferência
+  responde "indisponível" e a tela salva assim mesmo.
 
 **Construir**
 
-- [ ] Preencher o `usuarioTeams` de cada advogado.
+- [ ] Preencher o `usuarioTeams` de cada advogado, pela edição em
+  `/admin/advogados` (Bloco F1 da B2).
 - [ ] Ligar `REUNIOES_MODO=graph` em commit próprio, com uma chamada manual de
   teste antes.
 

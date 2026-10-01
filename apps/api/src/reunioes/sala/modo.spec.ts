@@ -19,12 +19,12 @@ describe('configuracaoDeReunioes', () => {
 
     /** A mensagem diz o que falta fazer, e nao so que falhou. */
     it('a recusa nomeia a permissao e a policy', () => {
-      expect(() =>
-        configuracaoDeReunioes({ REUNIOES_MODO: 'graph' }),
-      ).toThrow(/OnlineMeetings\.ReadWrite\.All/);
-      expect(() =>
-        configuracaoDeReunioes({ REUNIOES_MODO: 'graph' }),
-      ).toThrow(/application access policy/);
+      expect(() => configuracaoDeReunioes({ REUNIOES_MODO: 'graph' })).toThrow(
+        /OnlineMeetings\.ReadWrite\.All/,
+      );
+      expect(() => configuracaoDeReunioes({ REUNIOES_MODO: 'graph' })).toThrow(
+        /application access policy/,
+      );
     });
   });
 

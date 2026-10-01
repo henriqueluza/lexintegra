@@ -53,3 +53,14 @@
   color: var(--texto-3);
   font-variant-numeric: tabular-nums;
 }
+
+.advogados__botoes,
+.advogados__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.advogados__acoes {
+  justify-content: flex-end;
+}

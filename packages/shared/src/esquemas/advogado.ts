@@ -114,3 +114,13 @@ export type AdvogadoResumo = {
    */
   readonly usuarioTeams: string | null;
 };
+
+/**
+ * A edicao do advogado (B2, decisoes.md 4.1): o administrador edita TODOS os
+ * campos do cadastro — nome, e-mail e `usuarioTeams` — e por isso o contrato e
+ * o mesmo da criacao. `status` continua fora: suspender e reativar sao operacoes
+ * proprias, com tres efeitos cada, e nao um campo que se digita.
+ */
+export const esquemaEdicaoAdvogado = esquemaNovoAdvogado;
+
+export type EdicaoAdvogado = z.infer<typeof esquemaEdicaoAdvogado>;

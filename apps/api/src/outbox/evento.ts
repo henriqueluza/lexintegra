@@ -82,6 +82,13 @@ export interface NovoEvento {
    * cliente, e o segundo pedido do mesmo cliente nunca era avisado.
    */
   readonly pedidoId?: string;
+  /**
+   * So em `acesso-advogado-atualizado`: a versao do acesso do advogado, que
+   * sobe a cada troca de e-mail (decisoes.md 4.1). Sem ela, a segunda troca
+   * cairia no documento da primeira, ja entregue, e o endereco novo nunca
+   * receberia o link.
+   */
+  readonly versao?: number;
 }
 
 export interface RegistroOutbox {
@@ -222,6 +229,7 @@ const COM_CHAVE_COMPOSTA = [
   'cancelamento-reuniao',
   'pausa-contestacao',
   'reuniao-desmarcada-escritorio',
+  'acesso-advogado-atualizado',
 ] as const;
 
 function temChaveComposta(
@@ -282,6 +290,9 @@ export function ehDuplicata(erro: unknown): boolean {
  */
 export function chaveDoEvento(evento: NovoEvento): string {
   if (evento.estorno !== undefined) return evento.estorno.pagamentoId;
+  if (evento.versao !== undefined) {
+    return `${evento.destinatarioUid}_v${String(evento.versao)}`;
+  }
   if (evento.pedidoId !== undefined) return evento.pedidoId;
   if (evento.cobrancaId !== undefined) {
     return `${evento.cobrancaId}_${evento.destinatarioUid}`;

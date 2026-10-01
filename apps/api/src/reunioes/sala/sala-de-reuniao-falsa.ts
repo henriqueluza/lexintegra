@@ -1,5 +1,6 @@
 import {
   ReunioesDesligadas,
+  type ConferenciaDoUsuario,
   type NovaSala,
   type ResultadoDaSala,
   type SalaDeReuniao,
@@ -16,8 +17,7 @@ import {
 export const FALHAS_PREVISTAS = {
   policy:
     'Forbidden: No application access policy found for this app and user.',
-  licenca:
-    'Forbidden: The user does not have a valid Teams license assigned.',
+  licenca: 'Forbidden: The user does not have a valid Teams license assigned.',
   indisponivel: 'ServiceUnavailable: Graph temporariamente indisponivel.',
 } as const;
 
@@ -54,6 +54,10 @@ export class SalaDeReuniaoFalsa implements SalaDeReuniao {
   readonly pedidos: NovaSala[] = [];
   private falhasPendentes = 0;
   private falha: FalhaPrevista = 'indisponivel';
+
+  conferirUsuario(usuarioTeams: string): Promise<ConferenciaDoUsuario> {
+    return Promise.resolve(conferirComoFalso(usuarioTeams));
+  }
 
   /** As proximas `n` criacoes falham com o texto da falha escolhida. */
   falharProximas(n: number, falha: FalhaPrevista = 'indisponivel'): void {
@@ -117,4 +121,26 @@ export class SalaDeReuniaoDesligada implements SalaDeReuniao {
   criar(): Promise<ResultadoDaSala> {
     return Promise.reject(new ReunioesDesligadas());
   }
+
+  /**
+   * Com as reunioes desligadas, a conferencia do `usuarioTeams` passa pelo
+   * comportamento do FALSO (decisoes.md, 4.1, e o prompt da B2): ligar o Graph so
+   * para validar um cadastro seria ligar a integracao pela porta dos fundos.
+   */
+  conferirUsuario(usuarioTeams: string): Promise<ConferenciaDoUsuario> {
+    return Promise.resolve(conferirComoFalso(usuarioTeams));
+  }
+}
+
+/**
+ * O object ID que o falso trata como INEXISTENTE no tenant. Tudo o mais
+ * existe — o que o falso imita e o caminho do "nao encontrado", nao um
+ * diretorio inteiro.
+ */
+export const USUARIO_TEAMS_INEXISTENTE = '00000000-0000-0000-0000-000000000000';
+
+function conferirComoFalso(usuarioTeams: string): ConferenciaDoUsuario {
+  return usuarioTeams === USUARIO_TEAMS_INEXISTENTE
+    ? 'nao_encontrado'
+    : 'encontrado';
 }
