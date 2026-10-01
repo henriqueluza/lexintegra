@@ -154,7 +154,7 @@ describe('cancelamento sobre HTTP (ADR-12)', () => {
 
     const resposta = await cancelar('pedido-1').expect(409);
 
-    expect(resposta.body.message).toMatch(/ADR-12/);
+    expect(resposta.body).toMatchObject({ motivo: 'trabalho-iniciado' });
     expect(
       (await banco.doc('pedidos/pedido-1').get()).data()?.['situacao'],
     ).toBe('ativo');

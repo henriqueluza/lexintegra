@@ -1,4 +1,5 @@
 import { AlertaFalso } from '../../alertas/alerta.js';
+import type { ContestacoesService } from '../../contestacoes/contestacoes.service.js';
 import type { ConfirmacaoDeEstornoService } from '../../estornos/confirmacao-estorno.service.js';
 import type { ConfirmacaoService } from './confirmacao.service.js';
 import type { EventoDoGateway, MotivoIgnorado } from './evento.js';
@@ -15,10 +16,12 @@ function montar(): {
   processador: ProcessadorDeEventos;
   confirmados: string[];
   estornados: string[];
+  pausadas: string[];
   alertas: AlertaFalso;
 } {
   const confirmados: string[] = [];
   const estornados: string[] = [];
+  const pausadas: string[] = [];
   const alertas = new AlertaFalso();
   const processador = new ProcessadorDeEventos(
     {
@@ -33,9 +36,15 @@ function montar(): {
         return Promise.resolve('confirmado');
       },
     } as unknown as ConfirmacaoDeEstornoService,
+    {
+      abrir: (cobrancaId: string, eventoId: string) => {
+        pausadas.push(`${cobrancaId}:${eventoId}`);
+        return Promise.resolve(true);
+      },
+    } as unknown as ContestacoesService,
     alertas,
   );
-  return { processador, confirmados, estornados, alertas };
+  return { processador, confirmados, estornados, pausadas, alertas };
 }
 
 function ignorado(
@@ -96,15 +105,20 @@ describe('ProcessadorDeEventos', () => {
     expect(alertas.emitidos).toEqual([]);
   });
 
-  /** Chargeback nao muda estado nenhum, mas alguem precisa agir no mesmo dia. */
-  it('contestacao emite alerta critico com a cobranca, e nao mexe em nada', async () => {
-    const { processador, confirmados, estornados, alertas } = montar();
+  /**
+   * Chargeback PAUSA os pedidos da cobranca (decisoes.md, 5.4) e emite alerta
+   * critico: alguem precisa responder no gateway no mesmo dia.
+   */
+  it('contestacao pausa a cobranca e emite alerta critico', async () => {
+    const { processador, confirmados, estornados, pausadas, alertas } =
+      montar();
 
     const resultado = await processador.processar(
       ignorado('contestacao', 'checkout.disputed'),
     );
 
     expect(resultado).toBe('alertado');
+    expect(pausadas).toEqual(['bill_1:log_1']);
     expect(confirmados).toEqual([]);
     expect(estornados).toEqual([]);
     expect(alertas.emitidos).toEqual([

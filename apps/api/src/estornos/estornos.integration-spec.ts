@@ -166,7 +166,7 @@ describe('estorno sobre HTTP (ADR-12)', () => {
 
     const resposta = await estornar('pedido-1').expect(409);
 
-    expect(resposta.body.message).toMatch(/ADR-12/);
+    expect(resposta.body).toMatchObject({ motivo: 'trabalho-iniciado' });
     expect((await lido('pedidos/pedido-1'))['situacao']).toBe('ativo');
     expect(await lido('estornos/pedido-1')).toEqual({});
   });

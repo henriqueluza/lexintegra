@@ -8,6 +8,7 @@ import { Reflector } from '@nestjs/core';
 import type { Perfil } from 'shared';
 import { AdvogadosController } from './advogados/advogados.controller.js';
 import { AnamneseController } from './anamnese/anamnese.controller.js';
+import { ContestacoesAdminController } from './contestacoes/contestacoes.admin.controller.js';
 import type { AnamneseService } from './anamnese/anamnese.service.js';
 import type { AdvogadosService } from './advogados/advogados.service.js';
 import {
@@ -118,6 +119,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['entregas do outbox', OutboxAdminController],
     ['estornos (Etapa 8)', EstornosAdminController],
     ['reunioes sem sala (Etapa 10)', ReunioesAdminController],
+    ['contestacoes (B2)', ContestacoesAdminController],
   ])(
     'a superficie administrativa de %s exige admin, na classe',
     (_nome, classe) => {
@@ -140,6 +142,14 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['pre-cadastros.listar', PreCadastrosAdminController.prototype.listar],
     ['outbox.listar', OutboxAdminController.prototype.listar],
     ['outbox.reenviar', OutboxAdminController.prototype.reenviar],
+    [
+      'contestacoes.listarAbertas',
+      ContestacoesAdminController.prototype.listarAbertas,
+    ],
+    [
+      'contestacoes.registrarResultado',
+      ContestacoesAdminController.prototype.registrarResultado,
+    ],
   ])('o metodo administrativo %s nao se declara publico', (_nome, metodo) => {
     expect(reflector.get(CHAVE_PUBLICO, metodo)).toBeUndefined();
   });
@@ -681,16 +691,10 @@ describe('WebhookController', () => {
 describe('AnamneseController', () => {
   it('exige o perfil de cliente, na classe', () => {
     expect(
-      reflector.get<readonly Perfil[]>(
-        CHAVE_PERFIS,
-        AnamneseController,
-      ),
+      reflector.get<readonly Perfil[]>(CHAVE_PERFIS, AnamneseController),
     ).toEqual(['cliente']);
     expect(
-      reflector.get(
-        CHAVE_PUBLICO,
-        AnamneseController.prototype.registrar,
-      ),
+      reflector.get(CHAVE_PUBLICO, AnamneseController.prototype.registrar),
     ).toBeUndefined();
   });
 
@@ -999,10 +1003,7 @@ describe('perfis das areas autenticadas', () => {
       'cliente.cancelarReuniao (Etapa 10)',
       PedidosClienteController.prototype.cancelarReuniao,
     ],
-    [
-      'advogado.agenda (Etapa 10)',
-      ReunioesAdvogadoController.prototype.agenda,
-    ],
+    ['advogado.agenda (Etapa 10)', ReunioesAdvogadoController.prototype.agenda],
     [
       'admin.reunioesSemSala (Etapa 10)',
       ReunioesAdminController.prototype.semSala,

@@ -20,6 +20,7 @@ import { COLECAO_ADVOGADOS } from '../advogados/advogados.service.js';
 import { ClientesService } from '../clientes/clientes.service.js';
 import { ConsultaReunioesService } from '../reunioes/consulta.service.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
+import { exigirSemContestacao } from './pausa.js';
 import {
   COLECAO_PEDIDOS,
   paraDistribuir,
@@ -101,6 +102,8 @@ export class DistribuicaoService {
       if (!pedido.exists) {
         throw new NotFoundException('Pedido nao encontrado.');
       }
+      /* Pausado por contestacao, a distribuicao nao muda (decisoes.md, 5.4). */
+      exigirSemContestacao(pedido.data() as DocumentoPedido);
 
       /*
        * Exigir o DOCUMENTO de advogado e o que impede esta rota de atribuir um
@@ -188,6 +191,7 @@ export class DistribuicaoService {
     if (!documento.exists) {
       throw new NotFoundException('Pedido nao encontrado.');
     }
+    exigirSemContestacao(documento.data() as DocumentoPedido);
 
     /*
      * ADR-21, decisao D, do outro lado: devolver o pedido a caixa de entrada com

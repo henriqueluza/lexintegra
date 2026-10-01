@@ -4,6 +4,10 @@
     <span class="cartao-pedido__situacao">{{ situacao() }}</span>
   </p>
 
+  @if (pedido().contestacaoAberta) {
+  <p class="cartao-pedido__pausa" role="status">{{ avisoDePausa }}</p>
+  }
+
   <!-- Etapa 8 (ADR-12): so aparece com o pedido ativo e sem trabalho iniciado. -->
   <app-cancelamento-pedido
     [pedido]="pedido()"
@@ -135,6 +139,7 @@
       um evento de DOM chamado "ngSubmit", que nunca acontece: o formulario fica
       mudo e o Enter nao envia nada.
     -->
+    @if (!pedido().contestacaoAberta) {
     <form
       class="cartao-pedido__formulario"
       (submit)="$event.preventDefault(); enviarObservacao()"
@@ -154,6 +159,7 @@
         Enviar observação
       </app-botao>
     </form>
+    }
 
     <!--
       ⚠️ TEXTO PENDENTE DE APROVACAO. Sai literal, como o aviso de privacidade da
@@ -169,8 +175,7 @@
       <li>{{ anexo.nome }}</li>
       }
     </ul>
-    }
-
+    } @if (!pedido().contestacaoAberta) {
     <div class="cartao-pedido__formulario">
       <label class="cartao-pedido__arquivo">
         <span>Escolher arquivos (JPG ou PDF, até {{ maximoAnexos }})</span>
@@ -191,6 +196,7 @@
         Anexar ao pedido
       </app-botao>
     </div>
+    }
   </section>
   }
 </app-cartao>

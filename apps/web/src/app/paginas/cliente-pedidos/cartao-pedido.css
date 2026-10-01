@@ -143,3 +143,15 @@
 .cartao-pedido__autor {
   font-weight: var(--peso-forte);
 }
+
+/* B2 (decisoes.md, 5.4): pedido pausado por contestacao. */
+.cartao-pedido__pausa {
+  margin: 0 0 var(--s3);
+  padding: var(--s3);
+  border-left: var(--borda-media) solid var(--estado-alerta);
+  border-radius: var(--raio);
+  background: var(--estado-alerta-fundo);
+  color: var(--texto);
+  font-size: var(--t-menor);
+  line-height: var(--altura-densa);
+}

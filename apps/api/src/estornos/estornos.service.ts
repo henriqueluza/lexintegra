@@ -8,53 +8,57 @@ import {
 import {
   FieldValue,
   type DocumentReference,
-  type DocumentSnapshot,
   type Firestore,
   type Transaction,
 } from 'firebase-admin/firestore';
-import {
-  podeEstornar,
-  type EstadoEntregavel,
-  type EstornoResumo,
-} from 'shared';
+import type { EstornoResumo } from 'shared';
 import {
   SUBCOLECAO_ENTREGAVEIS,
   type DocumentoEntregavel,
 } from '../entregaveis/entregavel.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
+import type { NovoEvento } from '../outbox/evento.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import {
   COLECAO_PAGAMENTOS,
   type DocumentoPagamento,
 } from '../pagamentos/pagamento.js';
 import {
-  COLECAO_PEDIDOS,
-  situacaoDe,
-  type DocumentoPedido,
-} from '../pedidos/pedido.js';
+  escreverProdutosContratados,
+  escreverReunioesCanceladas,
+  eventosDasReunioesCanceladas,
+  futurasACancelar,
+  lerProdutosDoCliente,
+  lerReunioes,
+  versaoDasReunioes,
+  type ReuniaoLida,
+} from '../pedidos/encerramento.js';
+import { exigirSemContestacao } from '../pedidos/pausa.js';
+import { COLECAO_PEDIDOS, type DocumentoPedido } from '../pedidos/pedido.js';
+import { agora as agora_ } from '../relogio.js';
+import {
+  ehIntegral,
+  eventoIntegral,
+  exigirElegivel,
+  type Leitura,
+} from './decisao.js';
 import {
   COLECAO_ESTORNOS,
   paraResumo,
   type DocumentoEstorno,
 } from './estorno.js';
 
-/** O que a transacao leu, antes de escrever qualquer coisa. */
-interface Leitura {
-  readonly pedido: DocumentoPedido;
-  readonly estados: readonly EstadoEntregavel[];
-  readonly irmaos: readonly DocumentSnapshot[];
-  /** O estorno de cada OUTRO pedido da cobranca, se houver. */
-  readonly estornosDosIrmaos: readonly {
-    readonly pedidoId: string;
-    readonly estorno: DocumentoEstorno | undefined;
-  }[];
-  readonly pagamento: DocumentoPagamento | undefined;
-}
-
 /**
- * O estorno (ADR-12): so com o pedido sem trabalho iniciado, decidido pelo
- * administrador, validado no SERVIDOR.
+ * O estorno (ADR-12 e `docs/decisoes.md`, 3.3): decidido pelo administrador,
+ * validado no SERVIDOR, e so com as tres condicoes juntas — pedido em
+ * `solicitado` (nenhum trabalho iniciado, e portanto nenhum entregavel enviado),
+ * nenhuma reuniao com inicio ja passado, e o pedido fora de contestacao. Anexos
+ * do cliente nao bloqueiam. A recusa diz qual condicao falhou.
+ *
+ * O QUE VAI JUNTO, na mesma transacao: as reunioes futuras do pedido
+ * (canceladas com devolucao) e o produto em `produtosContratados`, a nao ser que
+ * outro pedido ativo do cliente o tenha.
  *
  * "Tentativa de estorno com pedido em `em_elaboracao` e rejeitada no servidor" e
  * criterio de aceite da Etapa 8 — e a interface esconder o botao nao conta. A
@@ -87,24 +91,41 @@ export class EstornosService {
     pedidoId: string,
     motivo: string,
     adminUid: string,
+    agora: number = agora_(),
   ): Promise<EstornoResumo> {
     const resultado = await this.db.runTransaction(async (transacao) => {
       const leitura = await this.ler(transacao, pedidoId);
-      const integral = this.ehIntegral(pedidoId, leitura);
-      const idEvento = integral
-        ? await this.registrarIntegral(transacao, leitura)
-        : null;
+      exigirElegivel(leitura, agora);
+      const integral = ehIntegral(pedidoId, leitura);
+      const futuras = futurasACancelar(leitura.reunioes, agora);
+
+      /*
+       * UM LOTE SO para o outbox: o integral e os `METHOD:CANCEL` das futuras.
+       * Dois registros seguidos poriam a leitura do segundo depois da escrita
+       * do primeiro, e o Firestore recusa a transacao inteira.
+       */
+      const novos: NovoEvento[] = [
+        ...(integral ? [eventoIntegral(leitura)] : []),
+        ...eventosDasReunioesCanceladas(pedidoId, futuras),
+      ];
+      const eventos =
+        novos.length === 0
+          ? []
+          : await this.outbox.registrarSeAusenteEmLote(transacao, novos);
 
       const estorno = this.escrever(transacao, pedidoId, leitura, {
         motivo,
         adminUid,
         integral,
+        futuras,
+        agora,
       });
-      return { estorno, idEvento };
+      return { estorno, eventos };
     });
 
-    if (resultado.idEvento !== null) {
-      await this.enfileirador.enfileirarPorId(resultado.idEvento);
+    for (const id of resultado.eventos) {
+      // Depois do commit, nunca dentro (regra inviolavel 2).
+      await this.enfileirador.enfileirarPorId(id);
     }
     this.log.log(
       `pedido ${pedidoId} estornado por ${adminUid} (${resultado.estorno.execucao})`,
@@ -120,12 +141,22 @@ export class EstornosService {
   ): Promise<EstornoResumo> {
     return this.db.runTransaction(async (transacao) => {
       const referencia = this.referencia(pedidoId);
-      const atual = (await transacao.get(referencia)).data() as
-        DocumentoEstorno | undefined;
+      const [estornoDoc, pedidoDoc] = [
+        await transacao.get(referencia),
+        await transacao.get(this.db.collection(COLECAO_PEDIDOS).doc(pedidoId)),
+      ];
+      const atual = estornoDoc.data() as DocumentoEstorno | undefined;
 
       if (atual === undefined) {
         throw new NotFoundException('Estorno nao encontrado.');
       }
+      /*
+       * Pausado por contestacao, nem a devolucao manual se registra: se o
+       * cliente ganhar o chargeback, o dinheiro volta pelo meio de pagamento, e
+       * registrar uma devolucao manual agora seria devolver duas vezes.
+       */
+      const pedido = pedidoDoc.data() as DocumentoPedido | undefined;
+      if (pedido !== undefined) exigirSemContestacao(pedido);
       if (atual.execucao !== 'manual_pendente') {
         throw new ConflictException(
           `Este estorno nao esta pendente de devolucao manual (${atual.execucao}).`,
@@ -198,8 +229,16 @@ export class EstornosService {
     const pagamento = await transacao.get(
       this.db.collection(COLECAO_PAGAMENTOS).doc(pedido.pagamentoId),
     );
+    const reunioes = await lerReunioes(transacao, documento.ref);
+    const produtos = await lerProdutosDoCliente(
+      transacao,
+      this.db,
+      pedido.clienteId,
+    );
 
     return {
+      reunioes,
+      produtos,
       pedido,
       estados: entregaveis.docs.map(
         (e) => (e.data() as DocumentoEntregavel).estado,
@@ -210,56 +249,17 @@ export class EstornosService {
     };
   }
 
-  /**
-   * Integral quando TODOS os outros pedidos da cobranca ja estao estornados e
-   * NENHUM estorno anterior foi devolvido a mao — um devolvido a mao mais o
-   * integral seria dinheiro devolvido duas vezes. E so para pagamento confirmado,
-   * que e o unico com cobranca a estornar.
-   */
-  private ehIntegral(pedidoId: string, leitura: Leitura): boolean {
-    this.exigirElegivel(leitura);
-    const outros = leitura.irmaos.filter((irmao) => irmao.id !== pedidoId);
-    return (
-      leitura.pagamento?.situacao === 'confirmado' &&
-      outros.every(
-        (irmao) => situacaoDe(irmao.data() as DocumentoPedido) === 'estornado',
-      ) &&
-      leitura.estornosDosIrmaos.every(
-        ({ estorno }) => estorno?.execucao !== 'manual_executado',
-      )
-    );
-  }
-
-  private exigirElegivel(leitura: Leitura): void {
-    if (!podeEstornar(situacaoDe(leitura.pedido), leitura.estados)) {
-      throw new ConflictException(
-        'Estorno so e permitido com o pedido em solicitado, sem trabalho ' +
-          'iniciado (ADR-12).',
-      );
-    }
-  }
-
-  private async registrarIntegral(
-    transacao: Transaction,
-    leitura: Leitura,
-  ): Promise<string> {
-    const pagamento = leitura.pagamento as DocumentoPagamento;
-    return this.outbox.registrarSeAusente(transacao, {
-      tipo: 'estorno-integral',
-      destinatarioUid: leitura.pedido.clienteId,
-      estorno: {
-        pagamentoId: leitura.pedido.pagamentoId,
-        cobrancaId: pagamento.cobrancaId,
-        origem: pagamento.origem,
-      },
-    });
-  }
-
   private escrever(
     transacao: Transaction,
     pedidoId: string,
     leitura: Leitura,
-    decisao: { motivo: string; adminUid: string; integral: boolean },
+    decisao: {
+      motivo: string;
+      adminUid: string;
+      integral: boolean;
+      futuras: readonly ReuniaoLida[];
+      agora: number;
+    },
   ): DocumentoEstorno {
     const { pedido } = leitura;
     const estorno: DocumentoEstorno = {
@@ -274,12 +274,27 @@ export class EstornosService {
       solicitadoEm: FieldValue.serverTimestamp(),
     };
 
+    const pedidoRef = this.db.collection(COLECAO_PEDIDOS).doc(pedidoId);
     transacao.create(this.referencia(pedidoId), estorno);
-    transacao.update(this.db.collection(COLECAO_PEDIDOS).doc(pedidoId), {
+    transacao.update(pedidoRef, {
       situacao: 'estornado',
       estornadoEm: FieldValue.serverTimestamp(),
       estornadoPor: decisao.adminUid,
+      ...versaoDasReunioes(decisao.futuras),
     });
+    escreverReunioesCanceladas(
+      transacao,
+      this.db,
+      pedidoRef,
+      decisao.futuras,
+      decisao.adminUid,
+      decisao.agora,
+    );
+    escreverProdutosContratados(
+      transacao,
+      leitura.produtos,
+      new Set([pedidoId]),
+    );
 
     if (decisao.integral) {
       this.absorverPendentes(transacao, leitura);

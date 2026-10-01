@@ -21,8 +21,9 @@ export const TEXTO_CANCELAMENTO_JURIDICO =
 /**
  * O cancelamento de um pedido pelo cliente (ADR-12), dentro do cartao dele.
  *
- * O BOTAO SO APARECE com o pedido ativo e sem trabalho iniciado — `podeCancelar`,
- * a mesma funcao que o servidor usa dentro da transacao. Mas esconder o botao nao
+ * O BOTAO SO APARECE com o pedido ativo, sem trabalho iniciado, sem reuniao ja
+ * realizada e fora de contestacao — `podeCancelar`, a mesma funcao que o
+ * servidor usa dentro da transacao. Mas esconder o botao nao
  * impede a chamada: quem decide e o servidor, e a recusa dele aparece aqui.
  *
  * A CONFIRMACAO DIZ QUE CANCELAR NAO DEVOLVE O VALOR. Devolucao e estorno, e
@@ -47,12 +48,16 @@ export class CancelamentoPedido {
   protected readonly processando = signal(false);
   protected readonly falha = signal<string | null>(null);
 
-  protected readonly disponivel = computed(() =>
-    podeCancelar(
-      this.pedido().situacao,
-      this.pedido().entregaveis.map((entregavel) => entregavel.estado),
-    ),
-  );
+  protected readonly disponivel = computed(() => {
+    const pedido = this.pedido();
+    return podeCancelar({
+      situacao: pedido.situacao,
+      estados: pedido.entregaveis.map((entregavel) => entregavel.estado),
+      reunioes: pedido.reunioes,
+      contestacaoAberta: pedido.contestacaoAberta,
+      agora: Date.now(),
+    });
+  });
 
   protected async confirmar(): Promise<void> {
     if (this.processando()) return;

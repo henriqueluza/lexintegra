@@ -101,6 +101,9 @@ export class OutboxService {
       destinatarioUid: evento.destinatarioUid,
       ...(evento.estorno === undefined ? {} : { estorno: evento.estorno }),
       ...(evento.reuniao === undefined ? {} : { reuniao: evento.reuniao }),
+      ...(evento.cobrancaId === undefined
+        ? {}
+        : { cobrancaId: evento.cobrancaId }),
       ...(rastreio === undefined ? {} : { rastreio }),
       estado: 'pendente',
       criadoEm: FieldValue.serverTimestamp(),

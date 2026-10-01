@@ -261,6 +261,7 @@ export function reuniaoFuturaAtiva(
  */
 export const IMPEDIMENTOS_PARA_AGENDAR = [
   'pedido-inativo',
+  'pedido-pausado',
   'pedido-nao-distribuido',
   'saldo-esgotado',
   'fora-da-janela',
@@ -281,6 +282,8 @@ export const MOTIVO_DO_IMPEDIMENTO: Readonly<
   Record<ImpedimentoParaAgendar, string>
 > = {
   'pedido-inativo': 'Este pedido foi cancelado ou estornado.',
+  'pedido-pausado':
+    'Este pedido está pausado por uma contestação do pagamento. As reuniões voltam a ser marcadas quando ela terminar.',
   'pedido-nao-distribuido':
     'Seu pedido ainda está em análise. Assim que um advogado assumir, os horários aparecem aqui.',
   'saldo-esgotado': 'As reuniões incluídas neste pedido já foram usadas.',
@@ -293,6 +296,11 @@ export const MOTIVO_DO_IMPEDIMENTO: Readonly<
 
 export interface DadosDoAgendamento {
   readonly situacao: SituacaoPedido;
+  /**
+   * Contestacao (chargeback) aberta: o pedido esta pausado e nada nele muda
+   * (decisoes.md, 5.4). Ausente e `false`.
+   */
+  readonly contestacaoAberta?: boolean;
   readonly distribuido: boolean;
   /** Do SNAPSHOT do pedido, nunca do produto vivo (regra inviolavel 5). */
   readonly quantidadeContratada: number;
@@ -311,6 +319,7 @@ export function impedimentoParaAgendar(
   dados: DadosDoAgendamento,
 ): ImpedimentoParaAgendar | null {
   if (dados.situacao !== 'ativo') return 'pedido-inativo';
+  if (dados.contestacaoAberta === true) return 'pedido-pausado';
   if (!dados.distribuido) return 'pedido-nao-distribuido';
 
   const saldo = saldoDeReunioes(dados.quantidadeContratada, dados.reunioes);

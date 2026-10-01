@@ -34,6 +34,10 @@ import { TEXTO_TERMO_DOWNLOAD } from './termo';
  * (ADR-12 e arquitetura 5.4). `app.routes.spec.ts` defende isso pelo lado da
  * navegacao.
  */
+/** Redação da interface; o texto final é o Bloco I da B2. */
+export const AVISO_DE_PAUSA =
+  'Este pedido está pausado por uma contestação do pagamento. Enquanto ela estiver em análise, nada muda nele. As reuniões marcadas foram desmarcadas e voltaram ao saldo.';
+
 @Component({
   selector: 'app-cartao-pedido',
   imports: [
@@ -111,8 +115,15 @@ export class CartaoPedidoComponent {
    * Isto aqui e para nao oferecer o que vai ser recusado.
    */
   protected podeDecidir(entregavel: EntregavelResumo): boolean {
-    return entregavel.estado === 'em_elaboracao' && entregavel.temArquivo;
+    return (
+      !this.pedido().contestacaoAberta &&
+      entregavel.estado === 'em_elaboracao' &&
+      entregavel.temArquivo
+    );
   }
+
+  /** Pausado por contestacao (decisoes.md, 5.4): nada muda, e a tela diz por que. */
+  protected readonly avisoDePausa = AVISO_DE_PAUSA;
 
   protected temSaldo(entregavel: EntregavelResumo): boolean {
     return (
@@ -263,8 +274,9 @@ export class CartaoPedidoComponent {
     );
   }
 
+  /** O aceite novo e recusado durante a contestacao, e o download depende dele. */
   protected podeBaixar(entregavel: EntregavelResumo): boolean {
-    return entregavel.arquivoServivel;
+    return !this.pedido().contestacaoAberta && entregavel.arquivoServivel;
   }
 
   private async agir(

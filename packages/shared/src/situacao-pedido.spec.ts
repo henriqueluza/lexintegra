@@ -1,7 +1,12 @@
 import {
+  MOTIVO_DO_IMPEDIMENTO_DO_PEDIDO,
+  impedimentoDoCancelamento,
+  impedimentoDoEstorno,
   podeCancelar,
   podeEstornar,
+  reunioesACancelarJunto,
   semTrabalhoIniciado,
+  type PedidoParaElegibilidade,
 } from './situacao-pedido.js';
 
 /**
@@ -31,11 +36,29 @@ describe('situacao do pedido (ADR-12)', () => {
     });
   });
 
-  describe('podeEstornar', () => {
+  const AGORA = Date.parse('2026-10-01T12:00:00Z');
+  const ANTES = '2026-09-30T12:00:00.000Z';
+  const DEPOIS = '2026-10-02T12:00:00.000Z';
+
+  function pedido(
+    mudancas: Partial<PedidoParaElegibilidade> = {},
+  ): PedidoParaElegibilidade {
+    return {
+      situacao: 'ativo',
+      estados: ['solicitado'],
+      reunioes: [],
+      contestacaoAberta: false,
+      agora: AGORA,
+      ...mudancas,
+    };
+  }
+
+  describe('impedimentoDoEstorno', () => {
     it.each(['ativo', 'cancelado'] as const)(
-      'pedido %s sem trabalho e elegivel',
+      'pedido %s sem trabalho e sem reuniao passada e elegivel',
       (situacao) => {
-        expect(podeEstornar(situacao, ['solicitado'])).toBe(true);
+        expect(impedimentoDoEstorno(pedido({ situacao }))).toBeNull();
+        expect(podeEstornar(pedido({ situacao }))).toBe(true);
       },
     );
 
@@ -43,26 +66,120 @@ describe('situacao do pedido (ADR-12)', () => {
     it.each(['ativo', 'cancelado'] as const)(
       'pedido %s em elaboracao nao e elegivel',
       (situacao) => {
-        expect(podeEstornar(situacao, ['em_elaboracao'])).toBe(false);
+        expect(
+          impedimentoDoEstorno(
+            pedido({ situacao, estados: ['em_elaboracao'] }),
+          ),
+        ).toBe('trabalho-iniciado');
       },
     );
 
     it('pedido ja estornado nao e estornado de novo', () => {
-      expect(podeEstornar('estornado', ['solicitado'])).toBe(false);
+      expect(impedimentoDoEstorno(pedido({ situacao: 'estornado' }))).toBe(
+        'situacao',
+      );
+      expect(podeEstornar(pedido({ situacao: 'estornado' }))).toBe(false);
+    });
+
+    /** decisoes.md, 3.3: reuniao com inicio ja passado impede o estorno. */
+    it.each(['confirmada', 'reservada_sem_link'] as const)(
+      'reuniao %s ja comecada impede',
+      (estado) => {
+        expect(
+          impedimentoDoEstorno(
+            pedido({ reunioes: [{ estado, inicio: ANTES }] }),
+          ),
+        ).toBe('reuniao-realizada');
+      },
+    );
+
+    it('o inicio exatamente agora ja conta como comecada', () => {
+      expect(
+        impedimentoDoEstorno(
+          pedido({
+            reunioes: [
+              { estado: 'confirmada', inicio: new Date(AGORA).toISOString() },
+            ],
+          }),
+        ),
+      ).toBe('reuniao-realizada');
+    });
+
+    /** Futura nao bloqueia (e cancelada junto); cancelada no passado tambem nao. */
+    it.each([
+      ['futura', { estado: 'confirmada', inicio: DEPOIS }],
+      [
+        'cancelada com devolucao',
+        { estado: 'cancelada_com_devolucao', inicio: ANTES },
+      ],
+      [
+        'cancelada sem devolucao',
+        { estado: 'cancelada_sem_devolucao', inicio: ANTES },
+      ],
+    ] as const)('reuniao %s nao impede', (_caso, reuniao) => {
+      expect(impedimentoDoEstorno(pedido({ reunioes: [reuniao] }))).toBeNull();
+    });
+
+    it('contestacao aberta impede antes de tudo', () => {
+      expect(
+        impedimentoDoEstorno(
+          pedido({ contestacaoAberta: true, estados: ['em_elaboracao'] }),
+        ),
+      ).toBe('contestacao-aberta');
     });
   });
 
-  describe('podeCancelar', () => {
+  describe('impedimentoDoCancelamento', () => {
     it('pedido ativo sem trabalho pode ser cancelado', () => {
-      expect(podeCancelar('ativo', ['solicitado'])).toBe(true);
+      expect(impedimentoDoCancelamento(pedido())).toBeNull();
+      expect(podeCancelar(pedido())).toBe(true);
     });
 
     it.each([
-      ['ativo em elaboracao', 'ativo', ['em_elaboracao']],
-      ['ja cancelado', 'cancelado', ['solicitado']],
-      ['estornado', 'estornado', ['solicitado']],
-    ] as const)('%s nao pode', (_caso, situacao, estados) => {
-      expect(podeCancelar(situacao, estados)).toBe(false);
+      [
+        'ativo em elaboracao',
+        pedido({ estados: ['em_elaboracao'] }),
+        'trabalho-iniciado',
+      ],
+      ['ja cancelado', pedido({ situacao: 'cancelado' }), 'situacao'],
+      ['estornado', pedido({ situacao: 'estornado' }), 'situacao'],
+      [
+        'com reuniao realizada',
+        pedido({ reunioes: [{ estado: 'confirmada', inicio: ANTES }] }),
+        'reuniao-realizada',
+      ],
+      ['pausado', pedido({ contestacaoAberta: true }), 'contestacao-aberta'],
+    ] as const)('%s nao pode', (_caso, entrada, motivo) => {
+      expect(impedimentoDoCancelamento(entrada)).toBe(motivo);
+      expect(podeCancelar(entrada)).toBe(false);
+    });
+  });
+
+  it('cada impedimento tem um texto para o usuario', () => {
+    for (const motivo of [
+      'situacao',
+      'trabalho-iniciado',
+      'reuniao-realizada',
+      'contestacao-aberta',
+    ] as const) {
+      expect(MOTIVO_DO_IMPEDIMENTO_DO_PEDIDO[motivo].length).toBeGreaterThan(
+        10,
+      );
+    }
+  });
+
+  describe('reunioesACancelarJunto', () => {
+    it('so as ativas que ainda nao comecaram', () => {
+      const reunioes = [
+        { id: 'r001', estado: 'confirmada', inicio: DEPOIS },
+        { id: 'r002', estado: 'reservada_sem_link', inicio: DEPOIS },
+        { id: 'r003', estado: 'cancelada_com_devolucao', inicio: DEPOIS },
+        { id: 'r004', estado: 'confirmada', inicio: ANTES },
+      ] as const;
+      expect(reunioesACancelarJunto(reunioes, AGORA).map((r) => r.id)).toEqual([
+        'r001',
+        'r002',
+      ]);
     });
   });
 });

@@ -37,6 +37,7 @@ export const TIPOS_EVENTO = [
   'criar-sala-reuniao',
   'convite-reuniao',
   'cancelamento-reuniao',
+  'pausa-contestacao',
 ] as const;
 
 export type TipoEvento = (typeof TIPOS_EVENTO)[number];
@@ -68,6 +69,13 @@ export type TipoEvento = (typeof TIPOS_EVENTO)[number];
  * recebe e o oposto: remover o evento em vez de atualiza-lo. Colapsa-los daria
  * um so montador com um `if` no meio, e o `if` erraria no dia em que a ordem dos
  * campos do iCalendar importasse.
+ */
+
+/*
+ * `pausa-contestacao` (B2, decisoes.md 5.4) e o aviso ao cliente de que o
+ * pagamento foi contestado no meio de pagamento, os pedidos daquela cobranca
+ * ficaram pausados e as reunioes futuras foram desmarcadas com devolucao ao
+ * saldo. Um por cliente por cobranca: a chave leva a cobranca.
  */
 
 /*
