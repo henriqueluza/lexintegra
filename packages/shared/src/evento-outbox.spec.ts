@@ -12,7 +12,7 @@ describe('vocabulario do outbox', () => {
    * correspondente no despachante produz registro que nunca sai — este teste
    * obriga quem acrescenta a passar por aqui.
    */
-  it('tem exatamente os nove tipos de evento que o despachante entrega', () => {
+  it('tem exatamente os dez tipos de evento que o despachante entrega', () => {
     expect(TIPOS_EVENTO).toEqual([
       'definir-senha',
       'redefinir-senha',
@@ -23,6 +23,7 @@ describe('vocabulario do outbox', () => {
       'convite-reuniao',
       'cancelamento-reuniao',
       'pausa-contestacao',
+      'reuniao-desmarcada-escritorio',
     ]);
   });
 

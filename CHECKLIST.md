@@ -500,9 +500,10 @@ constroem**. As decisões vão para um `decisoes.md`.
 
 - [ ] Tipos e tamanho do upload do advogado: hoje o ponto de partida é PDF de
   até 20 MB. → Tirar o marcador `A-CONFIRMAR-COM-A-CONTRATANTE`.
-- [ ] As oito decisões provisórias do ADR-21, em especial a antecedência de
-  24 h e a devolução do crédito quando o escritório cancela. → Ajustar o código
-  e o ADR.
+- [x] As oito decisões provisórias do ADR-21, em especial a antecedência de
+  24 h e a devolução do crédito quando o escritório cancela. Confirmadas
+  (decisoes.md, 3.2 e Anexo B); ADR-21 confirmado e e-mail de convite a
+  remarcar no Bloco C. Sem job de aviso de vencimento.
 - [x] `produtosContratados` do cliente perde o produto cancelado ou estornado?
   Decidido (decisoes.md, 3.3) e construído no Bloco B: só pedidos ativos, e a
   regra de estorno ganhou as três condições.

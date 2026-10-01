@@ -6,6 +6,7 @@ import { FIRESTORE } from '../firebase/firebase.module.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import type { ReuniaoDoEvento } from '../outbox/evento.js';
 import { COLECAO_PEDIDOS, type DocumentoPedido } from '../pedidos/pedido.js';
+import { urlDaAplicacao } from '../outbox/link-de-senha.js';
 import { registrarConvitesDaReuniao } from './convites-no-outbox.js';
 import {
   cancelamentoDeReuniao,
@@ -234,6 +235,41 @@ export class ConvitesService {
     };
   }
 
+  /**
+   * O aviso de que o ESCRITORIO desmarcou (ADR-21, decisao H): o credito voltou
+   * ao saldo, e o cliente pode marcar outro horario. Sem anexo — quem tira o
+   * compromisso do calendario e o `METHOD:CANCEL`, que sai a parte e so se
+   * algum convite foi emitido. Este sai sempre: o cliente precisa saber mesmo
+   * da reuniao que nunca ganhou sala.
+   *
+   * Reuniao que nao esta `cancelada_com_devolucao` nao gera aviso: o registro
+   * e de outro cancelamento, ou de dado que mudou por baixo.
+   */
+  async montarAvisoDoEscritorio(
+    evento: ReuniaoDoEvento,
+    destinatario: Destinatario,
+  ): Promise<Convite> {
+    const lido = await this.lerReuniao(evento);
+    if (lido === null) return { enviar: false, motivo: 'reuniao inexistente' };
+
+    const { reuniao, pedido } = lido;
+    if (reuniao.estado !== 'cancelada_com_devolucao') {
+      return {
+        enviar: false,
+        motivo: 'reuniao nao foi desmarcada com devolucao',
+      };
+    }
+
+    return {
+      enviar: true,
+      mensagem: {
+        para: [destinatario.email],
+        assunto: `Reuniao desmarcada pelo escritorio: ${pedido.snapshot.nome}`,
+        corpoTexto: textoDaReuniaoDesmarcada(reuniao.inicio, urlDaAplicacao()),
+      },
+    };
+  }
+
   private camposDoCalendario(
     reuniao: DocumentoReuniao,
     pedido: DocumentoPedido,
@@ -350,3 +386,20 @@ const TEXTO_CANCELAMENTO =
   'Sua reuniao foi cancelada. O anexo remove o compromisso do seu calendario.';
 
 const TEXTO_DESCRICAO = 'Reuniao do seu pedido na LexIntegra.';
+
+/**
+ * ⚠️ TEXTO PROVISORIO, como os de cima: o texto final e o Bloco I da B2. A data
+ * sai no fuso do escritorio (ADR-21, decisao 8), por extenso.
+ */
+export function textoDaReuniaoDesmarcada(inicio: string, base: string): string {
+  const quando = new Date(inicio).toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    dateStyle: 'full',
+    timeStyle: 'short',
+  });
+  return (
+    `O escritorio precisou desmarcar a sua reuniao de ${quando}. ` +
+    'O credito voltou ao saldo do seu pedido, e voce pode marcar outro ' +
+    `horario na sua area do cliente: ${base}/painel`
+  );
+}

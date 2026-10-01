@@ -321,9 +321,9 @@ Confira nos *Webhook Logs* do painel antes de desligar com cobrança em aberto.
 **Voltar atrás:** `REUNIOES_MODO = "desligado"`. As reuniões já marcadas
 continuam, e as sem sala aparecem em `/admin/reunioes`.
 
-Antes de ligar, confirme com o escritório as oito decisões provisórias do
-ADR-21. As duas principais: antecedência mínima de 24 horas e devolução do
-crédito quando é o escritório que cancela.
+As regras do agendamento estão confirmadas (ADR-21, confirmado em
+29/09/2026: as oito decisões, a antecedência mínima de 24 horas e a devolução
+quando o escritório cancela). Não há pendência de produto para ligar.
 
 ---
 
@@ -465,7 +465,7 @@ isso. `[CONFIRMAR: como e por quem o próximo administrador será provisionado]`
 | Estornar pedido | `/admin/estornos` | `POST /api/admin/pedidos/{id}/estorno` | Só sem trabalho iniciado, sem reunião já realizada e fora de contestação; a recusa diz o motivo. Reunião futura é cancelada junto. Isolado: a devolução é **manual**. Registre com `POST /api/admin/estornos/{id}/execucao-manual` |
 | Reenviar e-mail ou evento | `/admin/entregas` | `POST /api/admin/outbox/{id}/reenvio` | Só `falhou` ou `abandonado`. Passa pelo mesmo arrendamento (regra 3). Ver [`outbox-parado.md`](../runbooks/outbox-parado.md) |
 | Reunião sem sala | `/admin/reunioes` | `GET /api/admin/reunioes` e o reenvio do outbox | Ver [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
-| Cancelar reunião pelo escritório | `/admin/reunioes` | `POST /api/admin/reunioes/{pedidoId}/{reuniaoId}/cancelamento` | Sempre devolve o crédito (ADR-21, H, provisório) |
+| Cancelar reunião pelo escritório | `/admin/reunioes` | `POST /api/admin/reunioes/{pedidoId}/{reuniaoId}/cancelamento` | Sempre devolve o crédito, com qualquer antecedência, e o cliente recebe e-mail convidando a remarcar (ADR-21, H) |
 | Buscar cliente e ver anamnese | `/admin/clientes` | `GET /api/admin/clientes`, `GET .../{uid}/anamnese` | |
 | Conciliar pagamento órfão | **sem tela** | — | Ver [`pagamento-orfao.md`](../runbooks/pagamento-orfao.md) (prazos do `decisoes.md`, 5.3) |
 | Registrar resultado de contestação | `/admin/contestacoes` (sem item de menu até o Bloco F da B2) | `GET /api/admin/contestacoes`, `POST /api/admin/contestacoes/{cobrancaId}/resultado` | Ganha tira a pausa; perdida estorna sem devolução. Ver [`alerta-critico.md`](../runbooks/alerta-critico.md) |

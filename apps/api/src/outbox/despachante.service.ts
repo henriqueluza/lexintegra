@@ -73,6 +73,20 @@ function ehTextoFixo(tipo: TipoEvento): tipo is keyof typeof TEXTOS_FIXOS {
   return tipo in TEXTOS_FIXOS;
 }
 
+const NAO_SAO_EMAIL_DE_MODELO = [
+  'estorno-integral',
+  'criar-sala-reuniao',
+  'convite-reuniao',
+  'cancelamento-reuniao',
+  'reuniao-desmarcada-escritorio',
+] as const;
+
+function naoEhEmailDeModelo(
+  tipo: TipoEvento,
+): tipo is (typeof NAO_SAO_EMAIL_DE_MODELO)[number] {
+  return (NAO_SAO_EMAIL_DE_MODELO as readonly TipoEvento[]).includes(tipo);
+}
+
 function semMontador(tipo: never): never {
   throw new Error(`Tipo de evento sem montador: ${String(tipo)}`);
 }
@@ -225,7 +239,8 @@ export class DespachanteOutbox {
     }
     if (
       registro.tipo === 'convite-reuniao' ||
-      registro.tipo === 'cancelamento-reuniao'
+      registro.tipo === 'cancelamento-reuniao' ||
+      registro.tipo === 'reuniao-desmarcada-escritorio'
     ) {
       return this.entregarConvite(id, registro);
     }
@@ -277,10 +292,11 @@ export class DespachanteOutbox {
     }
 
     const destinatario = await this.destinatarioDe(registro.destinatarioUid);
-    const convite =
-      registro.tipo === 'cancelamento-reuniao'
-        ? await this.convites.montarCancelamento(registro.reuniao, destinatario)
-        : await this.convites.montarConvite(registro.reuniao, destinatario);
+    const convite = await this.montarDaReuniao(
+      registro.tipo,
+      registro.reuniao,
+      destinatario,
+    );
 
     if (!convite.enviar) {
       this.log.log(`registro ${id} nao precisa sair: ${convite.motivo}`, {
@@ -295,6 +311,21 @@ export class DespachanteOutbox {
       ...convite.mensagem,
       chaveIdempotencia: `${id}-c${String(registro.ciclo)}`,
     });
+  }
+
+  /** Qual dos tres e-mails de reuniao; o convite e o padrao, como antes. */
+  private montarDaReuniao(
+    tipo: TipoEvento,
+    evento: NonNullable<RegistroOutbox['reuniao']>,
+    destinatario: Destinatario,
+  ): ReturnType<ConvitesService['montarConvite']> {
+    if (tipo === 'cancelamento-reuniao') {
+      return this.convites.montarCancelamento(evento, destinatario);
+    }
+    if (tipo === 'reuniao-desmarcada-escritorio') {
+      return this.convites.montarAvisoDoEscritorio(evento, destinatario);
+    }
+    return this.convites.montarConvite(evento, destinatario);
   }
 
   /** O nome vai para o `CN` do iCalendar; o endereco, para o `mailto:`. */
@@ -375,6 +406,18 @@ export class DespachanteOutbox {
 
     const para = [usuario.email];
 
+    /*
+     * Os que NAO SAO e-mail de modelo nao chegam aqui: `executar` os desvia
+     * antes — o estorno vai ao gateway, a sala ao Graph, e os de reuniao
+     * precisam RELER a reuniao para decidir se ainda valem. A guarda existe para
+     * o `switch` abaixo ser exaustivo, e para quem tirar o desvio de `executar`
+     * descobrir o outro caminho em vez de mandar um e-mail de senha a quem
+     * esperava um convite ou um estorno.
+     */
+    if (naoEhEmailDeModelo(registro.tipo)) {
+      throw new Error(`${registro.tipo} nao produz e-mail de modelo`);
+    }
+
     if (ehTextoFixo(registro.tipo)) {
       const { assunto, corpoTexto } = TEXTOS_FIXOS[registro.tipo];
       return { para, assunto, corpoTexto };
@@ -391,27 +434,6 @@ export class DespachanteOutbox {
       case 'redefinir-senha':
       case 'acesso-cliente':
         return { para, modelo: await this.modeloDeSenha(usuario.email) };
-
-      /*
-       * `estorno-integral` nao chega aqui: ele nao e e-mail, e `executar` o
-       * desvia antes. O ramo existe para o `switch` ser exaustivo — e para
-       * alguem que o remova descobrir o outro caminho em vez de mandar um
-       * e-mail de senha a quem pediu estorno.
-       */
-      case 'estorno-integral':
-        throw new Error('estorno-integral nao produz e-mail');
-
-      /*
-       * Os tres da Etapa 10 nao chegam aqui: `executar` os desvia antes, porque
-       * a sala nao e e-mail e os convites precisam RELER a reuniao para decidir
-       * se ainda valem. Os ramos existem para o `switch` ser exaustivo — e para
-       * quem os remover descobrir o outro caminho em vez de mandar um e-mail de
-       * senha a quem esperava um convite.
-       */
-      case 'criar-sala-reuniao':
-      case 'convite-reuniao':
-      case 'cancelamento-reuniao':
-        throw new Error(`${registro.tipo} nao produz e-mail de senha`);
 
       default:
         return semMontador(registro.tipo);

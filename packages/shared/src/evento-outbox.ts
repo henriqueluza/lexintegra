@@ -38,6 +38,7 @@ export const TIPOS_EVENTO = [
   'convite-reuniao',
   'cancelamento-reuniao',
   'pausa-contestacao',
+  'reuniao-desmarcada-escritorio',
 ] as const;
 
 export type TipoEvento = (typeof TIPOS_EVENTO)[number];
@@ -76,6 +77,13 @@ export type TipoEvento = (typeof TIPOS_EVENTO)[number];
  * pagamento foi contestado no meio de pagamento, os pedidos daquela cobranca
  * ficaram pausados e as reunioes futuras foram desmarcadas com devolucao ao
  * saldo. Um por cliente por cobranca: a chave leva a cobranca.
+ */
+
+/*
+ * `reuniao-desmarcada-escritorio` (B2, ADR-21 decisao H) e o aviso ao CLIENTE de
+ * que o escritorio desmarcou a reuniao: o credito voltou ao saldo, e ele pode
+ * marcar outro horario. Sai sempre que o administrador cancela — inclusive
+ * quando a reuniao nunca ganhou sala e, portanto, nao ha `METHOD:CANCEL`.
  */
 
 /*

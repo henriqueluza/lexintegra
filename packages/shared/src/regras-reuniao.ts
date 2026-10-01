@@ -36,7 +36,8 @@ const MS_POR_DIA = 86_400_000;
 export const JANELA_CANCELAMENTO_MS = 24 * 60 * 60 * 1000;
 
 /**
- * A antecedencia minima para MARCAR (ADR-21, decisao F). PROVISORIO.
+ * A antecedencia minima para MARCAR (ADR-21, decisao F), confirmada em
+ * 29/09/2026 (`docs/decisoes.md`, Anexo B).
  *
  * Tem o mesmo valor da janela de cancelamento e e uma constante SEPARADA de
  * proposito: sao decisoes de origens diferentes — aquela e do ADR-12, confirmada
@@ -219,7 +220,7 @@ export function podeRemarcar(inicio: string, agoraMs: number): boolean {
   return comAntecedenciaDe(inicio, agoraMs, JANELA_CANCELAMENTO_MS);
 }
 
-/** A antecedencia minima para marcar (ADR-21, decisao F). PROVISORIO. */
+/** A antecedencia minima para marcar (ADR-21, decisao F). */
 export function respeitaAntecedencia(inicio: string, agoraMs: number): boolean {
   return comAntecedenciaDe(inicio, agoraMs, ANTECEDENCIA_MINIMA_MS);
 }

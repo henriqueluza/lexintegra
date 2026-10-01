@@ -309,6 +309,50 @@ describe('elegibilidade do estorno e do cancelamento (decisoes.md, 3.3)', () => 
   });
 });
 
+/**
+ * ADR-21 confirmado (decisoes.md, 3.2): dentro das 24 horas, o escritorio
+ * devolve o credito e avisa o cliente; o cliente consome.
+ */
+describe('cancelamento de reuniao dentro das 24 horas (ADR-21, H)', () => {
+  const DUAS_HORAS = 2 * 60 * 60 * 1000;
+
+  it('o escritorio devolve o credito e avisa o cliente para remarcar', async () => {
+    await reuniao('pedido-1', 'r001', Date.now() + DUAS_HORAS);
+
+    const resposta = await http(
+      'post',
+      '/api/admin/reunioes/pedido-1/r001/cancelamento',
+      'admin',
+    ).expect(200);
+
+    expect(resposta.body).toMatchObject({ estado: 'cancelada_com_devolucao' });
+    const avisos = await firestoreDeTeste()
+      .collection('outbox')
+      .where('tipo', '==', 'reuniao-desmarcada-escritorio')
+      .get();
+    expect(avisos.docs.map((d) => d.data()['destinatarioUid'])).toEqual([
+      'uid-ana',
+    ]);
+  });
+
+  it('o cliente consome o credito, sem aviso do escritorio', async () => {
+    await reuniao('pedido-1', 'r001', Date.now() + DUAS_HORAS);
+
+    const resposta = await http(
+      'post',
+      '/api/pedidos/pedido-1/reunioes/r001/cancelamento',
+      'cliente',
+    ).expect(200);
+
+    expect(resposta.body).toMatchObject({ estado: 'cancelada_sem_devolucao' });
+    const avisos = await firestoreDeTeste()
+      .collection('outbox')
+      .where('tipo', '==', 'reuniao-desmarcada-escritorio')
+      .get();
+    expect(avisos.size).toBe(0);
+  });
+});
+
 describe('contestacao (decisoes.md, 5.4)', () => {
   it('pausa os pedidos, cancela as futuras com devolucao e avisa o cliente', async () => {
     const slotId = await reuniao('pedido-1', 'r001', Date.now() + 10 * DIA);
