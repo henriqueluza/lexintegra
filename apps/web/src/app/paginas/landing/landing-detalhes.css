@@ -1,0 +1,260 @@
+.ficha,
+.duvidas {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr);
+  gap: var(--lex-space-8);
+  align-items: start;
+}
+.ficha .apoio,
+.duvidas .apoio {
+  margin-top: var(--lex-space-5);
+}
+.exemplo {
+  max-width: 480px;
+  padding: var(--lex-space-5);
+  background: var(--lex-bg);
+  border: var(--borda-fina) solid var(--lex-border-strong);
+  border-radius: var(--lex-radius-sm);
+}
+.exemplo__topo {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--lex-space-4);
+  color: var(--lex-accent);
+  padding-bottom: var(--lex-space-4);
+  border-bottom: var(--borda-fina) solid var(--lex-border-hairline);
+}
+dl {
+  margin: 0;
+}
+dd {
+  margin: 0;
+}
+.exemplo dl {
+  margin-top: var(--lex-space-4);
+}
+.exemplo dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--lex-space-5);
+  padding-block: var(--lex-space-1);
+  font-size: var(--lex-text-small);
+}
+.exemplo dt {
+  color: var(--lex-text-secondary);
+}
+.exemplo dd {
+  text-align: right;
+}
+.especificacoes > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--lex-space-5);
+  padding-block: var(--lex-space-5);
+  border-top: var(--borda-fina) solid var(--lex-border-hairline);
+}
+.especificacoes dt {
+  color: var(--lex-accent);
+}
+.especificacoes dd {
+  font-size: var(--lex-text-title);
+}
+.especificacoes small {
+  display: block;
+  margin-top: var(--lex-space-1);
+  font-size: var(--lex-text-small);
+  color: var(--lex-text-secondary);
+}
+.servicos__cabecalho,
+.servicos__base {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: var(--lex-space-5);
+}
+.servicos__cabecalho .apoio {
+  max-width: 46ch;
+  margin-top: var(--lex-space-5);
+}
+.servicos__cabecalho .nota {
+  margin-top: var(--lex-space-4);
+  color: var(--lex-accent);
+}
+.controles {
+  display: flex;
+  gap: var(--lex-space-3);
+}
+.util {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: var(--borda-fina) solid var(--lex-border-strong);
+  border-radius: var(--lex-radius-sm);
+  background: transparent;
+  color: var(--lex-text-primary);
+  cursor: pointer;
+}
+.util:hover {
+  background: var(--lex-surface-2);
+}
+.reversa {
+  transform: scaleX(-1);
+}
+.trilho {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: clamp(280px, 29vw, 440px);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--lex-gutter);
+  list-style: none;
+  padding: 0 var(--lex-gutter);
+  margin: var(--lex-space-7) 0 var(--lex-space-6);
+  border-block: var(--borda-fina) solid var(--lex-border-hairline);
+}
+.trilho li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lex-space-5);
+  min-height: 370px;
+  padding: var(--lex-space-6);
+  border-left: var(--borda-fina) solid var(--lex-border-hairline);
+  scroll-snap-align: start;
+  transition: background-color var(--lex-dur-base);
+}
+.trilho li:last-child {
+  border-right: var(--borda-fina) solid var(--lex-border-hairline);
+}
+.trilho li:hover {
+  background: var(--lex-surface-2);
+}
+.trilho h3 {
+  font-family: var(--lex-font-display);
+  font-size: var(--lex-text-display-3);
+  font-weight: var(--lex-weight-regular);
+  line-height: var(--lex-leading-heading);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.trilho p,
+.trilho .label,
+.servicos__base > p {
+  color: var(--lex-text-secondary);
+}
+.trilho dl {
+  margin-top: auto;
+  border-top: var(--borda-fina) solid var(--lex-border-hairline);
+  font-size: var(--lex-text-small);
+}
+.trilho dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--lex-space-3);
+  padding-top: var(--lex-space-3);
+}
+.trilho dt {
+  color: var(--lex-text-secondary);
+}
+.trilho dd {
+  text-align: right;
+}
+.comparacao ol {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  list-style: none;
+  padding: var(--lex-space-5) 0;
+  margin: var(--lex-space-8) 0 var(--lex-space-5);
+  border-top: var(--borda-media) solid var(--lex-gold);
+  gap: var(--lex-space-5);
+}
+.pergunta {
+  border-top: var(--borda-fina) solid var(--lex-border-hairline);
+}
+.pergunta:last-child {
+  border-bottom: var(--borda-fina) solid var(--lex-border-hairline);
+}
+.pergunta button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--lex-space-5);
+  min-height: 64px;
+  padding: var(--lex-space-5) 0;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  color: var(--lex-text-primary);
+  font-size: var(--lex-text-lead);
+  font-weight: var(--lex-weight-regular);
+  cursor: pointer;
+}
+.pergunta button:hover {
+  color: var(--lex-accent);
+}
+.resposta p {
+  padding-bottom: var(--lex-space-5);
+  color: var(--lex-text-secondary);
+  max-width: 65ch;
+}
+.fechamento {
+  position: relative;
+  isolation: isolate;
+  min-height: 85svh;
+  display: flex;
+  align-items: end;
+}
+.fechamento .foto::after {
+  background: var(--lex-photo-close-veil);
+}
+.fechamento .foto img {
+  object-position: 50% 30%;
+}
+.fechamento__conteudo {
+  padding-block: var(--lex-space-8);
+}
+.fechamento h2 {
+  font-size: var(--lex-title-close);
+  line-height: var(--lex-leading-display);
+}
+.fechamento__linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: var(--lex-space-7);
+  margin-top: var(--lex-space-7);
+}
+.fechamento__linha p {
+  max-width: 48ch;
+  color: var(--lex-text-secondary);
+  font-size: var(--lex-text-lead);
+}
+@media (max-width: 800px) {
+  .ficha,
+  .duvidas {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--lex-space-7);
+  }
+  .servicos__cabecalho,
+  .servicos__base,
+  .fechamento__linha {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .comparacao ol {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: var(--lex-space-6);
+  }
+  .especificacoes > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--lex-space-2);
+  }
+  .exemplo dl div {
+    flex-wrap: wrap;
+    gap: var(--lex-space-2);
+  }
+  .fechamento {
+    min-height: 70svh;
+  }
+}

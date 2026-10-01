@@ -1,18 +1,39 @@
-import { RodapePublico } from '../../shell/rodape-publico/rodape-publico';
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
-import { Icone } from '../../ui/icone/icone';
-import { JanelaProduto } from '../../ui/janela-produto/janela-produto';
-import { LinkAcao } from '../../ui/link-acao/link-acao';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  signal,
+  afterNextRender,
+  ElementRef,
+  inject,
+  DestroyRef,
+} from '@angular/core';
 import { TEXTOS } from './textos';
+import { NEVOA } from './conteudo-nevoa';
 @Component({
   selector: 'app-landing',
-  imports: [RodapePublico, LinkAcao, Icone, JanelaProduto],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './landing.html',
-  styleUrl: './landing.css',
+  styleUrls: [
+    './landing.css',
+    './landing-detalhes.css',
+    './landing-movimento.css',
+    './landing-catalogo.css',
+  ],
 })
 export class Landing {
+  constructor() {
+    const elemento = inject<ElementRef<HTMLElement>>(ElementRef);
+    const destruir = inject(DestroyRef);
+    afterNextRender(() => {
+      if (typeof elemento.nativeElement.animate !== 'function') return;
+      void import('./movimento').then(({ iniciarMovimento }) => {
+        if (!destruir.destroyed)
+          destruir.onDestroy(iniciarMovimento(elemento.nativeElement));
+      });
+    });
+  }
   protected readonly textos = TEXTOS;
+  protected readonly nevoa = NEVOA;
   protected readonly perguntasAbertas = signal<ReadonlySet<number>>(new Set());
   protected alternar(indice: number): void {
     this.perguntasAbertas.update((atual) => {
@@ -20,6 +41,14 @@ export class Landing {
       if (proximo.has(indice)) proximo.delete(indice);
       else proximo.add(indice);
       return proximo;
+    });
+  }
+  protected deslizar(trilho: HTMLElement, sentido: number): void {
+    trilho.scrollBy({
+      left: trilho.clientWidth * sentido * 0.8,
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'instant'
+        : 'smooth',
     });
   }
 }
