@@ -76,6 +76,12 @@ export interface NovoEvento {
    * produto — o e-mail diz o que precisa sem dado do pedido em repouso aqui.
    */
   readonly cobrancaId?: string;
+  /**
+   * So em `aviso-exclusao-arquivos`: o pedido cujos arquivos vao sair. O aviso
+   * e UM POR PEDIDO (decisoes.md, 2.2) — ate o Bloco D da B2 a chave era o
+   * cliente, e o segundo pedido do mesmo cliente nunca era avisado.
+   */
+  readonly pedidoId?: string;
 }
 
 export interface RegistroOutbox {
@@ -84,6 +90,7 @@ export interface RegistroOutbox {
   readonly estorno?: EstornoDoEvento;
   readonly reuniao?: ReuniaoDoEvento;
   readonly cobrancaId?: string;
+  readonly pedidoId?: string;
   readonly estado: EstadoEntrega;
   readonly criadoEm: Timestamp;
   /** Quantas vezes o registro foi REIVINDICADO. Ver `OutboxService.reivindicar`. */
@@ -190,10 +197,11 @@ export function idDoEvento(
       return `estorno-integral_${uid}`;
 
     /*
-     * O aviso de exclusao acontece UMA vez por pedido fechado, e o pedido ja e
-     * marcado como avisado na mesma transacao. O uid basta — e se o job repetir
-     * a passagem no mesmo dia, o `create` estoura como duplicata esperada em vez
-     * de mandar o mesmo aviso duas vezes.
+     * O aviso de exclusao acontece UMA vez por PEDIDO fechado, e o pedido ja e
+     * marcado como avisado na mesma transacao. A chave e o pedido (ver
+     * `chaveDoEvento`): se o job repetir a passagem, o evento ja existe e nao
+     * sai de novo. Ate o Bloco D da B2 a chave era o cliente, e o segundo pedido
+     * do mesmo cliente caia no documento do primeiro e nunca era avisado.
      */
     case 'aviso-exclusao-arquivos':
       return `aviso-exclusao_${uid}`;
@@ -274,6 +282,7 @@ export function ehDuplicata(erro: unknown): boolean {
  */
 export function chaveDoEvento(evento: NovoEvento): string {
   if (evento.estorno !== undefined) return evento.estorno.pagamentoId;
+  if (evento.pedidoId !== undefined) return evento.pedidoId;
   if (evento.cobrancaId !== undefined) {
     return `${evento.cobrancaId}_${evento.destinatarioUid}`;
   }

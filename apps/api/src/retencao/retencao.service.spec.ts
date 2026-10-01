@@ -85,7 +85,11 @@ function montar(
     retencao: new RetencaoService(
       banco as unknown as Firestore,
       armazenamento,
-      new OutboxService(banco as unknown as Firestore, { atrasoDoVarredorMs: 0, arrendamentoMs: 60_000, loteDoVarredor: 100 }),
+      new OutboxService(banco as unknown as Firestore, {
+        atrasoDoVarredorMs: 0,
+        arrendamentoMs: 60_000,
+        loteDoVarredor: 100,
+      }),
       despachante,
     ),
   };
@@ -269,37 +273,71 @@ describe('RetencaoService', () => {
     });
   });
 
-  describe('marcarSeFechou', () => {
-    it('marca quando TODOS os entregaveis chegam a entregue', async () => {
-      const { banco, retencao } = montar({
-        retencaoEm: null,
-        estadosDosEntregaveis: ['entregue', 'entregue'],
-      });
+  /** B2 (decisoes.md, 2.2): o aviso e um por PEDIDO, e nunca se exclui sem ele. */
+  describe('o aviso e por pedido, e vem antes de qualquer exclusao', () => {
+    it('o id do evento e o do pedido, nao o do cliente', async () => {
+      const { banco, retencao } = montar();
 
-      expect(await retencao.marcarSeFechou('pedido-1')).toBe(true);
+      await retencao.executarPassagem(dias(23));
+
+      expect(banco.documentos.has('outbox/aviso-exclusao_pedido-1')).toBe(true);
+    });
+
+    it('pedido visto so depois do 30o dia e avisado, e nao excluido', async () => {
+      const { retencao, armazenamento } = montar();
+
+      const resumo = await retencao.executarPassagem(dias(40));
+
+      expect(resumo).toMatchObject({ avisados: 1, excluidos: 0 });
       expect(
-        banco.documentos.get('pedidos/pedido-1')?.['retencaoPendente'],
+        await armazenamento.existe({
+          balde: 'arquivos',
+          caminho: 'entregaveis/pedido-1/001/v1',
+        }),
       ).toBe(true);
     });
+  });
 
-    /** UM entregavel em aberto segura o pedido inteiro — e o gatilho decidido na
-     * reuniao: o "fim do contrato" e quando todos chegam a `entregue`. */
-    it('nao marca com um entregavel em aberto', async () => {
-      const { retencao } = montar({
-        retencaoEm: null,
-        estadosDosEntregaveis: ['entregue', 'em_elaboracao'],
-      });
-
-      expect(await retencao.marcarSeFechou('pedido-1')).toBe(false);
+  /** decisoes.md, 5.4: contestacao aberta suspende aviso e exclusao. */
+  it('pedido em contestacao nao e avisado nem excluido', async () => {
+    const { banco, retencao } = montar({ jaAvisado: true });
+    banco.documentos.set('pedidos/pedido-1', {
+      ...banco.documentos.get('pedidos/pedido-1'),
+      contestacao: { cobrancaId: 'bill_1' },
     });
 
-    it('nao marca pedido sem entregavel nenhum', async () => {
-      const { retencao } = montar({
-        retencaoEm: null,
-        estadosDosEntregaveis: [],
-      });
+    const resumo = await retencao.executarPassagem(dias(45));
 
-      expect(await retencao.marcarSeFechou('pedido-1')).toBe(false);
-    });
+    expect(resumo).toMatchObject({ avisados: 0, excluidos: 0 });
+  });
+
+  /** decisoes.md, 2.3: os anexos do cliente saem no mesmo ciclo. */
+  it('a exclusao leva os anexos do cliente, nos dois baldes', async () => {
+    const { banco, retencao, armazenamento } = montar({ jaAvisado: true });
+    for (const [id, balde, estado] of [
+      ['a1', 'arquivos', 'limpo'],
+      ['a2', 'quarentena', 'pendente_scan'],
+    ] as const) {
+      const caminho = `anexos/pedido-1/${id}`;
+      banco.documentos.set(`pedidos/pedido-1/anexos/${id}`, {
+        caminho,
+        estado,
+      });
+      armazenamento.semear({ balde, caminho }, new Uint8Array([1]));
+    }
+
+    await retencao.executarPassagem(dias(30));
+
+    for (const [id, balde] of [
+      ['a1', 'arquivos'],
+      ['a2', 'quarentena'],
+    ] as const) {
+      expect(
+        await armazenamento.existe({ balde, caminho: `anexos/pedido-1/${id}` }),
+      ).toBe(false);
+      expect(
+        banco.documentos.get(`pedidos/pedido-1/anexos/${id}`)?.['estado'],
+      ).toBe('excluido');
+    }
   });
 });

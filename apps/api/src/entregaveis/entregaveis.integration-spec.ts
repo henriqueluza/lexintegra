@@ -93,6 +93,22 @@ describe('maquina de estados contra o Firestore', () => {
   });
 
   /**
+   * B2, decisoes.md 2.2: a confirmacao do ULTIMO entregavel marca o pedido para
+   * a retencao, na mesma transacao — e contra o emulador, que impoe leitura
+   * antes de escrita (a leitura dos irmaos vem antes das escritas).
+   */
+  it('a confirmacao do ultimo entregavel inicia a retencao', async () => {
+    await ateAguardandoCliente();
+
+    await entregaveis.confirmarEntrega(ALVO, CLIENTE);
+
+    const pedido = (await banco.doc('pedidos/pedido-1').get()).data() ?? {};
+    expect(pedido['retencaoPendente']).toBe(true);
+    expect(pedido['retencaoEm']).toBeDefined();
+    expect(pedido['avisoDeExclusaoEnviado']).toBe(false);
+  });
+
+  /**
    * O SEGUNDO CRITERIO DE ACEITE DA ETAPA 5, contra o banco de verdade: tentar
    * avancar manualmente um entregavel para `entregue` sem passar pelo evento de
    * confirmacao do cliente e rejeitado no servidor.

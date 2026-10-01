@@ -104,6 +104,7 @@ export class OutboxService {
       ...(evento.cobrancaId === undefined
         ? {}
         : { cobrancaId: evento.cobrancaId }),
+      ...(evento.pedidoId === undefined ? {} : { pedidoId: evento.pedidoId }),
       ...(rastreio === undefined ? {} : { rastreio }),
       estado: 'pendente',
       criadoEm: FieldValue.serverTimestamp(),
