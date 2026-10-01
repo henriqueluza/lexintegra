@@ -551,11 +551,15 @@ constroem**. As decisões vão para um `decisoes.md`.
 
 - [ ] Nome do repositório de destino. → PR que faz o WIF aceitar os dois
   repositórios (`transferencia.md` 2.1).
-- [ ] Destino de `apps/web/public/imagens/arquitetura-lexintegra.{jpg,png}`:
-  versionar com a origem registrada, ou descartar.
-- [ ] Pode apagar a branch morta `feat/modelo-produtos`?
-- [ ] A regra `deny` de `scripts/manual-only/` no `.claude/settings.json` fica?
-  Recomendação: manter.
+- [x] Destino de `arquitetura-lexintegra.{jpg,png}`: movidas para
+  `docs/imagens/`, ilustrando o `README.md` da raiz, origem "geradas por IA"
+  registrada (decisoes.md, 6.2; Bloco H).
+- [ ] 👤 Branch `feat/modelo-produtos`: **não apagar por enquanto** (Anexo B).
+  Ela tem o commit `be2217b` fora da `main`, com
+  `scripts/manual-only/atribuir-admin.js` e dois scripts de teste de e-mail
+  (sem chave escrita neles, conferido no Bloco H). O Henrique guarda o que
+  quiser e apaga depois.
+- [x] A regra `deny` de `scripts/manual-only/` fica (decisoes.md, 6.4).
 
 ---
 

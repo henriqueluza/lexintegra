@@ -512,12 +512,18 @@ Pare também quando: a mudança exigir novo serviço externo, alterar custo reco
 
 ## Scripts de execução manual apenas
 
-**A pasta `scripts/manual-only/` não existe no repositório** (verificado no Bloco E,
-25/09/2026: nenhum commit a criou). O script de elevação a administrador nunca foi
-versionado; a claim `admin` foi gravada à mão, fora do repositório. O caminho
-continua reservado: o `.claude/settings.json` nega a execução de qualquer coisa
-sob ele, e a regra abaixo vale para qualquer script que eleve privilégio, esteja
-onde estiver.
+**A pasta `scripts/manual-only/` não existe na `main`.** Ela existe num commit
+fora dela: `be2217b`, na branch `feat/modelo-produtos`, que traz
+`scripts/manual-only/atribuir-admin.js` (o script de elevação a administrador)
+e dois scripts de teste de e-mail. A nota do Bloco E (25/09/2026) dizia que
+"nenhum commit a criou" — estava errada, corrigida na B2 (Bloco H). A branch
+**não é apagada por enquanto** (`decisoes.md`, Anexo B): o Henrique guarda o
+que quiser e apaga depois. Nenhum agente abre ou executa esse script. Desde a
+B2, o próximo administrador nasce **dentro da plataforma**, por convite
+(`/admin/administradores`, regra 17), e o script deixa de ser necessário. O
+caminho continua reservado: o `.claude/settings.json` nega a execução de
+qualquer coisa sob ele (regra `deny` mantida, `decisoes.md` 6.4), e a regra
+abaixo vale para qualquer script que eleve privilégio, esteja onde estiver.
 
 Scripts de elevação de privilégio nunca devem ser
 executados por sessão de agente — nem sugeridos, nem rodados automaticamente.
