@@ -1,10 +1,23 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { esperarHidratacao } from './hidratacao';
 
 // Capturas estáticas; o movimento real é verificado em movimento.spec.ts.
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
 });
+
+/**
+ * As FOTOGRAFIAS da landing ficam mascaradas na captura. Com tudo igual, o
+ * Chrome as vezes rasteriza uma foto grande com outra qualidade de escala, e a
+ * textura (nuvens, fachadas) muda alguns milhares de pixels de uma execucao
+ * para a outra — no CI, `home travada` e `landing-todas-imagens` falhavam uma
+ * vez em tres. A mascara pinta a caixa de cada foto: posicao e tamanho continuam
+ * conferidos, e o texto e o layout da pagina seguem estritos. Fora da landing a
+ * locator nao casa com nada, e a captura nao muda.
+ */
+const fotosDaLanding = (page: Page): Locator[] => [
+  page.locator('app-landing img'),
+];
 
 /** Espera hidratação, fontes e imagens antes da captura estática. */
 async function assentar(page: Page): Promise<void> {
@@ -108,7 +121,10 @@ test.describe('regressao visual das telas publicas', () => {
     await assentar(page);
 
     await expect(page.locator('.corte').first()).toHaveCSS('opacity', '0');
-    await expect(page).toHaveScreenshot('home-travada.png', { fullPage: true });
+    await expect(page).toHaveScreenshot('home-travada.png', {
+      fullPage: true,
+      mask: fotosDaLanding(page),
+    });
   });
 
   /** O estado que so existe depois do pre-cadastro: precos e cartoes na tela. */
@@ -228,6 +244,7 @@ for (const [nome, caminho] of [
     await assentar(page);
     await expect(page).toHaveScreenshot(nome + '.png', {
       fullPage: true,
+      mask: fotosDaLanding(page),
     });
   });
 }
