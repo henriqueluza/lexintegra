@@ -71,7 +71,7 @@ Registro consolidado, com o ADR correspondente na arquitetura:
 Decidido na reunião: o **CONTRATADO cria o projeto**, não o Marcos. O arranjo de faturamento também está resolvido — ver ADR-13 da arquitetura.
 
 - O CONTRATADO cria o projeto Google Cloud/Firebase e fica como `Owner` técnico durante todo o desenvolvimento.
-- O Marcos cria sua própria **conta de faturamento** (perfil de pagamentos do Google preenchido por ele, cartão dele), recebe o papel de **Billing Account Administrator** nela, e vincula essa conta ao projeto do CONTRATADO. Ele não precisa de acesso de IAM dentro do projeto para isso.
+- O Marcos cria sua própria **conta de faturamento** (perfil de pagamentos do Google preenchido por ele, cartão dele), recebe o papel de **Billing Account Administrator** nela, e vincula essa conta ao projeto do CONTRATADO. Ele não precisa de acesso de IAM dentro do projeto para isso. *(Errata de 29/09/2026: a conta vinculada é do dono do escritório, Auan Bastos, com ele e o CONTRATADO como `billing.admin`; o Marcos não tem papel nela. Ver o ADR-13.)*
 - Travar o vínculo entre projeto e conta de faturamento (*lock the link*), para que ninguém troque o pagador sem autorização dos dois lados.
 - Verificar as regiões de servidor disponíveis no plano Blaze e confirmar `southamerica-east1`.
 - Tentar manter tudo em cota gratuita e em território brasileiro; qualquer serviço que precise de servidor fora do Brasil exige checagem de LGPD antes de adotar (ver seção 13 da arquitetura) — mas essa checagem já valia antes desta decisão, e não muda por causa dela (ADR-13).
@@ -353,7 +353,7 @@ qualquer coisa que não seja um projeto `demo-`.
   os cinco testes que emitem token — e a mensagem era "credencial inválida",
   porque o guard esconde a causa de propósito.
 - A `apiKey` do Firebase, escrita no código, disparou o secret scanning do GitHub
-  (o repositório é **público**). Não é credencial, mas saiu do código-fonte assim
+  (o repositório era **público** até 29/09/2026; é privado desde então). Não é credencial, mas saiu do código-fonte assim
   mesmo: agora vem de `/__/firebase/init.json`, servido pelo Hosting.
 
 ### Só você — Etapa 4

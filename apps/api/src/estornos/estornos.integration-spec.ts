@@ -24,6 +24,7 @@ import {
 import { assinar } from '../pagamentos/webhook/assinatura.js';
 import { PedidosService } from '../pedidos/pedidos.service.js';
 import { ProdutosService } from '../produtos/produtos.service.js';
+import { escutarNoLoopback } from '../arnes-http.js';
 
 const PARECER: NovoProduto = {
   nome: 'Parecer de risco trabalhista',
@@ -63,7 +64,7 @@ beforeEach(async () => {
     logger: false,
   });
   configurar(app as NestExpressApplication);
-  await app.init();
+  await escutarNoLoopback(app);
 
   const gateway = app.get<GatewayPagamentoFalso>(GATEWAY_PAGAMENTO);
   cobrancaId = (

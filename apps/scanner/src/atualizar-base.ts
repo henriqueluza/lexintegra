@@ -90,4 +90,19 @@ async function geracaoDe(caminho: string): Promise<Date | null> {
   }
 }
 
-await principal();
+/*
+ * A FALHA SAI COMO LOG ESTRUTURADO EM ERROR, e nao como a pilha crua de uma
+ * promessa rejeitada. A politica "ClamAV: job da base terminou em erro" casa
+ * `severity>=ERROR` no `cloud_run_job`; uma linha JSON com `severity` garante isso
+ * sem depender de como a plataforma classifica texto solto no stderr. O codigo de
+ * saida continua 1, para a execucao aparecer como falha e o `max_retries` valer.
+ */
+try {
+  await principal();
+} catch (erro) {
+  registrar('ERROR', 'atualizacao da base do ClamAV falhou', {
+    sinal: 'clamav.job-falhou',
+    erro: erro instanceof Error ? erro.message : String(erro),
+  });
+  process.exitCode = 1;
+}

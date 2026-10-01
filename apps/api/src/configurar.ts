@@ -48,8 +48,15 @@ export function configurar(app: NestExpressApplication): void {
    * requisicao a lexintegra.com.br/api/health chega neste processo como
    * /api/health, nao como /health. Sem este prefixo global, todo o roteamento
    * quebra em producao enquanto continua funcionando em localhost.
+   *
+   * COM A BARRA, `'/api'`, e nao `'api'`. As rotas funcionam igual nos dois,
+   * porque o Nest normaliza o prefixo ao registra-las. Mas o tratador de 404 do
+   * Nest 12 (`registerNotFoundHandler`) monta um router do Express com o prefixo
+   * CRU, e no Express 5 `use('api', ...)` nao casa com `/api/...`: a rota
+   * inexistente caia no 404 padrao do Express, uma pagina HTML, em vez do JSON
+   * do Nest. `app.integration-spec.ts` confere o formato.
    */
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('/api');
 
   /*
    * Sem isto, `requisicao.ip` e o endereco do proxy e o guard de limite conta

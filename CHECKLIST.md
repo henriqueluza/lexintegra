@@ -30,14 +30,18 @@ Itens marcados com ❓ podem já ter sido feitos. Se foram, é só marcar.
 
 **Segurança (uns 20 min, sem depender de nada)**
 
-- [ ] Apagar a chave JSON da `firebase-adminsdk-fbsvc`: criada em
-  04/09/2026, sem vencimento e sem uso pela aplicação. **Desativada em
-  29/09; apagar em 30/09 ou 01/10** (`docs/entrega/credenciais.md` §3).
+- [x] Apagar a chave JSON da `firebase-adminsdk-fbsvc`: criada em
+  04/09/2026, sem vencimento e sem uso pela aplicação. Desativada em 29/09 e
+  **apagada em 30/09**; a conta não tem mais nenhuma chave criada por usuário
+  (`docs/entrega/credenciais.md` §3).
 - [x] Tirar `roles/editor` da SA padrão do Compute
   (`docs/runbooks/limpeza-infra.md` §2). Feito em 29/09, 13:52 UTC, depois de
   conferir que nada roda com ela.
-- [ ] Segunda conferência de `roles/editor`: depois das execuções de 16h e 17h
-  (Brasília) de 29/09, procurar recusa de permissão nos logs.
+- [x] Segunda conferência de `roles/editor`: nenhuma recusa de permissão
+  (`protoPayload.status.code=7`) em 15 horas desde a remoção. A `retencao-diaria`
+  das 20:00 UTC de 29/09 rodou sem erro, antes do primeiro merge do dia. O
+  `PERMISSION_DENIED` do `clamav-base-diaria` às 19:00 UTC era o problema antigo
+  do binding do job, não a remoção.
 - [x] Proteger a `main` no GitHub com PR obrigatório e checks do CI
   obrigatórios (`transferencia.md`, Fase 2). Feito em 29/09: PR sem exigir
   aprovação, sete checks do `ci.yml`, valendo para administradores.
@@ -66,11 +70,11 @@ Itens marcados com ❓ podem já ter sido feitos. Se foram, é só marcar.
   *Retenção parada* e *Webhook recusado* não têm disparo seguro hoje. Não
   improvise. (*Retenção parada* disparou por acidente em 29/09, por troca de
   revisão, e provou o caminho política → e-mail: ver B1.)
-- [ ] Soft delete, primeira parte (`docs/entrega/operacao.md` §6):
-  - hoje, excluir um objeto de teste de `lexintegra-arquivos-36bda` e ver que
-    ele continua recuperável;
-  - um dia depois, conferir que não sobram versões não atuais
-    (`--all-versions`).
+- [x] Soft delete, primeira parte (`docs/entrega/operacao.md` §6):
+  - [x] 29/09: objeto `teste-soft-delete/20260929-100813.txt` (geração
+    `1790687297036031`) excluído de `lexintegra-arquivos-36bda` e recuperável;
+  - [x] 30/09: `--all-versions` sem nenhum objeto (versionamento desligado), e o
+    objeto excluído ainda recuperável.
 - [x] No Trace Explorer: chegam traços da `api-lexintegra` por OTLP e o
   `traceparent` sobrevive ao rewrite do Hosting (29/09, seção 2.10 de
   `docs/achados-2026-09-29-alertas-e-clamav.md`). A parte do Cloud Tasks foi para a
@@ -89,7 +93,8 @@ Itens marcados com ❓ podem já ter sido feitos. Se foram, é só marcar.
   reCAPTCHA Enterprise, `APP_CHECK_ENFORCE=true`).
 - [ ] Teste manual com o arquivo EICAR: ele reprova e nunca fica acessível em
   nenhum momento. **Adiado** até as correções do ClamAV (B1) e até haver como
-  criar um pedido em produção (AbacatePay).
+  criar um pedido em produção (AbacatePay). É também o "refazer o EICAR depois
+  das correções" do bloco do ClamAV.
 - [x] Alerta artificial disparado e recebido (29/09, 14:22 UTC, em
   `henriqueluza@gmail.com`), pelo caminho alternativo
   (`docs/runbooks/alerta-artificial.md`). O caminho real ficou em C →
@@ -100,13 +105,13 @@ Itens marcados com ❓ podem já ter sido feitos. Se foram, é só marcar.
 O job `clamav-atualizar-base` falhou com `PERMISSION_DENIED` desde 14/09 por
 falta de binding (B1). Execução manual em 29/09 publicou a base no bucket.
 
-- [ ] Enquanto a correção não entra, repetir
-  `gcloud run jobs execute clamav-atualizar-base --region=southamerica-east1 --wait`
-  a cada um ou dois dias.
-- [ ] Anotar se o alerta do ClamAV chega em 30/09 por volta de 11:42 UTC (23 h
-  depois da publicação manual). Se chegar, é alerta verdadeiro e prova a
-  política.
-- [ ] Refazer o teste do EICAR depois das correções.
+- [x] Repetir a execução manual do job a cada um ou dois dias, e anotar se o
+  alerta chega em 30/09 por volta de 11:42 UTC: **deixaram de se aplicar**. O
+  agendamento funciona desde 30/09 (binding no Terraform, execução
+  `clamav-atualizar-base-26lmc` pelo Scheduler), então a base não envelhece mais
+  até o alerta.
+- O "refazer o teste do EICAR depois das correções" foi juntado ao item *Teste
+  manual com o arquivo EICAR*, em *Provas em produção*.
 
 **Perguntas que só você sabe responder**
 
@@ -127,13 +132,14 @@ Mande as respostas ao Claude para ele preencher os documentos.
 ### A2. Ao longo do caminho
 
 - [ ] Revisar e mesclar os PRs do Claude e do Codex. **Merge na `main` é
-  deploy.**
+  deploy.** Esperar o deploy de cada merge terminar com sucesso antes de mesclar
+  o próximo: em 29/09, o #39 foi mesclado em cima do deploy quebrado do #38.
 - [ ] Aprovar, uma a uma, as imagens de referência da regressão visual. Faça
   isso **depois do redesign**, porque as atuais vão todas mudar.
 - [ ] Aprovar os textos institucionais do site.
 - [ ] Criar no painel admin os acessos dos advogados reais.
-- [ ] 📅 Por volta de 05/10: o objeto excluído no teste de soft delete sumiu de
-  vez.
+- [ ] 📅 Por volta de 06/10: o objeto excluído no teste de soft delete sumiu de
+  vez (retenção de 604800 s a partir das 13:08 UTC de 29/09).
 - [ ] 📅 No faturamento de outubro: o armazenamento de
   `lexintegra-clamav-db-36bda` caiu. **A premissa mudou em 29/09**: o bucket
   estava vazio e agora tem cerca de 108 MiB. Reavaliar o que esperar.
@@ -214,10 +220,21 @@ execução corrigida gera alarme falso.
   presente, e `gcloud scheduler jobs run clamav-base-diaria` (04:05:36 UTC) gerou
   a execução `clamav-atualizar-base-26lmc`, concluída com sucesso, sem
   `status.code` de erro no Scheduler.
-- [ ] Alerta para "a base do ClamAV nunca foi publicada" e para falha do job
-  no Scheduler.
-- [ ] Scanner sem base: recusar tudo e alertar; revisar o `|| true` de
-  `apps/scanner/entrada.sh:39`.
+- [x] Alerta para "a base do ClamAV nunca foi publicada" e para falha do job
+  no Scheduler. Coberto pelas três políticas de log (#38 e a divisão de
+  `clamav_job_falhou`), que disparam desde a primeira falha, sem depender de uma
+  publicação anterior: *Scheduler não conseguiu iniciar o job*, *job terminou em
+  erro* e *scanner sem base de assinaturas*. Ativas em produção (30/09). O PR
+  `fix/scanner-sem-base` fez a falha do job sair como log estruturado em ERROR
+  (`clamav.job-falhou`) e amarrou os filtros ao código com teste
+  (`apps/scanner/src/alertas-do-clamav.spec.ts`).
+- [x] Scanner sem base: recusar tudo e alertar; revisar o `|| true` de
+  `apps/scanner/entrada.sh:39`. Feito no #38: o `|| true` saiu, e o scanner sem
+  base responde `indisponivel` a toda varredura (nunca `limpo`) e loga
+  `scanner.sem-base` em ERROR. O PR `fix/scanner-sem-base` trocou o literal por
+  `SINAL_SEM_BASE`, com teste que confere o filtro da política e que o
+  `entrada.sh` não volta a ter `|| true` nem `2>/dev/null`. Falta a prova com
+  falha real, que é humana: ver o teste do EICAR em A1.
 - [x] Condições de ausência agregando por identidade estável, não por
   `revision_name` (conferido em produção em 30/09: *Sonda de sinais parada* e
   *Retencao parada* com `REDUCE_SUM` e `groupByFields` só por
@@ -228,31 +245,69 @@ execução corrigida gera alarme falso.
   (`apps/api/src/proxies-confiaveis.spec.ts`).
 - [x] Canal de notificação confirmado sem mudança com a variável já apagada
   (30/09, run 36663051297), e PR removendo a reserva `|| vars.` dos dois
-  workflows (`chore/remover-reserva-vars-alertas`).
-- [ ] Runbook `sonda-parada.md`: trocar "pausar por 20 minutos" por "até o
-  e-mail chegar, no máximo 40 minutos"; registrar latência real de ~25 min e
-  que alarme preso a revisão antiga, logo após deploy, é falso positivo.
-- [ ] Atualizar `docs/runbooks/alerta-artificial.md` (comando com `--severity`
-  e `revision_name` atual, tempos observados, secret em vez de variable).
-- [ ] Documentar o incidente do ClamAV (14/09 a 29/09), o falso positivo de
-  revisão e o falso positivo de idade nos runbooks (`scanner-indisponivel.md`
-  incluso) e em `operacao.md`.
-- [ ] Atualizar os documentos que dizem que o repositório é público
-  (`infra/terraform/README.md:197` e outros).
-- [ ] Preencher `credenciais.md`, `operacao.md` e `transferencia.md` com as
+  workflows (`chore/remover-reserva-vars-alertas`). Depois do deploy, o canal
+  *Desenvolvimento (PROVISORIO — substituir antes da Etapa 13)* continua
+  existindo e ativo, com `henriqueluza@gmail.com` (conferido em 30/09).
+- [x] Runbook `sonda-parada.md`: "até o e-mail chegar, no máximo 40 minutos";
+  latência real de ~24 min (13:10:04 → 13:34:05 UTC); e o falso positivo por
+  revisão acabou com a correção de 30/09.
+- [x] Atualizar `docs/runbooks/alerta-artificial.md` (comando com
+  `--monitored-resource-*` e `--severity`, `revision_name` atual, tempos
+  observados, secret em vez de variable). O grosso veio no #41; faltava a
+  tabela de sintomas citar só o secret.
+- [x] Documentar o incidente do ClamAV (14/09 a 29/09), o falso positivo de
+  revisão e o falso positivo de idade nos runbooks (`scanner-indisponivel.md`,
+  seção "Histórico") e em `operacao.md` (com os nomes das três políticas novas).
+- [x] Atualizar os documentos que dizem que o repositório é público
+  (`infra/terraform/README.md:197` e outros). Os últimos eram
+  `plano-de-execucao.md` e `inventario-custos.md`; o resto já diz "privado desde
+  29/09" ou fala no passado.
+- [x] Preencher `credenciais.md`, `operacao.md` e `transferencia.md` com as
   respostas da seção 2.13, incluindo a ordem da transferência de acessos
   (primeiro o escritório recebe `owner` e `billing.admin`, depois os acessos do
-  Henrique caem). **Não preencher** as linhas "a definir em 30/09".
+  Henrique caem). O grosso veio no #41; faltavam, em `transferencia.md`, a conta
+  onde o domínio do Resend está verificado e o titular do Registro.br, e a
+  errata do faturamento no ADR-13 e no plano (a conta é do Auan, não do
+  Marcos). As linhas "a definir em 30/09" e a tabela da garantia
+  (`credenciais.md` §4) ficaram como estão. Continua aberta a pergunta "o
+  Resend aceita o mesmo domínio em duas contas?" (`transferencia.md`, 3.1).
 - [x] Comentário no topo do `ci.yml` avisando que os nomes dos sete jobs são
   checks obrigatórios da proteção da `main`; registrar a proteção e sua
   dependência do plano do GitHub em `transferencia.md`.
-- [ ] Varredura do histórico do Git e dos logs do Actions atrás de segredos,
-  porque o repositório ficou público de 03/09 a 29/09. Credencial achada é
-  tratada como vazada: rotacionar.
-- [ ] Medir o consumo de minutos do Actions por workflow e registrar em
-  `inventario-custos.md`.
-- [ ] Conferir se o 404 da API responder com a página HTML padrão do Express
-  (e não com o JSON do Nest) é o desejado.
+- [x] Varredura do histórico do Git e dos logs do Actions atrás de segredos,
+  porque o repositório ficou público de 03/09 a 29/09. Feita em 30/09 com
+  `gitleaks` 8.30.1 e buscas por padrão (chaves do AbacatePay e do Resend,
+  chave privada, token do GitHub, `webhookSecret` na URL, token OAuth do Google).
+  **Nenhuma credencial vazada.**
+  - Git: todas as branches (`--all`, 324 commits, 56 branches remotas). Quatro
+    achados eram falsos positivos (`--region=southamerica-east1` em runbooks). O
+    único real é a `apiKey` web do Firebase em
+    `apps/web/src/app/autenticacao/firebase.ts`, commit `34bb502` (04/09),
+    retirada do código em `06eacae` (05/09). É a mesma chave em uso hoje
+    ("Browser key (auto created by Firebase)"). **Não é credencial**: o Firebase
+    a publica em `/__/firebase/init.json` para todo visitante. Está restrita aos
+    referenciadores `lexintegra.com.br/*` e `*.lexintegra.com.br/*` e a 25 APIs.
+    Não precisa rotacionar. (Restringir a lista de APIs ao que o site usa é
+    endurecimento opcional, não correção.)
+  - Actions: as 119 execuções criadas entre 03/09 e 29/09 (1.060 arquivos de
+    log, 70 MB). 519 achados, todos falsos positivos: 502 SHAs de commit na tag
+    da imagem (`api:<sha>`) e 17 `APP_CHECK_SITE_KEY`, que é a chave de site do
+    reCAPTCHA, pública por definição. O e-mail `henriqueluza@gmail.com` aparece
+    em claro em 22 linhas de `TF_VAR_alertas_email_desenvolvimento` (era
+    *variable*, não mascarada) e em 16 linhas de `creator`/`last_modifier` do
+    plan. É dado pessoal exposto, não credencial; desde 30/09 vem de secret.
+- [x] Medir o consumo de minutos do Actions por workflow e registrar em
+  `inventario-custos.md` (seção 7.1, 30/09). CI cerca de 30 min por execução,
+  deploy cerca de 14. No ritmo destas duas semanas, cerca de 3.800 min/mês,
+  **acima dos 3.000 do Pro**; em manutenção, cerca de 740.
+- [x] Conferir se o 404 da API responder com a página HTML padrão do Express
+  (e não com o JSON do Nest) é o desejado. **Não era: era defeito.** O tratador
+  de 404 do Nest 12 monta um router do Express com o prefixo global cru, e com
+  `setGlobalPrefix('api')` (sem a barra) o Express 5 não o casava com `/api/...`.
+  Corrigido para `'/api'` no PR `fix/api-404-json`, com teste de integração que
+  exige o JSON do Nest. 👤 Depois do merge: `curl -i
+  https://lexintegra.com.br/api/rota-que-nao-existe` responde 404 com
+  `content-type: application/json`.
 
 **Infraestrutura e documentos**
 
@@ -286,31 +341,52 @@ execução corrigida gera alarme falso.
   uma condição), e o do #39 falhou igual, porque a política quebrada estava na
   `main`. O CI não pegou porque o `terraform plan` não valida essa regra: ela
   mora na API do Monitoring. Virou lint (`scripts/conferir-condicoes-de-log.mjs`,
-  em `pnpm lint`), com o formato antigo confirmado como reprovado. 👤 Depois do
-  merge, conferir o deploy (ver o PR).
+  em `pnpm lint`), com o formato antigo confirmado como reprovado.
+  - [x] 👤 O deploy depois do merge ficou verde (30/09), e as três políticas
+    novas (*Scheduler não conseguiu iniciar o job*, *job terminou em erro*,
+    *scanner sem base de assinaturas*) existem em produção e estão ativas,
+    junto com as de *Base do ClamAV*.
 
 - [x] Comentário do plano do Terraform no PR (`ci.yml`): um por PR, atualizado a
   cada push, com o resumo `Plan: …` no topo, e sem comentário novo quando o plan
   é "No changes". Saiu o aviso sobre `import`. Entrou na junção #49; o primeiro
   uso real foi o plan do #51.
-- [ ] `outbox.integration-spec.ts` falhou uma vez (1 de 189, 30/09, na junção do
-  #50) e não reproduziu em cinco execuções seguintes (a suíte inteira duas vezes e
-  o arquivo sozinho três). Causa não investigada. Se voltar no CI, é teste
-  intermitente a corrigir, não a ignorar.
-- [ ] Regressão visual do estado vazio de `/servicos`: o #44 cobriu o estado com
-  e2e e axe nas três larguras, mas não gerou imagem de referência (exige Docker).
-  Gerar no contêiner e depois entrar na aprovação uma a uma (A2).
-- [ ] 👤 Depois do deploy do #49, que removeu `roles/cloudtrace.agent`: repetir a
-  busca `traceSampled=true` e conferir no Trace Explorer que os traços da
-  `api-lexintegra` continuam chegando (o `telemetry.tracesWriter` fica). Reversão:
-  `git revert` do commit e deploy.
-- [ ] `ci.yml` disparado por `workflow_dispatch` propõe um diff falso nas imagens
+- [x] `outbox.integration-spec.ts` falhou uma vez (1 de 189, 30/09, na junção do
+  #50). **Causa achada em 30/09:** o supertest escuta em `::` e conecta em
+  `127.0.0.1`, e no macOS o `listen` em `::` aceita uma porta que outro processo
+  já ocupa só no loopback (o emulador do Firestore abre duas assim). A requisição
+  cai no outro processo, que responde 404. Reproduzida em 1 de 25 execuções do
+  arquivo (404 onde a API daria 401), e o mecanismo, à parte, de forma
+  determinística. Corrigido no PR `fix/outbox-intermitente`: os 11 arquivos de
+  integração com servidor HTTP escutam em `127.0.0.1` (`arnes-http.ts`), com
+  teste que recusa arquivo novo fora disso. Depois: 25 de 25 e a integração
+  completa verdes. No CI (Linux) a colisão é bem menos provável, mas o mesmo
+  caminho vale lá.
+- [x] Regressão visual do estado vazio de `/servicos`: teste `catalogo vazio` em
+  `telas-publicas.visual.spec.ts` e três imagens novas
+  (`catalogo-vazio-{estreito,medio,largo}.png`), geradas no contêiner em 30/09
+  com `--update-snapshots=missing`, sem tocar nas existentes. 👤 Entram na
+  aprovação uma a uma (A2).
+- [x] 👤 Depois do deploy do #49, que removeu `roles/cloudtrace.agent`: em 30/09,
+  uma requisição com `traceparent` a `/api/teste-de-traco` gerou dois spans no
+  mesmo trace, o do Cloud Run (`/component AppServer`) e o da aplicação
+  (`service.name api-lexintegra`). O `telemetry.tracesWriter` basta.
+- [ ] Teste intermitente novo: `reunioes.integration-spec.ts › concorrencia › dois
+  clientes no MESMO slot: um marca, o outro recebe 409` estourou os 5 s do Jest no
+  CI (30/09, PR #57, tentativa 1; passou na tentativa 2). A chamada gRPC que ele
+  deixou em voo terminou depois de o Jest desmontar o ambiente, e o erro caiu no
+  arquivo seguinte (`outbox.integration-spec.ts`, "Test suite failed to run").
+  Investigar a espera pela transação no emulador e dar ao teste um prazo próprio,
+  sem enfraquecer a asserção.
+- [x] `ci.yml` disparado por `workflow_dispatch` propõe um diff falso nas imagens
   (30/09, run 36663051297: `0 to add, 3 to change, 0 to destroy` logo depois de
   um deploy verde). Os três são `api-lexintegra`, `scanner-lexintegra` e o job
   `clamav-atualizar-base`: `github.event.pull_request.head.sha` é vazio fora de
   PR, então `TF_VAR_api_image` e `TF_VAR_scanner_image` viram `...:` (tag vazia) e
   `TF_VAR_commit_sha` fica vazio. Não é drift real. Correção: no `ci.yml`, usar
   `github.event.pull_request.head.sha || github.sha` nas três variáveis.
+  Corrigido no PR `fix/ci-plan-workflow-dispatch`. 👤 Depois do merge, disparar o
+  `ci.yml` na `main` e conferir que o plan dá "No changes".
 
 **Catálogo vazio em produção** (o escritório cria os produtos pelo admin)
 
@@ -327,14 +403,14 @@ B2 e de C)
 - [x] `pnpm test` *(linha de base 29/09/2026: ok)*
 - [x] `pnpm test:integration` *(linha de base 29/09/2026: ok)*
 - [x] `pnpm quality` *(linha de base 29/09/2026: ok)*
-- [ ] `pnpm test:e2e` *Rodado em 29/09/2026: 120 ok, 78 falhas, todas capturas de tela (`*.visual.spec.ts`) rodadas fora do contêiner. Ambiente, não defeito; refazer com Docker.*
-- [ ] `pnpm test:a11y` *Não rodou em 29/09/2026: exige Docker, desligado na máquina. Rodar com Docker.*
-- [ ] `pnpm test:visual` *Não rodou em 29/09/2026: exige Docker.*
-- [ ] `pnpm test:visual paineis` *Não rodou em 29/09/2026: exige Docker.*
+- [x] `pnpm test:e2e` *30/09/2026: a suíte e2e inteira passa no contêiner (`pnpm test:visual`, 204 ok, 15 pulados). No host, as capturas de tela sempre diferem (fonte e antisserrilhamento), então o `test:e2e` do host não é a referência. Atenção: com um `ng serve` seu já na porta 4200, o Playwright do host o reaproveita e testa o SEU código, não o da branch (foi o que produziu 11 falhas não visuais em 30/09, contra a `feat/landing-nevoa`).*
+- [x] `pnpm test:a11y` *30/09/2026, no contêiner: 51 ok.*
+- [x] `pnpm test:visual` *30/09/2026, no contêiner: 204 ok, 15 pulados, com as imagens do catálogo vazio.*
+- [x] `pnpm test:visual paineis` *30/09/2026, no contêiner: 45 ok.*
 - [x] `pnpm test:jornadas` *(linha de base 29/09/2026: ok)*
 - [x] `pnpm mutacao` *(linha de base 29/09/2026: ok)*
 - [x] `pnpm relatorio:qualidade` *(linha de base 29/09/2026: ok)*
-- [ ] Corrigir o que falhar. *Nada a corrigir no código: as únicas falhas da linha de base são de ambiente (Docker desligado). Fica aberto até rodar os quatro comandos acima com Docker.*
+- [x] Corrigir o que falhar. *Nada a corrigir no código: as falhas da linha de base eram de ambiente, e com Docker as quatro suítes passam (30/09).*
 
 **Traços em produção confirmados (OTLP e Hosting, 29/09)**
 

@@ -24,16 +24,18 @@ parada".
 
 ---
 
-## Alarme logo depois de um deploy
+## Alarme logo depois de um deploy (falso positivo resolvido em 30/09/2026)
 
-Antes da correção de 29/09/2026, a condição de ausência era agrupada por
-**revisão** do Cloud Run: cada deploy criava uma série nova, e a da revisão
-anterior disparava este alerta uns 25 minutos depois, com a sonda funcionando.
-A condição hoje agrupa por `service_name`, mas, se um alarme chegar logo após um
-merge, confirme antes de agir: o incidente vem preso a uma **revisão antiga**
-(`api-lexintegra-0003x-…`) e há pontos de `jsonPayload.sinal="sinais"` em
-revisão **mais nova**? Então é falso positivo, e o incidente fecha sozinho.
-Sem pontos em nenhuma revisão, é real.
+Até 30/09/2026, a condição de ausência era agrupada por **revisão** do Cloud
+Run: cada deploy criava uma série nova, e a da revisão anterior disparava este
+alerta uns 25 minutos depois, com a sonda funcionando. A correção (condição
+agrupada só por `service_name`, com `REDUCE_SUM`) foi aplicada e conferida em
+produção em 30/09. **Desde então, deploy não dispara mais este alerta.**
+
+Se ainda assim um alarme chegar preso a uma **revisão antiga**
+(`api-lexintegra-0003x-…`), confira a condição da política no console: ela
+precisa agrupar só por `resource.label.service_name`. Se agrupar por
+`revision_name`, a correção foi desfeita.
 
 ## Sintoma
 
@@ -79,10 +81,13 @@ Feito em 29/09/2026, funcionou: pausar `sinais-operacionais`
 (`gcloud scheduler jobs pause sinais-operacionais --location=southamerica-east1`),
 esperar o e-mail e retomar (`resume`).
 
-- **A detecção leva uns 25 minutos, não 15:** os 15 da condição, mais o
+- **A detecção leva uns 24 minutos, não 15:** os 15 da condição, mais o
   alinhamento de 300 s, mais o atraso de avaliação do Monitoring (no teste, do
-  último ponto às 13:10:04 UTC à abertura do incidente, 13:34:05).
+  último ponto às 13:10:04 UTC à abertura do incidente, 13:34:05, e o e-mail no
+  mesmo minuto).
 - **Pause até o e-mail chegar, no máximo 40 minutos.** Pausar por 20 não basta.
+  Passados 40 minutos sem e-mail, retome o job e investigue o canal (ver
+  `alerta-artificial.md`, "Se não chegar").
 - Depois de retomar, o incidente fecha sozinho em ~3 minutos.
 - Enquanto pausada, os quatro alertas listados no topo ficam cegos.
 

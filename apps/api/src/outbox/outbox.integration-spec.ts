@@ -16,6 +16,7 @@ import {
 } from '../tarefas/verificador.js';
 import { FILA_DE_EVENTOS, type TarefaDeEvento } from './fila.js';
 import { POLITICA } from './politica.js';
+import { escutarNoLoopback } from '../arnes-http.js';
 
 /**
  * O CRITERIO DE ACEITE DA ETAPA 7, fim a fim e sem intervencao no banco:
@@ -84,7 +85,7 @@ async function montarAplicacao(): Promise<NestExpressApplication> {
     logger: false,
   });
   configurar(criada);
-  await criada.init();
+  await escutarNoLoopback(criada);
   return criada;
 }
 

@@ -93,7 +93,7 @@ incidente e e-mail às 14:22).
 | Nenhuma entrada com `jsonPayload` | `LOG_FORMATO` diferente de `json` no serviço |
 | Entrada existe, métrica zerada | filtro da métrica não casa o `resource.type` da entrada |
 | Métrica conta, sem incidente | a política está com `notification_channels` vazio — veja `alertas-roteamento.json` |
-| Incidente aberto, sem e-mail | canal não criado (secret/variable ausente no GitHub) ou e-mail em spam |
+| Incidente aberto, sem e-mail | canal não criado (secret `ALERTAS_EMAIL_DESENVOLVIMENTO` ausente no GitHub) ou e-mail em spam |
 
 ## Depois
 

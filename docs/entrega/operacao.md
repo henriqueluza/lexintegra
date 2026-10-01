@@ -436,11 +436,13 @@ destino e decidir o roteamento faz parte da transferência
 binding nunca foi declarado no Terraform). Nenhum alerta avisou: a métrica de idade nunca recebeu ponto, e uma
 condição de ausência só dispara para série que já existiu. O scanner seguiu varrendo, porque o boot cai para
 o mirror oficial quando o bucket está vazio. O bucket estava **vazio** até a execução manual de 29/09 e agora tem
-~108 MiB. Correções: binding no Terraform, política *Job da base do ClamAV falhou ou scanner sem base* e
+~108 MiB. Correções: binding no Terraform, três políticas de log (*ClamAV: Scheduler nao conseguiu iniciar o job*,
+*ClamAV: job da base terminou em erro* e *ClamAV: scanner sem base de assinaturas*) e
 scanner que recusa toda varredura sem base. Dois falsos positivos do mesmo dia: *Base do ClamAV velha*
 (a métrica media também `main.cvd` e `bytecode.cvd`, meses de idade) e *Retencao parada* / *Sonda de sinais
-parada* (condição agrupada por revisão, disparando após todo deploy). Detalhe em
-`docs/achados-2026-09-29-alertas-e-clamav.md`.
+parada* (condição agrupada por revisão, disparando após todo deploy; corrigido e conferido em
+produção em 30/09). Detalhe em `docs/achados-2026-09-29-alertas-e-clamav.md` e em
+[`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md).
 
 **Webhook recusado tem alerta desde o Bloco E**, pela linha estruturada que o
 guard escreve a cada `401` (`jsonPayload.sinal="webhook.recusado"`).

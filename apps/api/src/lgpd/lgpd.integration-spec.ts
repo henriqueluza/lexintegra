@@ -16,6 +16,7 @@ import { ArmazenamentoFalso } from '../armazenamento/armazenamento-falso.js';
 import { idDoPreCadastro } from '../pre-cadastros/liberacao.js';
 import { PortaoDeArquivos } from '../arquivos/portao.js';
 import { LgpdService } from './lgpd.service.js';
+import { escutarNoLoopback } from '../arnes-http.js';
 
 let app: NestExpressApplication;
 let admin: string;
@@ -45,7 +46,7 @@ beforeEach(async () => {
     logger: false,
   });
   configurar(app);
-  await app.init();
+  await escutarNoLoopback(app);
   armazenamento = app.get(ARMAZENAMENTO);
   for (const uid of ['ana', 'bruno']) await semear(uid);
 });
