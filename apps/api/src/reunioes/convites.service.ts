@@ -192,7 +192,7 @@ export class ConvitesService {
       enviar: true,
       mensagem: {
         para: [destinatario.email],
-        assunto: `Reuniao marcada: ${pedido.snapshot.nome}`,
+        assunto: `Reunião marcada: ${pedido.snapshot.nome}`,
         corpoTexto: TEXTO_CONVITE,
         anexos: [anexoDeCalendario(ics)],
       },
@@ -228,7 +228,7 @@ export class ConvitesService {
       enviar: true,
       mensagem: {
         para: [destinatario.email],
-        assunto: `Reuniao cancelada: ${pedido.snapshot.nome}`,
+        assunto: `Reunião cancelada: ${pedido.snapshot.nome}`,
         corpoTexto: TEXTO_CANCELAMENTO,
         anexos: [anexoDeCalendario(ics)],
       },
@@ -264,7 +264,7 @@ export class ConvitesService {
       enviar: true,
       mensagem: {
         para: [destinatario.email],
-        assunto: `Reuniao desmarcada pelo escritorio: ${pedido.snapshot.nome}`,
+        assunto: `Reunião desmarcada pelo escritório: ${pedido.snapshot.nome}`,
         corpoTexto: textoDaReuniaoDesmarcada(reuniao.inicio, urlDaAplicacao()),
       },
     };
@@ -342,7 +342,7 @@ export class ConvitesService {
 
 /** O assunto do evento no calendario. Vem do SNAPSHOT (regra inviolavel 5). */
 function assuntoDa(pedido: DocumentoPedido): string {
-  return `Reuniao: ${pedido.snapshot.nome}`;
+  return `Reunião: ${pedido.snapshot.nome}`;
 }
 
 /**
@@ -373,23 +373,24 @@ export function remetenteDoConvite(
 }
 
 /**
- * ⚠️ TEXTOS PROVISORIOS, escritos pelo agente e pendentes de revisao humana
- * ("So voce — Etapa 10"). Nao sao marcadores literais como
- * `{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}`: nao ha obrigacao juridica no corpo de
- * um convite, e um marcador aqui sairia no e-mail que o cliente le.
+ * Os textos dos e-mails de reunião (B2, decisoes.md 1.2). Sem obrigação
+ * jurídica no corpo de um convite: o que importa é dizer o que o anexo faz. O
+ * rodapé de todo e-mail é acrescentado pelo despachante.
  */
 const TEXTO_CONVITE =
-  'Sua reuniao foi marcada. O convite em anexo pode ser adicionado ao seu ' +
-  'calendario, e o link da sala esta na descricao do evento.';
+  'Sua reunião foi marcada. Abra o convite em anexo para adicioná-la ao seu ' +
+  'calendário; o link da sala está na descrição do evento. Para remarcar ou ' +
+  'cancelar, use a sua área: com pelo menos 24 horas de antecedência, a ' +
+  'reunião volta ao saldo do pedido.';
 
 const TEXTO_CANCELAMENTO =
-  'Sua reuniao foi cancelada. O anexo remove o compromisso do seu calendario.';
+  'Sua reunião foi cancelada. O anexo remove o compromisso do seu calendário.';
 
-const TEXTO_DESCRICAO = 'Reuniao do seu pedido na LexIntegra.';
+const TEXTO_DESCRICAO = 'Reunião do seu pedido na LexIntegra.';
 
 /**
- * ⚠️ TEXTO PROVISORIO, como os de cima: o texto final e o Bloco I da B2. A data
- * sai no fuso do escritorio (ADR-21, decisao 8), por extenso.
+ * O escritório desmarcou (ADR-21, decisão H). A data sai no fuso do escritório
+ * (decisão 8), por extenso.
  */
 export function textoDaReuniaoDesmarcada(inicio: string, base: string): string {
   const quando = new Date(inicio).toLocaleString('pt-BR', {
@@ -398,8 +399,8 @@ export function textoDaReuniaoDesmarcada(inicio: string, base: string): string {
     timeStyle: 'short',
   });
   return (
-    `O escritorio precisou desmarcar a sua reuniao de ${quando}. ` +
-    'O credito voltou ao saldo do seu pedido, e voce pode marcar outro ' +
-    `horario na sua area do cliente: ${base}/painel`
+    `O escritório precisou desmarcar a sua reunião de ${quando}. ` +
+    'A reunião voltou ao saldo do seu pedido, e você pode marcar outro ' +
+    `horário na sua área do cliente: ${base}/painel`
   );
 }

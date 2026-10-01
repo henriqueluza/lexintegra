@@ -1,10 +1,11 @@
+import { ENCARREGADO } from 'shared/encarregado';
 import type { EmailRedigido } from './email-transport.js';
 
 /**
- * O endereco do encarregado (decisoes.md, 1.3 e "Valores de configuracao"):
- * a caixa compartilhada `privacidade@` no Microsoft 365 da B&C.
+ * O endereco do encarregado (decisoes.md, 1.3): a caixa compartilhada
+ * `privacidade@`. Vem de `shared/encarregado`, o mesmo da politica publica.
  */
-export const EMAIL_PRIVACIDADE = 'privacidade@lexintegra.com.br';
+export const EMAIL_PRIVACIDADE = ENCARREGADO.email;
 
 /**
  * O rodape de TODO e-mail da plataforma (B2, decisoes.md 5.1).

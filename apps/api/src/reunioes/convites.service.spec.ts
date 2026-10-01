@@ -120,7 +120,7 @@ describe('ConvitesService.criarSala', () => {
     expect(sala.pedidos[0]).toMatchObject({
       reuniaoId: 'r001',
       usuarioTeams: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
-      assunto: 'Reuniao: Revisao de contrato',
+      assunto: 'Reunião: Revisao de contrato',
     });
   });
 
@@ -335,7 +335,7 @@ describe('ConvitesService.montarAvisoDoEscritorio', () => {
     const aviso = await servico.montarAvisoDoEscritorio(EVENTO, CLARA);
 
     if (!aviso.enviar) throw new Error('deveria enviar');
-    expect(aviso.mensagem.assunto).toMatch(/desmarcada pelo escritorio/);
+    expect(aviso.mensagem.assunto).toMatch(/desmarcada pelo escritório/);
     expect(aviso.mensagem.corpoTexto).toContain('/painel');
     expect(aviso.mensagem.anexos).toBeUndefined();
   });

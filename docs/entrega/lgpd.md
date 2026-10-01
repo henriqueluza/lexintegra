@@ -146,15 +146,19 @@ um dia depois do deploy que a aplicou.
 
 ## 5. Quem atende um pedido de titular hoje
 
-- **Canal de entrada e encarregado (DPO):**
-  `[CONFIRMAR: nome e contato do encarregado indicado pelo escritório]`.
-  `[CONFIRMAR: canal publicado na política de privacidade]`.
+- **Canal de entrada e encarregado (DPO):** Auan Bastos, dono do escritório,
+  pelo e-mail `privacidade@lexintegra.com.br` (decisões 1.3), caixa
+  compartilhada no Microsoft 365 da B&C. Publicados na política de privacidade
+  (`/privacidade`) e no rodapé de todo e-mail, a partir de uma constante só
+  (`packages/shared/src/encarregado.ts`). **A caixa ainda precisa ser criada**
+  (C › Microsoft do CHECKLIST): até lá, o endereço publicado não recebe.
 - **Quem executa a exportação:** um administrador global da plataforma, a
   pedido do encarregado.
 - **Prazo legal:** a LGPD, art. 19, II, fixa até **15 dias** do requerimento
   para confirmar a existência dos dados e dar acesso completo. Para os demais
-  direitos do art. 18: `[CONFIRMAR: prazo adotado pelo escritório, com o
-  jurídico]`.
+  direitos do art. 18, o prazo ainda é decisão do escritório (decisões 1.4); a
+  política publicada mostra o marcador `[PENDENTE-ESCRITORIO: …]` no lugar,
+  com teste que trava a lista (`pendencias-escritorio.ts`).
 - **Eliminação pedida hoje:** registre a solicitação
   (`POST .../eliminacao`), informe ao titular que ela está registrada e
   **não** diga que os dados foram eliminados. A resposta ao titular é do

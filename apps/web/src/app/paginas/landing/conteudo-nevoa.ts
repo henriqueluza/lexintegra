@@ -16,13 +16,13 @@ export const NEVOA = {
     {
       titulo: 'Contrate',
       etapa: 'Contrate',
-      resumo: 'PIX ou cartão',
+      resumo: 'PIX; cartão em breve',
       foto: 'cap2-contrate-maos-assinando',
       pessoa: 'Você',
       texto:
         'Revise o carrinho e confirme a contratação com o preço que você já viu.',
       detalhe:
-        'Após a confirmação do pagamento, cada serviço vira um pedido. No cartão, o pagamento acontece na página do meio de pagamento.',
+        'Após a confirmação do pagamento, cada serviço vira um pedido. O cartão, quando liberado, é pago na página segura do meio de pagamento.',
       icone: 'credit-card',
     },
     {
@@ -65,7 +65,7 @@ export const NEVOA = {
   especificacoes: [
     [
       'Pagamento',
-      'PIX ou cartão',
+      'PIX; cartão em breve',
       'Conforme as opções disponíveis no checkout.',
     ],
     [
@@ -91,7 +91,7 @@ export const NEVOA = {
     [
       'Cancelamento',
       'Antes do início do trabalho',
-      'Direto pela sua área. Outros casos, pelo atendimento.',
+      'Pela sua área, sem documento entregue nem reunião realizada. Estorno, pelo atendimento.',
     ],
     [
       'Acesso',

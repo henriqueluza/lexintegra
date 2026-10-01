@@ -25,3 +25,15 @@ describe('textos dos e-mails com link de senha', () => {
     expect(ehTipoComLinkDeSenha('convite-reuniao')).toBe(false);
   });
 });
+
+/**
+ * Os e-mails nao carregam pendencia do escritorio nem marcador antigo: a lista
+ * travada de `[PENDENTE-ESCRITORIO: …]` mora so na politica de privacidade
+ * (`shared/pendencias-escritorio.spec.ts`).
+ */
+describe('textos dos e-mails sem marcador', () => {
+  it.each(TIPOS_COM_LINK_DE_SENHA)('%s', (tipo) => {
+    const { assunto, corpoTexto } = mensagemDeAcesso(tipo, 'https://l.test');
+    expect(`${assunto} ${corpoTexto}`).not.toMatch(/PENDENTE|TODO|\{\{/u);
+  });
+});

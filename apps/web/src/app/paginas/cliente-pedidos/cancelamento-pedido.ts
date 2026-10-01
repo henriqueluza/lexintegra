@@ -8,15 +8,28 @@ import {
   signal,
 } from '@angular/core';
 import type { CartaoPedido } from 'shared/esquemas/pedido';
+import {
+  TEXTO_CANCELAR_NAO_DEVOLVE,
+  TEXTO_DIREITOS_PRESERVADOS,
+  TEXTO_PRAZOS_ESTORNO,
+} from 'shared/regra-estorno';
 import { podeCancelar } from 'shared/situacao-pedido';
 import { ApiClienteService } from '../../autenticacao/api-cliente.service';
 import { Botao } from '../../ui/botao/botao';
 import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
 import { mensagemDoErro } from '../erros';
 
-/** Redação da interface; decisões de aprovação estão em docs/revisao-frontend.md. */
-export const TEXTO_CANCELAMENTO_JURIDICO =
-  'Ao confirmar, este pedido será cancelado e não seguirá para elaboração. Esta ação não gera devolução automática do pagamento. Para solicitar estorno, procure o atendimento do escritório responsável. Permanecem preservados os direitos previstos na legislação aplicável.';
+/**
+ * O texto da confirmação (B2, decisoes.md 1.2 e 3.3). A parte da regra vem de
+ * `shared/regra-estorno`, a mesma dos termos: cancelar e estornar são atos
+ * diferentes, e quem cancela precisa ler isso antes de confirmar.
+ */
+export const TEXTO_CANCELAMENTO_JURIDICO = [
+  'Ao confirmar, este pedido será cancelado: ele não seguirá para elaboração, e as reuniões ainda futuras dele serão desmarcadas.',
+  TEXTO_CANCELAR_NAO_DEVOLVE,
+  TEXTO_PRAZOS_ESTORNO,
+  TEXTO_DIREITOS_PRESERVADOS,
+].join(' ');
 
 /**
  * O cancelamento de um pedido pelo cliente (ADR-12), dentro do cartao dele.
