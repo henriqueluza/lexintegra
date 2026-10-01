@@ -1,0 +1,91 @@
+app-root.publica-nevoa {
+  display: block;
+  min-height: 100svh;
+  background: var(--lex-bg);
+  color: var(--lex-text-primary);
+  font-family: var(--lex-font-text);
+  font-size: var(--lex-text-body);
+  line-height: var(--lex-leading-body);
+  caret-color: var(--lex-accent);
+}
+app-root.publica-nevoa ::selection {
+  background: var(--lex-selection-bg);
+  color: var(--lex-selection-fg);
+}
+app-root.publica-nevoa :is(h1, h2, h3) {
+  text-wrap: balance;
+}
+app-root.publica-nevoa :is(p, li) {
+  text-wrap: pretty;
+}
+app-root.publica-nevoa :is(button, input, textarea, select) {
+  font-family: var(--lex-font-text);
+}
+app-root.publica-nevoa :is(.botao, .link-acao) {
+  min-height: var(--lex-control-h-lg);
+  border-radius: var(--lex-radius-pill);
+  font-size: var(--lex-text-label);
+  letter-spacing: var(--lex-tracking-label);
+  text-transform: uppercase;
+}
+app-root.publica-nevoa :is(.pagina, .checkout) h1 {
+  font-family: var(--lex-font-display);
+  font-size: var(--lex-text-display-2);
+  font-weight: var(--lex-weight-regular);
+  line-height: var(--lex-leading-heading);
+  text-transform: uppercase;
+}
+app-root.publica-nevoa .pagina .rotulo {
+  display: none;
+}
+app-root.publica-nevoa :is(.pagina, .checkout) {
+  max-width: 1440px;
+}
+app-root.publica-nevoa .acesso__marca {
+  background: var(--lex-surface-2);
+  color: var(--lex-text-primary);
+  border-right: var(--borda-fina) solid var(--lex-border-hairline);
+  --foco: var(--lex-border-focus);
+}
+app-root.publica-nevoa .acesso__apresentacao h2 {
+  font-family: var(--lex-font-display);
+  font-size: var(--lex-text-display-3);
+  font-weight: var(--lex-weight-regular);
+  text-transform: uppercase;
+}
+app-root.publica-nevoa :is(.acesso__apresentacao p, .acesso__frase) {
+  color: var(--lex-text-secondary);
+}
+app-root.publica-nevoa .acesso__janela {
+  display: none;
+}
+/* Tokens de marca locais: a moldura pública também os consome diretamente. */
+app-root.publica-nevoa .acesso__marca {
+  --marca-texto: var(--lex-text-primary);
+  --marca-texto-2: var(--lex-text-secondary);
+  background-image: none;
+  position: relative;
+  isolation: isolate;
+}
+app-root.publica-nevoa .acesso__marca::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: url('/imagens/nevoa/cap3-brief-mesa-laptop-800.jpg');
+  background-size: cover;
+  background-position: center;
+  filter: var(--lex-photo-filter);
+  opacity: 0.12;
+}
+
+@media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
+  app-root.publica-nevoa:has(dialog[open]) app-landing {
+    transform: scale(0.96);
+    border-radius: var(--lex-radius-sm);
+  }
+  app-root.publica-nevoa app-landing {
+    transition: transform 0.42s var(--lex-ease-out);
+    transform-origin: center top;
+  }
+}

@@ -41,10 +41,10 @@ test('a home carrega a fotografia e as rotas antigas redirecionam', async ({
 }) => {
   await page.goto('/com-movimento');
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator('main img')).toHaveCount(1);
+  await expect(page.locator('main img')).toHaveCount(7);
   await page.goto('/todas-as-imagens');
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator('main img')).toHaveCount(1);
+  await expect(page.locator('main img')).toHaveCount(7);
   for (const foto of await page.locator('main img').all()) {
     await foto.scrollIntoViewIfNeeded();
     await expect(foto).toBeVisible();
@@ -58,7 +58,7 @@ test('a navegação oferece acesso independente aos fluxos', async ({ page }) =>
   await page.goto('/');
   const menu = page.getByRole('button', { name: 'Menu', exact: true });
   if (await menu.isVisible()) await menu.click();
-  const nav = page.getByRole('navigation', { name: 'Navegação principal' });
+  const nav = page.getByRole('dialog', { name: 'Navegação principal' });
   await expect(nav.getByRole('link', { name: 'Cadastre-se' })).toHaveAttribute(
     'href',
     '/cadastro',
@@ -74,7 +74,7 @@ test('a navegação oferece acesso independente aos fluxos', async ({ page }) =>
   ).toBeVisible();
 });
 
-test('as quatro perguntas animam abertura e fechamento com redução de movimento', async ({
+test('as perguntas animam abertura e fechamento com redução de movimento', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });

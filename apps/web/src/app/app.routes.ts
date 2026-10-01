@@ -75,12 +75,12 @@ export const routes: Routes = [
   {
     path: 'privacidade',
     loadComponent: () => import('./paginas/legal/legal').then((m) => m.Legal),
-    title: 'Privacidade — LexIntegra',
+    title: 'Política de privacidade — LexIntegra',
   },
   {
     path: 'termos',
     loadComponent: () => import('./paginas/legal/legal').then((m) => m.Legal),
-    title: 'Termos de contratação — LexIntegra',
+    title: 'Termos de uso — LexIntegra',
     data: { termos: true },
   },
 

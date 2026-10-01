@@ -3,6 +3,7 @@
  * importa: primitivos antes de semanticos (semantico referencia primitivo), e
  * base por ultimo (base ja consome semantico).
  */
+@import 'lenis/dist/lenis.css';
 @import './tokens/fontes.css';
 @import './tokens/escala.css';
 @import './tokens/primitivos-catedra.css';
@@ -11,3 +12,8 @@
 @import './tokens/redesign.css';
 @import './base.css';
 @import './paginas.css';
+
+@import './tokens/fontes-nevoa.css';
+@import './tokens/nevoa.css';
+@import './tokens/nevoa-mapeamento.css';
+@import './publico-nevoa.css';

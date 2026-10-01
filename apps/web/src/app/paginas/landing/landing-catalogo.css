@@ -1,0 +1,38 @@
+.servico-reservado__conteudo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--lex-space-4);
+  filter: blur(6px);
+  opacity: 0.45;
+  user-select: none;
+  pointer-events: none;
+}
+.esqueleto {
+  display: block;
+  width: 100%;
+  height: var(--lex-space-3);
+  background: var(--lex-text-secondary);
+  border-radius: var(--lex-radius-sm);
+}
+.esqueleto--rotulo {
+  width: 30%;
+  height: var(--lex-space-2);
+  margin-bottom: var(--lex-space-3);
+}
+.esqueleto--titulo {
+  height: var(--lex-space-6);
+}
+.esqueleto--curto {
+  width: 65%;
+}
+.servico-reservado__base {
+  display: grid;
+  gap: var(--lex-space-4);
+  margin-top: auto;
+  padding-top: var(--lex-space-5);
+  border-top: var(--borda-fina) solid var(--lex-border-hairline);
+}
+.servicos__base .nota {
+  align-items: center;
+}

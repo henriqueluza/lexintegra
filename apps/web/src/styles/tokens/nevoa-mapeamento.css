@@ -1,0 +1,93 @@
+/* Tema opt-in no host público: nenhum token da shell autenticada é alterado. */
+.publica-nevoa {
+  --superficie: var(--lex-bg);
+  --superficie-elevada: var(--lex-surface);
+  --superficie-sutil: var(--lex-surface-2);
+  --superficie-clara: var(--lex-elevated);
+  --texto: var(--lex-text-primary);
+  --texto-2: var(--lex-text-secondary);
+  --texto-3: var(--lex-text-muted);
+  --texto-fraco: var(--lex-text-muted);
+  --texto-sobre-acento: var(--lex-text-on-accent);
+  --acento: var(--lex-accent);
+  --acento-forte: var(--lex-accent-hover);
+  --acento-fundo: var(--lex-accent-subtle);
+  --acento-em-elevada: var(--lex-accent);
+  --divisor: var(--lex-border-hairline);
+  --divisor-forte: var(--lex-border-strong);
+  --foco: var(--lex-border-focus);
+  --fonte-interface: var(--lex-font-text);
+  --fonte-display: var(--lex-font-display);
+  --peso-forte: var(--lex-weight-medium);
+  --peso-maximo: var(--lex-weight-medium);
+  --peso-extra: var(--lex-weight-medium);
+  --peso-titulo: var(--lex-weight-regular);
+  --botao-peso: var(--lex-weight-medium);
+  --botao-peso-primario: var(--lex-weight-medium);
+  --botao-secundario-fundo: transparent;
+  --botao-secundario-borda: var(--lex-text-primary);
+  --botao-secundario-cor: var(--lex-text-primary);
+  --campo-fundo: var(--lex-surface);
+  --campo-borda-cor: var(--lex-text-muted);
+  --estado-ok: var(--lex-success);
+  --estado-alerta: var(--lex-warning);
+  --estado-alerta-fundo: var(--lex-warning-bg);
+  --estado-erro: var(--lex-danger);
+  --estado-erro-fundo: var(--lex-danger-bg);
+  --raio: var(--lex-radius-sm);
+  --raio-cartao: var(--lex-radius-sm);
+  --raio-grande: var(--lex-radius-sm);
+  --raio-destaque: var(--lex-radius-sm);
+  --sombra-leve: none;
+  --sombra-media: none;
+  --sombra-forte: none;
+  --dourado-fundo: var(--lex-surface-2);
+  --dourado-texto: var(--lex-text-gold);
+  --dourado-linha: var(--lex-border-hairline);
+  --altura-topo-publico: 72px;
+  --t-nano: var(--lex-text-min);
+  --lex-title-hero: min(6rem, 11.5vh, 10.1vw);
+  --lex-title-chapter: clamp(1.5rem, 8.6vw, 9rem);
+  --lex-title-close: clamp(3rem, 16.5vw, 17rem);
+  --lex-hero-bottom: clamp(1.25rem, 3.5vh, 2.5rem);
+  --lex-hero-top: 96px;
+  --lex-chapter-y: clamp(2rem, 6vh, 4rem);
+  --lex-photo-hero-veil:
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--lex-veil) 55%, transparent),
+      transparent 16%
+    ),
+    linear-gradient(
+      to top,
+      color-mix(in srgb, var(--lex-veil) 98%, transparent) 8%,
+      color-mix(in srgb, var(--lex-veil) 62%, transparent) 48%,
+      color-mix(in srgb, var(--lex-veil) 12%, transparent) 80%
+    ),
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--lex-veil) 72%, transparent),
+      transparent 62%
+    );
+  --lex-photo-chapter-veil:
+    linear-gradient(to bottom, var(--lex-veil) 7%, transparent 30%),
+    linear-gradient(
+      to top,
+      var(--lex-veil) 6%,
+      color-mix(in srgb, var(--lex-veil) 88%, transparent) 42%,
+      transparent 78%
+    );
+  --lex-photo-close-veil: linear-gradient(
+    to top,
+    var(--lex-veil),
+    color-mix(in srgb, var(--lex-veil) 88%, transparent) 40%,
+    transparent
+  );
+}
+@media (max-width: 640px) {
+  .publica-nevoa {
+    --lex-title-hero: 10.1vw;
+    --lex-title-chapter: 8.1vw;
+    --lex-title-close: 16vw;
+  }
+}

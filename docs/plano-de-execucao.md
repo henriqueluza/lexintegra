@@ -1019,3 +1019,16 @@ Provisionamento do administrador Auan foi retirado do escopo pelo solicitante.
 **Uso com agentes de código (Codex e Claude Code).** Cada etapa fecha com seus testes passando antes de a seguinte começar. Trabalhar com um agente sobre base sem rede de testes acumula erro silencioso — é por isso que a Etapa 2 inclui o pipeline com limiares desde o primeiro commit, e não depois. Comece cada etapa em plan mode, com o escopo e o critério de aceite colados no prompt, e revise o plano antes de deixar executar.
 
 **Convenção de nome de branch.** Uma etapa por branch, uma etapa por PR (ver AGENTS.md). O nome da branch usa o prefixo de tipo de mudança, sem número de etapa — `feat/nome-descritivo`, por exemplo `feat/fundacao-infraestrutura` para a Etapa 2. O número da etapa fica registrado no PR e no commit, não no nome da branch.
+
+
+## Redesign público Névoa — 30/09/2026
+
+**Escopo solicitado:** aplicar o handoff aprovado à landing e às páginas públicas,
+incluindo o catálogo, dados de contato no rodapé e páginas preenchidas de termos
+e privacidade. Preservar admin, advogado e área do cliente após login.
+
+**Critérios:** tema limitado por rota; nenhuma chamada de API antes do
+pré-cadastro; fluxo cadastro → catálogo → carrinho → checkout preservado;
+rodapé único em todas as rotas públicas; teclado, movimento reduzido, contraste
+e larguras de 320 a 2560 pixels verificados. Build, lint e cobertura mantêm os
+limiares existentes. Registro em `docs/design-audit.md`.

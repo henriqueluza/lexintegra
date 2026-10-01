@@ -1,3 +1,4 @@
+import { CONTATO_PUBLICO } from './contato-publico';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 @Component({
@@ -6,4 +7,6 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   templateUrl: './rodape-publico.html',
   styleUrl: './rodape-publico.css',
 })
-export class RodapePublico {}
+export class RodapePublico {
+  protected readonly contato = CONTATO_PUBLICO;
+}

@@ -98,17 +98,12 @@ describe('Servicos', () => {
       ).not.toBeNull();
     });
 
-    /**
-     * Os cartoes borrados sao textura, nao conteudo: quem usa leitor de tela
-     * recebe o aviso e o botao, que e a informacao inteira. Anuncia-los seria ler
-     * tres nomes de servico que nao existem.
-     */
-    it('esconde os cartoes de exemplo do leitor de tela', () => {
+    it('identifica os exemplos como ilustração, sem preço fictício', () => {
       const fundo = (montar().nativeElement as HTMLElement).querySelector(
         '.trava__fundo',
       );
-
-      expect(fundo?.getAttribute('aria-hidden')).toBe('true');
+      expect(fundo?.textContent).toContain('Exemplo de serviço');
+      expect(fundo?.textContent).not.toContain('R$');
     });
 
     it('nao mostra preco nenhum de verdade', () => {

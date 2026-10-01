@@ -1,0 +1,256 @@
+.capitulo,
+.fechamento {
+  overflow: clip;
+  contain: paint;
+}
+.capitulo .foto {
+  top: -9%;
+  bottom: -9%;
+}
+.corte {
+  position: absolute;
+  inset: 0;
+  background: var(--lex-bg);
+  opacity: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.iris {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.iris i {
+  position: absolute;
+  background: var(--lex-bg);
+  transform: scale(0);
+}
+.iris i:nth-child(1),
+.iris i:nth-child(2) {
+  left: 0;
+  right: 0;
+  height: 50%;
+}
+.iris i:nth-child(1) {
+  top: 0;
+  transform-origin: top;
+}
+.iris i:nth-child(2) {
+  bottom: 0;
+  transform-origin: bottom;
+}
+.iris i:nth-child(3),
+.iris i:nth-child(4) {
+  top: 0;
+  bottom: 0;
+  width: 50%;
+}
+.iris i:nth-child(3) {
+  left: 0;
+  transform-origin: left;
+}
+.iris i:nth-child(4) {
+  right: 0;
+  transform-origin: right;
+}
+.regua {
+  position: relative;
+}
+.medidor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--lex-gold);
+  transform-origin: left;
+}
+.letra {
+  display: inline-block;
+}
+.telemetria {
+  position: relative;
+  overflow: clip;
+}
+.contagem {
+  float: right;
+}
+.contagem span {
+  display: inline-block;
+}
+.piloto,
+.volta {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: var(--lex-gold);
+  opacity: 0;
+  pointer-events: none;
+}
+.piloto {
+  width: 20%;
+}
+.volta {
+  width: 100%;
+  transform-origin: left;
+}
+.percurso li {
+  position: relative;
+}
+.percurso li::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--lex-space-3));
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--lex-gold);
+  transform-origin: left;
+}
+.is-cycle li::before {
+  transform: scaleX(0);
+  transition: transform 0.9s var(--lex-ease-in-out);
+}
+.is-cycle li.is-on::before,
+.is-cycle li.is-done::before {
+  transform: scaleX(1);
+}
+.is-cycle li strong {
+  transition:
+    transform 0.6s var(--lex-ease-out),
+    opacity 0.6s;
+  color: var(--lex-text-secondary);
+}
+.is-cycle li.is-on strong,
+.is-cycle li.is-done strong {
+  color: var(--lex-text-primary);
+}
+.is-cycle li.is-on strong {
+  transform: translateX(4px);
+}
+.is-drain li::before {
+  transition-duration: 0.7s;
+}
+.is-drain li:nth-child(1)::before {
+  transition-delay: 280ms;
+}
+.is-drain li:nth-child(2)::before {
+  transition-delay: 210ms;
+}
+.is-drain li:nth-child(3)::before {
+  transition-delay: 140ms;
+}
+.is-drain li:nth-child(4)::before {
+  transition-delay: 70ms;
+}
+.passo-atual {
+  display: none;
+}
+.trilho {
+  cursor: grab;
+  overscroll-behavior-x: contain;
+}
+.trilho.arrastando {
+  cursor: grabbing;
+  scroll-snap-type: none;
+  user-select: none;
+}
+.pill {
+  position: relative;
+  overflow: clip;
+  isolation: isolate;
+}
+.pill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--lex-text-primary);
+  transform: translateY(105%);
+  transition: transform var(--lex-dur-base) var(--lex-ease-out);
+}
+.pill:hover {
+  background: transparent;
+}
+.pill:hover::before {
+  transform: none;
+}
+.pill .icone {
+  transition: transform var(--lex-dur-base) var(--lex-ease-out);
+}
+.pill:hover .icone {
+  transform: translateX(4px);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero h1 span {
+    animation: mascara 1.2s var(--lex-ease-out) 0.25s backwards;
+  }
+  .hero h1 span:last-child {
+    animation-delay: 0.34s;
+  }
+  .hero .foto img {
+    animation: fotografia 2.4s var(--lex-ease-out) backwards;
+  }
+  .hero .foto::after {
+    animation: farol 2.4s var(--lex-ease-out) backwards;
+  }
+  .hero .apoio {
+    animation: mascara 0.9s var(--lex-ease-out) 0.7s backwards;
+  }
+  .hero__acoes > a {
+    animation: mascara 0.9s var(--lex-ease-out) 0.78s backwards;
+  }
+  .hero .nota {
+    animation: mascara 0.9s var(--lex-ease-out) 0.86s backwards;
+  }
+  .percurso {
+    animation: mascara 0.9s var(--lex-ease-out) 0.95s backwards;
+  }
+  .resposta:not([hidden]) {
+    animation: mascara 0.35s var(--lex-ease-out) backwards;
+  }
+  @keyframes mascara {
+    from {
+      transform: translateY(0.5em);
+      clip-path: inset(0 0 100%);
+      opacity: 0;
+    }
+  }
+  @keyframes fotografia {
+    from {
+      transform: scale(1.12);
+    }
+  }
+  @keyframes farol {
+    from {
+      opacity: 0.25;
+    }
+  }
+}
+@media (max-width: 640px) {
+  .contagem {
+    float: none;
+    display: block;
+  }
+  .passo-atual {
+    display: block;
+    font-size: var(--lex-text-small);
+    margin-top: var(--lex-space-3);
+  }
+  .hero h1 span {
+    animation-duration: 0.96s;
+  }
+  .hero .foto img {
+    animation-duration: 1.92s;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}
