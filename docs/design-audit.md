@@ -100,7 +100,7 @@ as referências aprovadas de regressão visual em `e2e/referencia`.
   visual posterior com 28 testes, incluindo 320/390/768/1440/2560 pixels.
 - Axe sem violações nas dez rotas públicas verificadas em desktop e mobile.
 - Capturas locais de conferência: `reports/nevoa/`. As referências visuais
-  versionadas não foram regravadas. Os screenshots do handoff serviram à
+  versionadas foram atualizadas na correção do CI registrada abaixo. Os screenshots do handoff serviram à
   comparação de composição, não à comparação pixel a pixel de ambientes.
 - Sem publicação em produção, alteração de infraestrutura ou de lógica de API.
 
@@ -128,3 +128,18 @@ está no CHECKLIST. A navbar exibe Entrar/Cadastro para visitantes, apenas Catá
 para pré-cadastrados sem sessão e Minha área para clientes autenticados. Admin e
 advogado mantêm seus destinos internos. Testes de componente cobrem os três
 estados; Playwright confirma visitante e pré-cadastrado em desktop e celular.
+
+### Correção do CI do PR #69 — 01/10/2026
+
+- As asserções do redesign agora verificam as sete fotografias do handoff e
+  encontram Entrar/Cadastro no diálogo completo da navegação.
+- As 39 referências das páginas públicas foram regravadas no contêiner oficial
+  Playwright 1.62.1, nas larguras 360, 768 e 1280 pixels.
+- A captura aplica movimento reduzido diretamente antes da navegação, aguarda a
+  hidratação da landing por interação reversível no FAQ e decodifica as imagens.
+  Isso evita capturar etapas intermediárias das animações. Os testes de movimento
+  continuam separados e ativos; nenhuma animação do produto foi removida.
+- Nenhuma tolerância visual ou referência dos módulos internos foi alterada.
+- Validação final: `scripts/visual.sh --workers=2` passou com 261 testes e
+  15 casos de pré-renderização ignorados pela configuração de desenvolvimento.
+  ESLint dos testes alterados e `git diff --check` também passaram.
