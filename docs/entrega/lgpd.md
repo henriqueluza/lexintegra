@@ -126,6 +126,7 @@ um dia depois do deploy que a aplicou.
 | **Firebase Auth** | A conta de login do cliente. Fora do Brasil (arquitetura, seção 13) |
 | **Cópias baixadas pelo escritório** | Entregáveis e anexos baixados por advogados ficam nas máquinas deles, fora do sistema |
 | **Pagamentos órfãos** | `pagamentos/{cobrancaId}` com `situacao` anômala guarda só ids e valor. Sem vínculo recuperável, o sistema não sabe de qual titular é, e a conciliação é humana (runbook do titular e [`pagamento-orfao.md`](../runbooks/pagamento-orfao.md)) |
+| **Ficha de anamnese** | `clientes/{uid}/anamnese/definitiva-v1` (e a `provisoria-v0`, de quem respondeu o stub). Dados da **empresa**, sem dado sensível do art. 5º, II; faturamento, passivo trabalhista, autuações e reclamações são confidenciais. Lida só pelo advogado atribuído e pelo administrador; entra na exportação do titular. Prazo de guarda: o da política (decisoes.md, 2.1) |
 | **Anexos do cliente** | Sem retenção definida. A rotina de 30 dias não os toca (arquitetura, 7.3) |
 | **Pré-cadastros que nunca compraram** | Sem prazo. A arquitetura (seção 8) lista a limpeza como rotina candidata |
 

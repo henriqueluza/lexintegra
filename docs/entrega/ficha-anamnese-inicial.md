@@ -1,6 +1,6 @@
 # Ficha de anamnese inicial (escritório)
 
-> Cópia de leitura do arquivo original [`ficha-anamnese-inicial.docx`](ficha-anamnese-inicial.docx), recebido do escritório em 30/09/2026. **A fonte é o `.docx`.** `( )` é escolha única, `[ ]` é múltipla escolha, `[Texto]` e `[Campo aberto]` são campos livres. É o insumo da ficha definitiva que substitui a provisória `provisoria-v0` (ver o `CHECKLIST.md`, B2).
+> Cópia de leitura do arquivo original [`ficha-anamnese-inicial.docx`](ficha-anamnese-inicial.docx), recebido do escritório em 30/09/2026. **A fonte é o `.docx`.** `( )` é escolha única, `[ ]` é múltipla escolha, `[Texto]` e `[Campo aberto]` são campos livres. É o insumo da ficha definitiva `definitiva-v1`, construída no Bloco A da B2 (`packages/shared/src/anamnese.ts`; regras de interpretação em `docs/decisoes.md`, 1.1).
 
 **FICHA DE ANAMNESE JURÍDICA, OPERACIONAL E DE COMPLIANCE**
 

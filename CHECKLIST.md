@@ -423,6 +423,13 @@ Já podem ser feitos, a menos que apareça dependência do caminho do Cloud Task
   de 88% de uma requisição autenticada. Resultado e recomendação (manter) em
   `docs/plano-de-execucao.md`, Etapa 4.
 
+- [ ] Pôr o `ui/grupo-opcoes` (Bloco A da B2) no catálogo. Abaixo de 720 px o
+  índice lateral fica acima do palco e o empurra; uma peça a mais no índice
+  muda a posição subpixel do palco e invalida as 15 referências estreitas do
+  catálogo sem nenhum componente mudar (o acoplamento que a Etapa 6 resolveu só
+  para telas largas). Corrigir a casca para o palco não depender do índice,
+  incluir a peça e regravar as referências estreitas. 👤 aprova a regravação.
+
 ### B2. Precisa de decisão do Henrique (passo 3)
 
 Cada item diz **o que decidir** e, depois da seta, **o que o Claude ou o Codex
@@ -453,16 +460,12 @@ constroem**. As decisões vão para um `decisoes.md`.
 
 **Conteúdo**
 
-- [ ] Ficha de anamnese (insumo de A1, **recebido em 30/09**:
-  `docs/entrega/ficha-anamnese-inicial.md`, 10 blocos sobre a empresa cliente).
-  → Trocar o stub `provisoria-v0` pela ficha definitiva: schema, tela, testes e
-  mapa LGPD. Antes de construir, decidir:
-  - quando é preenchida (logo após a compra, como o stub, ou depois) e se é por
-    cliente (`clientes/{uid}/anamnese`, como hoje) ou por pedido;
-  - se todos os campos são obrigatórios, e o que fazer com "Outro" e com as
-    perguntas condicionais ("Se sim, quantas…", "Se publica…");
-  - retenção: a ficha traz passivo trabalhista, autuações e reclamações, dado
-    sigiloso que entra no mapa LGPD e na política de guarda (já pendente).
+- [x] Ficha de anamnese (insumo de A1, **recebido em 30/09**:
+  `docs/entrega/ficha-anamnese-inicial.md`). Decidido em `docs/decisoes.md`
+  (1.1 e Anexo B): por cliente, uma vez, após a primeira compra. **Construída
+  no Bloco A** (`feat/anamnese-definitiva`): `definitiva-v1` em
+  `packages/shared/src/anamnese.ts`, tela, testes e mapa LGPD. A guarda segue
+  a política (2.1, pendente).
 - [ ] Texto final das minutas:
   - termos;
   - checkout;
