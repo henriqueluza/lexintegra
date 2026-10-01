@@ -14,7 +14,7 @@ esses módulos; esta restrição foi explícita no pedido.
   removida ao navegar para `/painel`, `/advogado`, `/admin` e `/catalogo`
   (catálogo técnico de componentes); `/servicos` recebe o novo tema.
 - Landing com sete fotografias responsivas locais, cinco capítulos, ficha,
-  exemplos explicitamente ilustrativos, FAQ e fechamento. Nenhuma API na home.
+  placeholders borrados no Line-up, FAQ e fechamento. Nenhuma API na home.
 - Animações do handoff restauradas em 01/10/2026: Motion + Lenis restritos à
   landing, com limpeza por navegação e preferência de movimento reduzido.
   Esta decisão substitui a ausência de animação no hero registrada no ADR-22.

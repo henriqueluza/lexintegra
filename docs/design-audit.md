@@ -16,7 +16,7 @@ localmente dimensionadas em 800/1600/2400, com srcset; somente a hero tem
 prioridade alta. Fontes baixadas diretamente do Fontshare, sem subsetting.
 
 Composição: hero inteira → cinco capítulos fotográficos → ficha técnica →
-trilho de exemplos → percurso do pedido → FAQ → fechamento → rodapé.
+trilho de placeholders borrados → percurso do pedido → FAQ → fechamento → rodapé.
 Hierarquia por escala, sem caixas decorativas nem promessas de preço, prazo ou
 popularidade. O percurso comparativo foi concentrado no fluxo efetivamente
 implementado; o texto não promete ausência de esclarecimentos pelo advogado.
@@ -119,3 +119,12 @@ as referências aprovadas de regressão visual em `e2e/referencia`.
   lockfile; o estado antigo de HMR criava o catálogo duas vezes. A repetição
   com servidor limpo passou sem alteração na lógica do catálogo.
 - A meta de FPS do handoff não foi aferida em dispositivo móvel físico.
+
+### Ajustes finais de 01/10/2026
+
+O Line-up usa apenas placeholders decorativos borrados, sem nomes ou preços
+fictícios. O catálogo real continua em `/servicos`; sua alimentação pelo escritório
+está no CHECKLIST. A navbar exibe Entrar/Cadastro para visitantes, apenas Catálogo
+para pré-cadastrados sem sessão e Minha área para clientes autenticados. Admin e
+advogado mantêm seus destinos internos. Testes de componente cobrem os três
+estados; Playwright confirma visitante e pré-cadastrado em desktop e celular.
