@@ -12,6 +12,15 @@ for (const caminho of [
   '/termos',
 ]) {
   test(`redesign responsivo e acessível: ${caminho}`, async ({ page }) => {
+    /*
+     * O axe mede a cor CALCULADA, e a landing anima a entrada dos blocos
+     * (opacidade). Com o movimento ligado, a medição às vezes cai no meio da
+     * animação e lê a mistura da cor com o fundo — o rótulo do percurso, com
+     * token de 5,3:1, já foi medido a 3,25:1 assim, num CI sim e no seguinte
+     * não, com a mesma árvore. Movimento reduzido mostra o estado final, que é
+     * o que a regra de contraste avalia; a suíte visual já faz o mesmo.
+     */
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     const chamadas: string[] = [];
     page.on('request', (r) => {
       if (new URL(r.url()).pathname.startsWith('/api')) chamadas.push(r.url());
