@@ -279,6 +279,24 @@ resource "google_firestore_index" "estornos_pendentes" {
   }
 }
 
+# B2, Bloco B (docs/decisoes.md, 5.4): o painel lista as contestacoes ABERTAS,
+# da mais recente para a mais antiga (`ContestacoesService.listar`).
+resource "google_firestore_index" "contestacoes_abertas" {
+  project    = var.project_id
+  database   = google_firestore_database.default.name
+  collection = "contestacoes"
+
+  fields {
+    field_path = "estado"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "abertaEm"
+    order      = "DESCENDING"
+  }
+}
+
 # ------------------------------------------------------------------------------
 # Etapa 10 — agendamento de reunioes
 # ------------------------------------------------------------------------------

@@ -37,7 +37,10 @@ export class ObservacoesService {
     autor: Autor,
     dados: NovaObservacao,
   ): Promise<ObservacaoResumo> {
-    const { referencia: pedido } = await this.acesso.exigir(pedidoId, autor);
+    const { referencia: pedido } = await this.acesso.exigirParaAlterar(
+      pedidoId,
+      autor,
+    );
 
     /*
      * ID automatico, e nao deterministico. A regra inviolavel 4 pede id

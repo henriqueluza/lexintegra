@@ -34,6 +34,10 @@ import { mensagemDoErro } from '../erros';
  * convidaria a testar ids alheios na barra de enderecos — o servidor responde 404
  * de qualquer forma, mas nao ha razao para oferecer o campo.
  */
+/** Redação da interface; o texto final é o Bloco I da B2. */
+export const AVISO_DE_PAUSA_ADVOGADO =
+  'Pedido pausado por uma contestação do pagamento. Nada muda nele até o escritório registrar o resultado.';
+
 @Component({
   selector: 'app-advogado-demandas',
   imports: [
@@ -132,6 +136,8 @@ export class AdvogadoDemandas implements OnInit {
   }
 
   /** O estado decide qual acao existe; o servidor decide se ela vale (ADR-11). */
+  protected readonly avisoDePausa = AVISO_DE_PAUSA_ADVOGADO;
+
   protected acao(entregavel: EntregavelResumo): 'iniciar' | 'retomar' | null {
     if (entregavel.estado === 'solicitado') return 'iniciar';
     if (entregavel.estado === 'em_revisao') return 'retomar';

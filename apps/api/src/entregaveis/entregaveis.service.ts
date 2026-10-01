@@ -18,7 +18,8 @@ import {
   type EntregavelResumo,
   type EventoDeTransicao,
 } from 'shared';
-import { COLECAO_PEDIDOS } from '../pedidos/pedido.js';
+import { exigirSemContestacao } from '../pedidos/pausa.js';
+import { COLECAO_PEDIDOS, type DocumentoPedido } from '../pedidos/pedido.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import {
   idDaTransicao,
@@ -324,12 +325,13 @@ export class EntregaveisService {
       throw new NotFoundException('Entregavel nao encontrado.');
     }
 
-    const dadosPedido = documentoPedido.data() as {
-      clienteId: string;
-      advogadoId?: string | null;
-      situacao?: string;
-      snapshot: { numeroRevisoesPermitidas: number };
-    };
+    const dadosPedido = documentoPedido.data() as DocumentoPedido;
+    /*
+     * Pedido pausado por contestacao nao muda (decisoes.md, 5.4): nem inicio,
+     * nem retomada, nem upload, nem confirmacao, nem revisao. Aqui, dentro da
+     * transacao, porque todo evento de entregavel passa por esta leitura.
+     */
+    exigirSemContestacao(dadosPedido);
 
     return {
       entregavel: documento.data() as DocumentoEntregavel,

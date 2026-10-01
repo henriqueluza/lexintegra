@@ -49,7 +49,16 @@ A decisão e o estorno, o escritório, no painel do AbacatePay.
 ## O que fazer
 
 1. **Leve o caso ao escritório** com o id da cobrança, o valor e a situação.
-   `[CONFIRMAR: quem no escritório decide, e em quanto tempo]`.
+   Decidido em `docs/decisoes.md`, 5.3:
+   - **Quem mexe no dinheiro é só o dono**, no painel do AbacatePay. O advogado
+     responsável pelo pedido confirma se ele é elegível a estorno (nada
+     entregue, nenhuma reunião ocorrida), mas não tem acesso ao financeiro.
+   - **Pagamento órfão:** identificado e associado ao pedido em até **2 dias
+     úteis**. Se em **30 dias** não for possível identificar a quem pertence, o
+     valor é devolvido à origem.
+   - **Estorno:** iniciado em até **5 dias úteis** depois de aprovado. No PIX o
+     valor volta na hora em que o estorno é feito; no cartão segue o prazo da
+     operadora. Os termos dizem isso ao cliente.
 2. **Caminhos possíveis.** O código não oferece outro:
    - **Estornar no painel do AbacatePay.** Esse estorno é feito por uma pessoa
      no painel. O botão de estorno da plataforma só existe para **pedidos**, e

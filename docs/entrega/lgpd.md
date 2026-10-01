@@ -73,7 +73,10 @@ dado eliminado.**
 Tirado da seção *Aviso e executor* do runbook:
 
 1. Registrar a versão aprovada da política e a decisão do controlador para cada
-   categoria: conservação identificável, minimização e prazo.
+   categoria: conservação identificável, minimização e prazo. Contestação
+   (chargeback) aberta já é impedimento na simulação, e
+   `temContestacaoAberta` (`apps/api/src/lgpd/politica.ts`) está exportada para
+   o executor conferir de novo, dentro da própria trava (`decisoes.md`, 5.4).
 2. Uma trava transacional contra novas escritas, pagamentos, uploads, reuniões
    e tarefas durante o processamento.
 3. Reaproveitar o evento `aviso-exclusao-arquivos` do outbox, com chave por

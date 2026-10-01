@@ -45,6 +45,11 @@ export const MAPA_TITULAR = {
     campo: 'clienteId',
     guarda: 'definir_guarda',
   },
+  contestacoes: {
+    colecao: 'contestacoes',
+    campo: 'clienteId',
+    guarda: 'definir_guarda',
+  },
   preCadastros: {
     colecao: 'pre-cadastros',
     vinculo: 'email',

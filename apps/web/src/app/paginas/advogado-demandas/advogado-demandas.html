@@ -27,6 +27,9 @@
     @for (demanda of demandas(); track demanda.id) {
     <app-cartao [titulo]="demanda.snapshot.nome">
       <p class="demandas__cliente">{{ demanda.cliente.nome }}</p>
+      @if (demanda.contestacaoAberta) {
+      <p class="demandas__pausa" role="status">{{ avisoDePausa }}</p>
+      }
 
       <ul class="demandas__entregaveis">
         @for (entregavel of demanda.entregaveis; track entregavel.id) {
@@ -34,7 +37,7 @@
           <span class="demandas__nome">{{ entregavel.nome }}</span>
           <app-selo-estado [estado]="entregavel.estado" />
 
-          @if (acao(entregavel); as proxima) {
+          @if (!demanda.contestacaoAberta && acao(entregavel); as proxima) {
           <app-botao
             variante="primario"
             tamanho="p"
@@ -43,7 +46,7 @@
           >
             {{ proxima === 'iniciar' ? 'Iniciar trabalho' : 'Retomar' }}
           </app-botao>
-          } @if (podeEnviarArquivo(entregavel)) {
+          } @if (!demanda.contestacaoAberta && podeEnviarArquivo(entregavel)) {
           <label class="demandas__arquivo">
             <span>Enviar entregável</span>
             <input
@@ -113,6 +116,7 @@
         }
 
         <!-- `(submit)`, e nao `(ngSubmit)`: ver a nota em `cartao-pedido.html`. -->
+        @if (!demanda.contestacaoAberta) {
         <form
           class="demandas__formulario"
           (submit)="$event.preventDefault(); responder(demanda.id)"
@@ -132,7 +136,7 @@
             Enviar resposta
           </app-botao>
         </form>
-        }
+        } }
       </section>
       }
     </app-cartao>

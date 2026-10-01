@@ -16,7 +16,10 @@ interface Registro {
 }
 export interface Impedimento {
   readonly tipo:
-    'pedido_em_andamento' | 'reuniao_futura' | 'reuniao_inconsistente';
+    | 'pedido_em_andamento'
+    | 'reuniao_futura'
+    | 'reuniao_inconsistente'
+    | 'contestacao_aberta';
   readonly caminho: string;
 }
 
@@ -46,6 +49,9 @@ export function impedimentos(
 ): Impedimento[] {
   const resultado: Impedimento[] = [];
   for (const registro of registros) {
+    if (pedidoEmContestacao(registro)) {
+      resultado.push({ tipo: 'contestacao_aberta', caminho: registro.caminho });
+    }
     if (
       /^pedidos\/[^/]+$/.test(registro.caminho) &&
       pedidoEmAndamento(registro, registros)
@@ -72,4 +78,25 @@ export function impedimentos(
       resultado.push({ tipo: 'reuniao_futura', caminho: registro.caminho });
   }
   return resultado;
+}
+
+/**
+ * Contestacao (chargeback) aberta impede a eliminacao (`docs/decisoes.md`, 5.4
+ * e 2.1): os dados sao a prova que o escritorio apresenta no gateway.
+ *
+ * EXPORTADA PARA O EXECUTOR que ainda nao existe — ele precisa conferir isto de
+ * novo, dentro da propria trava, e nao confiar na simulacao. A pausa e o
+ * marcador `contestacao` no pedido (`pedidos/pausa.ts`).
+ */
+export function temContestacaoAberta(registros: readonly Registro[]): boolean {
+  return registros.some(pedidoEmContestacao);
+}
+
+function pedidoEmContestacao(registro: Registro): boolean {
+  const contestacao = registro.dados['contestacao'];
+  return (
+    /^pedidos\/[^/]+$/.test(registro.caminho) &&
+    contestacao !== undefined &&
+    contestacao !== null
+  );
 }

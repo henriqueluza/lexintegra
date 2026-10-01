@@ -371,6 +371,13 @@ Os eventos de domínio, com a aresta de cada um, vivem em `packages/shared/src/e
 
 **A situação do pedido é um eixo separado do estado dos entregáveis.** `pedidos.situacao` ∈ `ativo | cancelado | estornado`, sempre escrita; documento anterior à Etapa 8 sem o campo é lido como `ativo`. O ADR-11 continua intacto: cancelar não é transição de entregável. O outro lado da corrida está em `EntregaveisService`, que recusa `iniciar-trabalho` em pedido que não esteja `ativo`, também dentro da transação — o estorno e o início do trabalho leem o mesmo pedido, e um dos dois reexecuta.
 
+**B2 (`docs/decisoes.md`, 3.3 e 5.4, construída no Bloco B) — três condições, o que vai junto, e a pausa.**
+
+- **Estorno exige as três condições juntas:** pedido em `solicitado` (nenhum trabalho iniciado — e portanto nenhum entregável enviado, porque o upload só existe em `em_elaboracao`), **nenhuma reunião com início já passado** (realizada ou não comparecimento), e o pedido **fora de contestação**. Anexos enviados pelo cliente não bloqueiam. O **cancelamento pelo cliente segue as mesmas condições** (regra inviolável 15; decisoes.md, Anexo B). As duas elegibilidades vivem em `packages/shared/src/situacao-pedido.ts` (`impedimentoDoEstorno`, `impedimentoDoCancelamento`), devolvem o **motivo** e não um booleano, e o 409 carrega esse motivo (`motivo` no corpo, ao lado de `message`) — a recusa diz qual condição falhou.
+- **Reunião futura não bloqueia: vai junto.** Na mesma transação do cancelamento ou do estorno, as reuniões ativas que ainda não começaram viram `cancelada_com_devolucao`, o slot é liberado e o `METHOD:CANCEL` sai pelo outbox para quem recebeu o convite.
+- **`produtosContratados` reflete só pedidos ativos.** Cancelar ou estornar tira o produto, a não ser que outro pedido ativo do mesmo cliente tenha o mesmo produto. Recalculado na mesma transação, a partir dos pedidos do cliente (`pedidos/encerramento.ts`).
+- **Contestação (chargeback) pausa o pedido.** É um **marcador** (`pedidos.contestacao`), e não uma situação nova: a contestação provável é a de um pedido já cancelado, porque cancelar não devolve dinheiro, e uma situação `pausado` apagaria o que ele era. O webhook `*.disputed` abre a contestação em `contestacoes/{cobrancaId}` e pausa **todos os pedidos da cobrança** na mesma transação: reuniões futuras canceladas com devolução, e e-mail ao cliente (`pausa-contestacao`, outbox). Enquanto aberta, **nenhuma alteração** passa — cliente, advogado ou administrador: cancelamento, estorno, devolução manual, agendar/remarcar/cancelar reunião, observação, anexo, aceite de termos, eventos de entregável e upload, distribuição. Cada ponto de entrada confere no servidor (`pedidos/pausa.ts`); ler continua livre. O administrador registra o resultado em `/admin/contestacoes`: **ganha** tira a pausa; **perdida** leva os pedidos a `estornado` com estorno de execução `contestacao` (o dinheiro já voltou pelo meio de pagamento, então não há devolução manual nem pelo gateway) e tira o produto de `produtosContratados`. Estorno que o escritório **já tinha devolvido** e contestação perdida na mesma cobrança vira alerta crítico (`pagamento.contestacao-sobre-estorno`). Contestação aberta também impede a eliminação de dados do titular (`lgpd/politica.ts`, `temContestacaoAberta`).
+
 **O texto jurídico da regra ainda não existe.** O aceite no checkout sai com o marcador literal `{{TODO-TEXTO-REGRA-ESTORNO-ADR-12}}` e a versão `checkout-v0-pendente-adr-12`, e o cancelamento com `{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}`, cada um com teste que cai quando o marcador for substituído. A evidência do aceite (`termosVersao`, `termosAceitosEm`) é **copiada para o pagamento** na confirmação: o checkout some pela TTL, e a prova de que o cliente aceitou a regra não pode sumir com ele.
 
 ### ADR-13 — Projeto Google Cloud/Firebase no nome do CONTRATADO, faturamento separado
@@ -529,7 +536,7 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
 | Evento | Resposta | Alerta |
 |---|---|---|
 | documentado e alheio a este sistema (`subscription.*`, `transfer.*`, `payout.*`) | 200, `ignorado` | nenhum |
-| chargeback (`checkout.disputed`, `transparent.disputed`) | 200, `alertado` — nenhum estado muda | crítico, `pagamento.contestacao`, com o id da cobrança |
+| chargeback (`checkout.disputed`, `transparent.disputed`) | 200, `alertado` — **desde a B2, pausa os pedidos da cobrança** (errata do ADR-12) | crítico, `pagamento.contestacao`, com o id da cobrança |
 | qualquer outro nome | 200, `alertado` | crítico, `pagamento.webhook-evento-desconhecido`, com nome, id do log e da cobrança |
 
 200 e não 5xx: reentregar não faria o código entender o evento, e um webhook que recusa em série pode ser desativado pelo gateway. O nome do evento de conclusão do cartão é o **item 1** do roteiro do sandbox; se ele desmentir a documentação, a correção é uma linha em `EVENTOS` (`pagamentos/webhook/evento.ts`).
@@ -822,6 +829,7 @@ problema de leitura.
 | `pagamentos` | Um por cobrança do gateway, com a situação da confirmação (Etapa 8, ADR-19) |
 | `pedidos` | Um por produto comprado; snapshot imutável |
 | `estornos` | Um por pedido estornado, com a forma de execução (Etapa 8, ADR-12) |
+| `contestacoes` | Uma por cobrança contestada (chargeback): a pausa e o resultado (B2, ADR-12) |
 | `produtos-gateway` | Cache do produto cadastrado no gateway para o cartão (Etapa 8) |
 | `advogados` | Perfil e licença Microsoft confirmada |
 | `disponibilidades` | Slots com ID determinístico |

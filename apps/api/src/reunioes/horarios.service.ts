@@ -13,6 +13,7 @@ import {
 } from '../disponibilidades/slot.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import { agora as agora_ } from '../relogio.js';
+import { contestacaoAberta } from '../pedidos/pausa.js';
 import {
   COLECAO_PEDIDOS,
   situacaoDe,
@@ -80,6 +81,7 @@ export class HorariosService {
         (slot) =>
           impedimentoParaAgendar({
             situacao: situacaoDe(pedido),
+            contestacaoAberta: contestacaoAberta(pedido),
             distribuido: pedido.distribuido,
             quantidadeContratada: pedido.snapshot.quantidadeReunioes,
             intervaloMinimoDias: pedido.snapshot.intervaloMinimoReunioesDias,

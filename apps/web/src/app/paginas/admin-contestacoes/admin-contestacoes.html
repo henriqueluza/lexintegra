@@ -1,0 +1,61 @@
+<section class="contestacoes">
+  <h1 class="contestacoes__titulo">Contestações</h1>
+  <p class="pagina-descricao">
+    Pagamentos contestados no meio de pagamento. Os pedidos da cobrança ficam
+    pausados até você registrar o resultado.
+  </p>
+
+  <p class="contestacoes__nota">
+    Responda à contestação no painel do AbacatePay, com os termos aceitos, os
+    downloads e as reuniões realizadas. Depois registre aqui: ganha tira a
+    pausa; perdida estorna os pedidos, sem devolução a fazer — o dinheiro já
+    voltou ao cliente pelo meio de pagamento.
+  </p>
+
+  <app-campo
+    rotulo="Nota do resultado (número do caso, data da decisão)"
+    [formControl]="nota"
+    [obrigatorio]="true"
+  />
+
+  @if (falha(); as mensagem) {
+  <app-mensagem-erro variante="bloco">{{ mensagem }}</app-mensagem-erro>
+  } @if (falhaDaLista()) {
+  <app-mensagem-erro variante="bloco">
+    Não foi possível carregar as contestações. Recarregue a página.
+  </app-mensagem-erro>
+  }
+
+  <app-tabela
+    legenda="Contestacoes abertas"
+    [colunas]="colunas"
+    [linhas]="linhas()"
+    [carregando]="carregando()"
+    mensagemVazia="Nenhuma contestação aberta."
+  >
+    <ng-template appCelulaTabela let-linha let-coluna="coluna">
+      @switch (coluna.chave) { @case ('cobranca') { {{
+      comoContestacao(linha).cobrancaId }} } @case ('pedidos') { {{
+      comoContestacao(linha).pedidoIds.join(', ') }} } @case ('abertaEm') { {{
+      data(comoContestacao(linha)) }} } @case ('acoes') {
+      <div class="contestacoes__acoes">
+        <app-botao
+          tamanho="p"
+          [carregando]="emCurso() === comoContestacao(linha).cobrancaId"
+          (click)="registrar(comoContestacao(linha), 'ganha')"
+        >
+          Ganha
+        </app-botao>
+        <app-botao
+          variante="primario"
+          tamanho="p"
+          [carregando]="emCurso() === comoContestacao(linha).cobrancaId"
+          (click)="registrar(comoContestacao(linha), 'perdida')"
+        >
+          Perdida
+        </app-botao>
+      </div>
+      } }
+    </ng-template>
+  </app-tabela>
+</section>

@@ -78,6 +78,20 @@ export interface DocumentoPedido {
   estornadoPor?: string;
 
   /**
+   * B2 (decisoes.md, 5.4). A contestacao (chargeback) aberta sobre a cobranca
+   * deste pedido: enquanto existir, o pedido esta PAUSADO e nada nele muda (ver
+   * `pausa.ts`). `null` ou ausente: sem contestacao aberta — ausente e todo
+   * pedido anterior a este campo, e nenhuma consulta filtra por ele.
+   *
+   * MARCADOR, E NAO SITUACAO: a contestacao provavel e a de um pedido ja
+   * cancelado, e uma situacao `pausado` apagaria o que ele era.
+   */
+  contestacao?: {
+    cobrancaId: string;
+    abertaEm: Timestamp | FieldValue;
+  } | null;
+
+  /**
    * Quando TODOS os entregaveis do pedido chegaram a `entregue` — o gatilho da
    * retencao de 30 dias (arquitetura 7.3 e secao 13, decidido na reuniao).
    *
@@ -136,6 +150,17 @@ export interface DocumentoPedido {
   arquivosExcluidosEm?: Timestamp | FieldValue;
 }
 
+/**
+ * O pedido esta pausado por contestacao? Vive AQUI, e nao em `pausa.ts`, porque
+ * `pausa.ts` importa este arquivo e as projecoes daqui precisam da resposta —
+ * importar de volta seria ciclo. `pausa.ts` reexporta.
+ */
+export function contestacaoAberta(
+  pedido: Pick<DocumentoPedido, 'contestacao'>,
+): boolean {
+  return pedido.contestacao !== undefined && pedido.contestacao !== null;
+}
+
 /** ISO 8601, ou `null` enquanto o carimbo do servidor nao materializou. */
 export function paraIso(valor: unknown): string | null {
   return valor instanceof Timestamp ? valor.toDate().toISOString() : null;
@@ -166,6 +191,7 @@ export function paraCartao(
     entregaveis,
     distribuido: pedido.distribuido,
     situacao: situacaoDe(pedido),
+    contestacaoAberta: contestacaoAberta(pedido),
     criadoEm: paraIso(pedido.criadoEm),
     reunioes,
     /*
@@ -231,6 +257,7 @@ export function paraDemanda(
     entregaveis,
     cliente,
     criadoEm: paraIso(pedido.criadoEm),
+    contestacaoAberta: contestacaoAberta(pedido),
   };
 }
 

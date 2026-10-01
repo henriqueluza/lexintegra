@@ -71,6 +71,11 @@ export interface NovoEvento {
   readonly estorno?: EstornoDoEvento;
   /** Nos tres eventos de reuniao da Etapa 10. */
   readonly reuniao?: ReuniaoDoEvento;
+  /**
+   * So em `pausa-contestacao`: a cobranca contestada. E so um id, sem valor nem
+   * produto — o e-mail diz o que precisa sem dado do pedido em repouso aqui.
+   */
+  readonly cobrancaId?: string;
 }
 
 export interface RegistroOutbox {
@@ -78,6 +83,7 @@ export interface RegistroOutbox {
   readonly destinatarioUid: string;
   readonly estorno?: EstornoDoEvento;
   readonly reuniao?: ReuniaoDoEvento;
+  readonly cobrancaId?: string;
   readonly estado: EstadoEntrega;
   readonly criadoEm: Timestamp;
   /** Quantas vezes o registro foi REIVINDICADO. Ver `OutboxService.reivindicar`. */
@@ -152,6 +158,16 @@ export function idDoEvento(
   uid: string,
   agora: number = Date.now(),
 ): string {
+  /*
+   * OS TRES DA ETAPA 10 E A PAUSA POR CONTESTACAO tem a mesma FORMA de id —
+   * `tipo_chave` —, e o que os distingue e a CHAVE, montada em `chaveDoEvento`:
+   * a sala leva so (pedido, reuniao); o convite e o cancelamento levam tambem
+   * `sequence` e o destinatario; a pausa leva a cobranca e o destinatario — um
+   * aviso por cliente por cobranca contestada, e o webhook repetido cai no
+   * mesmo documento. O porque de cada parte esta la, junto da composicao.
+   */
+  if (temChaveComposta(tipo)) return `${tipo}_${uid}`;
+
   switch (tipo) {
     case 'definir-senha':
       return `definir-senha_${uid}`;
@@ -182,17 +198,6 @@ export function idDoEvento(
     case 'aviso-exclusao-arquivos':
       return `aviso-exclusao_${uid}`;
 
-    /*
-     * OS TRES DA ETAPA 10 tem a mesma FORMA de id — `tipo_chave` —, e o que os
-     * distingue e a CHAVE, montada em `chaveDoEvento`: a sala leva so (pedido,
-     * reuniao); o convite e o cancelamento levam tambem `sequence` e o
-     * destinatario. O porque de cada parte esta la, junto da composicao.
-     */
-    case 'criar-sala-reuniao':
-    case 'convite-reuniao':
-    case 'cancelamento-reuniao':
-      return `${tipo}_${uid}`;
-
     case 'redefinir-senha': {
       const janela = Math.floor(agora / JANELA_REDEFINICAO_MS);
       return `redefinir-senha_${uid}_${janela}`;
@@ -201,6 +206,19 @@ export function idDoEvento(
     default:
       return semRamo(tipo);
   }
+}
+
+const COM_CHAVE_COMPOSTA = [
+  'criar-sala-reuniao',
+  'convite-reuniao',
+  'cancelamento-reuniao',
+  'pausa-contestacao',
+] as const;
+
+function temChaveComposta(
+  tipo: TipoEvento,
+): tipo is (typeof COM_CHAVE_COMPOSTA)[number] {
+  return (COM_CHAVE_COMPOSTA as readonly TipoEvento[]).includes(tipo);
 }
 
 /**
@@ -255,6 +273,9 @@ export function ehDuplicata(erro: unknown): boolean {
  */
 export function chaveDoEvento(evento: NovoEvento): string {
   if (evento.estorno !== undefined) return evento.estorno.pagamentoId;
+  if (evento.cobrancaId !== undefined) {
+    return `${evento.cobrancaId}_${evento.destinatarioUid}`;
+  }
 
   const reuniao = evento.reuniao;
   if (reuniao === undefined) return evento.destinatarioUid;

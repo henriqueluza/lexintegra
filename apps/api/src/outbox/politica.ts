@@ -72,6 +72,12 @@ export const POLITICA: Readonly<Record<TipoEvento, PoliticaDeEvento>> = {
    * reuniao fantasma.
    */
   'cancelamento-reuniao': { criticidade: 'critico', maxTentativas: 10 },
+  /*
+   * A pausa por contestacao (B2, decisoes.md 5.4). Critico porque e o unico
+   * aviso de que as reunioes futuras do cliente sumiram da agenda — sem ele, o
+   * cliente aparece numa sala que o escritorio ja desmarcou.
+   */
+  'pausa-contestacao': { criticidade: 'critico', maxTentativas: 10 },
 };
 
 export interface ConfiguracaoDoOutbox {

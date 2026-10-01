@@ -503,8 +503,9 @@ constroem**. As decisões vão para um `decisoes.md`.
 - [ ] As oito decisões provisórias do ADR-21, em especial a antecedência de
   24 h e a devolução do crédito quando o escritório cancela. → Ajustar o código
   e o ADR.
-- [ ] `produtosContratados` do cliente perde o produto cancelado ou estornado?
-  → Ajustar.
+- [x] `produtosContratados` do cliente perde o produto cancelado ou estornado?
+  Decidido (decisoes.md, 3.3) e construído no Bloco B: só pedidos ativos, e a
+  regra de estorno ganhou as três condições.
 - [ ] Enquanto o cartão não for homologado: esconder a opção ou lançar só com
   PIX? → Implementar.
 
@@ -521,9 +522,12 @@ constroem**. As decisões vão para um `decisoes.md`.
 - [ ] Endereço do remetente de e-mail. → `EMAIL_FROM` e `operacao.md`.
 - [ ] Destinatários dos alertas, e quais acordam alguém. →
   `alertas-roteamento.json` e Terraform.
-- [ ] Quem resolve um pagamento órfão, quem devolve o dinheiro no estorno
-  manual, e em quanto tempo. → Runbooks.
-- [ ] Processo de contestação (chargeback). → `alerta-critico.md`.
+- [x] Quem resolve um pagamento órfão, quem devolve o dinheiro no estorno
+  manual, e em quanto tempo. Decidido (decisoes.md, 5.3); runbook
+  `pagamento-orfao.md` no Bloco B. O texto dos termos é o Bloco I.
+- [x] Processo de contestação (chargeback). Decidido (decisoes.md, 5.4) e
+  construído no Bloco B: pausa dos pedidos, `/admin/contestacoes`,
+  `alerta-critico.md`.
 - [ ] Como será provisionado o próximo administrador. → `operacao.md` §8.
 - [x] Tipografia: Plus Jakarta Sans, família única (ADR-22).
 

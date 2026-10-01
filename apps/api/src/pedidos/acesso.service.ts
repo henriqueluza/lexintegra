@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 import type { Perfil } from 'shared';
 import { FIRESTORE } from '../firebase/firebase.module.js';
+import { exigirSemContestacao } from './pausa.js';
 import {
   COLECAO_PEDIDOS,
   podeAcessarPedido,
@@ -63,5 +64,21 @@ export class AcessoPedidoService {
     }
 
     return { referencia, pedido };
+  }
+
+  /**
+   * O mesmo `exigir`, para quem vai ALTERAR algo pendurado no pedido (anexo,
+   * observacao): pedido pausado por contestacao responde 409
+   * (`docs/decisoes.md`, 5.4). Ler continua com `exigir`, que nao olha a
+   * pausa. Fora de transacao porque os chamadores escrevem documentos novos,
+   * que nao disputam com a pausa — a janela e a mesma de qualquer leitura.
+   */
+  async exigirParaAlterar(
+    pedidoId: string,
+    quem: QuemAcessa,
+  ): Promise<{ referencia: DocumentReference; pedido: DocumentoPedido }> {
+    const acesso = await this.exigir(pedidoId, quem);
+    exigirSemContestacao(acesso.pedido);
+    return acesso;
   }
 }

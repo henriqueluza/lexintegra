@@ -26,6 +26,7 @@ import { FIRESTORE } from '../firebase/firebase.module.js';
 import { agora as agora_ } from '../relogio.js';
 import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
+import { contestacaoAberta, exigirSemContestacao } from '../pedidos/pausa.js';
 import {
   COLECAO_PEDIDOS,
   situacaoDe,
@@ -194,6 +195,8 @@ export class AlteracoesDeReuniaoService {
     agora: number,
   ): void {
     const { reuniao, pedido } = contexto;
+    /* Pausado por contestacao, primeiro: nada no pedido muda (5.4). */
+    exigirSemContestacao(pedido);
 
     if (!reuniaoAtiva(reuniao.estado)) {
       throw new ConflictException('Esta reuniao ja foi cancelada.');
@@ -231,6 +234,7 @@ export class AlteracoesDeReuniaoService {
 
     const impedimento = impedimentoParaAgendar({
       situacao: situacaoDe(pedido),
+      contestacaoAberta: contestacaoAberta(pedido),
       distribuido: pedido.distribuido,
       quantidadeContratada: pedido.snapshot.quantidadeReunioes,
       intervaloMinimoDias: pedido.snapshot.intervaloMinimoReunioesDias,
@@ -309,10 +313,9 @@ export class AlteracoesDeReuniaoService {
       this.db.collection(COLECAO_DISPONIBILIDADES).doc(reuniao.slotId),
       { reserva: null },
     );
-    transacao.update(
-      this.db.collection(COLECAO_DISPONIBILIDADES).doc(slotId),
-      { reserva: { pedidoId: alvo.pedidoId, reuniaoId: alvo.reuniaoId } },
-    );
+    transacao.update(this.db.collection(COLECAO_DISPONIBILIDADES).doc(slotId), {
+      reserva: { pedidoId: alvo.pedidoId, reuniaoId: alvo.reuniaoId },
+    });
     /*
      * A SERIALIZACAO POR PEDIDO, a mesma do agendamento: sem tocar o documento
      * do pedido, duas alteracoes simultaneas em reunioes DIFERENTES do mesmo

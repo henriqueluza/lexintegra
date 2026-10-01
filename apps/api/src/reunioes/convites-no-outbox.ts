@@ -1,4 +1,5 @@
 import type { Transaction } from 'firebase-admin/firestore';
+import type { NovoEvento } from '../outbox/evento.js';
 import type { OutboxService } from '../outbox/outbox.service.js';
 import type { DocumentoReuniao } from './reuniao.js';
 
@@ -65,14 +66,28 @@ export async function registrarCancelamentosDaReuniao(
   alvo: { readonly pedidoId: string; readonly reuniaoId: string },
   reuniao: Pick<DocumentoReuniao, 'sequence' | 'clienteId' | 'advogadoId'>,
 ): Promise<string[]> {
-  const carga = { ...alvo, sequence: reuniao.sequence };
-
   return outbox.registrarSeAusenteEmLote(
     transacao,
-    [reuniao.clienteId, reuniao.advogadoId].map((destinatarioUid) => ({
-      tipo: 'cancelamento-reuniao' as const,
-      destinatarioUid,
-      reuniao: carga,
-    })),
+    eventosDeCancelamento(alvo, reuniao),
   );
+}
+
+/**
+ * Os dois `cancelamento-reuniao` de uma reuniao, sem gravar nada.
+ *
+ * Existe para quem cancela VARIAS reunioes na mesma transacao — o cancelamento
+ * e o estorno do pedido, e a pausa por contestacao (B2). Elas juntam todos os
+ * eventos num lote so de `registrarSeAusenteEmLote`, porque dois lotes seguidos
+ * poriam a leitura do segundo depois da escrita do primeiro.
+ */
+export function eventosDeCancelamento(
+  alvo: { readonly pedidoId: string; readonly reuniaoId: string },
+  reuniao: Pick<DocumentoReuniao, 'sequence' | 'clienteId' | 'advogadoId'>,
+): NovoEvento[] {
+  const carga = { ...alvo, sequence: reuniao.sequence };
+  return [reuniao.clienteId, reuniao.advogadoId].map((destinatarioUid) => ({
+    tipo: 'cancelamento-reuniao' as const,
+    destinatarioUid,
+    reuniao: carga,
+  }));
 }

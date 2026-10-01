@@ -1,6 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { FIRESTORE } from '../firebase/firebase.module.js';
+import { exigirSemContestacao } from '../pedidos/pausa.js';
+import { COLECAO_PEDIDOS, type DocumentoPedido } from '../pedidos/pedido.js';
 
 export const COLECAO_ACEITES = 'aceites-de-termos';
 
@@ -74,6 +76,18 @@ export class TermosService {
       dados.entregavelId,
       dados.versaoArquivo,
     );
+
+    /*
+     * Pedido pausado por contestacao nao ganha aceite novo (decisoes.md, 5.4):
+     * o aceite e o registro de download que o escritorio usa como prova na
+     * contestacao, e ele nao pode ser criado durante ela. Versao ja aceita
+     * continua baixavel — o portao so confere que o aceite existe.
+     */
+    const pedido = await this.db
+      .collection(COLECAO_PEDIDOS)
+      .doc(dados.pedidoId)
+      .get();
+    if (pedido.exists) exigirSemContestacao(pedido.data() as DocumentoPedido);
 
     /*
      * `set` com merge e nao `create`: o segundo clique nao pode estourar. O

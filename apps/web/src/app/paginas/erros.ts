@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { MOTIVO_DO_IMPEDIMENTO_DO_PEDIDO } from 'shared/situacao-pedido';
 
 /**
  * Traduz a falha da API em texto de tela.
@@ -16,6 +17,12 @@ import { HttpErrorResponse } from '@angular/common/http';
  * tela, e "Ja existe um advogado com este e-mail" e util. Quem tem o texto melhor
  * passa; quem nao tem, herda o generico.
  */
+const GENERICAS_POR_STATUS: Readonly<Record<number, string>> = {
+  404: 'Este item não existe mais.',
+  409: 'Já existe um registro equivalente.',
+  403: 'Seu perfil não permite esta operação.',
+};
+
 export function mensagemDoErro(
   erro: unknown,
   especificas: Readonly<Record<number, string>> = {},
@@ -23,13 +30,30 @@ export function mensagemDoErro(
   const generica = 'Não foi possível concluir a operação.';
   if (!(erro instanceof HttpErrorResponse)) return generica;
 
-  const especifica = especificas[erro.status];
-  if (especifica !== undefined) return especifica;
-
-  if (erro.status === 404) return 'Este item não existe mais.';
-  if (erro.status === 409) return 'Já existe um registro equivalente.';
-  if (erro.status === 403) return 'Seu perfil não permite esta operação.';
+  /*
+   * O 409 que diz POR QUE o pedido nao aceita a operacao (B2, decisoes.md 3.3 e
+   * 5.4) vence o texto da tela: "ja comecou o trabalho" e "pausado por
+   * contestacao" sao recusas diferentes, e a tela so conhece uma.
+   */
+  const texto =
+    motivoDoPedido(erro) ??
+    especificas[erro.status] ??
+    GENERICAS_POR_STATUS[erro.status];
+  if (texto !== undefined) return texto;
 
   const corpo = erro.error as { erros?: Record<string, string> } | null;
   return Object.values(corpo?.erros ?? {})[0] ?? generica;
+}
+
+function motivoDoPedido(erro: HttpErrorResponse): string | undefined {
+  const motivo = (erro.error as { motivo?: unknown } | null)?.motivo;
+  if (
+    typeof motivo !== 'string' ||
+    !(motivo in MOTIVO_DO_IMPEDIMENTO_DO_PEDIDO)
+  ) {
+    return undefined;
+  }
+  return MOTIVO_DO_IMPEDIMENTO_DO_PEDIDO[
+    motivo as keyof typeof MOTIVO_DO_IMPEDIMENTO_DO_PEDIDO
+  ];
 }

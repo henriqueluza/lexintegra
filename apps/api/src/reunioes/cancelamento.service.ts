@@ -25,6 +25,7 @@ import { FIRESTORE } from '../firebase/firebase.module.js';
 import { agora as agora_ } from '../relogio.js';
 import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
+import { exigirSemContestacao } from '../pedidos/pausa.js';
 import { COLECAO_PEDIDOS, type DocumentoPedido } from '../pedidos/pedido.js';
 import { registrarCancelamentosDaReuniao } from './convites-no-outbox.js';
 import {
@@ -56,8 +57,7 @@ export interface AtorDoCancelamento {
  * agravante de liberar um slot que nao existe mais. Cancelar TARDE continua
  * valendo: o que muda e a devolucao, nao a permissao.
  *
- * QUANDO QUEM CANCELA E O ESCRITORIO, DEVOLVE SEMPRE (ADR-21, decisao H —
- * PROVISORIO). O administrador precisa poder desmarcar (advogado doente, agenda
+ * QUANDO QUEM CANCELA E O ESCRITORIO, DEVOLVE SEMPRE (ADR-21, decisao H). O administrador precisa poder desmarcar (advogado doente, agenda
  * remanejada), e nesse caso a culpa nao e do cliente: a reuniao volta ao saldo
  * mesmo dentro das 24 horas. A regra nao esta no contrato e e pergunta ao Marcos.
  */
@@ -113,6 +113,11 @@ export class CancelamentoDeReuniaoService {
       throw new NotFoundException('Reuniao nao encontrada.');
     }
     this.exigirAcesso(pedido, ator);
+    /*
+     * Pausado por contestacao, nem o cancelamento passa (decisoes.md, 5.4): as
+     * futuras ja foram canceladas, com devolucao, quando a pausa abriu.
+     */
+    exigirSemContestacao(pedido);
 
     if (!reuniaoAtiva(reuniao.estado)) {
       throw new ConflictException('Esta reuniao ja foi cancelada.');

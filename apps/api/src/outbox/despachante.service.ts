@@ -14,11 +14,14 @@ import {
   GATEWAY_PAGAMENTO,
   type GatewayPagamento,
 } from '../pagamentos/gateway/gateway.js';
+import type { TipoEvento } from 'shared';
 import type { RegistroOutbox } from './evento.js';
 import { montarLinkDeSenha, urlDaAplicacao } from './link-de-senha.js';
 import {
   ASSUNTO_AVISO_EXCLUSAO,
+  ASSUNTO_PAUSA_CONTESTACAO,
   TEXTO_AVISO_EXCLUSAO,
+  TEXTO_PAUSA_CONTESTACAO,
 } from '../termos/termos.textos.js';
 import {
   ConvitesService,
@@ -48,6 +51,28 @@ const MODELO_SENHA = 'password-reset';
  * e-mail para trocar a propria senha, e nada falharia. Agora o compilador cobra
  * o ramo.
  */
+/**
+ * Os e-mails de TEXTO FIXO, sem link e sem dado do pedido: o aviso previo de
+ * exclusao (Etapa 11, arquitetura secao 13) e a pausa por contestacao (B2,
+ * decisoes.md 5.4). Os textos sao minutas, e saem assim mesmo, de proposito: a
+ * alternativa seria uma rotina de conformidade que nao roda ate alguem lembrar
+ * de aprovar um texto.
+ */
+const TEXTOS_FIXOS = {
+  'aviso-exclusao-arquivos': {
+    assunto: ASSUNTO_AVISO_EXCLUSAO,
+    corpoTexto: TEXTO_AVISO_EXCLUSAO,
+  },
+  'pausa-contestacao': {
+    assunto: ASSUNTO_PAUSA_CONTESTACAO,
+    corpoTexto: TEXTO_PAUSA_CONTESTACAO,
+  },
+} as const;
+
+function ehTextoFixo(tipo: TipoEvento): tipo is keyof typeof TEXTOS_FIXOS {
+  return tipo in TEXTOS_FIXOS;
+}
+
 function semMontador(tipo: never): never {
   throw new Error(`Tipo de evento sem montador: ${String(tipo)}`);
 }
@@ -350,24 +375,12 @@ export class DespachanteOutbox {
 
     const para = [usuario.email];
 
-    switch (registro.tipo) {
-      /*
-       * O AVISO PREVIO DE EXCLUSAO (Etapa 11, arquitetura secao 13). Nao gera
-       * link de senha nenhum.
-       *
-       * ⚠️ O TEXTO NAO FOI APROVADO pela CONTRATANTE. `TEXTO_AVISO_EXCLUSAO` e
-       * um marcador literal, e ha teste que cai quando ele for substituido — ver
-       * `termos/termos.textos.ts`. O e-mail SAI mesmo assim, de propósito: a
-       * alternativa seria uma rotina de conformidade que nao roda ate alguem
-       * lembrar de aprovar um texto.
-       */
-      case 'aviso-exclusao-arquivos':
-        return {
-          para,
-          assunto: ASSUNTO_AVISO_EXCLUSAO,
-          corpoTexto: TEXTO_AVISO_EXCLUSAO,
-        };
+    if (ehTextoFixo(registro.tipo)) {
+      const { assunto, corpoTexto } = TEXTOS_FIXOS[registro.tipo];
+      return { para, assunto, corpoTexto };
+    }
 
+    switch (registro.tipo) {
       /*
        * Os tres que levam link de senha. Sao eventos DIFERENTES — "o
        * administrador criou um acesso de advogado", "alguem esqueceu a senha" e
