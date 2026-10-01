@@ -831,7 +831,7 @@ Branch `feat/agendamento-reunioes`. **A etapa não fecha**: os três pré-requis
 
 - **Preencher `usuarioTeams` de cada advogado.** O Graph identifica o advogado pelo **object ID do Entra**, não pelo uid do Firebase nem pelo e-mail. O campo é opcional no formulário do administrador e o adaptador recusa com erro claro e reentregável quando está nulo — mas enquanto ele estiver vazio, nenhuma sala é criada para aquele advogado.
 - **Aprovar as imagens de referência da regressão visual.** Nove são novas; todas as outras dos painéis mudaram porque o menu ganhou item. Uma a uma — regravar em bloco apaga a regressão em vez de acusá-la.
-- **Confirmar com o Marcos as oito decisões provisórias do ADR-21**, em especial: a antecedência mínima de 24 horas para marcar (decisão F) e a devolução do crédito quando quem cancela é o escritório (decisão H). Nenhuma das duas está no contrato.
+- ~~**Confirmar com o Marcos as oito decisões provisórias do ADR-21**~~ — **confirmadas em 29/09/2026** (`docs/decisoes.md`, 3.2 e Anexo B), com a F e a H; o cancelamento pelo escritório ganhou o e-mail de convite a remarcar.
 - **Ligar `REUNIOES_MODO=graph` em commit próprio**, depois de o registro no Entra ID e a policy estarem confirmados, e com uma chamada de teste manual antes. Hoje o valor derruba o boot de propósito.
 
 ## Etapa 11 — Upload e varredura de malware

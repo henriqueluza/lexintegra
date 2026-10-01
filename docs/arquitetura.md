@@ -606,11 +606,12 @@ roteiro.
 
 ### ADR-21 — Agendamento de reunião: as regras que o contrato não fixa
 
-**Estado: PROVISÓRIO, a confirmar com a CONTRATANTE.** O ADR-05 decidiu *como* a sala
-nasce (Graph API, app-only) e o ADR-12 decidiu a janela de 24 horas do cancelamento. Entre
-os dois sobra um conjunto de regras que a Etapa 10 precisa responder para existir e que
-nenhum documento fixa. Elas estão aqui, cada uma isolada o suficiente para mudar sem
-reescrever o módulo, e cada uma na lista de confirmação do "Só você" da Etapa 10.
+**Estado: CONFIRMADO em 29/09/2026** (`docs/decisoes.md`, 3.2 e Anexo B): as oito decisões
+de produto abaixo, a antecedência mínima para marcar (**F**) e o cancelamento pelo escritório
+(**H**), que ganhou o e-mail de convite a remarcar. O ADR-05 decidiu *como* a sala nasce
+(Graph API, app-only) e o ADR-12 decidiu a janela de 24 horas do cancelamento; entre os dois
+sobrava um conjunto de regras que a Etapa 10 precisava responder para existir e que nenhum
+documento fixava. Elas continuam isoladas o suficiente para mudar sem reescrever o módulo.
 
 #### As oito decisões de produto
 
@@ -630,8 +631,8 @@ reescrever o módulo, e cada uma na lista de confirmação do "Só você" da Eta
    disponibilidade (seção 8). O job de "expiração da janela de 12 meses" que a seção 8
    listava **deixa de existir**: ele não tem nada a fazer que a leitura não faça, e um job
    a mais é uma peça móvel que falha em silêncio. Já são cinco jobs; um sexto só se
-   justifica se o escritório quiser um **e-mail de aviso de vencimento** — que é
-   funcionalidade nova, não infraestrutura, e é pergunta ao Marcos.
+   justificaria com um **e-mail de aviso de vencimento**, e **ele não entra no
+   lançamento** (decisoes.md, 3.2): sem sexto job.
 
 4. **Consumo do saldo.** Saldo = `quantidadeReunioes` do snapshot menos as reuniões do
    pedido em qualquer estado **exceto** `cancelada_com_devolucao`. Não comparecimento
@@ -721,10 +722,10 @@ os clientes de calendário a aplicariam — deslocando reuniões em uma hora num
 Se o horário de verão voltar, **este** é o ponto único a mudar, como o `hora + 3` da grade
 de disponibilidade.
 
-**F. Antecedência mínima para agendar: 24 horas. PROVISÓRIO.** Marcar para daqui a dez
-minutos não dá ao advogado tempo de se preparar nem à sala tempo de ser criada — a criação
-passa pelo outbox e pode ser reentregue. O número não veio de lugar nenhum: é **pergunta ao
-Marcos**, e vive numa constante em `packages/shared/src/regras-reuniao.ts`.
+**F. Antecedência mínima para agendar: 24 horas. Confirmada em 29/09/2026.** Marcar para
+daqui a dez minutos não dá ao advogado tempo de se preparar nem à sala tempo de ser criada —
+a criação passa pelo outbox e pode ser reentregue. Vive numa constante em
+`packages/shared/src/regras-reuniao.ts`.
 
 **G. Advogado suspenso não recebe reunião.** A transação de agendar e a de remarcar leem
 `advogados/{advogadoId}` e recusam se estiver suspenso. É o outro lado de **D**: sem as
@@ -732,11 +733,13 @@ duas, marcar na agenda de quem acabou de perder o acesso seria o caso comum, e n
 As duas juntas **estreitam** a corrida entre "suspender" e "marcar", mas não a fecham — ver
 "Um risco aceito", abaixo.
 
-**H. Cancelamento pelo administrador, sempre com devolução. PROVISÓRIO.** O escritório
-precisa poder desmarcar — advogado doente, agenda remanejada — e nesse caso a culpa não é
-do cliente: a reunião volta ao saldo **mesmo dentro das 24 horas**. Reaproveita o mesmo
-serviço do cancelamento do cliente, com o ator vindo do token. A regra de devolução nesse
-caso **não está no contrato**, e é **pergunta ao Marcos**.
+**H. Cancelamento pelo escritório, sempre com devolução. Confirmada em 29/09/2026.** O
+escritório precisa poder desmarcar — advogado doente, agenda remanejada — e nesse caso a culpa
+não é do cliente: a reunião volta ao saldo (`cancelada_com_devolucao`) **com qualquer
+antecedência**, inclusive dentro das 24 horas. Reaproveita o mesmo serviço do cancelamento do
+cliente, com o ator vindo do token. **O cliente recebe e-mail** (`reuniao-desmarcada-escritorio`,
+pelo outbox) avisando e convidando a remarcar — sempre, inclusive quando a reunião nunca ganhou
+sala e não há `METHOD:CANCEL` a mandar.
 
 #### O que fica fora desta branch
 
