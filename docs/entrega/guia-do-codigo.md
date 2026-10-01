@@ -62,7 +62,7 @@ ou o ADR de `docs/arquitetura.md` e as regras invioláveis do `AGENTS.md`.
 |---|---|---|
 | `advogados/` | Criar advogado (com link de definição de senha), suspender e reativar acesso, gravar `usuarioTeams` | 7.4, ADR-07, ADR-21 (B, D, G), regra 17 |
 | `alertas/` | Porta de alerta: um alerta é uma linha de log estruturado que o Monitoring consome | ADR-03, seção 9 |
-| `anamnese-provisoria/` | **Stub** da ficha inicial do cliente: três perguntas provisórias | 5.1, Etapa 8 |
+| `anamnese/` | Ficha inicial do cliente, modelo `definitiva-v1` (`shared/anamnese`). Uma por cliente, sem reescrita | 5.1, Bloco A da B2 |
 | `anexos/` | Arquivos de apoio do cliente (até 3, jpg/pdf, 5 MB cada), por URL assinada | 7.3, regra 16 |
 | `app-check/` | Guard do App Check nas rotas `@Publico()`. `APP_CHECK_ENFORCE` é obrigatória em produção | ADR-16 |
 | `armazenamento/` | Porta do Cloud Storage. Em teste e desenvolvimento, adaptador falso em memória | ADR-17 |

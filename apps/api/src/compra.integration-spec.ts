@@ -4,6 +4,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { VERSAO_TERMOS_CHECKOUT, type NovoProduto } from 'shared';
 import { AppModule } from './app.module.js';
+import { respostasMinimasDaFicha } from './arnes-anamnese.js';
 import { caminhoDoWebhook, eventoNoFormatoReal } from './arnes-webhook.js';
 import { COLECAO_CHECKOUTS } from './checkout/checkout.js';
 import { configurar, OPCOES_DA_APLICACAO } from './configurar.js';
@@ -183,7 +184,7 @@ describe('compra completa (criterio de aceite da Etapa 8)', () => {
     const idToken = String(entrada['idToken']);
     expect(idToken.length).toBeGreaterThan(20);
 
-    /* 7. A ficha inicial (stub) e exigida, e depois de enviada, esta preenchida. */
+    /* 7. A ficha inicial e exigida, e depois de enviada, esta preenchida. */
     const autenticado = (
       metodo: 'get' | 'post',
       caminho: string,
@@ -192,13 +193,20 @@ describe('compra completa (criterio de aceite da Etapa 8)', () => {
 
     expect(
       (await autenticado('get', '/api/anamnese/situacao').expect(200)).body,
-    ).toEqual({ preenchida: false });
+    ).toMatchObject({
+      preenchida: false,
+      /* O telefone so existe no pre-cadastro: o checkout nao o pede. */
+      preenchimento: { telefone: '61990000000' },
+    });
     await autenticado('post', '/api/anamnese')
-      .send({ respostas: { contexto: 'Venda de participacao societaria.' } })
+      .send({ respostas: { cnpj: '12345' } })
+      .expect(400);
+    await autenticado('post', '/api/anamnese')
+      .send({ respostas: respostasMinimasDaFicha() })
       .expect(201);
     expect(
       (await autenticado('get', '/api/anamnese/situacao').expect(200)).body,
-    ).toEqual({ preenchida: true });
+    ).toMatchObject({ preenchida: true });
 
     /* 8. A area do cliente mostra os dois cartoes, ativos. */
     const { body: cartoes } = await autenticado('get', '/api/pedidos').expect(

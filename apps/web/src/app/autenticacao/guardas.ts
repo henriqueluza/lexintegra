@@ -82,8 +82,8 @@ export function rotaInicialDe(perfil: Perfil | null): string {
 }
 
 /**
- * A ficha inicial e obrigatoria antes dos pedidos (item 2.2.5). ⚠️ A ficha ainda e
- * o STUB provisorio da Etapa 8 — ver `shared/anamnese-provisoria`.
+ * A ficha inicial e obrigatoria antes dos pedidos (item 2.2.5), no modelo de
+ * `shared/anamnese`. Quem so respondeu o stub da Etapa 8 e levado a ela.
  *
  * `canActivate` e nao `canMatch`: a arvore do cliente ja casou pelo perfil, e
  * este guard so decide PARA ONDE dentro dela a pessoa vai.

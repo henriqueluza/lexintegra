@@ -11,6 +11,7 @@ import {
   authDeTeste,
   firestoreDeTeste,
   limparEmuladores,
+  PRAZO_DE_CONCORRENCIA_NO_EMULADOR,
 } from '../../emulador.js';
 import { ProdutosService } from '../../produtos/produtos.service.js';
 import {
@@ -138,9 +139,7 @@ function webhook(
     }),
   );
   return http()
-    .post(
-      caminhoDoWebhook(SEGREDO_WEBHOOK_DESENVOLVIMENTO),
-    )
+    .post(caminhoDoWebhook(SEGREDO_WEBHOOK_DESENVOLVIMENTO))
     .set('Content-Type', 'application/json')
     .set('X-Webhook-Signature', assinar(corpo, CHAVE_HMAC_DESENVOLVIMENTO))
     .send(corpo);
@@ -192,29 +191,33 @@ describe('confirmacao do pagamento: idempotencia', () => {
    * passam pelo atalho de leitura, e so uma sobrevive ao commit — a outra
    * reexecuta e ve o pagamento, ou estoura no `create`.
    */
-  it('o mesmo webhook tres vezes, ao mesmo tempo: um pagamento e dois pedidos', async () => {
-    const compra = await comprar();
+  it(
+    'o mesmo webhook tres vezes, ao mesmo tempo: um pagamento e dois pedidos',
+    async () => {
+      const compra = await comprar();
 
-    const respostas = await Promise.all([
-      webhook(compra),
-      webhook(compra),
-      webhook(compra),
-    ]);
+      const respostas = await Promise.all([
+        webhook(compra),
+        webhook(compra),
+        webhook(compra),
+      ]);
 
-    expect(respostas.map((r) => r.status)).toEqual([200, 200, 200]);
-    expect(
-      respostas.filter(
-        (r) => (r.body as { resultado: string }).resultado === 'confirmado',
-      ),
-    ).toHaveLength(1);
-    expect(await contagem()).toEqual({
-      pagamentos: 1,
-      pedidos: 2,
-      clientes: 1,
-      acessos: 1,
-      contas: 1,
-    });
-  });
+      expect(respostas.map((r) => r.status)).toEqual([200, 200, 200]);
+      expect(
+        respostas.filter(
+          (r) => (r.body as { resultado: string }).resultado === 'confirmado',
+        ),
+      ).toHaveLength(1);
+      expect(await contagem()).toEqual({
+        pagamentos: 1,
+        pedidos: 2,
+        clientes: 1,
+        acessos: 1,
+        contas: 1,
+      });
+    },
+    PRAZO_DE_CONCORRENCIA_NO_EMULADOR,
+  );
 });
 
 describe('confirmacao do pagamento: o que ela cria', () => {

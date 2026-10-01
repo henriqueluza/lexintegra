@@ -10,6 +10,7 @@ import {
   firestoreDeTeste,
   idTokenDe,
   limparEmuladores,
+  PRAZO_DE_CONCORRENCIA_NO_EMULADOR,
 } from '../emulador.js';
 import { ARMAZENAMENTO } from '../armazenamento/armazenamento.js';
 import { ArmazenamentoFalso } from '../armazenamento/armazenamento-falso.js';
@@ -61,6 +62,10 @@ async function semear(uid: string): Promise<void> {
   const documentos: Record<string, Record<string, unknown>> = {
     [`clientes/${uid}`]: { nome: uid, email: `${uid}@exemplo.test` },
     [`clientes/${uid}/anamnese/provisoria-v0`]: { resposta: `anamnese-${uid}` },
+    [`clientes/${uid}/anamnese/definitiva-v1`]: {
+      modelo: 'definitiva-v1',
+      respostas: { faturamento: `faturamento-${uid}` },
+    },
     [`pre-cadastros/${preCadastroId}`]: {
       email: `${uid}@exemplo.test`,
       liberacaoHash: 'nao-exportar-hash',
@@ -149,6 +154,8 @@ it('exporta JSON e bytes reais, sem dados de Bruno, links ou bytes de quarentena
     encoding: 'utf8',
   });
   expect(json).toContain('anamnese-ana');
+  /* As duas fichas, e as respostas confidenciais da definitiva, vao ao titular. */
+  expect(json).toContain('faturamento-ana');
   expect(json).toContain('outbox/convite-ana');
   expect(json).toContain('outbox/estorno-ana');
   expect(json).toContain('entregaveis/p-ana/001/v0');
@@ -200,23 +207,27 @@ it('recusa execucao com compromisso futuro e identifica o pedido em andamento', 
   expect((await db.doc('clientes/ana').get()).exists).toBe(true);
 });
 
-it('repeticao concorrente retoma um protocolo; politica pendente nunca apaga nem envia aviso', async () => {
-  const db = firestoreDeTeste();
-  const outroAntes = (await db.doc('clientes/bruno').get()).data();
-  const objetosAntes = armazenamento.caminhos;
-  const respostas = await Promise.all([
-    post('eliminacao').expect(200),
-    post('eliminacao').expect(200),
-  ]);
-  expect(respostas[0].body.protocolo).toBe(respostas[1].body.protocolo);
-  expect(respostas[0].body.estado).toBe('aguardando_politica');
-  expect((await db.collection('solicitacoes-lgpd').get()).size).toBe(1);
-  await post('eliminacao/executar').expect(409);
-  expect((await db.doc('clientes/bruno').get()).data()).toEqual(outroAntes);
-  expect(armazenamento.caminhos).toEqual(objetosAntes);
-  expect((await db.collection('outbox').get()).size).toBe(6);
-  expect((await authDeTeste().getUser('ana')).disabled).toBe(false);
-});
+it(
+  'repeticao concorrente retoma um protocolo; politica pendente nunca apaga nem envia aviso',
+  async () => {
+    const db = firestoreDeTeste();
+    const outroAntes = (await db.doc('clientes/bruno').get()).data();
+    const objetosAntes = armazenamento.caminhos;
+    const respostas = await Promise.all([
+      post('eliminacao').expect(200),
+      post('eliminacao').expect(200),
+    ]);
+    expect(respostas[0].body.protocolo).toBe(respostas[1].body.protocolo);
+    expect(respostas[0].body.estado).toBe('aguardando_politica');
+    expect((await db.collection('solicitacoes-lgpd').get()).size).toBe(1);
+    await post('eliminacao/executar').expect(409);
+    expect((await db.doc('clientes/bruno').get()).data()).toEqual(outroAntes);
+    expect(armazenamento.caminhos).toEqual(objetosAntes);
+    expect((await db.collection('outbox').get()).size).toBe(6);
+    expect((await authDeTeste().getUser('ana')).disabled).toBe(false);
+  },
+  PRAZO_DE_CONCORRENCIA_NO_EMULADOR,
+);
 
 it('reavalia impedimento removido sem perder o autor da solicitacao', async () => {
   const db = firestoreDeTeste();

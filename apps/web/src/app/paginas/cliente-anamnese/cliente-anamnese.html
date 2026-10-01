@@ -1,25 +1,63 @@
 <section class="ficha">
   <h1>Ficha inicial</h1>
   <p class="ficha__apoio">
-    Antes de o escritório começar, conte o contexto do seu caso. As respostas
-    ficam disponíveis para o advogado responsável pelos seus pedidos.
+    Antes de o escritório começar, conte como a sua empresa funciona hoje. A
+    ficha é preenchida uma vez e vale para todos os seus pedidos.
   </p>
   <p class="ficha__aviso">{{ aviso }}</p>
 
-  <form
-    class="ficha__formulario"
-    [formGroup]="formulario"
-    (ngSubmit)="enviar()"
-  >
-    @for (pergunta of perguntas; track pergunta.chave) {
-    <app-campo
-      [rotulo]="pergunta.rotulo"
-      [multilinha]="true"
-      [linhas]="4"
-      [formControlName]="pergunta.chave"
-      [obrigatorio]="pergunta.obrigatoria"
-      [erro]="erro(pergunta.chave)"
-    />
+  <form class="ficha__formulario" [formGroup]="respostas" (ngSubmit)="enviar()">
+    @for (bloco of blocos; track bloco.chave; let numero = $index) {
+    <section
+      class="ficha__bloco"
+      [attr.aria-labelledby]="'bloco-' + bloco.chave"
+    >
+      <h2 class="ficha__titulo-bloco" [id]="'bloco-' + bloco.chave">
+        <span class="ficha__numero">{{ numero + 1 }}.</span> {{ bloco.titulo }}
+      </h2>
+
+      @for (pergunta of bloco.perguntas; track pergunta.chave) { @if
+      (visivel(pergunta)) { @switch (pergunta.tipo) { @case ('unica') {
+      <app-grupo-opcoes
+        [formControl]="respostas.controls[pergunta.chave]"
+        [rotulo]="pergunta.rotulo"
+        [opcoes]="opcoes(pergunta)"
+        [obrigatorio]="true"
+        [erro]="erroDa(pergunta)"
+      />
+      } @case ('multipla') {
+      <app-grupo-opcoes
+        [formControl]="respostas.controls[pergunta.chave]"
+        [rotulo]="pergunta.rotulo"
+        [opcoes]="opcoes(pergunta)"
+        [multipla]="true"
+        [obrigatorio]="true"
+        dica="Marque todas as que se aplicam."
+        [erro]="erroDa(pergunta)"
+      />
+      } @case ('textoLongo') {
+      <app-campo
+        [formControl]="texto(pergunta)"
+        [rotulo]="pergunta.rotulo"
+        [multilinha]="true"
+        [linhas]="4"
+        [erro]="erroDa(pergunta)"
+      />
+      } @default {
+      <app-campo
+        [formControl]="texto(pergunta)"
+        [rotulo]="pergunta.rotulo"
+        [tipo]="tipoDoCampo(pergunta)"
+        [erro]="erroDa(pergunta)"
+      />
+      } } @if (outroVisivel(pergunta)) {
+      <app-campo
+        [formControl]="outros.controls[pergunta.chave]"
+        rotulo="Qual?"
+        [erro]="erroDoOutro(pergunta)"
+      />
+      } } }
+    </section>
     } @if (falha() !== null) {
     <app-mensagem-erro variante="bloco">{{ falha() }}</app-mensagem-erro>
     }

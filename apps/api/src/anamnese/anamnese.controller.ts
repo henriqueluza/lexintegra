@@ -1,17 +1,17 @@
 import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
 import {
-  esquemaAnamneseProvisoria,
-  type AnamneseProvisoria,
+  esquemaAnamnese,
+  type FichaAnamnese,
   type SituacaoAnamnese,
 } from 'shared';
 import { Perfis, UsuarioAtual } from '../autenticacao/decoradores.js';
 import type { UsuarioAutenticado } from '../autenticacao/usuario.js';
 import { ZodPipe } from '../validacao/zod.pipe.js';
-import { AnamneseProvisoriaService } from './anamnese-provisoria.service.js';
+import { AnamneseService } from './anamnese.service.js';
 
 /**
- * ⚠️ STUB TEMPORÁRIO — a ficha inicial do cliente (item 2.2.5), com as perguntas
- * provisorias. Ver `packages/shared/src/anamnese-provisoria.ts`.
+ * A ficha inicial do cliente (item 2.2.5), no modelo definitivo
+ * (`packages/shared/src/anamnese.ts`).
  *
  * `@Perfis('cliente')` na CLASSE (regra inviolavel 18), e NENHUMA ROTA RECEBE O
  * UID: ele sai do token, como na area do cliente. Uma rota que aceitasse o id do
@@ -19,8 +19,8 @@ import { AnamneseProvisoriaService } from './anamnese-provisoria.service.js';
  */
 @Perfis('cliente')
 @Controller('anamnese')
-export class AnamneseProvisoriaController {
-  constructor(private readonly anamnese: AnamneseProvisoriaService) {}
+export class AnamneseController {
+  constructor(private readonly anamnese: AnamneseService) {}
 
   @Get('situacao')
   situacao(
@@ -32,9 +32,9 @@ export class AnamneseProvisoriaController {
   @Post()
   @HttpCode(201)
   registrar(
-    @Body(new ZodPipe(esquemaAnamneseProvisoria)) ficha: AnamneseProvisoria,
+    @Body(new ZodPipe(esquemaAnamnese)) ficha: FichaAnamnese,
     @UsuarioAtual() cliente: UsuarioAutenticado,
-  ): Promise<SituacaoAnamnese> {
+  ): Promise<{ preenchida: true }> {
     return this.anamnese.registrar(cliente.uid, ficha);
   }
 }

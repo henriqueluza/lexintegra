@@ -371,13 +371,18 @@ execução corrigida gera alarme falso.
   uma requisição com `traceparent` a `/api/teste-de-traco` gerou dois spans no
   mesmo trace, o do Cloud Run (`/component AppServer`) e o da aplicação
   (`service.name api-lexintegra`). O `telemetry.tracesWriter` basta.
-- [ ] Teste intermitente novo: `reunioes.integration-spec.ts › concorrencia › dois
-  clientes no MESMO slot: um marca, o outro recebe 409` estourou os 5 s do Jest no
-  CI (30/09, PR #57, tentativa 1; passou na tentativa 2). A chamada gRPC que ele
-  deixou em voo terminou depois de o Jest desmontar o ambiente, e o erro caiu no
-  arquivo seguinte (`outbox.integration-spec.ts`, "Test suite failed to run").
-  Investigar a espera pela transação no emulador e dar ao teste um prazo próprio,
-  sem enfraquecer a asserção.
+- [x] Teste intermitente novo: `reunioes.integration-spec.ts › concorrencia › dois
+  clientes no MESMO slot` estourou os 5 s do Jest no CI (30/09, PR #57, tentativa
+  1), e o erro tardio dele derrubou o arquivo seguinte. **Causa (30/09):** quando
+  duas transações disputam o mesmo documento, o emulador do Firestore faz a que
+  espera desistir com "Transaction lock timeout" depois de ~3 s, e o SDK a
+  reexecuta. Reproduzido em 1 de 30 execuções; medido sem o limite de 5 s, os dois
+  testes de concorrência de reuniões têm mediana de 3,1 a 3,3 s e máximo de
+  12,8 s, e os de outbox, webhook e LGPD, mediana de ~3 s (o do webhook passou de
+  5 s uma vez em 20). Todos passam quando têm tempo. Corrigido no PR
+  `fix/prazo-concorrencia-emulador`: os cinco testes de concorrência usam
+  `PRAZO_DE_CONCORRENCIA_NO_EMULADOR` (30 s, em `emulador.ts`), com asserções
+  intocadas. Depois: integração completa verde e 30 de 30 no arquivo de reuniões.
 - [x] `ci.yml` disparado por `workflow_dispatch` propõe um diff falso nas imagens
   (30/09, run 36663051297: `0 to add, 3 to change, 0 to destroy` logo depois de
   um deploy verde). Os três são `api-lexintegra`, `scanner-lexintegra` e o job
@@ -423,6 +428,13 @@ Já podem ser feitos, a menos que apareça dependência do caminho do Cloud Task
   de 88% de uma requisição autenticada. Resultado e recomendação (manter) em
   `docs/plano-de-execucao.md`, Etapa 4.
 
+- [ ] Pôr o `ui/grupo-opcoes` (Bloco A da B2) no catálogo. Abaixo de 720 px o
+  índice lateral fica acima do palco e o empurra; uma peça a mais no índice
+  muda a posição subpixel do palco e invalida as 15 referências estreitas do
+  catálogo sem nenhum componente mudar (o acoplamento que a Etapa 6 resolveu só
+  para telas largas). Corrigir a casca para o palco não depender do índice,
+  incluir a peça e regravar as referências estreitas. 👤 aprova a regravação.
+
 ### B2. Precisa de decisão do Henrique (passo 3)
 
 Cada item diz **o que decidir** e, depois da seta, **o que o Claude ou o Codex
@@ -453,16 +465,12 @@ constroem**. As decisões vão para um `decisoes.md`.
 
 **Conteúdo**
 
-- [ ] Ficha de anamnese (insumo de A1, **recebido em 30/09**:
-  `docs/entrega/ficha-anamnese-inicial.md`, 10 blocos sobre a empresa cliente).
-  → Trocar o stub `provisoria-v0` pela ficha definitiva: schema, tela, testes e
-  mapa LGPD. Antes de construir, decidir:
-  - quando é preenchida (logo após a compra, como o stub, ou depois) e se é por
-    cliente (`clientes/{uid}/anamnese`, como hoje) ou por pedido;
-  - se todos os campos são obrigatórios, e o que fazer com "Outro" e com as
-    perguntas condicionais ("Se sim, quantas…", "Se publica…");
-  - retenção: a ficha traz passivo trabalhista, autuações e reclamações, dado
-    sigiloso que entra no mapa LGPD e na política de guarda (já pendente).
+- [x] Ficha de anamnese (insumo de A1, **recebido em 30/09**:
+  `docs/entrega/ficha-anamnese-inicial.md`). Decidido em `docs/decisoes.md`
+  (1.1 e Anexo B): por cliente, uma vez, após a primeira compra. **Construída
+  no Bloco A** (`feat/anamnese-definitiva`): `definitiva-v1` em
+  `packages/shared/src/anamnese.ts`, tela, testes e mapa LGPD. A guarda segue
+  a política (2.1, pendente).
 - [ ] Texto final das minutas:
   - termos;
   - checkout;

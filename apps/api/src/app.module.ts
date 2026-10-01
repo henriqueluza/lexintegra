@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AdvogadosModule } from './advogados/advogados.module.js';
-import { AnamneseProvisoriaModule } from './anamnese-provisoria/anamnese-provisoria.module.js';
+import { AnamneseModule } from './anamnese/anamnese.module.js';
 import { AlertasModule } from './alertas/alertas.module.js';
 import { AppCheckModule } from './app-check/app-check.module.js';
 import { AutenticacaoModule } from './autenticacao/autenticacao.module.js';
@@ -89,7 +89,7 @@ import { LgpdModule } from './lgpd/lgpd.module.js';
     VitrineModule,
     CheckoutModule,
     WebhookModule,
-    AnamneseProvisoriaModule,
+    AnamneseModule,
     EstornosModule,
     ClientesModule,
     PedidosModule,
