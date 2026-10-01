@@ -9,9 +9,9 @@ import { ResendEmailTransport } from './resend.transport.js';
  *
  * Chave e remetente vem SEMPRE de variavel de ambiente, nunca do codigo. Em
  * producao a chave chega ao Cloud Run pelo Secret Manager (regra inviolavel 9);
- * `EMAIL_FROM` e o que permite trocar `onboarding@resend.dev` por
- * `notificacoes.lexintegra.com.br` sem tocar em uma linha de codigo, quando a
- * verificacao do dominio sair.
+ * `EMAIL_FROM` e o que permitiu trocar `onboarding@resend.dev` por
+ * `nao-responda@notificacoes.lexintegra.com.br` (B2, decisoes.md 5.1) sem
+ * tocar em uma linha de codigo.
  *
  * EM PRODUCAO, FALTA DE CONFIGURACAO E ERRO DE INICIALIZACAO, nao degradacao
  * silenciosa para o transporte falso. Um servico que sobe "saudavel" e engole

@@ -93,6 +93,12 @@ export class Checkout {
   protected readonly falha = signal<string | null>(null);
   protected readonly pix = signal<CobrancaPixExibida | null>(null);
   protected readonly copiado = signal(false);
+  /**
+   * B2 (decisoes.md 3.4). Comeca `true` — o padrao de quem nao sabe ainda — e
+   * vira `false` se o servidor disser que o cartao esta desligado. Falha ao
+   * perguntar deixa como esta: o servidor recusa com 422 de todo jeito.
+   */
+  protected readonly cartaoDisponivel = signal(true);
   private readonly errosDoServidor = signal<
     Partial<Record<'nome' | 'email', string>>
   >({});
@@ -125,6 +131,7 @@ export class Checkout {
 
     afterNextRender(() => {
       this.hidratado.set(true);
+      void this.consultarMetodos();
       const retorno = this.rota.snapshot.queryParamMap.get('id');
       if (retorno !== null && retorno !== '' && this.preCadastro.liberado()) {
         this.checkoutId = retorno;
@@ -147,6 +154,18 @@ export class Checkout {
           minute: '2-digit',
         })
       : '';
+  }
+
+  private async consultarMetodos(): Promise<void> {
+    const token = this.preCadastro.token();
+    if (token === null) return;
+    try {
+      const { cartao } = await this.api.metodos(token);
+      this.cartaoDisponivel.set(cartao);
+      if (!cartao) this.formulario.controls.metodo.setValue('pix');
+    } catch {
+      /* Fica como esta: a recusa de verdade e do servidor. */
+    }
   }
 
   protected prepararVerificacao(): void {

@@ -41,15 +41,30 @@ variable "commit_sha" {
 
 variable "email_remetente" {
   description = <<-EOT
-    Valor de EMAIL_FROM no Cloud Run. Hoje o remetente de desenvolvimento do
-    Resend, que so entrega ao endereco da propria conta.
-
-    Vira `notificacoes@notificacoes.lexintegra.com.br` quando a verificacao do
-    dominio no Resend estiver confirmada — e a troca e SO esta variavel, porque
-    nenhum remetente aparece no codigo (ADR-07.1).
+    Valor de EMAIL_FROM no Cloud Run (B2, decisoes.md 5.1). O endereco nao
+    precisa de caixa: o Resend so exige o dominio `notificacoes.lexintegra.com.br`
+    verificado (conferido em 29/09/2026), e o rodape de todo e-mail diz que a
+    caixa nao e lida. Nenhum remetente aparece no codigo (ADR-07.1).
   EOT
   type        = string
-  default     = "onboarding@resend.dev"
+  default     = "LexIntegra <nao-responda@notificacoes.lexintegra.com.br>"
+}
+
+variable "pagamentos_cartao" {
+  description = <<-EOT
+    Valor de PAGAMENTOS_CARTAO no Cloud Run (B2, decisoes.md 3.4):
+    `habilitado` ou `desabilitado`. Enquanto a homologacao do cartao no
+    AbacatePay nao sair, `desabilitado`: o checkout recusa cartao com 422 e a
+    tela mostra a opcao desabilitada com "em breve". Ligar e trocar o padrao
+    aqui, em PR proprio — sem mudar codigo.
+  EOT
+  type        = string
+  default     = "desabilitado"
+
+  validation {
+    condition     = contains(["habilitado", "desabilitado"], var.pagamentos_cartao)
+    error_message = "pagamentos_cartao aceita so \"habilitado\" ou \"desabilitado\"."
+  }
 }
 
 variable "url_aplicacao" {

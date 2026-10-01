@@ -77,7 +77,7 @@ servindo.
 | `URL_APLICACAO` | sim | `https://lexintegra.com.br` | Recusa subir (filas). É também a audiência do OIDC das rotas internas e a base do link de senha | `tarefas/criar-fila.ts`, `tarefas/tarefa.guard.ts`, `outbox/link-de-senha.ts` |
 | `COMMIT_SHA` | não | SHA do commit publicado | `/api/health` responde `desconhecido` e o smoke test do deploy falha | `health/health.service.ts` |
 | `PORT` | não | definida pelo Cloud Run | Padrão `8080` | `main.ts` |
-| `EMAIL_FROM` | sim | `onboarding@resend.dev` (remetente de desenvolvimento do Resend) | Recusa subir | `email/email.module.ts`, `reunioes/convites.service.ts` |
+| `EMAIL_FROM` | sim | `onboarding@resend.dev` até o deploy da B2; depois, `LexIntegra <nao-responda@notificacoes.lexintegra.com.br>` (decisões 5.1) | Recusa subir | `email/email.module.ts`, `reunioes/convites.service.ts` |
 | `RESEND_API_KEY` | sim | secret `resend-api-key`, versão `latest` | Recusa subir. **Secret sem versão impede a revisão de subir** | `email/email.module.ts` |
 | `BUCKET_QUARENTENA` | sim | `lexintegra-quarentena-36bda` | Recusa subir | `armazenamento/armazenamento.module.ts` |
 | `BUCKET_ARQUIVOS` | sim | `lexintegra-arquivos-36bda` | Recusa subir | `armazenamento/armazenamento.module.ts` |
@@ -91,6 +91,7 @@ servindo.
 | `APP_CHECK_ENFORCE` | sim | `true` | Fora de `"true"`/`"false"`, **recusa subir** em produção | `app-check/exigencia.ts` |
 | `PROXIES_CONFIAVEIS` | não | `2` | Inválido, usa 0. Com o número errado, o limitador conta todo mundo como um visitante só, **sem falhar** | `configurar.ts` |
 | `PAGAMENTOS_MODO` | sim | `desligado` | Ausente ou inválido, recusa subir. `producao` **sempre** recusa (regra 20) | `pagamentos/gateway/modo.ts` |
+| `PAGAMENTOS_CARTAO` | sim | `desabilitado` (B2, decisões 3.4) | Ausente ou inválido, recusa subir. `desabilitado`: o checkout recusa cartão com 422 e a tela mostra "em breve" | `pagamentos/gateway/cartao.ts` |
 | `ABACATEPAY_API_KEY` | só com `sandbox` | não definida | Em `sandbox`, recusa subir sem ela e recusa chave sem o prefixo `abc_dev_` | `pagamentos/gateway/modo.ts` |
 | `ABACATEPAY_WEBHOOK_SECRET` | com a chave | não definida | Com a chave e sem ela, recusa subir | `pagamentos/gateway/modo.ts` |
 | `ABACATEPAY_WEBHOOK_CHAVE_HMAC` | com a chave | não definida | Com a chave e sem ela, recusa subir | `pagamentos/gateway/modo.ts` |
@@ -124,7 +125,8 @@ delas: commit, PR e deploy. Nunca um `apply` local.
 
 | Variável | Hoje | Efeito |
 |---|---|---|
-| `email_remetente` | `onboarding@resend.dev` | Vira `EMAIL_FROM` |
+| `email_remetente` | `LexIntegra <nao-responda@notificacoes.lexintegra.com.br>` | Vira `EMAIL_FROM` |
+| `pagamentos_cartao` | `desabilitado` | Vira `PAGAMENTOS_CARTAO`. Trocar para `habilitado` quando a homologação do cartão sair (seção 4.2) |
 | `app_check_enforce` | `"true"` (padrão; o deploy não sobrescreve) | Vira `APP_CHECK_ENFORCE` |
 | `proxies_confiaveis` | `2` | Vira `PROXIES_CONFIAVEIS` |
 | `rastreio_amostragem` | `"0.1"` | Vira `RASTREIO_AMOSTRAGEM` |
@@ -156,9 +158,18 @@ dentro dela não são.
 
 ### 4.1 Resend com domínio verificado
 
-Hoje o remetente é `onboarding@resend.dev`. O Resend só entrega esse remetente
-ao endereço da conta dona da chave. **Nenhum cliente real recebe e-mail
-enquanto isso não mudar.**
+O remetente é `LexIntegra <nao-responda@notificacoes.lexintegra.com.br>`
+(decisões 5.1), no `default` de `email_remetente`. **Esta caixa não existe para
+leitura**: o Resend só exige o domínio verificado, e o rodapé de todo e-mail
+(`apps/api/src/email/rodape.ts`) avisa que respostas não chegam a ninguém e
+indica `privacidade@lexintegra.com.br` para dados pessoais. Até o deploy da
+B2, era `onboarding@resend.dev`, que o Resend só entrega à própria conta.
+
+Os e-mails com link de senha (acesso do cliente, acesso do advogado,
+redefinição, troca de e-mail do advogado e convite de administrador) saem com
+texto versionado em `apps/api/src/email/textos-de-acesso.ts`. O modelo
+`password-reset` do painel do Resend **deixou de ser usado** e pode ser
+arquivado lá.
 
 1. **Confirmar a verificação do domínio.** No painel do Resend, em *Domains*,
    `notificacoes.lexintegra.com.br` precisa aparecer como *Verified*. Os
@@ -174,13 +185,11 @@ enquanto isso não mudar.**
    ser de uma chave da conta onde o domínio foi verificado. Se a conta mudar de
    dono, gere a chave nova na conta nova e siga
    [`credenciais.md`](credenciais.md).
-3. **Trocar o remetente.** Mude o `default` de `email_remetente` em
-   [`variables.tf`](../../infra/terraform/variables.tf) para um endereço no
-   domínio verificado. A descrição da variável sugere
-   `notificacoes@notificacoes.lexintegra.com.br`
-   `[CONFIRMAR: endereço escolhido pelo escritório]`. Abra PR e faça o merge. O
-   deploy aplica. Nenhum código muda: o remetente não aparece em lugar nenhum
-   do código (ADR-07.1).
+3. **O remetente já foi trocado** na B2 (Bloco G): `default` de
+   `email_remetente` em [`variables.tf`](../../infra/terraform/variables.tf). O
+   deploy do merge aplica. Nenhum código muda com ele: o remetente não aparece
+   em lugar nenhum do código (ADR-07.1). **Antes do merge, confira o passo 2**:
+   com a chave de outra conta, o Resend recusa o remetente e nenhum e-mail sai.
 4. **Testar a entrega.** Em `https://lexintegra.com.br/recuperar-senha`, peça a
    redefinição para uma conta de advogado de teste cujo e-mail **não** seja o
    da conta do Resend. Confira nesta ordem:
@@ -200,11 +209,13 @@ enquanto isso não mudar.**
 **Pré-requisitos**, todos de terceiros:
 
 - a conta do escritório aprovada, com chave `abc_prod_`;
-- a homologação de cartão, ou a decisão de lançar só com PIX (plano de
-  execução, "Só você — Etapa 8");
-- os textos jurídicos que hoje são marcadores
-  (`{{TODO-TEXTO-REGRA-ESTORNO-ADR-12}}`, `{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}`);
-- a ficha de anamnese definitiva.
+- a homologação de cartão. **Decidido (decisões 3.4): se ela não sair antes
+  do lançamento, lança só com PIX** — `pagamentos_cartao = "desabilitado"` (o
+  padrão), o checkout recusa cartão com 422 e a tela mostra o cartão
+  desabilitado com "em breve". Quando a homologação sair, um PR troca o padrão
+  para `habilitado`; nenhum código muda;
+- os textos jurídicos (Bloco I da B2) aprovados pelo escritório;
+- a ficha de anamnese definitiva (construída no Bloco A da B2).
 
 1. **Destravar o código, em PR próprio.** `PAGAMENTOS_MODO=producao` recusa
    subir por construção (`apps/api/src/pagamentos/gateway/modo.ts`, regra

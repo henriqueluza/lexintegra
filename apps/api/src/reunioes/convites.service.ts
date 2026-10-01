@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 import { reuniaoAtiva } from 'shared';
-import type { EmailAnexo, EmailMensagem } from '../email/email-transport.js';
+import type { EmailAnexo, EmailRedigido } from '../email/email-transport.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import type { ReuniaoDoEvento } from '../outbox/evento.js';
@@ -25,7 +25,7 @@ const COLECAO_ADVOGADOS = 'advogados';
 
 /** O que sai de uma montagem: um e-mail para enviar, ou a razao de nao enviar. */
 export type Convite =
-  | { readonly enviar: true; readonly mensagem: EmailMensagem }
+  | { readonly enviar: true; readonly mensagem: EmailRedigido }
   | { readonly enviar: false; readonly motivo: string };
 
 /** Quem recebe. O nome vai para o `CN` do iCalendar; o e-mail, para o `mailto:`. */

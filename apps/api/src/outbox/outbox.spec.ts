@@ -465,23 +465,29 @@ function montarCenario(opcoes: {
 }
 
 describe('DespachanteOutbox', () => {
-  it('envia pelo modelo password-reset, com o link na variavel LINK', async () => {
+  /**
+   * B2, decisoes.md 5.1: o texto e versionado no repositorio, um por situacao,
+   * e nao mais o modelo `password-reset` do painel do Resend. O link entra no
+   * corpo, e o rodape de todo e-mail vem depois.
+   */
+  it('envia o texto do acesso de advogado, com o link e o rodape', async () => {
     const { despachante, transporte } = montarCenario({});
 
     await despachante.despachar('definir-senha_uid-advogado');
 
-    expect(transporte.enviadas).toEqual([
-      {
-        para: ['advogado@teste.local'],
-        modelo: {
-          alias: 'password-reset',
-          variaveis: {
-            LINK: 'http://localhost:4200/definir-senha?oobCode=CODIGO',
-          },
-        },
-        chaveIdempotencia: 'definir-senha_uid-advogado-c0',
-      },
-    ]);
+    expect(transporte.enviadas).toHaveLength(1);
+    const [mensagem] = transporte.enviadas;
+    expect(mensagem).toMatchObject({
+      para: ['advogado@teste.local'],
+      assunto: 'Seu acesso de advogado à LexIntegra',
+      chaveIdempotencia: 'definir-senha_uid-advogado-c0',
+    });
+    expect(mensagem.modelo).toBeUndefined();
+    expect(mensagem.corpoTexto).toContain(
+      'http://localhost:4200/definir-senha?oobCode=CODIGO',
+    );
+    expect(mensagem.corpoTexto).toContain('privacidade@lexintegra.com.br');
+    expect(mensagem.corpoTexto).toContain('Esta caixa não é lida');
   });
 
   /**
@@ -499,13 +505,11 @@ describe('DespachanteOutbox', () => {
     );
 
     expect(transporte.enviadas[0]).toMatchObject({
-      modelo: {
-        alias: 'password-reset',
-        variaveis: {
-          LINK: 'http://localhost:4200/definir-senha?oobCode=CODIGO',
-        },
-      },
+      assunto: 'Seu acesso à LexIntegra',
     });
+    expect(transporte.enviadas[0].corpoTexto).toContain(
+      'http://localhost:4200/definir-senha?oobCode=CODIGO',
+    );
   });
 
   /**
