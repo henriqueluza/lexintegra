@@ -1,33 +1,39 @@
 import { SECOES_TERMOS, SECOES_PRIVACIDADE } from 'shared/documentos-legais';
+import { ENCARREGADO } from 'shared/encarregado';
 import { CONTATO_PUBLICO } from '../../shell/rodape-publico/contato-publico';
 
+/**
+ * As páginas públicas de termos e privacidade (redesign Névoa, 30/09/2026;
+ * textos da B2, decisoes.md 1.2 e 1.3). O corpo vem de `shared/documentos-legais`,
+ * o mesmo texto aceito no checkout; aqui entram a identificação, os contatos
+ * do rodapé e o encarregado. As versões de aceite já registradas não mudam com
+ * esta página.
+ */
 const identificacao = {
   titulo: 'Identificação e contato',
-  texto: `LexIntegra — CNPJ ${CONTATO_PUBLICO.cnpj}. Para assuntos relacionados à plataforma, aos serviços contratados ou aos seus dados pessoais, entre em contato pelo e-mail ${CONTATO_PUBLICO.email} ou pelo telefone ${CONTATO_PUBLICO.telefone}. Ao solicitar atendimento sobre uma compra, informe o número do pedido, se disponível. Não envie senhas, códigos de autenticação ou dados de cartão por esses canais.`,
+  texto: `LexIntegra — CNPJ ${CONTATO_PUBLICO.cnpj}. Para assuntos da plataforma e dos serviços contratados, escreva para ${CONTATO_PUBLICO.email} ou ligue para ${CONTATO_PUBLICO.telefone}, informando o número do pedido, se houver. Para assuntos de dados pessoais, escreva para ${ENCARREGADO.email}. Os e-mails automáticos da plataforma não recebem respostas. Nunca envie senhas, códigos de acesso ou dados de cartão por esses canais.`,
 };
 
-/** Complementos de apresentação pública. Não alteram versões de aceites já registradas. */
 export const TERMOS_PUBLICOS = [
   identificacao,
   ...SECOES_TERMOS.slice(0, -1),
   {
     titulo: 'Atualizações, dúvidas e documentos da contratação',
-    texto:
-      'Estes termos regulam a utilização da plataforma e devem ser lidos em conjunto com o escopo contratado, os registros do pedido e os instrumentos específicos do serviço. O atendimento jurídico é prestado pelo profissional responsável pelo pedido. Alterações posteriores desta página não substituem o texto associado a aceites anteriores nem modificam retroativamente as condições contratadas. Para dúvidas, problemas de acesso, cancelamento ou reclamações, utilize os contatos indicados nesta página. A legislação brasileira rege o uso da plataforma, preservados os direitos e as regras de competência aplicáveis.',
+    texto: `${SECOES_TERMOS[SECOES_TERMOS.length - 1].texto} Use os contatos do início desta página. Alterações desta página não substituem o texto associado a aceites anteriores nem mudam retroativamente as condições contratadas. A legislação brasileira rege o uso da plataforma, preservados os direitos e as regras de competência aplicáveis ao consumidor.`,
   },
 ];
 
 export const PRIVACIDADE_PUBLICA = [
   identificacao,
+  SECOES_PRIVACIDADE[0],
   {
-    titulo: 'O que esta política abrange',
-    texto:
-      'Esta política descreve o uso de dados pessoais na navegação, no cadastro, na consulta ao catálogo, na contratação e no acompanhamento de serviços pela LexIntegra. O responsável pela plataforma pode ser contatado pelos canais acima para esclarecer as atividades de tratamento e encaminhar solicitações ao escritório responsável pelo atendimento jurídico.',
+    titulo: 'Encarregado pelo tratamento de dados',
+    texto: `O encarregado pelo tratamento de dados pessoais (art. 41 da LGPD) é ${ENCARREGADO.nome}, pelo e-mail ${ENCARREGADO.email}. É o canal para dúvidas sobre esta política, pedidos de titulares e comunicações da Autoridade Nacional de Proteção de Dados.`,
   },
-  ...SECOES_PRIVACIDADE.slice(1, -2),
+  ...SECOES_PRIVACIDADE.slice(1, -1),
   {
-    titulo: 'Seus direitos e como solicitar',
-    texto: `Escreva para ${CONTATO_PUBLICO.email} para solicitar confirmação de tratamento, acesso, correção, informações sobre compartilhamento e o exercício dos demais direitos previstos na LGPD. Descreva o pedido e forneça um contato para resposta. Poderá ser necessária uma verificação proporcional de identidade para proteger seus dados. Solicitações de eliminação, oposição ou revogação de consentimento são avaliadas conforme a finalidade, a base legal e as hipóteses de conservação. Também é possível apresentar petição à autoridade de proteção de dados e aos órgãos competentes.`,
+    titulo: 'Como fazer um pedido',
+    texto: `Escreva para ${ENCARREGADO.email} descrevendo o pedido e um contato para resposta, de preferência a partir do e-mail cadastrado na plataforma. Poderemos pedir uma confirmação proporcional de identidade antes de entregar dados, para proteger você.`,
   },
   SECOES_PRIVACIDADE[SECOES_PRIVACIDADE.length - 1],
 ];

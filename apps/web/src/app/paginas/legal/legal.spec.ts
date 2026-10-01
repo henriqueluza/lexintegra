@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
+import { marcadoresEm, pendente } from 'shared/pendencias-escritorio';
+import { PRIVACIDADE_PUBLICA, TERMOS_PUBLICOS } from './conteudo-legal';
 import { Legal } from './legal';
 
 describe('Documentos públicos', () => {
@@ -35,4 +37,36 @@ describe('Documentos públicos', () => {
       );
     });
   }
+
+  /** B2, decisoes.md 1.3: encarregado e canal públicos (LGPD, art. 41). */
+  it('a privacidade identifica o encarregado e o canal privacidade@', () => {
+    const texto = PRIVACIDADE_PUBLICA.map((s) => s.texto).join(' ');
+    expect(texto).toContain('Auan Bastos');
+    expect(texto).toContain('privacidade@lexintegra.com.br');
+  });
+
+  /**
+   * A LISTA TRAVADA nas páginas públicas (Anexo B): os termos não têm
+   * pendência; a privacidade tem exatamente as duas do decisoes.md (1.4 e 2.1).
+   */
+  it('publica exatamente as pendências do escritório', () => {
+    expect(marcadoresEm(TERMOS_PUBLICOS.map((s) => s.texto).join(' '))).toEqual(
+      [],
+    );
+    expect(
+      marcadoresEm(PRIVACIDADE_PUBLICA.map((s) => s.texto).join(' ')).sort(),
+    ).toEqual(
+      [
+        pendente('politica-de-guarda'),
+        pendente('prazo-direitos-art-18'),
+      ].sort(),
+    );
+  });
+
+  /** decisoes.md 3.3 e 5.3: a regra de estorno pública é a constante única. */
+  it('os termos públicos trazem a regra e os prazos de estorno', () => {
+    const texto = TERMOS_PUBLICOS.map((s) => s.texto).join(' ');
+    expect(texto).toContain('nenhuma reunião do pedido já aconteceu');
+    expect(texto).toContain('5 dias úteis');
+  });
 });
