@@ -136,6 +136,8 @@ Mande as respostas ao Claude para ele preencher os documentos.
   o próximo: em 29/09, o #39 foi mesclado em cima do deploy quebrado do #38.
 - [ ] Aprovar, uma a uma, as imagens de referência da regressão visual. Faça
   isso **depois do redesign**, porque as atuais vão todas mudar.
+  As do catálogo vazio (`catalogo-vazio-*.png`) ficam de fora: serão regeradas
+  com o catálogo e o front novos.
 - [ ] Aprovar os textos institucionais do site.
 - [ ] Criar no painel admin os acessos dos advogados reais.
 - [ ] 📅 Por volta de 06/10: o objeto excluído no teste de soft delete sumiu de
@@ -365,8 +367,9 @@ execução corrigida gera alarme falso.
 - [x] Regressão visual do estado vazio de `/servicos`: teste `catalogo vazio` em
   `telas-publicas.visual.spec.ts` e três imagens novas
   (`catalogo-vazio-{estreito,medio,largo}.png`), geradas no contêiner em 30/09
-  com `--update-snapshots=missing`, sem tocar nas existentes. 👤 Entram na
-  aprovação uma a uma (A2).
+  com `--update-snapshots=missing`, sem tocar nas existentes. **Aprovação
+  dispensada (30/09):** o catálogo e o front vão ser refeitos, e estas imagens
+  serão regeradas com eles.
 - [x] 👤 Depois do deploy do #49, que removeu `roles/cloudtrace.agent`: em 30/09,
   uma requisição com `traceparent` a `/api/teste-de-traco` gerou dois spans no
   mesmo trace, o do Cloud Run (`/component AppServer`) e o da aplicação
