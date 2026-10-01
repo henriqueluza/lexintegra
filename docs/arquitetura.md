@@ -842,7 +842,9 @@ problema de leitura.
 
 Subcoleções: `clientes/{id}/anamnese`, `pedidos/{id}/entregaveis`, `pedidos/{id}/reunioes`, `pedidos/{id}/entregaveis/{id}/transicoes`, `pedidos/{id}/observacoes` e `pedidos/{id}/anexos` (as duas últimas, da Etapa 9).
 
-**A anamnese da Etapa 8 é um STUB.** `clientes/{id}/anamnese/provisoria-v0` guarda três perguntas provisórias no formato `campos[{rotulo, valor}]` que a tela do advogado já lê. O id do documento carrega a versão do modelo: quando a ficha da CONTRATANTE chegar (plano 0.2, item 3), ela entra com outro id, e o que foi respondido no stub não se confunde com a ficha definitiva.
+**A anamnese é a ficha definitiva do escritório desde o Bloco A da B2** (`docs/decisoes.md`, 1.1 e Anexo A). Uma por cliente, preenchida uma vez depois da primeira compra, em `clientes/{id}/anamnese/definitiva-v1`: as respostas estruturadas (`respostas`, `outros`) e os pares `campos[{rotulo, valor}]` derivados delas, que a tela do advogado lê sem conhecer nome de campo. As perguntas são declaradas uma vez em `packages/shared/src/anamnese.ts`, e o schema, a tela e os pares saem dessa declaração. O stub da Etapa 8 (`provisoria-v0`, três perguntas) não é mais preenchido, mas o que foi respondido nele continua legível ao lado: o id do documento carrega o modelo. Quem só respondeu o stub é levado à definitiva.
+
+Os dados são **da empresa** do cliente, e nenhum é dado sensível do art. 5º, II, da LGPD. Faturamento, passivo trabalhista, autuações e reclamações são **confidenciais**: ficam na subcoleção, que nenhuma leitura de `clientes/{id}` arrasta junto, e só dois endpoints a leem — o do advogado atribuído a um pedido daquele cliente e o do administrador. A guarda segue a política pendente (`decisoes.md`, 2.1).
 
 **`observacoes` é append-only**, e isso é decisão e não limitação: o advogado trabalha a partir do que o cliente escreveu, e texto reescrito faz "o cliente pediu X" virar "o cliente sempre pediu Y", sem trilha. A API não expõe edição nem exclusão, e há teste que defende a ausência.
 
@@ -998,7 +1000,7 @@ Sequência:
 - **Passo 2.** Só o PIX é transparente; o cartão redireciona para o checkout hospedado (ADR-19).
 - **Passo 4.** O pagamento tem o id da **cobrança**, não do evento (errata do ADR-04). A conta do cliente é criada **antes** da transação, e não dentro dela: criar usuário no Auth é efeito externo (regra 2), e é idempotente por e-mail. Os pedidos saem do snapshot guardado no checkout, nunca do produto vivo.
 - **Passo 5.** O evento é `acesso-cliente`, e o link é o mesmo da definição de senha do advogado (`/definir-senha?oobCode=`).
-- **Passo 6.** A ficha obrigatória é, por enquanto, um **stub** com três perguntas provisórias, e o guard da área do cliente leva a ela até ser respondida.
+- **Passo 6.** A ficha obrigatória é a definitiva do escritório (`definitiva-v1`, seção 5.1), e o guard da área do cliente leva a ela até ser respondida. Nome, e-mail e telefone vêm preenchidos do cadastro e do pré-cadastro.
 
 O caminho inteiro — pré-cadastro, dois produtos, checkout, webhook assinado, conta, link capturado no transporte falso, senha definida, login, ficha, dois cartões — é um teste só, contra os emuladores: `apps/api/src/compra.integration-spec.ts`. Em desenvolvimento, `scripts/simular-webhook.mjs` faz o papel do gateway.
 

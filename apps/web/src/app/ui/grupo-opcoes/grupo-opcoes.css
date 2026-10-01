@@ -1,0 +1,76 @@
+:host {
+  display: block;
+}
+
+.grupo {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+/* Mesma voz do rotulo da `app-campo` e da `app-selecao`. */
+.grupo__rotulo {
+  padding: 0;
+  margin-bottom: var(--s2);
+  font-size: var(--campo-rotulo-tamanho);
+  font-weight: var(--peso-medio);
+  letter-spacing: var(--campo-rotulo-espaco);
+  text-transform: var(--campo-rotulo-caixa-alta);
+  color: var(--campo-rotulo-cor);
+}
+
+.grupo__obrigatorio {
+  color: var(--estado-erro);
+}
+
+.grupo__dica {
+  margin: 0 0 var(--s2);
+  font-size: var(--t-micro);
+  color: var(--texto-3);
+  line-height: var(--altura-densa);
+}
+
+.grupo__opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.grupo__opcao {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio);
+  color: var(--texto);
+  font-size: var(--t-menor);
+  line-height: var(--altura-densa);
+  cursor: pointer;
+  transition: border-color var(--duracao-rapida) ease;
+}
+
+.grupo__opcao:hover {
+  border-color: var(--acento);
+}
+
+.grupo__opcao:has(.grupo__controle:checked) {
+  border-color: var(--acento);
+  background: var(--acento-fundo);
+}
+
+.grupo__controle {
+  margin: 0;
+  flex: none;
+  accent-color: var(--acento);
+}
+
+.grupo--invalido .grupo__opcao {
+  border-color: var(--estado-erro);
+}
+
+.grupo:disabled .grupo__opcao {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

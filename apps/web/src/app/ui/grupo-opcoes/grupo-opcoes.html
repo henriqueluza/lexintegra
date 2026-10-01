@@ -1,0 +1,42 @@
+<fieldset
+  class="grupo"
+  [class.grupo--invalido]="erro() !== null"
+  [disabled]="desabilitado()"
+  [attr.role]="multipla() ? null : 'radiogroup'"
+  [attr.aria-describedby]="descritoPor()"
+  [attr.aria-invalid]="!multipla() && erro() !== null ? 'true' : null"
+  [attr.aria-required]="!multipla() && obrigatorio() ? 'true' : null"
+>
+  <legend class="grupo__rotulo">
+    {{ rotulo() }} @if (obrigatorio()) {
+    <span class="grupo__obrigatorio" aria-hidden="true">*</span>
+    }
+  </legend>
+
+  @if (dica() !== null) {
+  <p class="grupo__dica" [id]="idDica">{{ dica() }}</p>
+  }
+
+  <div class="grupo__opcoes">
+    @for (opcao of opcoes(); track opcao.valor) {
+    <label class="grupo__opcao">
+      <input
+        class="grupo__controle"
+        [type]="multipla() ? 'checkbox' : 'radio'"
+        [name]="nome"
+        [value]="opcao.valor"
+        [checked]="marcada(opcao.valor)"
+        (change)="alternou(opcao, $event)"
+        (blur)="saiu()"
+      />
+      <span>{{ opcao.rotulo }}</span>
+    </label>
+    }
+  </div>
+
+  @if (erro() !== null) {
+  <app-mensagem-erro variante="linha" [id]="idErro">
+    {{ erro() }}
+  </app-mensagem-erro>
+  }
+</fieldset>

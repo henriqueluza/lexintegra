@@ -51,6 +51,8 @@ export default {
     '!arnes-http.ts',
     // `arnes-webhook.ts` e o payload real do sandbox, para testes e simulador.
     '!arnes-webhook.ts',
+    // `arnes-anamnese.ts` monta a menor ficha valida a partir da declaracao.
+    '!arnes-anamnese.ts',
   ],
   coverageDirectory: '../coverage',
   coverageReporters: ['text-summary', 'lcov', 'json-summary'],

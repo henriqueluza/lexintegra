@@ -30,7 +30,32 @@
 .ficha__formulario {
   display: flex;
   flex-direction: column;
+  gap: var(--s6);
+}
+
+/*
+ * Um bloco por secao do documento do escritorio. A borda superior separa os
+ * dez blocos sem precisar de cartao: a ficha e longa, e cartao dentro de
+ * cartao pesaria a leitura.
+ */
+.ficha__bloco {
+  display: flex;
+  flex-direction: column;
   gap: var(--s4);
+  padding-top: var(--s4);
+  border-top: var(--borda-fina) solid var(--divisor);
+}
+
+.ficha__titulo-bloco {
+  margin: 0;
+  font-family: var(--fonte-display);
+  font-weight: var(--peso-titulo);
+  font-size: var(--t-t3);
+  color: var(--texto);
+}
+
+.ficha__numero {
+  color: var(--acento);
 }
 
 .ficha__acoes {

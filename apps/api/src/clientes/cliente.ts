@@ -43,21 +43,24 @@ export interface DocumentoCliente {
 }
 
 /**
- * A anamnese como a Etapa 9 consegue trata-la: pares campo/valor, sem schema.
- *
- * A ficha definitiva ainda nao chegou da CONTRATANTE (plano de execucao, 0.2,
- * item 3) e quem a preenche e a Etapa 8. Fixar nomes de campo aqui seria decidir
- * a ficha no lugar de quem tem que decidi-la — e trocar depois significaria
- * reescrever a tela do advogado inteira.
+ * A anamnese gravada. `campos` e o que a tela do advogado le: pares
+ * rotulo/valor, sem nome de campo, e por isso fichas de modelos diferentes
+ * continuam legiveis lado a lado.
  */
 export interface DocumentoAnamnese {
   campos: { rotulo: string; valor: string }[];
   /**
-   * Qual ficha gerou os campos. A Etapa 8 grava a ficha PROVISORIA
-   * (`provisoria-v0`, ver `anamnese-provisoria/`); a definitiva ganha outro
-   * modelo, e as fichas antigas continuam legiveis porque a tela so conhece
-   * rotulo e valor.
+   * Qual ficha gerou os campos, e tambem o id do documento: `definitiva-v1`
+   * (`shared/anamnese`) ou `provisoria-v0`, o stub da Etapa 8, que ninguem mais
+   * preenche mas continua legivel.
    */
   modelo?: string;
+  /**
+   * As respostas estruturadas da ficha definitiva, como o schema as devolveu.
+   * `campos` e derivado delas na gravacao; elas ficam para a exportacao do
+   * titular e para quem precisar ler uma resposta pela chave.
+   */
+  respostas?: Record<string, string | readonly string[]>;
+  outros?: Record<string, string>;
   criadoEm: Timestamp | FieldValue;
 }

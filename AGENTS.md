@@ -188,7 +188,7 @@ segurança registrado: a confirmação consultar a cobrança no gateway.
 - **A conta do cliente é criada ANTES da transação** (efeito externo), idempotente, por `ContasClienteService` — o segundo escritor de claim da **regra 17 emendada**. O e-mail sai pelo evento `acesso-cliente` do outbox.
 - **Estorno e cancelamento (errata do ADR-12).** O administrador estorna; o cliente cancela, e cancelar não devolve dinheiro. Os dois só sem trabalho iniciado, validados na transação. Estorno isolado é registrado e devolvido à mão; quando todos os pedidos da cobrança são estornados, sai o integral pelo gateway **via outbox** (`estorno-integral`, regra 20). `pedidos.situacao` é eixo separado do estado dos entregáveis, e `iniciar-trabalho` recusa pedido não `ativo`.
 - **Trava contra produção no código (regra 20):** `PAGAMENTOS_MODO` (`desligado | sandbox`; `producao` derruba o boot), prefixo `abc_dev_`, `devMode` conferido em tudo. Terraform com `desligado`, sem secret novo.
-- **Placeholders com teste que cai ao substituir:** `{{TODO-TEXTO-REGRA-ESTORNO-ADR-12}}` (versão `checkout-v0-pendente-adr-12`), `{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}`, `{{TODO-FICHA-ANAMNESE-DA-CONTRATANTE}}`. A anamnese é **stub** (`provisoria-v0`, três perguntas).
+- **Placeholders com teste que cai ao substituir:** `{{TODO-TEXTO-REGRA-ESTORNO-ADR-12}}` (versão `checkout-v0-pendente-adr-12`), `{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}`, `{{TODO-FICHA-ANAMNESE-DA-CONTRATANTE}}`. A anamnese era **stub** (`provisoria-v0`, três perguntas); a definitiva entrou no Bloco A da B2.
 - **Todo texto que sai para o gateway passa por `pagamentos/gateway/texto-do-gateway.ts`.** A rodada no sandbox achou o primeiro caso: o AbacatePay responde 400 "Disallowed character in description" a um travessão, e a suíte não pegava porque o gateway falso aceitava tudo. **O falso agora recusa o que o real recusa** — é essa a defesa, e vale para qualquer limite do gateway que se descubra. O nome e a descrição do produto vêm do catálogo, escrito por gente: o filtro é o que impede o catálogo criado pelo escritório de derrubar a compra por cartão.
 - **Rodada no sandbox (16/09, encerrada): PIX validado de ponta a ponta, e estorno manual, integral via outbox e idempotência da confirmação validados contra o gateway real; cartão BLOQUEADO por homologação de conta, não testado.** O 409 com trabalho iniciado ficou para a próxima rodada por sequenciamento, sem bloqueio. **O `abacatepay listen` mutila o corpo do evento — não use para validar formato**; use o evento do painel de Webhook Logs com a assinatura calculada à parte (método no roteiro). O AbacatePay recusou o checkout hospedado com `CARD is not available for this store` — não é defeito de código, e não se "corrige" aqui. O nome do evento de conclusão do cartão segue sem confirmação. **Não trate a seção de cartão do roteiro como pendência de execução**: ela só pode ser feita depois da homologação.
 - **O evento real do webhook NÃO tem `id` na raiz** (sandbox, 16/09), ao contrário da documentação, e a cobrança vem sob a chave do prefixo do evento (`data.transparent`). O parser exigia o `id` e todo pagamento real voltava 422. **Teste de webhook usa `eventoNoFormatoReal` de `apps/api/src/arnes-webhook.ts`** (o payload capturado, verbatim) — montar o corpo à mão no formato da documentação foi o que deixou o defeito passar.
@@ -261,7 +261,7 @@ apps/web/          Angular 22, pré-renderização estática das rotas públicas
   src/app/paginas/landing/ home publica; TODO o texto em textos.ts
   src/app/paginas/checkout/ rota publica: QR do PIX, redirecionamento do cartao, polling
   src/app/paginas/cliente-pedidos/ um cartao por pedido; a reuniao e o cancelamento vivem dentro dele
-  src/app/paginas/cliente-anamnese/ ficha inicial PROVISORIA (stub da Etapa 8)
+  src/app/paginas/cliente-anamnese/ ficha inicial definitiva, montada de shared/anamnese
   src/app/paginas/admin-estornos/ estornos pendentes de devolucao manual
   src/app/paginas/advogado-demandas/ so o que foi distribuido
   src/app/paginas/advogado-disponibilidade/ grade semanal (ADR-06)
@@ -288,7 +288,7 @@ apps/api/          NestJS 12 (ESM-only), prefixo global /api
   src/pagamentos/   porta do gateway, `modo.ts` (regra 20), webhook e confirmação
   src/contas-cliente/ segundo e último escritor de claim (regra 17)
   src/estornos/     estorno do admin, manual ou integral via outbox
-  src/anamnese-provisoria/ STUB da ficha inicial
+  src/anamnese/      ficha inicial (definitiva-v1); uma por cliente, sem reescrita
   src/entregaveis/  máquina de estados do ADR-11 e a trilha de transições
   src/reunioes/     agendamento, remarcacao, cancelamento e iCalendar
   src/reunioes/sala/ porta da sala do Teams, adaptador falso e a trava de modo

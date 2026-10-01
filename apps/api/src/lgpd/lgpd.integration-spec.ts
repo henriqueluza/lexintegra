@@ -62,6 +62,10 @@ async function semear(uid: string): Promise<void> {
   const documentos: Record<string, Record<string, unknown>> = {
     [`clientes/${uid}`]: { nome: uid, email: `${uid}@exemplo.test` },
     [`clientes/${uid}/anamnese/provisoria-v0`]: { resposta: `anamnese-${uid}` },
+    [`clientes/${uid}/anamnese/definitiva-v1`]: {
+      modelo: 'definitiva-v1',
+      respostas: { faturamento: `faturamento-${uid}` },
+    },
     [`pre-cadastros/${preCadastroId}`]: {
       email: `${uid}@exemplo.test`,
       liberacaoHash: 'nao-exportar-hash',
@@ -150,6 +154,8 @@ it('exporta JSON e bytes reais, sem dados de Bruno, links ou bytes de quarentena
     encoding: 'utf8',
   });
   expect(json).toContain('anamnese-ana');
+  /* As duas fichas, e as respostas confidenciais da definitiva, vao ao titular. */
+  expect(json).toContain('faturamento-ana');
   expect(json).toContain('outbox/convite-ana');
   expect(json).toContain('outbox/estorno-ana');
   expect(json).toContain('entregaveis/p-ana/001/v0');
