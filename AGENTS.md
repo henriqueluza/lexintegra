@@ -151,7 +151,7 @@ segurança registrado: a confirmação consultar a cobrança no gateway.
 - **ADR-17 e ADR-18** novos em `docs/arquitetura.md`: armazenamento atrás de uma porta, e a topologia Cloud Tasks → API → scanner.
 - **Os dois fluxos de upload são separados de verdade** (arquitetura 6.2): módulos, controladores, prefixos de bucket, políticas e retenções distintas. Compartilham só a porta de armazenamento e o portão de leitura.
 - **A regra inviolável 6 virou LINT.** A emissão de link vive em `arquivos/leitura.ts` e só `arquivos/portao.ts` pode importá-la — regra de dependency-cruiser. Teste prova que o portão confere; o lint prova que ninguém contorna.
-- **Duas conferências:** ClamAV ("tem malware?") e magic bytes ("isto é mesmo um PDF?"). Nenhuma cobre a outra — um HTML com extensão `.pdf` passa limpo pelo antivírus.
+- **Duas conferências:** ClamAV ("tem malware?") e magic bytes ("isto é mesmo um PDF?"). Nenhuma cobre a outra — um HTML com extensão `.pdf` passa limpo pelo antivírus. **Desde a B2, o DOCX do advogado tem uma terceira, estrutural** (`apps/api/src/varredura/docx.ts`): todo ZIP passa pelo magic bytes, inclusive o `.docm` com macro, então a varredura lê o diretório do ZIP por faixa e exige o tipo de conteúdo do Word sem macro.
 - **`indisponivel` não é `infectado`.** Scanner fora do ar faz a tarefa falhar para reentrega; tratá-lo como reprovação apagaria arquivo legítimo.
 - **O aceite de termos é por versão do arquivo**, não um "aceitei" global da conta.
 - **A retenção é em duas passagens** (avisa no 23º dia, exclui no 30º), com o aviso nascendo no outbox na mesma transação.

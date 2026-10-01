@@ -500,8 +500,9 @@ constroem**. As decisões vão para um `decisoes.md`.
 
 **Regras de produto**
 
-- [ ] Tipos e tamanho do upload do advogado: hoje o ponto de partida é PDF de
-  até 20 MB. → Tirar o marcador `A-CONFIRMAR-COM-A-CONTRATANTE`.
+- [x] Tipos e tamanho do upload do advogado: PDF e DOCX, 20 MB (decisoes.md,
+  3.1). Bloco E: DOCX validado pela estrutura, `.doc` e `.docm` recusados, e
+  o marcador `A-CONFIRMAR-COM-A-CONTRATANTE` saiu.
 - [x] As oito decisões provisórias do ADR-21, em especial a antecedência de
   24 h e a devolução do crédito quando o escritório cancela. Confirmadas
   (decisoes.md, 3.2 e Anexo B); ADR-21 confirmado e e-mail de convite a
