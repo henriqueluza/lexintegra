@@ -25,6 +25,7 @@ describe('vocabulario do outbox', () => {
       'pausa-contestacao',
       'reuniao-desmarcada-escritorio',
       'acesso-advogado-atualizado',
+      'convite-administrador',
     ]);
   });
 

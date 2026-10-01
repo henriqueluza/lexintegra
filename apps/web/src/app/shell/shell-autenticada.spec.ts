@@ -103,7 +103,7 @@ describe('navegacao da shell', () => {
    * administrativas, sem menu o administrador so chegaria as demais digitando a
    * URL.
    */
-  it('oferece as sete secoes administrativas ao admin', () => {
+  it('oferece as dez secoes administrativas ao admin', () => {
     const { fixture } = montar(
       { nome: 'Marcos', email: 'admin@x.test' },
       'admin',
@@ -119,7 +119,11 @@ describe('navegacao da shell', () => {
       'Produtos',
       /* Etapa 8: as devolucoes feitas por fora do gateway. */
       'Estornos',
-      /* As duas ultimas sao diagnostico, visitadas quando algo deu errado. */
+      /* B2, decisoes.md 5.5. */
+      'Administradores',
+      /* O grupo do fim e diagnostico, visitado quando algo deu errado. */
+      'Contestações',
+      'Pagamentos',
       'Entregas',
       /* Etapa 10, arquitetura 7.2: a fila de reunioes sem sala. */
       'Reuniões',
@@ -210,6 +214,9 @@ describe('navegacao da shell', () => {
       '/admin/advogados',
       '/admin/produtos',
       '/admin/estornos',
+      '/admin/administradores',
+      '/admin/contestacoes',
+      '/admin/pagamentos',
       '/admin/entregas',
       '/admin/reunioes',
     ]);

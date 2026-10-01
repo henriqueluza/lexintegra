@@ -536,7 +536,10 @@ constroem**. As decisões vão para um `decisoes.md`.
 - [x] Processo de contestação (chargeback). Decidido (decisoes.md, 5.4) e
   construído no Bloco B: pausa dos pedidos, `/admin/contestacoes`,
   `alerta-critico.md`.
-- [ ] Como será provisionado o próximo administrador. → `operacao.md` §8.
+- [x] Como será provisionado o próximo administrador. Decidido (decisoes.md,
+  5.5) e construído no Bloco F3: `/admin/administradores`, convite por e-mail,
+  regra 17 emendada (terceiro escritor de claim, só `admin`), último
+  administrador e a si mesmo protegidos, auditoria e `operacao.md` §8.
 - [x] Tipografia: Plus Jakarta Sans, família única (ADR-22).
 
 **Repositório**
@@ -661,6 +664,9 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
 - [ ] 👤 Disparar o alerta artificial depois de trocar o destinatário.
 - [ ] 👤 Remover seus acessos pessoais, ou registrar por escrito quais ficam
   nos 30 dias de garantia e por quê.
+- [ ] 👤 O Henrique convida o Auan em `/admin/administradores`; depois que o
+  Auan entrar, **o Auan remove o acesso de administrador do Henrique**
+  (`operacao.md` §8, `transferencia.md` 6.4a).
 
 **Encerramento**
 

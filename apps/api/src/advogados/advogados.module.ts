@@ -17,8 +17,9 @@ import { EdicaoDeAdvogadoService } from './edicao.service.js';
  * auditoria e novo e-mail de acesso quando o endereco muda — ver
  * `edicao.service.ts`.
  *
- * NAO FAZ: nao exclui, e nao escreve nenhum outro perfil de claim: `AdvogadosService.criar` e um dos dois unicos
- * escritores de claim do sistema (regra inviolavel 17).
+ * NAO FAZ: nao exclui, e nao escreve nenhum outro perfil de claim:
+ * `AdvogadosService.criar` e um dos tres unicos escritores de claim do sistema
+ * (regra inviolavel 17, emendada na B2).
  */
 @Module({
   imports: [OutboxModule, ConsultaReunioesModule],

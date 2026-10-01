@@ -31,9 +31,9 @@ import { mensagemDoErro } from '../erros';
  * pedidos — sem devolucao a fazer, porque o dinheiro ja voltou pelo meio de
  * pagamento. A nota e obrigatoria e fica na trilha.
  *
- * SEM ITEM DE MENU POR ENQUANTO: o menu muda todas as imagens de referencia dos
- * paineis, e o Bloco F da B2 acrescenta os itens novos de uma vez. O alerta
- * critico `pagamento.contestacao` e o runbook apontam para esta rota.
+ * O item de menu entrou no Bloco F3 da B2, com os outros itens novos de uma
+ * vez. O alerta critico `pagamento.contestacao` e o runbook apontam para esta
+ * rota.
  */
 @Component({
   selector: 'app-admin-contestacoes',

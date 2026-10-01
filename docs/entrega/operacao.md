@@ -456,12 +456,34 @@ guard escreve a cada `401` (`jsonPayload.sinal="webhook.recusado"`).
 ## 8. Tarefas do administrador global
 
 Tudo pelo painel em `https://lexintegra.com.br`, com uma conta que tenha a
-claim `role: admin`. **A aplicação não cria administrador.** A claim é gravada
-à mão, fora da aplicação (regra 17), e o repositório não traz o script para
-isso. `[CONFIRMAR: como e por quem o próximo administrador será provisionado]`.
+claim `role: admin`.
+
+**Próximo administrador (B2, decisões 5.5).** Um administrador convida outro
+em **`/admin/administradores`**: nome e e-mail. O convidado recebe por e-mail
+(outbox, `convite-administrador`) o link para definir a própria senha; a
+plataforma grava a claim `admin` (regra 17, emendada na B2) e a linha
+`administrador.convidado` no log de auditoria. Recusas:
+
+- e-mail que já é de **cliente ou advogado** (409): use outro endereço;
+- remover **a si mesmo** (409) e remover o **último** administrador (409).
+
+Remover tira a claim e revoga as sessões na hora. O primeiro uso previsto é o
+Henrique (administrador atual, provisionado à mão) convidar o Auan.
+
+**Na entrega final do projeto**, depois que o Auan estiver ativo e tiver
+entrado ao menos uma vez:
+
+1. O Auan abre `/admin/administradores` e remove o acesso do Henrique.
+2. Conferir que a linha `administrador.removido` está em `auditoria/` e que o
+   Henrique não entra mais no painel administrativo.
+3. Registrar a data em `transferencia.md`.
+
+O primeiro administrador ganha o seu documento em `administradores/` no
+primeiro acesso a essa tela; até lá, ele não aparece na contagem.
 
 | Tarefa | Tela | Rota da API | Observação |
 |---|---|---|---|
+| Convidar e remover administrador | `/admin/administradores` | `GET`/`POST /api/admin/administradores`, `DELETE /api/admin/administradores/{uid}` | Recusa e-mail de cliente ou advogado, remover a si mesmo e remover o último. Fica no log de auditoria |
 | Criar advogado | `/admin/advogados` | `POST /api/admin/advogados` | Grava a claim `advogado` e manda por e-mail (outbox) o link de definição de senha |
 | Editar advogado (nome, e-mail, ID do Teams) | `/admin/advogados` | `PUT /api/admin/advogados/{uid}` | Trocar o e-mail atualiza o login e manda link de acesso ao endereço novo (outbox). Não redistribui pedidos. Fica no log de auditoria |
 | Suspender e reativar acesso | `/admin/advogados` | `POST`/`DELETE /api/admin/advogados/{uid}/suspensao` | Revoga tokens na hora. Responde 409 se houver reunião futura (ADR-21, D) |
@@ -473,7 +495,7 @@ isso. `[CONFIRMAR: como e por quem o próximo administrador será provisionado]`
 | Cancelar reunião pelo escritório | `/admin/reunioes` | `POST /api/admin/reunioes/{pedidoId}/{reuniaoId}/cancelamento` | Sempre devolve o crédito, com qualquer antecedência, e o cliente recebe e-mail convidando a remarcar (ADR-21, H) |
 | Buscar cliente e ver anamnese | `/admin/clientes` | `GET /api/admin/clientes`, `GET .../{uid}/anamnese` | |
 | Pagamentos com problema (órfão, divergente, conflito de conta) | `/admin/pagamentos` | `GET /api/admin/pagamentos?situacao=&tipo=`, `POST /api/admin/pagamentos/{cobrancaId}/resolucao` | A correção é no painel do AbacatePay; a tela marca como resolvido, com nota obrigatória e auditoria. O comprador só aparece enquanto o checkout existir. Ver [`pagamento-orfao.md`](../runbooks/pagamento-orfao.md) (prazos do `decisoes.md`, 5.3) |
-| Registrar resultado de contestação | `/admin/contestacoes` (sem item de menu até o Bloco F da B2) | `GET /api/admin/contestacoes`, `POST /api/admin/contestacoes/{cobrancaId}/resultado` | Ganha tira a pausa; perdida estorna sem devolução. Ver [`alerta-critico.md`](../runbooks/alerta-critico.md) |
+| Registrar resultado de contestação | `/admin/contestacoes` | `GET /api/admin/contestacoes`, `POST /api/admin/contestacoes/{cobrancaId}/resultado` | Ganha tira a pausa; perdida estorna sem devolução. Ver [`alerta-critico.md`](../runbooks/alerta-critico.md) |
 | Exportar dados de um titular | **sem tela** | `POST /api/admin/lgpd/{clientes\|pre-cadastros}/{id}/exportacao` | Ver [`lgpd.md`](lgpd.md) e [`runbooks/lgpd-titular.md`](../runbooks/lgpd-titular.md) |
 
 **Chamar uma rota sem tela.** Com a sessão administrativa aberta no navegador,

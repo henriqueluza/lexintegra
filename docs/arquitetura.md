@@ -520,7 +520,7 @@ A ordem importa: os rewrites de `/api` e `/api/**` precisam vir antes do catch-a
    - sem chave e fora de produção, o gateway é o **falso**, com segredos de webhook de desenvolvimento que só valem nesse caso;
    - o Terraform declara `PAGAMENTOS_MODO = "desligado"` sem referenciar secret novo, e o hook do agente bloqueia `abc_prod_`.
 6. **O webhook recusa antes de ler.** `AssinaturaWebhookGuard` confere o segredo e o HMAC do corpo cru em tempo constante, e qualquer falha é 401 sem nenhuma escrita. O corpo cru chega porque `rawBody: true` está em `OPCOES_DA_APLICACAO`, usada por `main.ts` e por todo arnês HTTP de teste — uma opção só em `main.ts` faria a suíte validar um HMAC que produção nunca veria. Evento assinado e ilegível responde 422 com alerta crítico.
-7. **A confirmação é uma transação, com a conta resolvida antes dela.** A conta no Auth é criada fora da transação (efeito externo, regra 2), de forma idempotente, por `ContasClienteService` — o segundo escritor de claim da regra 17 emendada. Dentro da transação: o pagamento (`create`), os pedidos a partir do snapshot, o documento do cliente, o evento `acesso-cliente` no outbox e o checkout em `pago`.
+7. **A confirmação é uma transação, com a conta resolvida antes dela.** A conta no Auth é criada fora da transação (efeito externo, regra 2), de forma idempotente, por `ContasClienteService` — o segundo escritor de claim da regra 17 emendada (o terceiro, só de `admin`, é `AdministradoresService`, da B2). Dentro da transação: o pagamento (`create`), os pedidos a partir do snapshot, o documento do cliente, o evento `acesso-cliente` no outbox e o checkout em `pago`.
 
 **Casos anômalos**, todos gravando o pagamento e nenhum respondendo 200 em silêncio:
 
@@ -964,7 +964,7 @@ Quatro fronteiras, cada uma com forma distinta de autenticação:
 
 **3. Autenticada** — cliente e advogado, separados por custom claim no token do Firebase Auth. Pelos itens 2.6.1 e 2.6.2, o advogado só enxerga o que lhe foi distribuído — e a **Etapa 4 fixou onde isso é verificado**: nos guards e serviços da API, não nas regras do Firestore. A razão está em 6.1.
 
-**4. Administrativa** — administrador global, provisionado fora da aplicação conforme o 2.4.2, sem autocadastro possível.
+**4. Administrativa** — administrador global, provisionado fora da aplicação conforme o 2.4.2, sem autocadastro possível. **Emenda da B2 (decisões 5.5):** um administrador pode convidar outro dentro da plataforma (`/admin/administradores`, `AdministradoresService`, o terceiro escritor de claim da regra 17, só de `admin`). O convidado define a própria senha por link (ADR-07). Remover tira a claim e revoga os tokens; a plataforma recusa remover o último administrador e remover a si mesmo, com a contagem sobre `administradores/{uid}` lida na transação. Convite e remoção ficam em `auditoria/`. Continua sem autocadastro: só quem já é administrador convida.
 
 ### 6.1 Regras do Firestore
 

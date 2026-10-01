@@ -434,6 +434,7 @@ export class DespachanteOutbox {
       case 'redefinir-senha':
       case 'acesso-cliente':
       case 'acesso-advogado-atualizado':
+      case 'convite-administrador':
         return { para, modelo: await this.modeloDeSenha(usuario.email) };
 
       default:

@@ -126,11 +126,12 @@ export default tseslint.config(
   },
   {
     /*
-     * Regra inviolavel 17, emendada na Etapa 8: custom claim so e escrita em DOIS
-     * lugares — `AdvogadosService.criar` (so `advogado`) e
+     * Regra inviolavel 17, emendada na Etapa 8 e de novo na B2: custom claim so
+     * e escrita em TRES lugares — `AdvogadosService.criar` (so `advogado`),
      * `ContasClienteService.obterOuCriar` (so `cliente`, e so sem perfil
-     * anterior). Escrita de claim e a operacao mais sensivel do sistema, e um
-     * terceiro escritor nao quebraria teste nenhum: so abriria mais uma porta de
+     * anterior) e `AdministradoresService` (so `admin`: convite e remocao,
+     * decisoes.md 5.5). Escrita de claim e a operacao mais sensivel do sistema, e
+     * um quarto escritor nao quebraria teste nenhum: so abriria mais uma porta de
      * elevacao de privilegio.
      *
      * dependency-cruiser nao serve aqui — ele enxerga import, e `setCustomUserClaims`
@@ -143,6 +144,7 @@ export default tseslint.config(
     ignores: [
       'apps/api/src/advogados/advogados.service.ts',
       'apps/api/src/contas-cliente/contas-cliente.service.ts',
+      'apps/api/src/administradores/administradores.service.ts',
       '**/*.spec.ts',
       '**/*.integration-spec.ts',
     ],
@@ -152,8 +154,9 @@ export default tseslint.config(
         {
           selector: 'MemberExpression[property.name="setCustomUserClaims"]',
           message:
-            'Regra inviolavel 17: so AdvogadosService.criar e ' +
-            'ContasClienteService.obterOuCriar escrevem custom claim.',
+            'Regra inviolavel 17: so AdvogadosService.criar, ' +
+            'ContasClienteService.obterOuCriar e AdministradoresService ' +
+            'escrevem custom claim.',
         },
       ],
     },

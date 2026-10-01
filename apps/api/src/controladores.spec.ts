@@ -10,6 +10,7 @@ import { AdvogadosController } from './advogados/advogados.controller.js';
 import { AnamneseController } from './anamnese/anamnese.controller.js';
 import { ContestacoesAdminController } from './contestacoes/contestacoes.admin.controller.js';
 import { PagamentosAdminController } from './pagamentos/admin/pagamentos.admin.controller.js';
+import { AdministradoresController } from './administradores/administradores.controller.js';
 import type { AnamneseService } from './anamnese/anamnese.service.js';
 import type { AdvogadosService } from './advogados/advogados.service.js';
 import type { EdicaoDeAdvogadoService } from './advogados/edicao.service.js';
@@ -123,6 +124,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['reunioes sem sala (Etapa 10)', ReunioesAdminController],
     ['contestacoes (B2)', ContestacoesAdminController],
     ['pagamentos problematicos (B2)', PagamentosAdminController],
+    ['administradores (B2)', AdministradoresController],
   ])(
     'a superficie administrativa de %s exige admin, na classe',
     (_nome, classe) => {
@@ -156,6 +158,9 @@ describe('anotacoes de seguranca dos controladores', () => {
     ],
     ['pagamentos.listar', PagamentosAdminController.prototype.listar],
     ['pagamentos.resolver', PagamentosAdminController.prototype.resolver],
+    ['administradores.listar', AdministradoresController.prototype.listar],
+    ['administradores.convidar', AdministradoresController.prototype.convidar],
+    ['administradores.remover', AdministradoresController.prototype.remover],
   ])('o metodo administrativo %s nao se declara publico', (_nome, metodo) => {
     expect(reflector.get(CHAVE_PUBLICO, metodo)).toBeUndefined();
   });

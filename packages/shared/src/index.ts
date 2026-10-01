@@ -12,6 +12,7 @@ export * from './estado-entregavel.js';
 export * from './estado-reuniao.js';
 export * from './evento-outbox.js';
 export * from './esquemas/advogado.js';
+export * from './esquemas/administrador.js';
 export * from './esquemas/anamnese.js';
 export * from './esquemas/anexo.js';
 export * from './esquemas/checkout.js';

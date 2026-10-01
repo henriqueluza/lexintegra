@@ -1,0 +1,82 @@
+<section class="administradores">
+  <h1 class="administradores__titulo">Administradores</h1>
+  <p class="pagina-descricao">
+    Quem administra a plataforma. Um administrador convida outro; ninguém se
+    cadastra sozinho.
+  </p>
+
+  <app-cartao
+    titulo="Convidar administrador"
+    descricao="A pessoa recebe por e-mail um link para escolher a própria senha."
+  >
+    <form
+      class="administradores__formulario"
+      [formGroup]="formulario"
+      (ngSubmit)="convidar()"
+    >
+      <div class="administradores__campos">
+        <app-campo
+          rotulo="Nome completo"
+          formControlName="nome"
+          [obrigatorio]="true"
+          [erro]="erroDoCampo('nome')"
+        />
+        <app-campo
+          rotulo="E-mail"
+          tipo="email"
+          formControlName="email"
+          [obrigatorio]="true"
+          [erro]="erroDoCampo('email')"
+        />
+      </div>
+
+      <p class="administradores__aviso">
+        O e-mail não pode ser de um cliente nem de um advogado. Toda criação e
+        remoção fica registrada. A plataforma não deixa remover o último
+        administrador, nem o seu próprio acesso.
+      </p>
+
+      <div>
+        <app-botao
+          variante="primario"
+          tipo="submit"
+          [carregando]="convidando()"
+        >
+          Convidar e enviar link
+        </app-botao>
+      </div>
+    </form>
+  </app-cartao>
+
+  @if (falha(); as mensagem) {
+  <app-mensagem-erro variante="bloco">{{ mensagem }}</app-mensagem-erro>
+  } @if (falhaDaLista()) {
+  <app-mensagem-erro variante="bloco">
+    Não foi possível carregar os administradores. Recarregue a página.
+  </app-mensagem-erro>
+  }
+
+  <app-tabela
+    legenda="Administradores ativos"
+    [colunas]="colunas"
+    [linhas]="linhas()"
+    [carregando]="carregando()"
+    mensagemVazia="Nenhum administrador ativo."
+  >
+    <ng-template appCelulaTabela let-linha let-coluna="coluna">
+      @switch (coluna.chave) { @case ('acoes') { @if
+      (comoAdministrador(linha).ehVoce) {
+      <span class="administradores__voce">Você</span>
+      } @else {
+      <app-botao
+        tamanho="p"
+        variante="fantasma"
+        [carregando]="emCurso() === comoAdministrador(linha).uid"
+        (click)="remover(comoAdministrador(linha))"
+      >
+        Remover acesso
+      </app-botao>
+      } } @default { {{ linha[coluna.chave] }} } }
+    </ng-template>
+  </app-tabela>
+</section>

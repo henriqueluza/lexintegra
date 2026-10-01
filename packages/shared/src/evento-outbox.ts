@@ -40,6 +40,7 @@ export const TIPOS_EVENTO = [
   'pausa-contestacao',
   'reuniao-desmarcada-escritorio',
   'acesso-advogado-atualizado',
+  'convite-administrador',
 ] as const;
 
 export type TipoEvento = (typeof TIPOS_EVENTO)[number];
@@ -79,6 +80,14 @@ export type TipoEvento = (typeof TIPOS_EVENTO)[number];
  * `definir-senha` porque `definir-senha` acontece uma vez por conta — a chave e
  * o uid —, e a troca de e-mail pode acontecer quantas vezes o administrador
  * quiser: a chave leva a versao do acesso, e cada troca tem o seu registro.
+ */
+
+/*
+ * `convite-administrador` (B2, decisoes.md 5.5) e o link de definicao de senha
+ * de quem foi convidado a administrador. Separado de `definir-senha` pela mesma
+ * razao que separa os outros: "o administrador criou um advogado" e "o
+ * administrador convidou outro administrador" sao fatos distintos. A chave leva
+ * a versao do convite, porque quem foi removido pode ser convidado de novo.
  */
 
 /*
