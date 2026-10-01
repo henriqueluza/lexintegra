@@ -31,12 +31,18 @@ import { CONTAS, entrar, expect, test } from '../jornadas/pilha';
  * A grade da disponibilidade, essa sim, sai cheia — e e a tela que mais ganhou
  * com o relogio parado.
  *
- * O QUE CONTINUA DE FORA: `painel/anamnese`, que e o stub provisorio da Etapa 8
- * (`{{TODO-FICHA-ANAMNESE-DA-CONTRATANTE}}`) e vai mudar inteiro quando a ficha
- * definitiva chegar.
+ * `painel/anamnese` ENTROU no Bloco A da B2, com a ficha definitiva do
+ * escritorio. Ficava de fora enquanto era o stub da Etapa 8, que ia mudar
+ * inteiro. A captura e da ficha aberta, antes de qualquer resposta: o que ela
+ * defende e o formulario, com o preenchimento que vem do cadastro.
  */
 const TELAS = [
   { nome: 'cliente-pedidos', rota: '/painel', conta: CONTAS.cliente },
+  {
+    nome: 'cliente-anamnese',
+    rota: '/painel/anamnese',
+    conta: CONTAS.cliente,
+  },
   {
     nome: 'advogado-demandas',
     rota: '/advogado/demandas',
@@ -117,10 +123,13 @@ test.describe('regressao visual dos paineis', () => {
     await page.goto('/painel');
 
     await expect(page.getByRole('heading').first()).toBeVisible();
-    await expect(page.getByText(/ainda não está disponível/).first()).toBeVisible();
+    await expect(
+      page.getByText(/ainda não está disponível/).first(),
+    ).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     await page.evaluate(
-      () => new Promise((resolve) => requestAnimationFrame(() => resolve(null))),
+      () =>
+        new Promise((resolve) => requestAnimationFrame(() => resolve(null))),
     );
 
     await expect(page).toHaveScreenshot('cliente-pedidos-sem-agendamento.png', {

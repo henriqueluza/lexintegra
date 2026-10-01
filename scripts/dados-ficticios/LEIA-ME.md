@@ -53,8 +53,9 @@ passou a escrever o agregado de verdade. Conferido contra ela:
 3. **Confirmado.** O documento do cliente nasce na confirmação com
    `nomeNormalizado` e `emailNormalizado` preenchidos por `normalizarParaBusca`, e
    um cliente existente mantém o `criadoEm` original.
-4. **Continua pendente.** A Etapa 8 trouxe só uma ficha **provisória** (stub, três
-   perguntas) — a real segue com a CONTRATANTE.
+4. **Resolvido no Bloco A da B2 (01/10/2026).** A ficha real chegou e os
+   exemplos seguem o modelo `definitiva-v1` (`packages/shared/src/anamnese.ts`).
+   A semente passa as respostas pelo mesmo schema do servidor antes de gravar.
 
 Duas coisas que o seed **não** reproduz, e não precisa: os pedidos semeados não têm
 documento em `pagamentos` (então um estorno feito sobre eles nunca sai integral

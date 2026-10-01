@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { AnamneseProvisoriaController } from './anamnese-provisoria.controller.js';
-import { AnamneseProvisoriaService } from './anamnese-provisoria.service.js';
+import { AnamneseController } from './anamnese.controller.js';
+import { AnamneseService } from './anamnese.service.js';
 
-/** ⚠️ STUB TEMPORÁRIO — ver `packages/shared/src/anamnese-provisoria.ts`. */
+/** A ficha inicial do cliente, no modelo de `packages/shared/src/anamnese.ts`. */
 @Module({
-  controllers: [AnamneseProvisoriaController],
-  providers: [AnamneseProvisoriaService],
+  controllers: [AnamneseController],
+  providers: [AnamneseService],
 })
-export class AnamneseProvisoriaModule {}
+export class AnamneseModule {}

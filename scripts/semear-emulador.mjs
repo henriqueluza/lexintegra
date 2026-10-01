@@ -33,6 +33,7 @@
  * com `Bearer owner`, que o servico real recusa.
  */
 
+import './fonte-ts.mjs';
 import { congelarProduto } from '../packages/shared/src/esquemas/produto.ts';
 import {
   dataLocal,
@@ -339,6 +340,13 @@ async function semearDisponibilidade(uidPorEmail) {
  * contra o mesmo emulador.
  */
 async function semearClientesEPedidos(idsDeProduto, uidPorEmail) {
+  // Por `import()`, e nao estatico: a ficha importa os vizinhos por `.js`, e so
+  // o gancho de `fonte-ts.mjs` os acha na fonte — e ele so vale para o que for
+  // carregado depois dele.
+  const { MODELO_ANAMNESE, camposDaFicha } =
+    await import('../packages/shared/src/anamnese.ts');
+  const { esquemaAnamnese } =
+    await import('../packages/shared/src/esquemas/anamnese.ts');
   const agora = AGORA;
   const uidDoCliente = new Map();
 
@@ -364,11 +372,21 @@ async function semearClientesEPedidos(idsDeProduto, uidPorEmail) {
       criadoEm: agora,
     });
 
+    // O MESMO schema do servidor e os MESMOS pares rotulo/valor que
+    // `AnamneseService.registrar` grava. Um exemplo que o schema recusa derruba
+    // a semente, em vez de virar dado que a tela nunca produziria.
+    const ficha = esquemaAnamnese.parse(cliente.anamnese);
     await gravarDocumento(
       HOST_FIRESTORE,
       PROJETO,
-      `clientes/${uid}/anamnese/ficha-01`,
-      { campos: [...cliente.anamnese], criadoEm: agora },
+      `clientes/${uid}/anamnese/${MODELO_ANAMNESE}`,
+      {
+        campos: camposDaFicha(ficha),
+        modelo: MODELO_ANAMNESE,
+        respostas: ficha.respostas,
+        outros: ficha.outros,
+        criadoEm: agora,
+      },
     );
 
     console.log(`  cliente   ${cliente.nome}`);
