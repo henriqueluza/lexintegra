@@ -1,36 +1,28 @@
 <footer class="rodape">
-  <div class="rodape__faixa">
-    <div class="rodape__grade">
-      <div class="rodape__marca">
-        <a href="/" aria-label="LexIntegra — início"
-          ><img
-            src="/imagens/logo-lexintegra.png"
-            alt="LexIntegra"
-            width="160"
-            height="160"
-            loading="lazy"
-        /></a>
-        <p>Contratação e acompanhamento de serviços jurídicos para empresas.</p>
-      </div>
-      <nav aria-label="Plataforma">
-        <h2>Plataforma</h2>
-        <a href="/#como">Como funciona</a>
-        <a href="/servicos">Serviços</a>
-        <a href="/cadastro">Cadastro inicial</a>
-      </nav>
-      <nav aria-label="Atendimento">
-        <h2>Atendimento</h2>
-        <a href="/#duvidas">Dúvidas frequentes</a>
-        <a href="/entrar">Entrar na sua área</a>
-      </nav>
-      <nav aria-label="Informações legais">
-        <h2>Legal</h2>
-        <a href="/privacidade">Aviso de privacidade</a>
-        <a href="/termos">Termos de contratação</a>
-      </nav>
+  <div class="rodape__grade">
+    <div class="rodape__marca">
+      <a href="/" aria-label="LexIntegra — início">LexIntegra</a>
+      <p>Contratação e acompanhamento de serviços jurídicos para empresas.</p>
+      <p>CNPJ: {{ contato.cnpj }}</p>
     </div>
-    <p class="rodape__base">
-      © 2026 LexIntegra. Serviços jurídicos, conectados a você.
-    </p>
+    <nav aria-label="Plataforma">
+      <h2>Plataforma</h2>
+      <a href="/#como">Como funciona</a><a href="/servicos">Serviços e preços</a
+      ><a href="/entrar">Entrar na sua área</a>
+    </nav>
+    <nav aria-label="Atendimento">
+      <h2>Contato</h2>
+      <a [href]="'mailto:' + contato.email">{{ contato.email }}</a
+      ><a [href]="contato.telefoneHref">{{ contato.telefone }}</a
+      ><a href="/#duvidas">Dúvidas frequentes</a>
+    </nav>
+    <nav aria-label="Informações legais">
+      <h2>Informações legais</h2>
+      <a href="/termos">Termos de uso</a
+      ><a href="/privacidade">Política de privacidade</a>
+    </nav>
   </div>
+  <p class="rodape__base">
+    © 2026 LexIntegra. Serviços jurídicos, conectados a você.
+  </p>
 </footer>

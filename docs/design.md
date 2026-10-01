@@ -1,5 +1,33 @@
 # Design — LexIntegra
 
+## Tema Névoa — páginas públicas (30/09/2026)
+
+O solicitante aprovou o pacote `LexIntegra-design-handoff` para a landing e as
+páginas de exibição, incluindo o catálogo. **Admin, advogado e área do cliente
+continuam no ADR-22.** O guia de telas internas do pacote não autoriza alterar
+esses módulos; esta restrição foi explícita no pedido.
+
+- Fundo azul-névoa, tinta grafite, bordô nas ações e dourado decorativo.
+- Panchang 400 para display e Supreme 400/500 para texto público. Plus Jakarta
+  Sans permanece nas áreas internas.
+- A classe `publica-nevoa` no host de `App` delimita tokens e estilos. Ela é
+  removida ao navegar para `/painel`, `/advogado`, `/admin` e `/catalogo`
+  (catálogo técnico de componentes); `/servicos` recebe o novo tema.
+- Landing com sete fotografias responsivas locais, cinco capítulos, ficha,
+  exemplos explicitamente ilustrativos, FAQ e fechamento. Nenhuma API na home.
+- Animações do handoff restauradas em 01/10/2026: Motion + Lenis restritos à
+  landing, com limpeza por navegação e preferência de movimento reduzido.
+  Esta decisão substitui a ausência de animação no hero registrada no ADR-22.
+- Um rodapé em todas as páginas públicas, com CNPJ e contatos fornecidos pelo
+  solicitante, termos de uso e política de privacidade. As rotas `/termos` e
+  `/privacidade` foram preservadas e preenchidas.
+- Os complementos legais públicos não alteram documentos compartilhados nem
+  versões de aceites já registrados. A revisão jurídica permanece no CHECKLIST.
+
+Auditoria, escopo e verificações: [design-audit.md](design-audit.md).
+
+---
+
 ## ADR-22 — Direção clara única (28/09/2026)
 
 **Esta seção substitui a decisão da Etapa 1 abaixo.** O que vem depois dela é

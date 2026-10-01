@@ -206,6 +206,30 @@ e passe a lista ao Claude como "ajustes finais".
 
 ### B1. Já pode fazer (passo 2)
 
+**Frontend público Névoa — etapa de 30/09 a 01/10/2026**
+
+- [x] Aplicar o handoff à landing e às páginas públicas, com fontes, fotografias,
+  navegação, catálogo em página separada e layout responsivo.
+- [x] Preservar os módulos de administração, advogados e área do cliente.
+- [x] Adicionar rodapé público com CNPJ, e-mail, telefone e links para termos
+  de uso e política de privacidade; preencher e estilizar as páginas legais
+  (a revisão jurídica permanece no item específico abaixo).
+- [x] Restaurar as animações do modelo: hero, capítulos, títulos, faixa de passos,
+  revelações, arraste do Line-up e menu móvel; respeitar movimento reduzido.
+- [x] Navbar pública por estado: visitante vê Entrar/Cadastro; pré-cadastrado
+  sem sessão vê apenas Catálogo; cliente autenticado vê Minha área (`/painel`).
+  O menu acompanha a mesma regra e mantém os destinos de admin/advogado.
+  O pré-cadastro salvo é restaurado sem consultar a API na landing.
+- [x] Remover os exemplos de serviços do Line-up e colocar placeholders
+  decorativos borrados, sem nomes, preços ou ofertas fictícias. A home mantém
+  apenas a prévia reservada e links de cadastro/acesso; os serviços ficam em
+  outra página (`/servicos`). Nenhuma consulta à API foi adicionada à landing.
+- [ ] Adicionar o catálogo real de serviços em `/servicos`: o escritório deve
+  cadastrar e publicar os produtos pelo módulo administrativo, com escopo,
+  entregáveis e preços definitivos. Validar a exibição para usuários com acesso
+  e o fluxo de contratação. Os placeholders da landing não são produtos reais.
+
+
 **Alertas e ClamAV (achados de 29/09)**
 
 Ordem: métrica de idade do `daily` antes ou junto do binding, senão cada
@@ -471,7 +495,9 @@ constroem**. As decisões vão para um `decisoes.md`.
   no Bloco A** (`feat/anamnese-definitiva`): `definitiva-v1` em
   `packages/shared/src/anamnese.ts`, tela, testes e mapa LGPD. A guarda segue
   a política (2.1, pendente).
-- [ ] Texto final das minutas:
+- [ ] Texto final das minutas (páginas públicas de termos e privacidade
+  preenchidas no redesign Névoa de 30/09, com CNPJ e contatos fornecidos;
+  revisão jurídica e atualização dos aceites continuam neste item):
   - termos;
   - checkout;
   - regra de estorno;

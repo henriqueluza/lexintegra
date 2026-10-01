@@ -1,0 +1,21 @@
+@font-face {
+  font-family: 'Panchang';
+  src: url('/fontes/lex/panchang-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Supreme';
+  src: url('/fontes/lex/supreme-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Supreme';
+  src: url('/fontes/lex/supreme-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}

@@ -1,91 +1,66 @@
-/*
- * Rodape publico (ADR-22): faixa vinho profunda em quatro colunas no desktop,
- * duas no tablet e uma no celular.
- */
 :host {
   display: block;
 }
-
 .rodape {
-  background: var(--marca-superficie-profunda);
-  /* O anel de foco vinho some sobre o vinho: aqui ele e dourado. */
-  --foco: var(--marca-acento);
-  color: var(--marca-texto-2);
-  font-size: var(--t-menor);
+  padding: var(--lex-space-8) var(--lex-gutter) var(--lex-space-5);
+  border-top: var(--borda-fina) solid var(--lex-border-hairline);
+  background: var(--lex-bg);
+  color: var(--lex-text-secondary);
+  font-size: var(--lex-text-small);
 }
-
-.rodape__faixa {
-  max-width: var(--largura-conteudo);
-  margin: 0 auto;
-  padding: var(--s7) var(--s5) var(--s5);
-}
-
 .rodape__grade {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr 1fr;
-  gap: var(--s6);
+  grid-template-columns: 1.2fr 1fr 1.2fr 1fr;
+  gap: var(--lex-space-7);
 }
-
-.rodape__marca img {
-  display: block;
-  width: 150px;
-  height: 64px;
-  object-fit: contain;
-  object-position: left;
-  /* A logo e colorida; sobre o vinho profundo ela so le em branco. */
-  filter: brightness(0) invert(1);
+.rodape__marca > a {
+  font-size: var(--lex-text-title);
+  color: var(--lex-text-primary);
 }
-
 .rodape__marca p {
-  margin-top: var(--s3);
+  margin-top: var(--lex-space-4);
   max-width: 32ch;
-  line-height: var(--altura-corpo);
 }
-
 nav {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--s2);
 }
-
 h2 {
-  color: var(--marca-texto);
-  font-size: var(--t-menor);
-  font-weight: var(--peso-forte);
-  margin-bottom: var(--s1);
+  font-size: var(--lex-text-label);
+  font-weight: var(--lex-weight-medium);
+  letter-spacing: var(--lex-tracking-label);
+  text-transform: uppercase;
+  color: var(--lex-text-primary);
+  margin-bottom: var(--lex-space-3);
 }
-
 a {
-  color: var(--marca-texto-2);
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--lex-control-h);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--lex-text-secondary);
   text-decoration: none;
 }
-
 a:hover {
-  color: var(--marca-texto);
+  color: var(--lex-accent);
   text-decoration: underline;
-  text-underline-offset: var(--s1);
+  text-underline-offset: var(--lex-space-1);
 }
-
 .rodape__base {
-  margin-top: var(--s7);
-  padding-top: var(--s4);
-  border-top: var(--borda-fina) solid var(--marca-divisor);
-  font-size: var(--t-micro);
+  border-top: var(--borda-fina) solid var(--lex-border-hairline);
+  margin-top: var(--lex-space-7);
+  padding-top: var(--lex-space-5);
+  font-size: var(--lex-text-caption);
 }
-
-@media (max-width: 900px) {
+@media (max-width: 1000px) {
   .rodape__grade {
     grid-template-columns: 1fr 1fr;
   }
 }
-
 @media (max-width: 560px) {
   .rodape__grade {
-    grid-template-columns: 1fr;
-  }
-
-  .rodape__faixa {
-    padding: var(--s6) var(--s4) var(--s4);
+    grid-template-columns: minmax(0, 1fr);
   }
 }

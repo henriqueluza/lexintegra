@@ -140,7 +140,7 @@ test.describe('area publica', () => {
 
     await page.goto('/');
     await page
-      .getByRole('link', { name: 'Conhecer serviços', exact: true })
+      .getByRole('heading', { name: /Contrate.*Receba/i })
       .waitFor();
     await page.evaluate(() => {
       setTimeout(() => {

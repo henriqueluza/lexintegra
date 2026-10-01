@@ -7,12 +7,15 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
+import { RodapePublico } from './shell/rodape-publico/rodape-publico';
 import { NavegacaoPublica } from './shell/navegacao-publica';
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, NavegacaoPublica],
+  imports: [RouterOutlet, NavegacaoPublica, RodapePublico],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: '@if (publica()) { <app-navegacao-publica /> } <router-outlet />',
+  host: { '[class.publica-nevoa]': 'publica()' },
+  template:
+    '@if (publica()) { <app-navegacao-publica [inicio]="inicio()" /> } <router-outlet /> @if (publica()) { <app-rodape-publico /> }',
 })
 export class App {
   private readonly router = inject(Router);
@@ -24,6 +27,9 @@ export class App {
       map((evento) => evento.urlAfterRedirects),
     ),
     { initialValue: this.router.url },
+  );
+  protected readonly inicio = computed(() =>
+    /^\/(?:[?#]|$)/.test(this.caminho()),
   );
   protected readonly publica = computed(
     () =>
