@@ -10,6 +10,7 @@ import {
   firestoreDeTeste,
   idTokenDe,
   limparEmuladores,
+  PRAZO_DE_CONCORRENCIA_NO_EMULADOR,
 } from '../emulador.js';
 import { ARMAZENAMENTO } from '../armazenamento/armazenamento.js';
 import { ArmazenamentoFalso } from '../armazenamento/armazenamento-falso.js';
@@ -200,23 +201,27 @@ it('recusa execucao com compromisso futuro e identifica o pedido em andamento', 
   expect((await db.doc('clientes/ana').get()).exists).toBe(true);
 });
 
-it('repeticao concorrente retoma um protocolo; politica pendente nunca apaga nem envia aviso', async () => {
-  const db = firestoreDeTeste();
-  const outroAntes = (await db.doc('clientes/bruno').get()).data();
-  const objetosAntes = armazenamento.caminhos;
-  const respostas = await Promise.all([
-    post('eliminacao').expect(200),
-    post('eliminacao').expect(200),
-  ]);
-  expect(respostas[0].body.protocolo).toBe(respostas[1].body.protocolo);
-  expect(respostas[0].body.estado).toBe('aguardando_politica');
-  expect((await db.collection('solicitacoes-lgpd').get()).size).toBe(1);
-  await post('eliminacao/executar').expect(409);
-  expect((await db.doc('clientes/bruno').get()).data()).toEqual(outroAntes);
-  expect(armazenamento.caminhos).toEqual(objetosAntes);
-  expect((await db.collection('outbox').get()).size).toBe(6);
-  expect((await authDeTeste().getUser('ana')).disabled).toBe(false);
-});
+it(
+  'repeticao concorrente retoma um protocolo; politica pendente nunca apaga nem envia aviso',
+  async () => {
+    const db = firestoreDeTeste();
+    const outroAntes = (await db.doc('clientes/bruno').get()).data();
+    const objetosAntes = armazenamento.caminhos;
+    const respostas = await Promise.all([
+      post('eliminacao').expect(200),
+      post('eliminacao').expect(200),
+    ]);
+    expect(respostas[0].body.protocolo).toBe(respostas[1].body.protocolo);
+    expect(respostas[0].body.estado).toBe('aguardando_politica');
+    expect((await db.collection('solicitacoes-lgpd').get()).size).toBe(1);
+    await post('eliminacao/executar').expect(409);
+    expect((await db.doc('clientes/bruno').get()).data()).toEqual(outroAntes);
+    expect(armazenamento.caminhos).toEqual(objetosAntes);
+    expect((await db.collection('outbox').get()).size).toBe(6);
+    expect((await authDeTeste().getUser('ana')).disabled).toBe(false);
+  },
+  PRAZO_DE_CONCORRENCIA_NO_EMULADOR,
+);
 
 it('reavalia impedimento removido sem perder o autor da solicitacao', async () => {
   const db = firestoreDeTeste();

@@ -8,7 +8,12 @@ import { AppModule } from '../app.module.js';
 import { configurar } from '../configurar.js';
 import { EMAIL_TRANSPORT } from '../email/email-transport.js';
 import type { EmailFalsoTransport } from '../email/email-falso.transport.js';
-import { authDeTeste, idTokenDe, limparEmuladores } from '../emulador.js';
+import {
+  authDeTeste,
+  idTokenDe,
+  limparEmuladores,
+  PRAZO_DE_CONCORRENCIA_NO_EMULADOR,
+} from '../emulador.js';
 import { FilaFalsa } from '../tarefas/fila.js';
 import {
   VERIFICADOR_DE_TOKEN,
@@ -315,31 +320,35 @@ describe('entrega acontece no maximo uma vez', () => {
    * NAO escolhe e o caminho da perdedora, e por isso a asserção aceita os dois; o
    * teste acima e que fixa um deles.
    */
-  it('duas tarefas simultaneas para o mesmo registro entregam uma vez', async () => {
-    await pedirRedefinicao();
-    const id = fila.tarefas[0].id;
+  it(
+    'duas tarefas simultaneas para o mesmo registro entregam uma vez',
+    async () => {
+      await pedirRedefinicao();
+      const id = fila.tarefas[0].id;
 
-    const respostas = await Promise.all([
-      comoTarefa('/api/interno/outbox').send({ id }),
-      comoTarefa('/api/interno/outbox').send({ id }),
-    ]);
+      const respostas = await Promise.all([
+        comoTarefa('/api/interno/outbox').send({ id }),
+        comoTarefa('/api/interno/outbox').send({ id }),
+      ]);
 
-    expect(transporte.enviadas).toHaveLength(1);
+      expect(transporte.enviadas).toHaveLength(1);
 
-    const situacoes = respostas.map(
-      (resposta) => (resposta.body as { situacao: string }).situacao,
-    );
-    expect(situacoes).toContain('entregue');
-    /* A perdedora ou viu o arrendamento, ou ja viu o registro entregue. */
-    expect(situacoes).toEqual(
-      expect.arrayContaining([
-        expect.stringMatching(/^(em-andamento|ja-entregue)$/),
-      ]),
-    );
+      const situacoes = respostas.map(
+        (resposta) => (resposta.body as { situacao: string }).situacao,
+      );
+      expect(situacoes).toContain('entregue');
+      /* A perdedora ou viu o arrendamento, ou ja viu o registro entregue. */
+      expect(situacoes).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(/^(em-andamento|ja-entregue)$/),
+        ]),
+      );
 
-    const [linha] = await linhasDoPainel();
-    expect(linha).toMatchObject({ estado: 'enviado', tentativas: 1 });
-  });
+      const [linha] = await linhasDoPainel();
+      expect(linha).toMatchObject({ estado: 'enviado', tentativas: 1 });
+    },
+    PRAZO_DE_CONCORRENCIA_NO_EMULADOR,
+  );
 
   /** Entrega ao-menos-uma-vez e o contrato da fila: a MESMA tarefa pode chegar de
    * novo depois de ter dado certo. */

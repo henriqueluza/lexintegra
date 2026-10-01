@@ -3,7 +3,11 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { JANELA_CANCELAMENTO_MS } from 'shared';
 import { comSnapshot } from '../arnes-pedidos.js';
 import { ClientesService } from '../clientes/clientes.service.js';
-import { firestoreDeTeste, limparEmuladores } from '../emulador.js';
+import {
+  firestoreDeTeste,
+  limparEmuladores,
+  PRAZO_DE_CONCORRENCIA_NO_EMULADOR,
+} from '../emulador.js';
 import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import type { TarefaDeEvento } from '../outbox/fila.js';
 import { OutboxService } from '../outbox/outbox.service.js';
@@ -698,22 +702,28 @@ describe('a sala e o convite', () => {
  * (o `em-andamento`), e a corrida nao escolhia o caminho da perdedora.
  */
 describe('concorrencia', () => {
-  it('dois clientes no MESMO slot: um marca, o outro recebe 409', async () => {
-    await comprar({ pedidoId: 'pedido-1', clienteId: CLIENTE });
-    await comprar({ pedidoId: 'pedido-2', clienteId: OUTRO_CLIENTE });
-    const slotId = await publicarSlot(INICIO, FIM);
+  it(
+    'dois clientes no MESMO slot: um marca, o outro recebe 409',
+    async () => {
+      await comprar({ pedidoId: 'pedido-1', clienteId: CLIENTE });
+      await comprar({ pedidoId: 'pedido-2', clienteId: OUTRO_CLIENTE });
+      const slotId = await publicarSlot(INICIO, FIM);
 
-    const resultados = await Promise.allSettled([
-      reunioes.agendar('pedido-1', CLIENTE, slotId, AGORA),
-      reunioes.agendar('pedido-2', OUTRO_CLIENTE, slotId, AGORA),
-    ]);
+      const resultados = await Promise.allSettled([
+        reunioes.agendar('pedido-1', CLIENTE, slotId, AGORA),
+        reunioes.agendar('pedido-2', OUTRO_CLIENTE, slotId, AGORA),
+      ]);
 
-    expect(resultados.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
-    const recusada = resultados.find((r) => r.status === 'rejected');
-    expect((recusada as PromiseRejectedResult).reason).toBeInstanceOf(
-      ConflictException,
-    );
-  });
+      expect(resultados.filter((r) => r.status === 'fulfilled')).toHaveLength(
+        1,
+      );
+      const recusada = resultados.find((r) => r.status === 'rejected');
+      expect((recusada as PromiseRejectedResult).reason).toBeInstanceOf(
+        ConflictException,
+      );
+    },
+    PRAZO_DE_CONCORRENCIA_NO_EMULADOR,
+  );
 
   /**
    * O CASO QUE O CAMPO `reserva` DO SLOT NAO PEGA, e a razao de
@@ -721,21 +731,27 @@ describe('concorrencia', () => {
    * DIFERENTES tocam documentos diferentes: sem escrever o pedido, as duas
    * transacoes nao conflitariam e as duas passariam — furando o saldo.
    */
-  it('mesmo pedido, dois slots, saldo 1: um marca e o outro recebe 409', async () => {
-    await comprar({ quantidadeReunioes: 1, intervaloMinimoReunioesDias: 0 });
-    const primeiro = await publicarSlot(INICIO, FIM);
-    const segundo = await publicarSlot(
-      '2026-09-25T17:00:00.000Z',
-      '2026-09-25T18:00:00.000Z',
-    );
+  it(
+    'mesmo pedido, dois slots, saldo 1: um marca e o outro recebe 409',
+    async () => {
+      await comprar({ quantidadeReunioes: 1, intervaloMinimoReunioesDias: 0 });
+      const primeiro = await publicarSlot(INICIO, FIM);
+      const segundo = await publicarSlot(
+        '2026-09-25T17:00:00.000Z',
+        '2026-09-25T18:00:00.000Z',
+      );
 
-    const resultados = await Promise.allSettled([
-      reunioes.agendar('pedido-1', CLIENTE, primeiro, AGORA),
-      reunioes.agendar('pedido-1', CLIENTE, segundo, AGORA),
-    ]);
+      const resultados = await Promise.allSettled([
+        reunioes.agendar('pedido-1', CLIENTE, primeiro, AGORA),
+        reunioes.agendar('pedido-1', CLIENTE, segundo, AGORA),
+      ]);
 
-    expect(resultados.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
-    const pedido = await banco.collection('pedidos').doc('pedido-1').get();
-    expect(pedido.data()?.['reunioesEmitidas']).toBe(1);
-  });
+      expect(resultados.filter((r) => r.status === 'fulfilled')).toHaveLength(
+        1,
+      );
+      const pedido = await banco.collection('pedidos').doc('pedido-1').get();
+      expect(pedido.data()?.['reunioesEmitidas']).toBe(1);
+    },
+    PRAZO_DE_CONCORRENCIA_NO_EMULADOR,
+  );
 });
