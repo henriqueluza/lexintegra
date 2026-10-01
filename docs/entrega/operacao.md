@@ -336,7 +336,7 @@ Conferidas em 24/09/2026 com `gcloud scheduler jobs list` e
 |---|---|---|---|---|
 | `varredor-outbox` | Scheduler, em [`outbox.tf`](../../infra/terraform/outbox.tf) | a cada minuto | `POST /api/interno/outbox/varredura`: reenfileira o que ficou sem tarefa | Registro perdido entre gravar e enfileirar não é mais entregue. Alerta *Outbox parado* |
 | `clamav-base-diaria` | Scheduler, em [`varredura.tf`](../../infra/terraform/varredura.tf) | 4h e 16h | Executa o job `clamav-atualizar-base`, que publica a base no bucket | A base envelhece e o scanner continua dizendo "limpo". Alertas *Base do ClamAV velha* e *sem publicação* |
-| `retencao-diaria` | Scheduler, em `varredura.tf` | 5h e 17h | `POST /api/interno/retencao`: aviso no 23º dia e exclusão de todas as versões do entregável no 30º dia depois de `entregue`. Duas vezes por dia por causa do alerta de ausência | Arquivos ficam além dos 30 dias. Alerta *Retencao parada* |
+| `retencao-diaria` | Scheduler, em `varredura.tf` | 5h e 17h | `POST /api/interno/retencao`: aviso 7 dias antes (um por pedido) e, 30 dias depois de o último entregável chegar a `entregue` — nunca antes de 7 dias depois do aviso —, exclusão de todas as versões dos entregáveis e dos anexos do cliente. Pula pedido com contestação aberta. Duas vezes por dia por causa do alerta de ausência | Arquivos ficam além dos 30 dias. Alerta *Retencao parada* |
 | `sinais-operacionais` | Scheduler, em [`sinais.tf`](../../infra/terraform/sinais.tf) | a cada 5 minutos | `POST /api/interno/sinais`: mede e grava em log a idade do outbox, da quarentena e da reunião sem sala, e os advogados sem `usuarioTeams` | As métricas ficam sem dado, e os alertas que dependem delas **não disparam**. Alerta *Sonda de sinais parada* |
 | fila `eventos` | Cloud Tasks, em `outbox.tf` | sob demanda | Entrega o outbox em `POST /api/interno/outbox`. Até 12 tentativas em 1 hora, backoff de 10 a 300 s | E-mail, sala e estorno param. Alerta *Outbox parado* |
 | fila `varredura` | Cloud Tasks, em `varredura.tf` | sob demanda | Chama `POST /api/interno/varredura`, que chama o scanner. Até 10 tentativas em 1 hora | Arquivo parado em quarentena. Alerta *Arquivo parado em quarentena* |
@@ -382,14 +382,14 @@ precisa entrar na política de retenção que o escritório aprovar
 revisão é um objeto próprio (`caminhoDaVersao`, em
 `apps/api/src/entregaveis/entregavel.ts`).
 
-**O prazo de retenção dos arquivos é provisório.** Hoje é 30 dias contados de
-quando o entregável chega a `entregue`, com aviso 7 dias antes
-(`DIAS_DE_RETENCAO` e `DIAS_DE_AVISO_PREVIO` em
-[`packages/shared/src/retencao.ts`](../../packages/shared/src/retencao.ts)). O
-ponto de partida da contagem nunca foi confirmado pelo escritório (arquitetura,
-7.3). **Os anexos do cliente não têm retenção definida**, e a rotina não os
-toca. Mudar o prazo é mudar essas constantes, com teste, em PR.
-`[CONFIRMAR: prazo e ponto de partida decididos pelo escritório]`.
+**O prazo de retenção dos arquivos está decidido** (`docs/decisoes.md`, 2.2 e
+2.3): 30 dias contados de quando o **último** entregável do pedido chega a
+`entregue`, com lembrete 7 dias antes, e os **anexos do cliente saem no mesmo
+ciclo**, avisados no mesmo e-mail (`DIAS_DE_RETENCAO` e `DIAS_DE_AVISO_PREVIO`
+em [`packages/shared/src/retencao.ts`](../../packages/shared/src/retencao.ts)).
+Contestação aberta suspende a exclusão. O escritório guarda a própria cópia dos
+entregáveis fora da plataforma. Mudar o prazo é mudar essas constantes, com
+teste, em PR.
 
 O Firestore tem **PITR ligado** (`point_in_time_recovery_enablement` em
 [`firestore.tf`](../../infra/terraform/firestore.tf)): um documento apagado

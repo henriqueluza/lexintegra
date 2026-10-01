@@ -2,7 +2,7 @@
 export const TEXTO_TERMO_DOWNLOAD =
   'Ao baixar este documento, confira a versão e mantenha uma cópia em local seguro. O arquivo foi preparado para o contexto do pedido e deve ser usado conforme as orientações do atendimento. Compartilhe-o apenas com pessoas autorizadas. O aceite é registrado para esta versão do arquivo e não substitui a sua confirmação de entrega. Após a conclusão de todos os entregáveis do pedido, os arquivos permanecem disponíveis por 30 dias, com aviso prévio antes da exclusão.';
 export const TEXTO_AVISO_EXCLUSAO =
-  'Os arquivos do seu pedido estão próximos do fim do prazo de armazenamento. Acesse sua área e salve as cópias que deseja conservar. A exclusão ocorre 30 dias após a conclusão de todos os entregáveis do pedido; este aviso é enviado a partir do 23º dia. Se você já salvou seus documentos, nenhuma ação adicional é necessária.';
+  'Os arquivos do seu pedido estão próximos do fim do prazo de armazenamento: os documentos entregues pelo escritório e os arquivos de apoio que você enviou. Acesse sua área e salve as cópias que deseja conservar. A exclusão ocorre 30 dias após a conclusão de todos os entregáveis do pedido, e nunca antes de 7 dias depois deste aviso. Se você já salvou seus documentos, nenhuma ação adicional é necessária.';
 /**
  * O aviso da pausa por contestacao (decisoes.md, 5.4). Minuta: o texto final e o
  * Bloco I da B2.

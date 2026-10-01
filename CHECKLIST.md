@@ -491,10 +491,12 @@ constroem**. As decisões vão para um `decisoes.md`.
 
 - [ ] Política de guarda: prazos e exceções. → Construir o executor de
   eliminação e o envio do aviso, que hoje estão bloqueados.
-- [ ] Retenção dos entregáveis: hoje são 30 dias a partir de `entregue`. →
-  Confirmar ou ajustar o job.
-- [ ] Retenção dos anexos do cliente: não existe hoje. → Estender o job de
-  retenção.
+- [x] Retenção dos entregáveis: 30 dias a partir de `entregue`, com lembrete
+  7 dias antes (decisoes.md, 2.2). Bloco D: o job passou a rodar de verdade (a
+  marca de fechamento não era escrita por ninguém), o aviso é por pedido e a
+  exclusão nunca vem antes do aviso.
+- [x] Retenção dos anexos do cliente: no mesmo ciclo dos entregáveis
+  (decisoes.md, 2.3). Construído no Bloco D.
 
 **Regras de produto**
 

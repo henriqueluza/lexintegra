@@ -1043,7 +1043,7 @@ Concluído o envio, a API enfileira a varredura. O scanner baixa, analisa e move
 
 **Regras de negócio, definidas na reunião com o Marcos.** Tipos aceitos: `jpg` e `pdf` apenas. Máximo de 3 arquivos por envio do cliente (documentos de apoio como RG, cartão de CNPJ e afins). Tamanho máximo de 5 MB por arquivo. Essas regras valem para o upload do **cliente**; o upload do **advogado** (entregável) pode precisar de tipo diferente — a ser confirmado, mas a validação de tipo e tamanho deve ser parametrizada por perfil de quem envia, não hardcoded uma vez só.
 
-**Retenção: 30 dias.** Entregáveis ficam disponíveis por um mês. **[PENDENTE DE CONFIRMAÇÃO]** — o ponto de partida da contagem (a partir do upload, ou a partir da confirmação de `entregue` pelo cliente conforme o ADR-11) não ficou explícito na reunião; assumir a partir de `entregue` até confirmação em contrário, porque é o momento em que o arquivo passa a ter valor para o cliente.
+**Retenção: 30 dias a partir de `entregue`** — confirmado em `docs/decisoes.md`, 2.2: conta de quando o **último** entregável do pedido chega a `entregue`, com lembrete por e-mail 7 dias antes da remoção. O escritório guarda a própria cópia fora da plataforma. A marca é escrita pela transação da confirmação (`EntregaveisService`), e a exclusão nunca acontece antes de 7 dias depois do aviso; contestação aberta suspende as duas (B2, Bloco D).
 
 **Gate de termos antes do download.** Antes de baixar um entregável, a interface exibe um botão de aceite dos termos de serviço, que precisa ser clicado para o link assinado de leitura ser emitido. O aceite deve ser registrado com timestamp e associado ao usuário e ao arquivo específico — é evidência de conformidade, não só UX.
 
@@ -1051,7 +1051,7 @@ Defesas complementares ao ClamAV: verificação de magic bytes contra a extensã
 
 **Falha operacional prevista.** Com `min-instances = 0`, a instância do scanner morre e a base de assinaturas envelhece. Um job diário atualiza a base num bucket, de onde o scanner carrega no boot.
 
-**Retenção dos anexos do cliente: não definida.** Os 30 dias são dos **entregáveis**. A retenção dos arquivos de apoio que o cliente envia não foi decidida em lugar nenhum — e apagar documento de identificação por conta própria não é um default que se inventa. O job de retenção não os toca; fica como pendência do controlador (Etapa 11).
+**Retenção dos anexos do cliente: 30 dias, no mesmo ciclo** (`docs/decisoes.md`, 2.3). Os arquivos de apoio saem 30 dias depois de todos os entregáveis do pedido chegarem a `entregue`, avisados no mesmo e-mail dos entregáveis. Anexo ligado ao cliente, e não ao pedido, contaria do fim do último pedido do cliente — mas não existe hoje: todo anexo pende de um pedido.
 
 **Observação contratual.** Upload de arquivos não consta na cláusula 2ª. É acréscimo de escopo.
 

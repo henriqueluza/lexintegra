@@ -121,13 +121,14 @@ describe('podeSerServido', () => {
 
   /** A lista inteira, nominal: um estado novo que alguem acrescente sem pensar
    * na regra 6 faz este teste falhar. */
-  it('sao cinco estados, e apenas um serve', () => {
+  it('sao seis estados, e apenas um serve', () => {
     expect(ESTADOS_ARQUIVO).toEqual([
       'pendente_upload',
       'pendente_scan',
       'limpo',
       'infectado',
       'rejeitado',
+      'excluido',
     ]);
     expect(ESTADOS_ARQUIVO.filter(podeSerServido)).toEqual(['limpo']);
   });

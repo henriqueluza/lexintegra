@@ -91,6 +91,11 @@ export const ESTADOS_ARQUIVO = [
   'infectado',
   /** Passou pelo antivirus e o conteudo nao bate com o tipo declarado. */
   'rejeitado',
+  /**
+   * Removido pela retencao (B2, decisoes.md 2.2 e 2.3). O objeto saiu dos
+   * baldes; o documento fica como trilha de que o arquivo existiu.
+   */
+  'excluido',
 ] as const;
 
 export type EstadoArquivo = (typeof ESTADOS_ARQUIVO)[number];

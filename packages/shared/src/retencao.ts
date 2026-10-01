@@ -1,5 +1,6 @@
 /**
- * A retencao de 30 dias dos entregaveis (arquitetura 7.3 e secao 13).
+ * A retencao de 30 dias dos entregaveis E DOS ANEXOS do cliente (arquitetura 7.3
+ * e secao 13; `docs/decisoes.md`, 2.2 e 2.3).
  *
  * O GATILHO E O ESTADO DO PEDIDO, NAO A IDADE DO OBJETO. Foi decidido na reuniao
  * que o "fim do contrato", para efeito de contagem, e o momento em que TODOS os
@@ -8,11 +9,8 @@
  * objeto, e um pedido com quatro entregaveis entregues em datas diferentes tem
  * uma data de corte so.
  *
- * ⚠️ O PONTO DE PARTIDA E UMA ASSUNCAO, e esta registrada como tal no plano de
- * execucao (0.2, item 5): a reuniao nao deixou explicito se a contagem comeca no
- * upload ou na confirmacao de `entregue`. Assumimos `entregue`, porque e o
- * momento em que o arquivo passa a ter valor para o cliente. Confirmar com o
- * controlador — e conformidade, nao funcionalidade.
+ * O PONTO DE PARTIDA FOI CONFIRMADO (decisoes.md, 2.2): 30 dias a partir de
+ * `entregue` — o momento em que o ULTIMO entregavel do pedido chega la.
  *
  * O AVISO VEM ANTES DA EXCLUSAO, e nao junto. A secao 13 e explicita: "disparar o
  * aviso antes de executar a exclusao de fato — nao simultaneamente". Sao duas
@@ -66,17 +64,27 @@ export function avisarEm(entregueEm: Date | null): Date | null {
 export type AcaoDeRetencao = 'nada' | 'avisar' | 'excluir';
 
 export function acaoDeRetencao(
-  entregueEm: Date | null,
-  jaAvisado: boolean,
+  retencaoEm: Date | null,
+  avisadoEm: Date | null,
   agora: Date,
 ): AcaoDeRetencao {
-  const exclusao = excluirEm(entregueEm);
-  const aviso = avisarEm(entregueEm);
+  const exclusao = excluirEm(retencaoEm);
+  const aviso = avisarEm(retencaoEm);
   if (exclusao === null || aviso === null) return 'nada';
 
-  if (agora.getTime() >= exclusao.getTime()) return 'excluir';
-  if (!jaAvisado && agora.getTime() >= aviso.getTime()) return 'avisar';
-  return 'nada';
+  /*
+   * NUNCA EXCLUI SEM AVISO. Um pedido que o job so viu depois do 30o dia — job
+   * parado, pedido fechado antes deste campo existir — e avisado PRIMEIRO, e a
+   * exclusao fica para sete dias depois do aviso. Excluir na mesma passagem
+   * seria o "simultaneamente" que a secao 13 proibe.
+   */
+  if (avisadoEm === null) {
+    return agora.getTime() >= aviso.getTime() ? 'avisar' : 'nada';
+  }
+
+  const depoisDoAviso = avisadoEm.getTime() + DIAS_DE_AVISO_PREVIO * MS_POR_DIA;
+  const efetiva = Math.max(exclusao.getTime(), depoisDoAviso);
+  return agora.getTime() >= efetiva ? 'excluir' : 'nada';
 }
 
 /**
