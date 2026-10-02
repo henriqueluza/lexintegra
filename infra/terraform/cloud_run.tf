@@ -72,6 +72,11 @@ resource "google_cloud_run_v2_service" "api" {
         value = var.email_remetente
       }
 
+      env {
+        name  = "EMAIL_REPLY_TO"
+        value = var.email_resposta
+      }
+
       # Etapa 11. Sem estes, a API RECUSA SUBIR em producao (ver
       # `armazenamento.module.ts` e `varredura.module.ts`): um servico que sobe
       # "saudavel" com armazenamento em memoria e fila falsa aceita uploads,

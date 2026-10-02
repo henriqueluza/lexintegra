@@ -24,7 +24,7 @@ passou, a resposta é **sim**. Tudo marcado "sim" entra na rotação da seção 
 
 | Secret | Versões | Quem usa | Passou pela máquina? | Observação |
 |---|---|---|---|---|
-| `resend-api-key` | 1, `enabled`, criada em 03/09/2026 | `api-lexintegra`, como `RESEND_API_KEY`, versão `latest` (`cloud_run.tf`) | **sim** | A chave original foi exposta e revogada. Esta é a segunda |
+| `resend-api-key` | 2, `enabled` (01/10/2026): chave `lexintegra-producao` da **conta do escritório**, *Sending access* restrito a `notificacoes.lexintegra.com.br`. A versão 1 (03/09/2026, conta pessoal do desenvolvedor) segue `enabled` até o deploy que publica a revisão com a versão 2; depois, revogar no painel e desativar | `api-lexintegra`, como `RESEND_API_KEY`, versão `latest` (`cloud_run.tf`) | versão 1: **sim**; versão 2: não | A chave original da conta pessoal foi exposta e revogada; a versão 1 é a segunda dela |
 | `abacatepay-api-key-dev` | 1, `enabled`, criada em 03/09/2026 | ninguém em produção: `PAGAMENTOS_MODO=desligado` e nenhuma referência no `cloud_run.tf`. Lida à mão na rodada do sandbox | **sim** | Chave de **desenvolvimento** (`abc_dev_`) |
 
 Os dois têm `secretAccessor` só para `api-lexintegra-run` (`secrets.tf`) e
@@ -161,7 +161,8 @@ errada.
      [`runbooks/limpeza-infra.md`](../runbooks/limpeza-infra.md), seção 2).
 2. **Depois de o escritório assumir a conta do Resend** (ou de ele criar uma
    conta própria e verificar o domínio nela): nova `resend-api-key` gerada na
-   conta do escritório.
+   conta do escritório. **Feito em 01/10/2026** (versão 2); falta
+   desativar a versão 1 depois do deploy.
 3. **Depois de a conta do AbacatePay estar só com o escritório:**
    - a chave de desenvolvimento, se ainda for usada;
    - a chave de produção e o segredo do webhook nascem já na conta certa, ao

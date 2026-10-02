@@ -10,13 +10,15 @@ significam que o provedor está recusando.
 **Quem executa:** quem atende a operação, com acesso ao painel do Resend da
 conta dona da chave `resend-api-key`.
 
-> **Estado de hoje (B2):** o remetente é
-> `LexIntegra <nao-responda@notificacoes.lexintegra.com.br>` (`EMAIL_FROM`, em
-> `infra/terraform/variables.tf`), no domínio verificado em 29/09/2026. Se o
-> Resend recusar o remetente ("domain is not verified"), confira que a chave
-> `resend-api-key` é da **mesma conta** em que o domínio foi verificado. Ver
+> **Estado em 01/10/2026:** remetente
+> `LexIntegra <suporte@notificacoes.lexintegra.com.br>` (`EMAIL_FROM`) e
+> reply-to `suportelexintegra@gmail.com` (`EMAIL_REPLY_TO`), os dois em
+> `infra/terraform/variables.tf`. Domínio verificado em 29/09/2026 na conta do
+> escritório. Chave: `resend-api-key` versão 2 (`lexintegra-producao`, conta do
+> escritório, *Sending access*). **Plano gratuito: 100 e-mails por dia** (3.000
+> por mês). Detalhes, troca de chave e de remetente em
 > [`docs/entrega/operacao.md`](../entrega/operacao.md), seção 4.1. Os e-mails
-> de senha não usam mais o modelo do painel: o texto está no código
+> de senha não usam o modelo do painel: o texto está no código
 > (`apps/api/src/email/textos-de-acesso.ts`).
 
 ---
@@ -37,8 +39,9 @@ conta dona da chave `resend-api-key`.
 
 | O que o erro diz | Causa |
 |---|---|
-| Limite diário ou de envio atingido | **Teto diário do plano.** A arquitetura registra 100 por dia no plano gratuito (seção 12). Ao atingir, o provedor **pausa** o envio em vez de cobrar |
+| Limite diário ou de envio atingido (`daily_quota_exceeded`, 429) | **Teto diário do plano gratuito: 100 por dia.** Ao atingir, o provedor **recusa** o envio em vez de cobrar. Confira o consumo em *Usage*, no painel |
 | Só pode enviar para o próprio endereço, ou domínio não verificado | Remetente de teste, ou domínio que perdeu a verificação (registro DNS removido) |
+| `reply_to` inválido | Não deveria chegar aqui: a API recusa subir com `EMAIL_REPLY_TO` que não seja endereço simples. Se aparecer, confira o `default` de `email_resposta` |
 | Chave inválida ou não autorizada | A chave foi revogada ou girada sem nova versão no Secret Manager |
 | 5xx ou tempo esgotado | Indisponibilidade do provedor. A fila reentrega sozinha |
 
@@ -51,12 +54,15 @@ conta dona da chave `resend-api-key`.
   reenvio manual depois que o teto liberar
   ([outbox-parado.md](outbox-parado.md)). Priorize `acesso-cliente` e
   `definir-senha`: sem eles, a pessoa não entra.
-  `[CONFIRMAR: plano contratado e teto real]`.
 - **Domínio.** Confira em *Domains* no Resend e os registros no Registro.br.
   Corrija o DNS. Nada muda no código.
-- **Chave.** Gere uma chave nova na conta certa e grave a versão nova no secret
-  `resend-api-key`. Depois faça um deploy pelo pipeline: o container só lê o
-  secret ao iniciar. Ver [`credenciais.md`](../entrega/credenciais.md).
+- **Chave.** Gere uma chave nova na conta do domínio (*Sending access*,
+  restrita a `notificacoes.lexintegra.com.br`), grave como **nova versão** do
+  secret `resend-api-key` e publique uma revisão por merge na `main`: o
+  container só lê o secret ao iniciar, e reexecutar o deploy do mesmo commit não
+  cria revisão. Confirmada a entrega, revogue a chave antiga no painel e
+  desative a versão antiga. Passo a passo em
+  [`operacao.md`](../entrega/operacao.md), seção 4.1, passo 3.
 - **Provedor fora.** Acompanhe a página de status do Resend. A fila e o
   varredor cuidam do resto.
 

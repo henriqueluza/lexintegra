@@ -65,6 +65,15 @@ interface EmailBase {
    */
   readonly chaveIdempotencia?: string;
   /**
+   * Para onde vai a resposta de quem recebe. O remetente (`EMAIL_FROM`) nao tem
+   * caixa de leitura; o reply-to aponta a caixa de suporte (`EMAIL_REPLY_TO`).
+   *
+   * Opcional no contrato, e quem preenche e o despachante, na saida unica de
+   * e-mail — nenhum montador precisa lembrar. Ausente, o provedor nao recebe o
+   * campo e a resposta volta para o remetente.
+   */
+  readonly replyTo?: string;
+  /**
    * Parte alternativa do e-mail, distinta de anexo. O cartao de resposta do Gmail
    * e mais confiavel quando o iCalendar vai como parte alternativa (ADR-05, risco
    * de entregabilidade). Se o provedor escolhido nao expuser esse controle, e o

@@ -77,7 +77,8 @@ servindo.
 | `URL_APLICACAO` | sim | `https://lexintegra.com.br` | Recusa subir (filas). É também a audiência do OIDC das rotas internas e a base do link de senha | `tarefas/criar-fila.ts`, `tarefas/tarefa.guard.ts`, `outbox/link-de-senha.ts` |
 | `COMMIT_SHA` | não | SHA do commit publicado | `/api/health` responde `desconhecido` e o smoke test do deploy falha | `health/health.service.ts` |
 | `PORT` | não | definida pelo Cloud Run | Padrão `8080` | `main.ts` |
-| `EMAIL_FROM` | sim | `onboarding@resend.dev` até o deploy da B2; depois, `LexIntegra <nao-responda@notificacoes.lexintegra.com.br>` (decisões 5.1) | Recusa subir | `email/email.module.ts`, `reunioes/convites.service.ts` |
+| `EMAIL_FROM` | sim | `LexIntegra <suporte@notificacoes.lexintegra.com.br>` desde 01/10/2026 (antes, `nao-responda@`; decisões 5.1). É também o `ORGANIZER` do convite de reunião | Recusa subir | `email/email.module.ts`, `reunioes/convites.service.ts` |
+| `EMAIL_REPLY_TO` | não | `suportelexintegra@gmail.com` (01/10/2026) | Ausente ou vazia: os e-mails saem sem reply-to e o rodapé diz que a caixa não é lida. Valor que não seja endereço simples (`a@b.c`, sem nome) **recusa subir**, em qualquer ambiente | `email/resposta.ts`, conferida no boot por `email/email.module.ts` e aplicada em `outbox/despachante.service.ts` |
 | `RESEND_API_KEY` | sim | secret `resend-api-key`, versão `latest` | Recusa subir. **Secret sem versão impede a revisão de subir** | `email/email.module.ts` |
 | `BUCKET_QUARENTENA` | sim | `lexintegra-quarentena-36bda` | Recusa subir | `armazenamento/armazenamento.module.ts` |
 | `BUCKET_ARQUIVOS` | sim | `lexintegra-arquivos-36bda` | Recusa subir | `armazenamento/armazenamento.module.ts` |
@@ -125,7 +126,8 @@ delas: commit, PR e deploy. Nunca um `apply` local.
 
 | Variável | Hoje | Efeito |
 |---|---|---|
-| `email_remetente` | `LexIntegra <nao-responda@notificacoes.lexintegra.com.br>` | Vira `EMAIL_FROM` |
+| `email_remetente` | `LexIntegra <suporte@notificacoes.lexintegra.com.br>` | Vira `EMAIL_FROM` |
+| `email_resposta` | `suportelexintegra@gmail.com` | Vira `EMAIL_REPLY_TO`. Vazio desliga o reply-to |
 | `pagamentos_cartao` | `desabilitado` | Vira `PAGAMENTOS_CARTAO`. Trocar para `habilitado` quando a homologação do cartão sair (seção 4.2) |
 | `app_check_enforce` | `"true"` (padrão; o deploy não sobrescreve) | Vira `APP_CHECK_ENFORCE` |
 | `proxies_confiaveis` | `2` | Vira `PROXIES_CONFIAVEIS` |
@@ -158,12 +160,30 @@ dentro dela não são.
 
 ### 4.1 Resend com domínio verificado
 
-O remetente é `LexIntegra <nao-responda@notificacoes.lexintegra.com.br>`
-(decisões 5.1), no `default` de `email_remetente`. **Esta caixa não existe para
-leitura**: o Resend só exige o domínio verificado, e o rodapé de todo e-mail
-(`apps/api/src/email/rodape.ts`) avisa que respostas não chegam a ninguém e
-indica `privacidade@lexintegra.com.br` para dados pessoais. Até o deploy da
-B2, era `onboarding@resend.dev`, que o Resend só entrega à própria conta.
+**Estado em 01/10/2026:**
+
+| Item | Valor | Onde |
+|---|---|---|
+| Remetente (`EMAIL_FROM`) | `LexIntegra <suporte@notificacoes.lexintegra.com.br>` | `default` de `email_remetente` em [`variables.tf`](../../infra/terraform/variables.tf) |
+| Reply-to (`EMAIL_REPLY_TO`) | `suportelexintegra@gmail.com` | `default` de `email_resposta`, no mesmo arquivo |
+| Conta | Conta do escritório (dono: Auan Bastos), onde o domínio está verificado | Painel do Resend |
+| Chave | `resend-api-key` **versão 2**, chave `lexintegra-producao` da conta do escritório, permissão *Sending access* restrita ao domínio `notificacoes.lexintegra.com.br`. A versão 1 é a chave antiga, da conta pessoal do desenvolvedor, a desativar depois do deploy (passo 3) | Secret Manager; o Cloud Run lê `latest` |
+| Plano | **Gratuito** | Painel do Resend, *Settings → Billing* |
+| Teto | **100 e-mails por dia** (e 3.000 por mês, pela tabela de preços do Resend; confira em *Usage*) | Idem |
+
+**O remetente não tem caixa de leitura**: o Resend só exige o domínio
+verificado. Quem responde a um e-mail da plataforma fala com o reply-to, a
+caixa de suporte. O despachante do outbox põe o reply-to em **todo** e-mail
+(`outbox/despachante.service.ts`, a saída única), e o rodapé
+(`apps/api/src/email/rodape.ts`) diz que a resposta chega ao suporte e indica
+`privacidade@lexintegra.com.br` para dados pessoais. Sem `EMAIL_REPLY_TO`, o
+e-mail sai sem o cabeçalho e o rodapé volta a dizer que a caixa não é lida. O
+remetente também é o `ORGANIZER` do convite de reunião
+(`reunioes/convites.service.ts`): cliente de e-mail desconfia de convite cujo
+organizador não é quem enviou.
+
+Teste direto pela API do Resend em 01/10/2026, com a chave nova: SPF, DKIM e
+DMARC `pass`, entrega na caixa de entrada do Gmail, reply-to respeitado.
 
 Os e-mails com link de senha (acesso do cliente, acesso do advogado,
 redefinição, troca de e-mail do advogado e convite de administrador) saem com
@@ -174,35 +194,71 @@ arquivado lá.
 1. **Confirmar a verificação do domínio.** No painel do Resend, em *Domains*,
    `notificacoes.lexintegra.com.br` precisa aparecer como *Verified*. Os
    registros ficam no Registro.br, com os valores que o próprio painel do Resend
-   mostra. **Conferido em 29/09/2026: verificado, na conta do escritório**
-   (criada com o e-mail do dono, Auan Bastos). DNS: DKIM em
-   `resend._domainkey.notificacoes.lexintegra.com.br`; SPF e MX de retorno em
-   `send.notificacoes.lexintegra.com.br`, via CNAME para `send.forge.rmta.net`;
-   DMARC só no domínio principal, `v=DMARC1; p=none;` (o subdomínio herda). Com
-   `p=none` o DMARC só monitora: endurecer para `quarantine` ou `reject` é
-   decisão para depois de algumas semanas de envio real.
+   mostra. **Conferido em 29/09/2026: verificado, na conta do escritório.** DNS:
+   DKIM em `resend._domainkey.notificacoes.lexintegra.com.br`; SPF e MX de
+   retorno em `send.notificacoes.lexintegra.com.br`, via CNAME para
+   `send.forge.rmta.net`; DMARC só no domínio principal, `v=DMARC1; p=none;` (o
+   subdomínio herda). Com `p=none` o DMARC só monitora: endurecer para
+   `quarantine` ou `reject` é decisão para depois de algumas semanas de envio
+   real.
 2. **Confirmar que a chave é da mesma conta.** O secret `resend-api-key` precisa
-   ser de uma chave da conta onde o domínio foi verificado. Se a conta mudar de
-   dono, gere a chave nova na conta nova e siga
-   [`credenciais.md`](credenciais.md).
-3. **O remetente já foi trocado** na B2 (Bloco G): `default` de
-   `email_remetente` em [`variables.tf`](../../infra/terraform/variables.tf). O
-   deploy do merge aplica. Nenhum código muda com ele: o remetente não aparece
-   em lugar nenhum do código (ADR-07.1). **Antes do merge, confira o passo 2**:
-   com a chave de outra conta, o Resend recusa o remetente e nenhum e-mail sai.
-4. **Testar a entrega.** Em `https://lexintegra.com.br/recuperar-senha`, peça a
+   ser de uma chave da conta onde o domínio foi verificado. Com a chave de outra
+   conta, o Resend recusa o remetente ("domain is not verified") e nenhum e-mail
+   sai.
+3. **Trocar a chave**, sempre nesta ordem (procedimento geral em
+   [`credenciais.md`](credenciais.md), seção 3):
+   1. gere a chave nova no painel do Resend, na conta do domínio, com
+      *Sending access* restrito a `notificacoes.lexintegra.com.br`;
+   2. grave como **nova versão** do mesmo secret, pela entrada padrão (nunca
+      secret com outro nome: o `cloud_run.tf` referencia `resend-api-key`):
+
+      ```bash
+      gcloud secrets versions add resend-api-key --data-file=- --project=plataforma-juridica-36bda
+      ```
+
+   3. publique uma revisão nova: um merge na `main`. O container só lê o
+      secret ao iniciar, e reexecutar o deploy do mesmo commit **não** cria
+      revisão;
+   4. confirme que pegou: a revisão ativa é posterior à versão nova
+      (`gcloud run revisions list` contra `gcloud secrets versions list`), e
+      uma redefinição de senha de teste fica `enviado` em `/admin/entregas`;
+   5. só então revogue a chave antiga no painel do Resend e desative a versão
+      antiga:
+
+      ```bash
+      gcloud secrets versions disable <versão-antiga> --secret=resend-api-key --project=plataforma-juridica-36bda
+      ```
+
+      Nunca desative a versão que ainda é a `latest`: a revisão seguinte não
+      sobe.
+4. **Trocar o remetente ou o reply-to.** PR mudando `email_remetente` ou
+   `email_resposta` em `variables.tf`; o deploy do merge aplica. Nenhum código
+   muda: nenhum dos dois endereços aparece no código (ADR-07.1). O remetente
+   precisa ser do domínio verificado. O reply-to precisa ser endereço simples,
+   sem nome, senão a API recusa subir.
+5. **Testar a entrega.** Em `https://lexintegra.com.br/recuperar-senha`, peça a
    redefinição para uma conta de advogado de teste cujo e-mail **não** seja o
    da conta do Resend. Confira nesta ordem:
    - o registro aparece como `enviado` em *Entregas*, no painel do
      administrador (`/admin/entregas`);
    - a mensagem aparece em *Emails* no painel do Resend;
-   - o e-mail chega na caixa, fora do spam.
-5. **Dimensionar o teto diário.** A arquitetura (seção 12) registra 100
-   e-mails por dia no plano gratuito, e ao atingir esse teto o envio **pausa**.
-   `[CONFIRMAR: plano contratado no Resend e o teto dele]`. Ver
+   - o e-mail chega na caixa, fora do spam, e *Responder* endereça
+     `suportelexintegra@gmail.com`.
+6. **Acompanhar o teto.** No plano gratuito, ao atingir 100 e-mails no dia o
+   Resend **recusa** os envios seguintes até o dia virar, em vez de cobrar. A
+   recusa vira falha de entrega no outbox, que a fila reentrega por até 1 hora;
+   o que passar disso fica `abandonado` e precisa de reenvio manual. Cada pedido
+   pago gera ao menos um e-mail (acesso do cliente, na primeira compra), e cada
+   reunião gera dois convites (cliente e advogado), mais dois a cada remarcação
+   ou cancelamento. Se o uso diário passar de metade do
+   teto com frequência, contratar o plano pago é decisão do escritório (custo
+   recorrente). Ver
    [`runbooks/entrega-de-email-falhando.md`](../runbooks/entrega-de-email-falhando.md).
 
-**Voltar atrás:** reverta o commit do passo 3.
+**Voltar atrás:** para o remetente ou o reply-to, reverta o commit do passo 4.
+Para a chave, reabilite a versão antiga (`gcloud secrets versions enable`),
+desative a nova e publique uma revisão — só funciona enquanto a chave antiga
+não tiver sido revogada no painel.
 
 ### 4.2 AbacatePay em produção
 

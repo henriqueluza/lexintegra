@@ -362,13 +362,20 @@ function anexoDeCalendario(ics: string): EmailAnexo {
   };
 }
 
-/** Ver `urlDaAplicacao`, em `outbox/link-de-senha.ts`: mesma forma. */
+/**
+ * Ver `urlDaAplicacao`, em `outbox/link-de-senha.ts`: mesma forma.
+ *
+ * O `ORGANIZER` e o REMETENTE, e nao o reply-to, de proposito: cliente de
+ * e-mail que ve organizador diferente de quem enviou trata o convite como
+ * suspeito. A resposta escrita vai ao suporte pelo cabecalho; a resposta de
+ * calendario (aceitar/recusar) a plataforma nao processa.
+ */
 export function remetenteDoConvite(
   ambiente: NodeJS.ProcessEnv = process.env,
 ): string {
   const configurado = ambiente['EMAIL_FROM'];
   return configurado === undefined || configurado === ''
-    ? 'nao-responda@lexintegra.com.br'
+    ? 'suporte@notificacoes.lexintegra.com.br'
     : configurado;
 }
 

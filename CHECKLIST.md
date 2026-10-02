@@ -655,7 +655,7 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
 
 - [x] Domínio `notificacoes.lexintegra.com.br` verificado (29/09, conta do
   escritório). DMARC em `p=none`: endurecer só depois de semanas de envio real.
-- [ ] Plano contratado e teto diário.
+- [x] Plano contratado e teto diário - obs: plano gratuito por enquanto
 
 **Construir**
 
@@ -663,6 +663,14 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
   confirmar que a chave `resend-api-key` é da conta onde o domínio foi
   verificado.
 - [x] Atualizar `operacao.md` 4.1 e `entrega-de-email-falhando.md` (Bloco G).
+- [x] Remetente `suporte@notificacoes.lexintegra.com.br` e reply-to
+  `suportelexintegra@gmail.com` (`email_remetente`, `email_resposta`), com o
+  rodapé dizendo que a resposta chega ao suporte. `operacao.md` 4.1 com plano,
+  teto e troca de chave.
+- [ ] 👤 Depois do deploy do reply-to: revogar no painel a chave da conta
+  pessoal e desativar a versão 1 de `resend-api-key`.
+- [ ] 🤖 E-mails em HTML com a identidade visual (layout MJML compilado no
+  build, botão em tabela, rodapé com dados do escritório), em PR próprio.
 - [ ] 👤 E-mail real de teste em Gmail, Outlook e Apple Mail.
 - [ ] 👤 Conferir que o `traceparent` sobrevive ao Cloud Tasks (roteiro completo na
   seção 4.4 de `docs/runbooks/limpeza-infra.md`): pedir

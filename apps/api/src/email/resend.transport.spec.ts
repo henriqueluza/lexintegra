@@ -146,6 +146,26 @@ describe('ResendEmailTransport', () => {
     expect(envios[0]).not.toHaveProperty('template');
   });
 
+  it.each([
+    ['redigida', MENSAGEM_REDIGIDA],
+    ['de modelo', MENSAGEM_DE_MODELO],
+  ])('repassa o reply-to da mensagem %s', async (_caso, mensagem) => {
+    const { transporte, envios } = aceitando();
+
+    await transporte.enviar({ ...mensagem, replyTo: 'suporte@teste.local' });
+
+    expect(envios[0]).toMatchObject({ replyTo: 'suporte@teste.local' });
+  });
+
+  /** Sem reply-to, o campo nem vai: o provedor devolve a resposta ao remetente. */
+  it('omite o reply-to quando a mensagem nao traz', async () => {
+    const { transporte, envios } = aceitando();
+
+    await transporte.enviar(MENSAGEM_REDIGIDA);
+
+    expect(envios[0]).not.toHaveProperty('replyTo');
+  });
+
   it('omite html quando nao ha, em vez de mandar undefined', async () => {
     const { transporte, envios } = aceitando();
 
@@ -236,6 +256,14 @@ describe('EmailFalsoTransport', () => {
     expect(transporte.enviadas).toEqual([MENSAGEM_DE_MODELO]);
   });
 
+  it('registra o reply-to junto com a mensagem', async () => {
+    const transporte = new EmailFalsoTransport();
+
+    await transporte.enviar({ ...MENSAGEM_REDIGIDA, replyTo: 's@teste.local' });
+
+    expect(transporte.enviadas[0]?.replyTo).toBe('s@teste.local');
+  });
+
   it('numera as mensagens e permite limpar entre casos', async () => {
     const transporte = new EmailFalsoTransport();
 
@@ -292,6 +320,39 @@ describe('criarTransporte', () => {
     ],
   ])('recusa subir em producao %s', (_caso, ambiente) => {
     expect(() => criarTransporte(ambiente)).toThrow(/producao/);
+  });
+
+  it('aceita EMAIL_REPLY_TO valido junto do Resend', () => {
+    expect(
+      criarTransporte({
+        RESEND_API_KEY: 're_chave_de_teste',
+        EMAIL_FROM: 'r@teste.local',
+        EMAIL_REPLY_TO: 'suporte@teste.local',
+      }),
+    ).toBeInstanceOf(ResendEmailTransport);
+  });
+
+  /**
+   * Em QUALQUER ambiente: o despachante le a variavel a cada envio, e um valor
+   * invalido que passasse do boot viraria falha de todo e-mail.
+   */
+  it.each([
+    [
+      'em producao',
+      {
+        NODE_ENV: 'production',
+        RESEND_API_KEY: 're_x',
+        EMAIL_FROM: 'r@teste.local',
+      },
+    ],
+    ['fora de producao', { NODE_ENV: 'development' }],
+  ])('recusa subir com EMAIL_REPLY_TO invalido %s', (_caso, ambiente) => {
+    expect(() =>
+      criarTransporte({
+        ...ambiente,
+        EMAIL_REPLY_TO: 'Suporte <s@teste.local>',
+      }),
+    ).toThrow(/EMAIL_REPLY_TO/);
   });
 });
 

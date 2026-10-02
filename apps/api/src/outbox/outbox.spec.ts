@@ -488,6 +488,47 @@ describe('DespachanteOutbox', () => {
     );
     expect(mensagem.corpoTexto).toContain('privacidade@lexintegra.com.br');
     expect(mensagem.corpoTexto).toContain('Esta caixa não é lida');
+    expect(mensagem.replyTo).toBeUndefined();
+  });
+
+  /**
+   * O REPLY-TO VEM DA SAIDA UNICA, como o rodape: os e-mails de modelo e o
+   * convite de reuniao passam pelo mesmo `enviar`, e o rodape deixa de dizer que
+   * a resposta se perde.
+   */
+  describe('com EMAIL_REPLY_TO', () => {
+    beforeEach(() => {
+      process.env['EMAIL_REPLY_TO'] = 'suporte@exemplo.test';
+    });
+    afterEach(() => {
+      delete process.env['EMAIL_REPLY_TO'];
+    });
+
+    it.each([
+      ['acesso', REGISTRO],
+      [
+        'convite',
+        {
+          ...REGISTRO,
+          tipo: 'convite-reuniao' as const,
+          reuniao: { pedidoId: 'pedido-1', reuniaoId: 'r001', sequence: 0 },
+        },
+      ],
+    ])(
+      'o e-mail de %s sai com reply-to e o rodape que fala dele',
+      async (_caso, registro) => {
+        const { despachante, transporte } = montarCenario({ registro });
+
+        await despachante.despachar('id-1');
+
+        const [mensagem] = transporte.enviadas;
+        expect(mensagem.replyTo).toBe('suporte@exemplo.test');
+        expect(mensagem.corpoTexto).toContain(
+          'chegam à nossa equipe de suporte',
+        );
+        expect(mensagem.corpoTexto).not.toContain('não é lida');
+      },
+    );
   });
 
   /**

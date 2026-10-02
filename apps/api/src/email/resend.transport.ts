@@ -63,11 +63,14 @@ export class ResendEmailTransport implements EmailTransport {
     mensagem: EmailMensagem,
   ): Parameters<Resend['emails']['send']>[0] {
     const destino = [...mensagem.para];
+    const resposta =
+      mensagem.replyTo === undefined ? {} : { replyTo: mensagem.replyTo };
 
     if (mensagem.modelo !== undefined) {
       return {
         from: this.remetente,
         to: destino,
+        ...resposta,
         template: {
           id: mensagem.modelo.alias,
           variables: { ...mensagem.modelo.variaveis },
@@ -78,6 +81,7 @@ export class ResendEmailTransport implements EmailTransport {
     return {
       from: this.remetente,
       to: destino,
+      ...resposta,
       subject: mensagem.assunto,
       text: mensagem.corpoTexto,
       ...(mensagem.corpoHtml === undefined ? {} : { html: mensagem.corpoHtml }),

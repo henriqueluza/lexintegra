@@ -8,6 +8,7 @@ import {
   type EmailTransport,
 } from '../email/email-transport.js';
 import { comRodape } from '../email/rodape.js';
+import { enderecoDeResposta } from '../email/resposta.js';
 import {
   ehTipoComLinkDeSenha,
   mensagemDeAcesso,
@@ -243,12 +244,19 @@ export class DespachanteOutbox {
   }
 
   /**
-   * A UNICA SAIDA DE E-MAIL DO DESPACHANTE, e e ela que poe o rodape (B2,
-   * decisoes.md 5.1): a caixa do remetente nao e lida, e todo e-mail diz isso e
-   * aponta `privacidade@`. Nenhum montador precisa lembrar.
+   * A UNICA SAIDA DE E-MAIL DO DESPACHANTE, e e ela que poe o reply-to e o
+   * rodape (B2, decisoes.md 5.1): a caixa do remetente nao e lida, a resposta
+   * vai para o suporte (`EMAIL_REPLY_TO`), e todo e-mail aponta `privacidade@`.
+   * Nenhum montador precisa lembrar. O rodape le o reply-to da mensagem, entao
+   * a ordem importa: primeiro o endereco, depois o texto que fala dele.
    */
   private enviar(mensagem: EmailRedigido): Promise<EmailResultado> {
-    return this.transporte.enviar(comRodape(mensagem));
+    const resposta = enderecoDeResposta();
+    return this.transporte.enviar(
+      comRodape(
+        resposta === undefined ? mensagem : { ...mensagem, replyTo: resposta },
+      ),
+    );
   }
 
   /**
