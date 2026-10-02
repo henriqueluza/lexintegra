@@ -53,30 +53,12 @@ export class ResendEmailTransport implements EmailTransport {
     }
   }
 
-  /**
-   * O tipo de `emails.send` no SDK e uma uniao mutuamente exclusiva: ou
-   * `html`/`text`, ou `template`. E a mesma exclusividade que `EmailMensagem`
-   * modela, entao os dois ramos abaixo sao um mapeamento direto, sem `as`
-   * escapando de nada.
-   */
   private montar(
     mensagem: EmailMensagem,
   ): Parameters<Resend['emails']['send']>[0] {
     const destino = [...mensagem.para];
     const resposta =
       mensagem.replyTo === undefined ? {} : { replyTo: mensagem.replyTo };
-
-    if (mensagem.modelo !== undefined) {
-      return {
-        from: this.remetente,
-        to: destino,
-        ...resposta,
-        template: {
-          id: mensagem.modelo.alias,
-          variables: { ...mensagem.modelo.variaveis },
-        },
-      };
-    }
 
     return {
       from: this.remetente,

@@ -669,8 +669,11 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
   teto e troca de chave.
 - [ ] 👤 Depois do deploy do reply-to: revogar no painel a chave da conta
   pessoal e desativar a versão 1 de `resend-api-key`.
-- [ ] 🤖 E-mails em HTML com a identidade visual (layout MJML compilado no
-  build, botão em tabela, rodapé com dados do escritório), em PR próprio.
+- [x] 🤖 E-mails em HTML com a identidade visual (layout MJML compilado no
+  build, botão em tabela, rodapé com LexIntegra, CNPJ e contato; nome do escritório
+  retirado a pedido). Convites de administrador e advogado têm link individual
+  para criar senha. Textos puros e iCalendar preservados, modelos do provedor
+  removidos. Implementação e preview: `docs/runbooks/emails-html.md`.
 - [ ] 👤 E-mail real de teste em Gmail, Outlook e Apple Mail.
 - [ ] 👤 Conferir que o `traceparent` sobrevive ao Cloud Tasks (roteiro completo na
   seção 4.4 de `docs/runbooks/limpeza-infra.md`): pedir

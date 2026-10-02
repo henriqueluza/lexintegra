@@ -16,7 +16,8 @@ describe('rodape de todo e-mail (decisoes.md 5.1)', () => {
     const mensagem = comRodape({ ...base, chaveIdempotencia: 'k' });
     expect(mensagem.corpoTexto).toBe(`Corpo.\n\n${RODAPE_EMAIL}`);
     expect(mensagem.chaveIdempotencia).toBe('k');
-    expect(mensagem.corpoHtml).toBeUndefined();
+    expect(mensagem.corpoHtml).toContain('<!doctype html>');
+    expect(mensagem.corpoHtml).toContain('Corpo.');
   });
 
   /**
@@ -33,9 +34,36 @@ describe('rodape de todo e-mail (decisoes.md 5.1)', () => {
     );
   });
 
-  it('no HTML, entra num paragrafo, escapado', () => {
-    const mensagem = comRodape({ ...base, corpoHtml: '<p>Corpo.</p>' });
-    expect(mensagem.corpoHtml).toMatch(/^<p>Corpo\.<\/p><hr><p>Esta mensagem/u);
+  it('gera documento completo com rodapé antes do fechamento', () => {
+    const mensagem = comRodape(base);
+    expect(mensagem.corpoHtml).toContain('CNPJ: 33.906.250/0001-44');
+    expect(mensagem.corpoHtml).toContain('suportelexintegra@gmail.com');
+    expect(mensagem.corpoHtml).toContain('Esta caixa não é lida');
     expect(mensagem.corpoHtml).toContain('privacidade@lexintegra.com.br');
+    expect(mensagem.corpoHtml).not.toContain('TODO');
+    expect(mensagem.corpoHtml!.indexOf('Esta mensagem')).toBeLessThan(
+      mensagem.corpoHtml!.indexOf('</body>'),
+    );
+  });
+
+  it('preserva anexos, idempotência e reply-to', () => {
+    const anexos = [
+      {
+        nomeArquivo: 'reuniao.ics',
+        conteudo: Buffer.from('BEGIN:VCALENDAR\r\nEND:VCALENDAR'),
+        tipoConteudo: 'text/calendar; method=REQUEST',
+      },
+    ];
+    const mensagem = comRodape({
+      ...base,
+      anexos,
+      chaveIdempotencia: 'r-c0',
+      replyTo: 's@x.test',
+    });
+    expect(mensagem.anexos).toBe(anexos);
+    expect(mensagem.chaveIdempotencia).toBe('r-c0');
+    expect(mensagem.replyTo).toBe('s@x.test');
+    expect(mensagem.corpoHtml).toContain('chegam à nossa equipe de suporte');
+    expect(mensagem.corpoHtml).not.toContain('Esta caixa não é lida');
   });
 });

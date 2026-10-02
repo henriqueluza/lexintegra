@@ -194,6 +194,10 @@ export class ConvitesService {
         para: [destinatario.email],
         assunto: `Reunião marcada: ${pedido.snapshot.nome}`,
         corpoTexto: TEXTO_CONVITE,
+        acao: {
+          rotulo: 'Ver pedido',
+          url: `${urlDaAplicacao()}/${destinatario.uid === pedido.clienteId ? 'painel' : 'advogado/demandas'}`,
+        },
         anexos: [anexoDeCalendario(ics)],
       },
     };

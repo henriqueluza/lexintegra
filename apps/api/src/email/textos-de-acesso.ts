@@ -1,3 +1,4 @@
+import type { EmailRedigido } from './email-transport.js';
 /**
  * Os e-mails que levam LINK DE SENHA (B2, decisoes.md 5.1).
  *
@@ -90,10 +91,17 @@ export function ehTipoComLinkDeSenha(tipo: string): tipo is TipoComLinkDeSenha {
 export function mensagemDeAcesso(
   tipo: TipoComLinkDeSenha,
   link: string,
-): { assunto: string; corpoTexto: string } {
+): Pick<EmailRedigido, 'assunto' | 'corpoTexto' | 'acao'> {
   const texto = TEXTOS_DE_ACESSO[tipo];
   return {
     assunto: texto.assunto,
+    acao: {
+      rotulo:
+        tipo === 'redefinir-senha'
+          ? 'Redefinir minha senha'
+          : 'Definir minha senha',
+      url: link,
+    },
     corpoTexto: `${texto.abertura}\n\n${link}\n\n${texto.fecho}`,
   };
 }

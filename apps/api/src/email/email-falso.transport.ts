@@ -15,7 +15,7 @@ import type {
  *
  * O que ele registra e o que ele NAO registra importa. `enviadas` fica em
  * memoria, morre com o processo e nunca e serializado. O log de desenvolvimento
- * mostra o alias do modelo, a quantidade de destinatarios e se ha reply-to,
+ * mostra a quantidade de destinatarios e se ha reply-to,
  * jamais um endereco nem o valor das variaveis — o link de redefinicao de senha e uma delas, e um link
  * de redefinicao no terminal e uma credencial no terminal.
  */
@@ -118,7 +118,7 @@ export class EmailFalsoTransport implements EmailTransport {
     }
 
     this.log.debug?.(
-      `mensagem ${this.sequencia}: ${mensagem.modelo?.alias ?? 'corpo proprio'}, ` +
+      `mensagem ${this.sequencia}: corpo proprio, ` +
         `${mensagem.para.length} destinatario(s)` +
         (mensagem.replyTo === undefined ? ', sem reply-to' : ', com reply-to'),
     );
