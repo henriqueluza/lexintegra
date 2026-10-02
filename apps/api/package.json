@@ -3,12 +3,15 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "PORT=8080 ARMAZENAMENTO_FALSO_PORTA=9199 nest start --watch",
-    "build": "nest build",
+    "dev": "pnpm emails:build && PORT=8080 ARMAZENAMENTO_FALSO_PORTA=9199 nest start --watch",
+    "build": "pnpm emails:build && nest build",
     "start": "node --import ./dist/observabilidade/instrumentacao.js dist/main.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
-    "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.mjs"
+    "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.mjs",
+    "emails:build": "node scripts/compilar-emails.mjs",
+    "emails:check": "node scripts/compilar-emails.mjs --check",
+    "emails:preview": "node scripts/preview-emails.mjs"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.22.0",
@@ -43,6 +46,7 @@
     "@types/node": "^22.10.0",
     "@types/supertest": "^6.0.2",
     "jest": "^30.5.1",
+    "mjml": "5.4.1",
     "supertest": "^7.1.1",
     "ts-jest": "^29.4.6",
     "typescript": "~6.0.2"

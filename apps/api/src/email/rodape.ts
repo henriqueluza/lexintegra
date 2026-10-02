@@ -1,3 +1,4 @@
+import { htmlDoEmail } from './layout.js';
 import { ENCARREGADO } from 'shared/encarregado';
 import type { EmailRedigido } from './email-transport.js';
 
@@ -36,8 +37,8 @@ export const RODAPE_EMAIL_COM_RESPOSTA =
 
 /**
  * Aplicado pelo despachante a toda mensagem antes do transporte — e por isso
- * nenhum montador precisa lembrar dele. O HTML, quando existir, ganha o mesmo
- * texto num paragrafo.
+ * nenhum montador precisa lembrar dele. O HTML completo é sempre gerado pelo layout compilado,
+ * a partir do texto original, antes de acrescentar o rodapé ao texto puro.
  */
 export function comRodape(mensagem: EmailRedigido): EmailRedigido {
   const rodape =
@@ -45,17 +46,6 @@ export function comRodape(mensagem: EmailRedigido): EmailRedigido {
   return {
     ...mensagem,
     corpoTexto: `${mensagem.corpoTexto}\n\n${rodape}`,
-    ...(mensagem.corpoHtml === undefined
-      ? {}
-      : {
-          corpoHtml: `${mensagem.corpoHtml}<hr><p>${escaparHtml(rodape.replace(/^—\n/u, ''))}</p>`,
-        }),
+    corpoHtml: htmlDoEmail(mensagem, rodape),
   };
-}
-
-function escaparHtml(texto: string): string {
-  return texto
-    .replace(/&/gu, '&amp;')
-    .replace(/</gu, '&lt;')
-    .replace(/>/gu, '&gt;');
 }

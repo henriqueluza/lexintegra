@@ -1,0 +1,34 @@
+<mjml lang="pt-BR">
+  <mj-head>
+    <mj-title>@@LEX_ASSUNTO@@</mj-title>
+    <mj-attributes>
+      <mj-all font-family="Arial, Helvetica, sans-serif" />
+      <mj-text color="#425164" font-size="16px" line-height="26px" padding="0" />
+      <mj-section padding="0" />
+      <mj-column padding="0" />
+    </mj-attributes>
+    <mj-style inline="inline">.conteudo p { margin: 0 0 24px; } .conteudo a { color: #7a1a24; } .rodape a { color: #7a1a24; }</mj-style>
+    <mj-style>@media only screen and (max-width:480px) { .margem > table > tbody > tr > td { padding-left:24px !important; padding-right:24px !important; } .titulo h1 { font-size:28px !important; } }</mj-style>
+  </mj-head>
+  <mj-body width="600px" background-color="#e2e8ee">
+    <mj-section background-color="#edf1f5" css-class="margem" padding="20px 40px 24px">
+      <mj-column>
+        <mj-image src="https://lexintegra.com.br/imagens/nevoa/logo-lexintegra.png" alt="LexIntegra" width="112px" height="112px" align="left" padding="0 0 12px" />
+        <mj-divider border-width="1px" border-color="#a2865a" padding="0" />
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#edf1f5" css-class="margem" padding="8px 40px 36px">
+      <mj-column>
+        <mj-text css-class="titulo" padding="0 0 28px"><h1 style="margin:0;font-size:34px;line-height:1.15;font-weight:400;letter-spacing:-1px;color:#1f2a36">@@LEX_ASSUNTO@@</h1></mj-text>
+        <mj-text css-class="conteudo">@@LEX_CONTEUDO@@</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#d6dde5" css-class="margem" padding="28px 40px 32px">
+      <mj-column>
+        <mj-text padding="0 0 8px" color="#1f2a36">LexIntegra</mj-text>
+        <mj-text font-size="12px" line-height="19px">CNPJ: @@LEX_CNPJ@@<br /><a href="mailto:@@LEX_CONTATO@@" style="color:#7a1a24;text-decoration:underline">@@LEX_CONTATO@@</a></mj-text>
+        <mj-text css-class="rodape" font-size="12px" line-height="19px" padding="20px 0 0">@@LEX_RODAPE@@</mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

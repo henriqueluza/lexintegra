@@ -9,6 +9,7 @@ import {
 } from './convites.service.js';
 import { SalaDeReuniaoFalsa } from './sala/sala-de-reuniao-falsa.js';
 import type { DocumentoReuniao } from './reuniao.js';
+import { comRodape } from '../email/rodape.js';
 
 const CONFIG_OUTBOX: ConfiguracaoDoOutbox = {
   atrasoDoVarredorMs: 0,
@@ -219,6 +220,26 @@ describe('ConvitesService.montarConvite', () => {
     expect(ics).toContain('METHOD:REQUEST');
     expect(ics).toContain('https://teams.test/sala');
   });
+
+  it.each([
+    [CLARA, '/painel'],
+    [
+      { uid: ADVOGADO, nome: 'Ana', email: 'ana@exemplo.test' },
+      '/advogado/demandas',
+    ],
+  ] as const)(
+    'o HTML aponta a área correta sem alterar o calendário: %j',
+    async (destinatario, caminho) => {
+      const { servico } = montar(COM_SALA);
+      const convite = await servico.montarConvite(EVENTO, destinatario);
+      if (!convite.enviar) throw new Error('deveria enviar');
+      const pronto = comRodape(convite.mensagem);
+      expect(pronto.corpoHtml).toContain('Ver pedido');
+      expect(pronto.acao?.url).toMatch(new RegExp(`${caminho}$`, 'u'));
+      expect(pronto.anexos).toBe(convite.mensagem.anexos);
+      expect(pronto.corpoTexto).toContain(convite.mensagem.corpoTexto);
+    },
+  );
 
   /**
    * CONVITE SUPERADO POR REMARCACAO. Entrega-lo poria o horario VELHO na agenda

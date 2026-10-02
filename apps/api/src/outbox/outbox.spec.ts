@@ -445,6 +445,7 @@ function montarCenario(opcoes: {
     montarConvite: opcoes.montarConvite ?? (() => Promise.resolve(CONVITE)),
     montarCancelamento:
       opcoes.montarCancelamento ?? (() => Promise.resolve(CONVITE)),
+    montarAvisoDoEscritorio: () => Promise.resolve(CONVITE),
   } as unknown as ConvitesService;
 
   return {
@@ -465,6 +466,25 @@ function montarCenario(opcoes: {
 }
 
 describe('DespachanteOutbox', () => {
+  it.each([
+    'aviso-exclusao-arquivos',
+    'pausa-contestacao',
+    'convite-reuniao',
+    'cancelamento-reuniao',
+    'reuniao-desmarcada-escritorio',
+  ] as const)('%s também sai com o layout central', async (tipo) => {
+    const { despachante, transporte } = montarCenario({
+      registro: {
+        ...REGISTRO,
+        tipo,
+        reuniao: { pedidoId: 'p', reuniaoId: 'r', sequence: 0 },
+      },
+    });
+    await expect(despachante.despachar('evento')).resolves.toBe('entregue');
+    expect(transporte.enviadas[0].corpoHtml).toContain('<!doctype html>');
+    expect(transporte.enviadas[0].corpoHtml).toContain('33.906.250/0001-44');
+    expect(transporte.enviadas[0].corpoTexto).toContain('Esta mensagem');
+  });
   /**
    * B2, decisoes.md 5.1: o texto e versionado no repositorio, um por situacao,
    * e nao mais o modelo `password-reset` do painel do Resend. O link entra no
@@ -482,7 +502,11 @@ describe('DespachanteOutbox', () => {
       assunto: 'Seu acesso de advogado à LexIntegra',
       chaveIdempotencia: 'definir-senha_uid-advogado-c0',
     });
-    expect(mensagem.modelo).toBeUndefined();
+    expect(mensagem).not.toHaveProperty('modelo');
+    expect(mensagem.corpoHtml).toContain('Definir minha senha');
+    expect(mensagem.corpoHtml).toContain(
+      'http://localhost:4200/definir-senha?oobCode=CODIGO',
+    );
     expect(mensagem.corpoTexto).toContain(
       'http://localhost:4200/definir-senha?oobCode=CODIGO',
     );
@@ -536,6 +560,28 @@ describe('DespachanteOutbox', () => {
    * nasce no envio e nao volta ao banco. Um tipo sem montador seria um registro
    * que nunca sai — este teste e o que prova que ele tem.
    */
+  it.each([
+    'convite-administrador',
+    'definir-senha',
+    'redefinir-senha',
+    'acesso-advogado-atualizado',
+  ] as const)(
+    '%s entrega HTML com link de senha e texto puro',
+    async (tipo) => {
+      const { despachante, transporte } = montarCenario({
+        registro: { ...REGISTRO, tipo },
+      });
+      await expect(despachante.despachar('evento')).resolves.toBe('entregue');
+      const email = transporte.enviadas[0];
+      expect(email.corpoHtml).toContain(
+        'href="http://localhost:4200/definir-senha?oobCode=CODIGO"',
+      );
+      expect(email.corpoTexto).toContain(
+        'http://localhost:4200/definir-senha?oobCode=CODIGO',
+      );
+    },
+  );
+
   it('entrega o acesso do cliente com o link de definicao de senha', async () => {
     const { despachante, transporte } = montarCenario({
       registro: { ...REGISTRO, tipo: 'acesso-cliente' },

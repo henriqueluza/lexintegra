@@ -45,14 +45,6 @@ function aceitando(id = 'id-do-provedor'): {
   };
 }
 
-const MENSAGEM_DE_MODELO: EmailMensagem = {
-  para: ['destinatario@teste.local'],
-  modelo: {
-    alias: 'password-reset',
-    variaveis: { LINK: 'https://exemplo.test/definir-senha?oobCode=abc' },
-  },
-};
-
 const MENSAGEM_REDIGIDA: EmailMensagem = {
   para: ['destinatario@teste.local'],
   assunto: 'Assunto',
@@ -94,25 +86,6 @@ describe('redigirEnderecos', () => {
 });
 
 describe('ResendEmailTransport', () => {
-  it('envia mensagem de modelo pelo alias, com as variaveis', async () => {
-    const { transporte, envios } = aceitando();
-
-    await transporte.enviar(MENSAGEM_DE_MODELO);
-
-    expect(envios).toEqual([
-      {
-        from: 'remetente@teste.local',
-        to: ['destinatario@teste.local'],
-        template: {
-          id: 'password-reset',
-          variables: {
-            LINK: 'https://exemplo.test/definir-senha?oobCode=abc',
-          },
-        },
-      },
-    ]);
-  });
-
   /**
    * O remetente vem do construtor, que o modulo alimenta com `EMAIL_FROM`. Se
    * algum dia aparecer um endereco literal aqui, a troca de
@@ -146,13 +119,13 @@ describe('ResendEmailTransport', () => {
     expect(envios[0]).not.toHaveProperty('template');
   });
 
-  it.each([
-    ['redigida', MENSAGEM_REDIGIDA],
-    ['de modelo', MENSAGEM_DE_MODELO],
-  ])('repassa o reply-to da mensagem %s', async (_caso, mensagem) => {
+  it('repassa o reply-to da mensagem', async () => {
     const { transporte, envios } = aceitando();
 
-    await transporte.enviar({ ...mensagem, replyTo: 'suporte@teste.local' });
+    await transporte.enviar({
+      ...MENSAGEM_REDIGIDA,
+      replyTo: 'suporte@teste.local',
+    });
 
     expect(envios[0]).toMatchObject({ replyTo: 'suporte@teste.local' });
   });
@@ -177,7 +150,7 @@ describe('ResendEmailTransport', () => {
   it('devolve o identificador do provedor no sucesso', async () => {
     const { transporte } = aceitando('re_123');
 
-    await expect(transporte.enviar(MENSAGEM_DE_MODELO)).resolves.toEqual({
+    await expect(transporte.enviar(MENSAGEM_REDIGIDA)).resolves.toEqual({
       sucesso: true,
       idProvedor: 're_123',
     });
@@ -193,7 +166,7 @@ describe('ResendEmailTransport', () => {
     );
     const transporte = new ResendEmailTransport(cliente, 'r@teste.local');
 
-    await expect(transporte.enviar(MENSAGEM_DE_MODELO)).resolves.toEqual({
+    await expect(transporte.enviar(MENSAGEM_REDIGIDA)).resolves.toEqual({
       sucesso: false,
       motivo: 'Rate limit exceeded',
     });
@@ -209,7 +182,7 @@ describe('ResendEmailTransport', () => {
     );
     const transporte = new ResendEmailTransport(cliente, 'r@teste.local');
 
-    const resultado = await transporte.enviar(MENSAGEM_DE_MODELO);
+    const resultado = await transporte.enviar(MENSAGEM_REDIGIDA);
 
     expect(resultado).toEqual({
       sucesso: false,
@@ -228,7 +201,7 @@ describe('ResendEmailTransport', () => {
     });
     const transporte = new ResendEmailTransport(cliente, 'r@teste.local');
 
-    await expect(transporte.enviar(MENSAGEM_DE_MODELO)).resolves.toEqual({
+    await expect(transporte.enviar(MENSAGEM_REDIGIDA)).resolves.toEqual({
       sucesso: false,
       motivo: 'getaddrinfo ENOTFOUND api.resend.com',
     });
@@ -240,7 +213,7 @@ describe('ResendEmailTransport', () => {
     );
     const transporte = new ResendEmailTransport(cliente, 'r@teste.local');
 
-    const resultado = await transporte.enviar(MENSAGEM_DE_MODELO);
+    const resultado = await transporte.enviar(MENSAGEM_REDIGIDA);
 
     expect(resultado.sucesso).toBe(false);
   });
@@ -250,10 +223,10 @@ describe('EmailFalsoTransport', () => {
   it('registra a mensagem e responde sucesso, sem rede', async () => {
     const transporte = new EmailFalsoTransport();
 
-    const resultado = await transporte.enviar(MENSAGEM_DE_MODELO);
+    const resultado = await transporte.enviar(MENSAGEM_REDIGIDA);
 
     expect(resultado).toEqual({ sucesso: true, idProvedor: 'falso-1' });
-    expect(transporte.enviadas).toEqual([MENSAGEM_DE_MODELO]);
+    expect(transporte.enviadas).toEqual([MENSAGEM_REDIGIDA]);
   });
 
   it('registra o reply-to junto com a mensagem', async () => {
@@ -267,7 +240,7 @@ describe('EmailFalsoTransport', () => {
   it('numera as mensagens e permite limpar entre casos', async () => {
     const transporte = new EmailFalsoTransport();
 
-    await transporte.enviar(MENSAGEM_DE_MODELO);
+    await transporte.enviar(MENSAGEM_REDIGIDA);
     await expect(transporte.enviar(MENSAGEM_REDIGIDA)).resolves.toEqual({
       sucesso: true,
       idProvedor: 'falso-2',

@@ -31,24 +31,6 @@ export interface EmailAnexo {
   readonly tipoConteudo: string;
 }
 
-/**
- * Modelo publicado no provedor, referenciado por ALIAS.
- *
- * O alias e um nome logico ("password-reset"), nao um identificador da API do
- * Resend. E o que mantem o contrato provider-agnostico: trocar de provedor exige
- * republicar o modelo com o mesmo alias, nao mexer no dominio.
- *
- * Por que existir, se ja ha `corpoHtml`: o modelo mora no painel do provedor,
- * onde e editado e pre-visualizado por quem cuida da comunicacao, sem passar por
- * build. O custo e que o conteudo deixa de estar versionado aqui — aceitavel para
- * e-mail transacional curto, e a razao de a variavel do modelo ser sempre
- * explicita (`variaveis`), nunca "o objeto inteiro".
- */
-export interface ModeloEmail {
-  readonly alias: string;
-  readonly variaveis: Readonly<Record<string, string>>;
-}
-
 interface EmailBase {
   readonly para: readonly string[];
   readonly anexos?: readonly EmailAnexo[];
@@ -90,23 +72,11 @@ export interface EmailRedigido extends EmailBase {
   readonly assunto: string;
   readonly corpoTexto: string;
   readonly corpoHtml?: string;
-  readonly modelo?: never;
+  /** Ação visual; o link de senha permanece também no corpoTexto. */
+  readonly acao?: { readonly rotulo: string; readonly url: string };
 }
 
-/** Mensagem cujo corpo e assunto vivem no modelo publicado no provedor. */
-export interface EmailDeModelo extends EmailBase {
-  readonly modelo: ModeloEmail;
-  readonly assunto?: never;
-  readonly corpoTexto?: never;
-  readonly corpoHtml?: never;
-}
-
-/**
- * Uniao discriminada, e nao um objeto com todos os campos opcionais: ou o corpo
- * e montado aqui, ou vem do modelo. Ter os dois preenchidos nao tem significado —
- * e a propria API do Resend trata as duas formas como mutuamente exclusivas.
- */
-export type EmailMensagem = EmailRedigido | EmailDeModelo;
+export type EmailMensagem = EmailRedigido;
 
 export type EmailResultado =
   | { readonly sucesso: true; readonly idProvedor: string }

@@ -10,3 +10,6 @@ infra/terraform/.terraform
 docs/
 CLAUDE.md
 *.md
+
+# Saída determinística do compilador MJML.
+apps/api/src/email/modelos/base.html

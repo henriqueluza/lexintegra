@@ -5,6 +5,14 @@
 module.exports = {
   forbidden: [
     {
+      name: 'runtime-nao-importa-scripts-de-email',
+      severity: 'error',
+      comment:
+        'MJML compila no build; scripts e compilador não entram no runtime.',
+      from: { path: '^apps/api/src/' },
+      to: { path: '^apps/api/scripts/' },
+    },
+    {
       name: 'sem-ciclos',
       severity: 'error',
       comment:
@@ -220,6 +228,8 @@ module.exports = {
       from: {
         path: '^(apps|packages)',
         pathNot: [
+          // Compilador MJML executado somente no build, fora de src/ e dist/.
+          '^apps/api/scripts/compilar-emails\\.mjs$',
           '\\.spec\\.ts$',
           '\\.integration-spec\\.ts$',
           '^apps/web/e2e/',

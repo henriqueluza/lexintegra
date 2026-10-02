@@ -76,8 +76,9 @@ interface Contexto {
  *
  * Nenhum efeito colateral dentro da transacao (regra inviolavel 2): so escrita de
  * documento e de trilha. Notificacao ao advogado no pedido de revisao e evento de
- * outbox da Etapa 7, quando existir o template do e-mail — registrar o tipo agora
- * produziria documento de outbox que nunca sai.
+ * outbox da Etapa 7: falta definir o evento e seu texto. Ao implementá-lo, usar
+ * a saída central do despachante (comRodape), que já aplica o layout HTML comum.
+ * Registrar o tipo agora produziria documento de outbox que nunca sai.
  */
 @Injectable()
 export class EntregaveisService {

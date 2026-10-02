@@ -1,5 +1,13 @@
 # Design — LexIntegra
 
+## E-mails transacionais — 01/10/2026
+
+Layout Névoa aprovado em preview: até 600 px, Arial, botão bordô em tabela,
+fundo claro e filete dourado. Rodapé com LexIntegra, CNPJ e contato do site;
+sem nome do escritório, conforme ajuste aprovado. Fonte MJML compilada no build,
+HTML com estilos inline e texto puro preservado. Detalhes e homologação:
+[e-mails HTML](runbooks/emails-html.md).
+
 ## Tema Névoa — páginas públicas (30/09/2026)
 
 O solicitante aprovou o pacote `LexIntegra-design-handoff` para a landing e as
