@@ -14,7 +14,8 @@ variáveis de ambiente.
 
 | Onde | O quê | Valor |
 |---|---|---|
-| Resend + `EMAIL_FROM` | Remetente dos e-mails da plataforma | `LexIntegra <nao-responda@notificacoes.lexintegra.com.br>` |
+| Resend + `EMAIL_FROM` | Remetente dos e-mails da plataforma | `LexIntegra <suporte@notificacoes.lexintegra.com.br>` (até 01/10/2026, `nao-responda@`) |
+| `EMAIL_REPLY_TO` | Para onde vai a resposta de quem recebe | `suportelexintegra@gmail.com` (01/10/2026) |
 | Resend | Domínio de envio a verificar (registros DNS no Registro.br) | `notificacoes.lexintegra.com.br` |
 | Microsoft 365 da B&C | Caixa compartilhada do encarregado | `privacidade@lexintegra.com.br` |
 
@@ -255,6 +256,12 @@ Escopo (aprovado):
 
 O rodapé de todo e-mail informa que a caixa não é lida e indica o canal de
 contato (`privacidade@lexintegra.com.br` para dados pessoais).
+
+**Revisto em 01/10/2026:** `EMAIL_FROM = LexIntegra
+<suporte@notificacoes.lexintegra.com.br>` e `EMAIL_REPLY_TO =
+suportelexintegra@gmail.com`. O remetente continua sem caixa; a resposta vai
+para o suporte, e o rodapé passa a dizer isso em vez de "a caixa não é lida".
+O `privacidade@` continua indicado para dados pessoais.
 
 → **Construir:** `EMAIL_FROM` e `operacao.md`.
 

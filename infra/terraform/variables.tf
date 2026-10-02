@@ -43,11 +43,23 @@ variable "email_remetente" {
   description = <<-EOT
     Valor de EMAIL_FROM no Cloud Run (B2, decisoes.md 5.1). O endereco nao
     precisa de caixa: o Resend so exige o dominio `notificacoes.lexintegra.com.br`
-    verificado (conferido em 29/09/2026), e o rodape de todo e-mail diz que a
-    caixa nao e lida. Nenhum remetente aparece no codigo (ADR-07.1).
+    verificado (conferido em 29/09/2026), e a resposta vai para
+    `email_resposta`. Tambem e o ORGANIZER do convite de reuniao. Nenhum
+    remetente aparece no codigo (ADR-07.1).
   EOT
   type        = string
-  default     = "LexIntegra <nao-responda@notificacoes.lexintegra.com.br>"
+  default     = "LexIntegra <suporte@notificacoes.lexintegra.com.br>"
+}
+
+variable "email_resposta" {
+  description = <<-EOT
+    Valor de EMAIL_REPLY_TO no Cloud Run: para onde vai a resposta de quem
+    recebe um e-mail da plataforma (01/10/2026). Endereco simples, sem nome —
+    valor que nao parece endereco faz a API recusar subir. Vazio desliga o
+    reply-to, e o rodape volta a dizer que a caixa nao e lida.
+  EOT
+  type        = string
+  default     = "suportelexintegra@gmail.com"
 }
 
 variable "pagamentos_cartao" {

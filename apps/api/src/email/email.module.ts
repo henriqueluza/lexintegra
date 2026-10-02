@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import { EmailFalsoTransport } from './email-falso.transport.js';
 import { EMAIL_TRANSPORT, type EmailTransport } from './email-transport.js';
 import { ResendEmailTransport } from './resend.transport.js';
+import { enderecoDeResposta } from './resposta.js';
 
 /**
  * Escolha do transporte, e por que ela e feita assim.
@@ -10,8 +11,9 @@ import { ResendEmailTransport } from './resend.transport.js';
  * Chave e remetente vem SEMPRE de variavel de ambiente, nunca do codigo. Em
  * producao a chave chega ao Cloud Run pelo Secret Manager (regra inviolavel 9);
  * `EMAIL_FROM` e o que permitiu trocar `onboarding@resend.dev` por
- * `nao-responda@notificacoes.lexintegra.com.br` (B2, decisoes.md 5.1) sem
- * tocar em uma linha de codigo.
+ * `nao-responda@` e depois por `suporte@notificacoes.lexintegra.com.br` (B2,
+ * decisoes.md 5.1) sem tocar em uma linha de codigo. `EMAIL_REPLY_TO` e
+ * opcional (ver `resposta.ts`), mas invalido recusa subir.
  *
  * EM PRODUCAO, FALTA DE CONFIGURACAO E ERRO DE INICIALIZACAO, nao degradacao
  * silenciosa para o transporte falso. Um servico que sobe "saudavel" e engole
@@ -27,6 +29,9 @@ export function criarTransporte(
   const chave = ambiente['RESEND_API_KEY'];
   const remetente = ambiente['EMAIL_FROM'];
   const producao = ambiente['NODE_ENV'] === 'production';
+
+  // So para recusar o boot com valor invalido; quem aplica e o despachante.
+  enderecoDeResposta(ambiente);
 
   if (
     chave === undefined ||
