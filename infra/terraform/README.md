@@ -217,9 +217,10 @@ merge — ele não consulta o IAM, ele cobra que o papel esteja declarado em
 `papeis-de-bootstrap.json`.
 
 **O roteamento é arquivo**, `alertas-roteamento.json`: cada alerta vale
-`acordar`, `pendente` ou `registrar`, e hoje os oito estão em `pendente` porque a
-decisão é operacional e pertence à CONTRATANTE. `pnpm lint` confere que política
-e arquivo não se separam.
+`suporte` ou `registrar`. Desde 05/10/2026 (decisões 5.2) todos estão em
+`suporte`, e-mail para `suportelexintegra@gmail.com`; `acordar` deixou de ser
+destino aceito, porque nenhum alerta acorda alguém. `pnpm lint` confere que
+política e arquivo não se separam, e os destinos aceitos.
 
 **Custo que aparece depois:** o Cloud Monitoring passa a cobrar alertas a partir
 de 1º/09/2027 (US$ 0,35/mês por referência de métrica em política). Está na

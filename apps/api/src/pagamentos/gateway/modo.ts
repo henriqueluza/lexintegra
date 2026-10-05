@@ -7,10 +7,26 @@ import {
 export const CONFIGURACAO_PAGAMENTOS = Symbol('CONFIGURACAO_PAGAMENTOS');
 
 /**
- * Os modos que o processo aceita SUBIR. `producao` nao esta aqui, e isso nao e
- * esquecimento: ver `configuracaoDePagamentos`.
+ * Os modos do processo. `producao` so SOBE com `PRODUCAO_DESTRAVADA`: ver
+ * `configuracaoDePagamentos`.
  */
-export type ModoPagamentos = 'desligado' | 'sandbox';
+export type ModoPagamentos = 'desligado' | 'sandbox' | 'producao';
+
+/**
+ * A TRAVA DA REGRA INVIOLAVEL 20, e ela e CODIGO, nao variavel.
+ *
+ * O caminho de producao esta escrito e testado (o teste passa `true` para
+ * `configuracaoDePagamentos`), e o que o separa do ar e esta constante. Trocar
+ * para `true` e o COMMIT DE DESTRAVAMENTO de `docs/runbooks/ligar-terceiros.md`:
+ * so depois de a chave de producao estar no Secret Manager, o webhook
+ * cadastrado no painel e a primeira transacao real feita a mao pelo painel do
+ * AbacatePay. Revisado por humano, como todo commit — e nunca uma troca de
+ * variavel no Terraform, que sozinha continua derrubando o boot.
+ */
+export const PRODUCAO_DESTRAVADA = false;
+
+/** Prefixo da chave de producao do AbacatePay. */
+const PREFIXO_CHAVE_PRODUCAO = 'abc_prod_';
 
 export interface ConfiguracaoPagamentos {
   readonly modo: ModoPagamentos;
@@ -58,10 +74,14 @@ const DESLIGADO: ConfiguracaoPagamentos = {
  *
  * AS REGRAS, e o estrago que cada uma evita:
  *
- * - `producao` RECUSA SUBIR em qualquer ambiente (regra inviolavel 20). Destravar
- *   exige a chave de producao aprovada e a primeira transacao real feita a mao
- *   (plano de execucao, "So voce" da Etapa 8) — e isso e um ato, nao um valor de
+ * - `producao` RECUSA SUBIR enquanto `PRODUCAO_DESTRAVADA` for `false` (regra
+ *   inviolavel 20). Destravar exige a chave de producao aprovada e a primeira
+ *   transacao real feita a mao — e isso e um ato revisado, nao um valor de
  *   variavel.
+ * - Destravado, `producao` so sobe com `NODE_ENV=production`, so com chave
+ *   `abc_prod_` e com os dois segredos do webhook, e passa a esperar
+ *   `devMode: false` em toda resposta e todo evento. Maquina de
+ *   desenvolvimento nunca cobra de verdade.
  * - Em producao a variavel e OBRIGATORIA. Um padrao silencioso escolheria sozinho
  *   entre "checkout fora do ar" e "checkout ligado", como `APP_CHECK_ENFORCE`.
  * - `sandbox` so aceita chave `abc_dev_`. E a unica defesa contra a chave errada
@@ -71,37 +91,61 @@ const DESLIGADO: ConfiguracaoPagamentos = {
  *   nada.
  * - Com chave, os dois segredos do webhook sao obrigatorios. Sem eles, o webhook
  *   recusaria todo evento — o pagamento seria feito e o pedido nunca criado.
+ *
+ * `destravada` existe para o TESTE exercitar o caminho de producao; o boot
+ * chama sem ele, com a constante.
  */
 export function configuracaoDePagamentos(
   ambiente: NodeJS.ProcessEnv = process.env,
+  destravada: boolean = PRODUCAO_DESTRAVADA,
 ): ConfiguracaoPagamentos {
   const producao = ambiente['NODE_ENV'] === 'production';
-  const modo = lerModo(texto(ambiente['PAGAMENTOS_MODO']), producao);
+  const modo = lerModo(
+    texto(ambiente['PAGAMENTOS_MODO']),
+    producao,
+    destravada,
+  );
   if (modo === 'desligado') return DESLIGADO;
 
   const chave = texto(ambiente['ABACATEPAY_API_KEY']);
+  if (modo === 'producao') return deProducao(chave, ambiente);
   if (chave === null) return semChave(producao);
 
   return comChave(chave, ambiente);
 }
 
-function lerModo(bruto: string | null, producao: boolean): ModoPagamentos {
+function lerModo(
+  bruto: string | null,
+  producao: boolean,
+  destravada: boolean,
+): ModoPagamentos {
   if (bruto === 'producao') {
-    throw new Error(
-      'PAGAMENTOS_MODO=producao nao sobe nesta etapa (regra inviolavel 20). ' +
-        'Liberar exige a chave de producao aprovada e a primeira transacao real ' +
-        'feita a mao — ver "So voce — Etapa 8" no plano de execucao.',
-    );
+    if (!destravada) {
+      throw new Error(
+        'PAGAMENTOS_MODO=producao nao sobe com a trava fechada (regra ' +
+          'inviolavel 20, PRODUCAO_DESTRAVADA em pagamentos/gateway/modo.ts). ' +
+          'Liberar e o commit de destravamento de ' +
+          'docs/runbooks/ligar-terceiros.md, depois da chave de producao e da ' +
+          'primeira transacao real feita a mao.',
+      );
+    }
+    if (!producao) {
+      throw new Error(
+        'PAGAMENTOS_MODO=producao so sobe com NODE_ENV=production: fora do ' +
+          'ambiente de producao, nenhuma cobranca de verdade.',
+      );
+    }
+    return 'producao';
   }
   if (bruto === 'desligado' || bruto === 'sandbox') return bruto;
   if (bruto !== null) {
     throw new Error(
-      `PAGAMENTOS_MODO invalido: "${bruto}". Aceitos: "desligado" e "sandbox".`,
+      `PAGAMENTOS_MODO invalido: "${bruto}". Aceitos: "desligado", "sandbox" e "producao".`,
     );
   }
   if (producao) {
     throw new Error(
-      'PAGAMENTOS_MODO precisa ser "desligado" ou "sandbox" em producao. ' +
+      'PAGAMENTOS_MODO precisa ser declarado em producao. ' +
         'Recusando subir sem que alguem tenha decidido se o checkout esta no ar.',
     );
   }
@@ -146,6 +190,44 @@ function comChave(
     );
   }
 
+  const { segredo, hmac } = segredosDoWebhook(ambiente);
+
+  return {
+    modo: 'sandbox',
+    chaveApi: chave,
+    segredoWebhook: segredo,
+    chaveHmacWebhook: hmac,
+    devModeEsperado: true,
+  };
+}
+
+/** Producao, ja destravada. A mensagem nunca repete a chave (regra 9). */
+function deProducao(
+  chave: string | null,
+  ambiente: NodeJS.ProcessEnv,
+): ConfiguracaoPagamentos {
+  if (chave === null || !chave.startsWith(PREFIXO_CHAVE_PRODUCAO)) {
+    throw new Error(
+      'PAGAMENTOS_MODO=producao exige ABACATEPAY_API_KEY com a chave de ' +
+        `producao do AbacatePay (prefixo "${PREFIXO_CHAVE_PRODUCAO}"). ` +
+        'Recusando subir: uma chave de sandbox aqui mostraria QR codes que ' +
+        'nao cobram nada.',
+    );
+  }
+  const { segredo, hmac } = segredosDoWebhook(ambiente);
+  return {
+    modo: 'producao',
+    chaveApi: chave,
+    segredoWebhook: segredo,
+    chaveHmacWebhook: hmac,
+    devModeEsperado: false,
+  };
+}
+
+function segredosDoWebhook(ambiente: NodeJS.ProcessEnv): {
+  segredo: string;
+  hmac: string;
+} {
   const segredo = texto(ambiente['ABACATEPAY_WEBHOOK_SECRET']);
   const hmac = texto(ambiente['ABACATEPAY_WEBHOOK_CHAVE_HMAC']);
   if (segredo === null || hmac === null) {
@@ -155,14 +237,7 @@ function comChave(
         'recusaria todo evento: o pagamento seria feito e o pedido nunca criado.',
     );
   }
-
-  return {
-    modo: 'sandbox',
-    chaveApi: chave,
-    segredoWebhook: segredo,
-    chaveHmacWebhook: hmac,
-    devModeEsperado: true,
-  };
+  return { segredo, hmac };
 }
 
 function texto(valor: string | undefined): string | null {

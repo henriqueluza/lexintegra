@@ -42,6 +42,7 @@ const ROTULO_DO_TIPO: Readonly<Record<string, string>> = {
   'reuniao-desmarcada-escritorio': 'Reunião desmarcada pelo escritório',
   'acesso-advogado-atualizado': 'Novo acesso do advogado',
   'convite-administrador': 'Convite de administrador',
+  'aviso-eliminacao-titular': 'Aviso de eliminação de dados (LGPD)',
 };
 
 /**

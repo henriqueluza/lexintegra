@@ -17,7 +17,7 @@ import {
  * duas ficam aqui.
  *
  * O `alvo` e o id do que mudou: o uid do advogado ou do administrador, o id da
- * cobranca do pagamento. `antes` e `depois` levam so os campos da acao — o
+ * cobranca do pagamento, a chave (pseudonimo) do titular na retencao legal. `antes` e `depois` levam so os campos da acao — o
  * e-mail do advogado e dado pessoal, e por isso a colecao esta no mapa da LGPD
  * (`lgpd/mapa.ts`), com a guarda a definir como as outras trilhas.
  */
@@ -28,6 +28,8 @@ export const ACOES_AUDITADAS = [
   'pagamento.resolvido',
   'administrador.convidado',
   'administrador.removido',
+  'lgpd.retencao-legal.registrada',
+  'lgpd.retencao-legal.removida',
 ] as const;
 
 export type AcaoAuditada = (typeof ACOES_AUDITADAS)[number];

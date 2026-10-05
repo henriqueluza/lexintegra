@@ -213,7 +213,17 @@ e passe a lista ao Claude como "ajustes finais".
 - [x] Preservar os módulos de administração, advogados e área do cliente.
 - [x] Adicionar rodapé público com CNPJ, e-mail, telefone e links para termos
   de uso e política de privacidade; preencher e estilizar as páginas legais
-  (a revisão jurídica permanece no item específico abaixo).
+  (a revisão jurídica permanece no item específico abaixo). **05/10/2026:** o
+  telefone saiu; o rodapé ficou com nome, CNPJ, `suportelexintegra@gmail.com`
+  e os dois links (exigência da análise do AbacatePay), conferidos no HTML
+  pré-renderizado pelo CI (`scripts/conferir-rodape-prerenderizado.mjs`).
+- [x] Landing no celular (abaixo de 720 px): só a hero, com catálogo, cadastro
+  e entrar, e o rodapé completo. Só CSS, sem detecção de user agent nem API;
+  seções ocultas fora da árvore de acessibilidade, e o menu sem âncoras para
+  elas (05/10/2026, `landing-celular.css`, com e2e e axe).
+  - [ ] 👤 Aprovar, uma a uma, as referências visuais regravadas no PR
+    `feat/fechamento-sem-terceiros` (rodapé em todas as telas públicas,
+    landing estreita, catálogo estreito e o grupo de opções).
 - [x] Restaurar as animações do modelo: hero, capítulos, títulos, faixa de passos,
   revelações, arraste do Line-up e menu móvel; respeitar movimento reduzido.
 - [x] Navbar pública por estado: visitante vê Entrar/Cadastro; pré-cadastrado
@@ -452,12 +462,15 @@ Já podem ser feitos, a menos que apareça dependência do caminho do Cloud Task
   de 88% de uma requisição autenticada. Resultado e recomendação (manter) em
   `docs/plano-de-execucao.md`, Etapa 4.
 
-- [ ] Pôr o `ui/grupo-opcoes` (Bloco A da B2) no catálogo. Abaixo de 720 px o
+- [x] Pôr o `ui/grupo-opcoes` (Bloco A da B2) no catálogo. Abaixo de 720 px o
   índice lateral fica acima do palco e o empurra; uma peça a mais no índice
   muda a posição subpixel do palco e invalida as 15 referências estreitas do
   catálogo sem nenhum componente mudar (o acoplamento que a Etapa 6 resolveu só
   para telas largas). Corrigir a casca para o palco não depender do índice,
-  incluir a peça e regravar as referências estreitas. 👤 aprova a regravação.
+  incluir a peça e regravar as referências estreitas. **Feito em 05/10/2026:**
+  abaixo de 720 px o índice é uma linha só, com rolagem lateral, e a altura dele
+  não depende do número de peças. 👤 aprova a regravação (item da landing
+  acima).
 
 ### B2. Precisa de decisão do Henrique (passo 3)
 
@@ -466,7 +479,8 @@ constroem**. As decisões vão para um `decisoes.md`.
 
 **Segurança e latência**
 
-- [ ] Manter `verifyIdToken(token, true)` em toda requisição autenticada?
+- [x] Manter `verifyIdToken(token, true)` em toda requisição autenticada?
+  **Decidido em 05/10/2026: manter** (decisoes.md 7.1). Nada a construir.
   Medido em 30/09: custa cerca de 327 ms (p50) por requisição, 88% do tempo dela.
   Recomendação: manter, pelo motivo em `docs/plano-de-execucao.md`, Etapa 4. →
   Se a decisão for mudar, construir o cache de revogação ou o recorte por rota.
@@ -482,10 +496,13 @@ constroem**. As decisões vão para um `decisoes.md`.
   atualizados.
 - [x] Imagens de referência da regressão visual regravadas (públicas e
   painéis). 👤 aprova uma a uma (A2).
-- [ ] Descobrir a origem dos traços dos ícones (protótipo
+- [x] Descobrir a origem dos traços dos ícones (protótipo
   `direcao-B-pauta.html`). Registrar em `docs/imagens-landing.md` e, se vier de
-  biblioteca, a licença em `licencas-terceiros.md`. *Depois da entrega do front
-  novo.*
+  biblioteca, a licença em `licencas-terceiros.md`. **Investigado em
+  05/10/2026:** não vêm de biblioteca identificável (dois coincidem com o
+  Lucide por serem formas triviais). Achado no caminho: o sprite da área
+  pública (`icones/nevoa.svg`) é **Phosphor Icons (MIT)**, agora com aviso de
+  licença no arquivo e em `licencas-terceiros.md` (decisoes.md 6.6).
 
 **Conteúdo**
 
@@ -504,17 +521,26 @@ constroem**. As decisões vão para um `decisoes.md`.
   (`packages/shared/src/regra-estorno.ts`). Versões novas:
   `checkout-v3-2026-10` e `v3-2026-10` (download).
 - [ ] 👤 Revisar os textos do Bloco I e levar ao escritório para aprovação.
+  Inclui a **política de guarda** (decisoes.md 2.1), que é proposta do Henrique
+  sujeita à aprovação do escritório, e os termos do checkout
+  `checkout-v4-2026-10`.
 - [x] Encarregado (DPO) e canal de contato: Auan Bastos e
   `privacidade@lexintegra.com.br` (decisoes.md, 1.3), na política de
-  privacidade, no rodapé dos e-mails e em `lgpd.md` (Bloco I).
-- [ ] Prazo para atender os demais direitos do art. 18. → `lgpd.md` e trocar o
-  marcador `[PENDENTE-ESCRITORIO: …]` da política (`pendencias-escritorio.ts`).
+  privacidade, no rodapé dos e-mails e em `lgpd.md` (Bloco I). **Emenda de
+  05/10/2026:** o canal passou a ser o e-mail único
+  `suportelexintegra@gmail.com`, em todos os lugares; a caixa `privacidade@`
+  não será criada.
+- [x] Prazo para atender os demais direitos do art. 18: **15 dias corridos** a
+  partir da solicitação (decisoes.md 1.4, 05/10/2026). `lgpd.md` atualizado e
+  o marcador saiu da política (`pendencias-escritorio.ts` vazio).
 
 **LGPD e retenção**
 
-- [ ] Política de guarda: prazos e exceções. → Construir o executor de
-  eliminação e o envio do aviso, que hoje estão bloqueados, e trocar o
-  marcador `[PENDENTE-ESCRITORIO: …]` da política de privacidade.
+- [x] Política de guarda: prazos e exceções (decisoes.md 2.1, 05/10/2026,
+  proposta sujeita à aprovação do escritório). Construídos o executor de
+  eliminação e o aviso (`lgpd/eliminacao.service.ts`), a retenção legal, a
+  rotina por prazo dentro da `retencao-diaria` e os registros de acesso por 6
+  meses (bucket de logs `registros-de-acesso`); o marcador saiu da política.
 - [x] Retenção dos entregáveis: 30 dias a partir de `entregue`, com lembrete
   7 dias antes (decisoes.md, 2.2). Bloco D: o job passou a rodar de verdade (a
   marca de fechamento não era escrita por ninguém), o aviso é por pedido e a
@@ -557,8 +583,12 @@ constroem**. As decisões vão para um `decisoes.md`.
   <nao-responda@notificacoes.lexintegra.com.br>` (decisoes.md, 5.1). Bloco G:
   `email_remetente`, rodapé em todo e-mail com `privacidade@` e os e-mails de
   senha em texto versionado.
-- [ ] Destinatários dos alertas, e quais acordam alguém. →
-  `alertas-roteamento.json` e Terraform.
+- [x] Destinatários dos alertas, e quais acordam alguém: todos por e-mail para
+  `suportelexintegra@gmail.com`, nenhum acorda alguém (decisoes.md 5.2,
+  05/10/2026). `alertas-roteamento.json`, Terraform (canal *Suporte
+  LexIntegra*), lint que recusa `acordar` e `operacao.md`.
+  - [ ] 👤 Depois do deploy, disparar o alerta artificial e conferir que chega
+    em `suportelexintegra@gmail.com` (`docs/runbooks/alerta-artificial.md`).
 - [x] Quem resolve um pagamento órfão, quem devolve o dinheiro no estorno
   manual, e em quanto tempo. Decidido (decisoes.md, 5.3); runbook
   `pagamento-orfao.md` no Bloco B. O texto dos termos é o Bloco I.
@@ -573,8 +603,12 @@ constroem**. As decisões vão para um `decisoes.md`.
 
 **Repositório**
 
-- [ ] Nome do repositório de destino. → PR que faz o WIF aceitar os dois
-  repositórios (`transferencia.md` 2.1).
+- [x] PR que faz o WIF aceitar os dois repositórios (`transferencia.md` 2.1):
+  pronto em 05/10/2026 (`github_repositorios_adicionais` em `iam.tf`), sem
+  mudança no plan enquanto a lista estiver vazia.
+- [ ] 👤 Informar o nome do repositório de destino. O PR A da transferência
+  passa a ser uma linha: o nome em `github_repositorios_adicionais`
+  (`infra/terraform/variables.tf`).
 - [x] Destino de `arquitetura-lexintegra.{jpg,png}`: movidas para
   `docs/imagens/`, ilustrando o `README.md` da raiz, origem "geradas por IA"
   registrada (decisoes.md, 6.2; Bloco H).
@@ -589,65 +623,91 @@ constroem**. As decisões vão para um `decisoes.md`.
 
 ## C — Terceiros (passos 4 e 5)
 
-Levar para a reunião o que está em **Obter**. Depois dela, um agente faz o que
-está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
+**Desde 05/10/2026 o código e a infraestrutura estão prontos para receber
+credenciais** (PR `feat/fechamento-sem-terceiros`): os secrets existem vazios,
+o código de produção do AbacatePay e o do Graph estão escritos e testados atrás
+de constantes de destravamento, e as travas continuam fechadas
+(`REUNIOES_MODO`, `PAGAMENTOS_MODO` e `PAGAMENTOS_CARTAO`). Cada item abaixo diz
+o que falta — **credencial**, **configuração manual** ou **teste** — e quem
+faz. Os comandos estão em
+[`docs/runbooks/ligar-terceiros.md`](docs/runbooks/ligar-terceiros.md).
 
 ### Microsoft
 
-**Obter**
-
-- [ ] Licença Microsoft 365 com Teams confirmada para cada advogado.
-- [ ] Aplicativo registrado no Entra ID da B&C, com consentimento de
-  administrador para `OnlineMeetings.ReadWrite.All`.
-- [ ] Application access policy configurada por PowerShell (propagação de até
-  48 h).
-- [ ] Object ID do Entra de cada advogado. É esse o valor do `usuarioTeams`,
-  não o e-mail.
-- [ ] Domínio `lexintegra.com.br` no tenant da B&C e caixa compartilhada
-  `privacidade@lexintegra.com.br` (decisoes.md, 1.3). O endereço já está
-  publicado na política de privacidade e no rodapé dos e-mails.
-- [ ] Permissão de aplicação `User.Read.All` no mesmo aplicativo, com
-  consentimento de administrador. É ela que deixa a edição do advogado conferir
-  o `usuarioTeams` antes de salvar (Bloco F1 da B2). Sem ela a conferência
-  responde "indisponível" e a tela salva assim mesmo.
-
-**Construir**
-
-- [ ] Preencher o `usuarioTeams` de cada advogado, pela edição em
-  `/admin/advogados` (Bloco F1 da B2).
-- [ ] Ligar `REUNIOES_MODO=graph` em commit próprio, com uma chamada manual de
-  teste antes.
+- [x] ~~Domínio `lexintegra.com.br` no tenant da B&C e caixa compartilhada
+  `privacidade@lexintegra.com.br`~~ **Removido em 05/10/2026**: o único
+  e-mail de contato do projeto passou a ser `suportelexintegra@gmail.com`
+  (decisoes.md 1.3, emenda), e a caixa não será criada.
+- [x] Código: `REUNIOES_MODO=graph` lê `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID` e
+  `GRAPH_CLIENT_SECRET` e instancia o adaptador, atrás de
+  `INTEGRACAO_GRAPH_DESTRAVADA`; secret `graph-client-secret` declarado sem
+  valor; tenant e client id como variáveis com placeholder. Permissões
+  conferidas contra o código: `OnlineMeetings.ReadWrite.All` e `User.Read.All`,
+  de aplicação (`operacao.md` 4.3).
+- [ ] **Configuração manual — administrador do Microsoft 365 da B&C:** licença
+  com Teams para cada advogado.
+- [ ] **Configuração manual — administrador do Entra ID da B&C:** registrar o
+  aplicativo, conceder `OnlineMeetings.ReadWrite.All` e `User.Read.All`
+  (aplicação) com consentimento de administrador, e criar o client secret
+  (runbook 2.1).
+- [ ] **Configuração manual — administrador do Teams da B&C:** application
+  access policy por PowerShell para cada advogado (propagação de até 48 h).
+- [ ] **Credencial — Henrique:** gravar o client secret em
+  `graph-client-secret` (runbook 2.2) e receber os dois GUIDs (tenant e
+  aplicativo) e o object ID de cada advogado.
+- [ ] **Teste — Henrique:** chamada manual do Graph fora da aplicação
+  (`GET /users/{id}` e `createOrGet`, runbook 2.3).
+- [ ] **Configuração manual — admin da plataforma:** preencher o `usuarioTeams`
+  de cada advogado em `/admin/advogados`.
+- [ ] **Commit de destravamento — Henrique (ou agente, a pedido):**
+  `INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"` e os GUIDs
+  (runbook 2.5).
+- [ ] **Teste — Henrique:** marcar, remarcar e cancelar uma reunião de teste;
+  link do Teams e convite em Gmail, Outlook e Apple Mail (runbook 2.6; é
+  também item de A3).
 
 ### AbacatePay
 
-**Obter**
-
-- [ ] Homologação de cartão da conta. Confirmar se ela vale por conta ou por
-  ambiente.
-- [ ] Chave de produção `abc_prod_`.
-- [ ] Política de reentrega de webhook e reenvio manual de evento, se a
-  documentação não disser.
-
-**Construir**
-
-- [ ] 👤 Alerta artificial pelo caminho real: webhook com corpo ilegível no
-  sandbox, emitindo `pagamento.webhook-ilegivel` (runbook
-  `alerta-artificial.md`). O teste pelo caminho alternativo já foi feito em
-  29/09.
-- [ ] Rodada de cartão no sandbox, seção 4 de
-  `docs/runbooks/checkout-sandbox.md`. Ela confirma o nome do evento de
-  conclusão do cartão, **o maior risco em aberto**.
-- [ ] Secrets de produção no Secret Manager e no Terraform. Os secrets
-  `ABACATEPAY_WEBHOOK_SECRET` e `ABACATEPAY_WEBHOOK_CHAVE_HMAC` só nascem
-  depois disso.
-- [ ] Webhook cadastrado no painel, assinando os seis eventos:
-  - `transparent.completed` e `checkout.completed`;
-  - `transparent.refunded` e `checkout.refunded`;
-  - `transparent.disputed` e `checkout.disputed`.
-- [ ] 👤 Destravar `PAGAMENTOS_MODO` (regra 20): primeira transação real de
-  valor baixo feita à mão, e conferir que o dinheiro caiu.
-- [ ] 👤 Conferir a URL assinada no primeiro pedido real
-  (`limpeza-infra.md` §3).
+- [x] Código: `PAGAMENTOS_MODO=producao` exige chave `abc_prod_`, os dois
+  segredos do webhook e `NODE_ENV=production`, e espera `devMode: false`,
+  atrás de `PRODUCAO_DESTRAVADA` (regra 20); secrets `abacatepay-api-key`,
+  `abacatepay-webhook-secret` e `abacatepay-webhook-chave-hmac` declarados sem
+  valor e ligados ao Cloud Run só com `producao`. Rotas e permissão da chave em
+  `operacao.md` 4.2; URL do webhook de produção decidida:
+  `https://lexintegra.com.br/api/pagamentos/webhook` (runbook 1.7).
+- [ ] **Configuração manual — Caique:** pedir a **nova análise do site** ao
+  AbacatePay e tê-la **aprovada**. O rodapé exigido já está no HTML
+  pré-renderizado.
+- [ ] **Configuração manual — Caique:** homologação de cartão da conta;
+  confirmar se ela vale por conta ou por ambiente.
+- [ ] **Credencial — Caique, depois da aprovação:** chave de produção
+  `abc_prod_` com `CHECKOUT:CREATE`, `CHECKOUT:READ`, `PRODUCT:CREATE` e
+  `PRODUCT:READ` (runbook 1.2), e a chave HMAC de produção do painel.
+- [ ] **Credencial — Henrique:** gerar o segredo do webhook
+  (`openssl rand -hex 24`), gravá-lo em `abacatepay-webhook-secret` e digitá-lo
+  no painel; gravar a chave de API e a HMAC nos secrets (runbook 1.3).
+- [ ] **Configuração manual — Caique, com o Henrique:** cadastrar o webhook de
+  produção em `https://lexintegra.com.br/api/pagamentos/webhook`, com os seis
+  eventos (`transparent.*` e `checkout.*` de `completed`, `refunded` e
+  `disputed`), e conferir que nenhum webhook antigo aponta para `/api/webhook`.
+- [ ] **Teste — Caique e escritório:** primeira transação real de valor baixo
+  feita à mão pelo painel; o evento chega à URL (503 com o modo desligado) e o
+  dinheiro cai (runbook 1.4, regra 20).
+- [ ] **Commit de destravamento — Henrique (ou agente, a pedido):**
+  `PRODUCAO_DESTRAVADA = true` e `pagamentos_modo = "producao"` (runbook 1.5).
+- [ ] **Teste — Henrique:** compra PIX real pela plataforma e estorno; confere
+  a permissão dos estornos (runbook 1.6). Também conferir a URL assinada do
+  primeiro arquivo real (`limpeza-infra.md` §3).
+- [ ] **Teste — Henrique, no sandbox, depois da homologação:** rodada de cartão
+  da seção 4 de `docs/runbooks/checkout-sandbox.md`; confirma o nome do evento
+  de conclusão do cartão, **o maior risco em aberto**. Depois, PR com
+  `pagamentos_cartao = "habilitado"`.
+- [ ] **Teste — Henrique, no sandbox:** alerta artificial pelo caminho real
+  (webhook com corpo ilegível, `pagamento.webhook-ilegivel`;
+  `alerta-artificial.md`). O caminho alternativo já foi testado em 29/09.
+- [x] Política de reentrega de webhook e reenvio manual de evento: documentados
+  em `operacao.md` 4.2 e `webhook-fora-do-ar.md` (B1). O que a documentação
+  não diz (o que acontece depois de ~18 h) segue como risco conhecido.
 
 ### Resend
 
@@ -711,6 +771,10 @@ está em **Construir**. Passos detalhados em `docs/entrega/operacao.md` §4.
 - [ ] 👤 Transferir o projeto GCP/Firebase (`plataforma-juridica-36bda`), o
   repositório e as contas de terceiros.
 - [ ] 👤 Disparar o alerta artificial depois de trocar o destinatário.
+- [ ] 👤 Tirar o canal de alertas provisório de desenvolvimento, que desde
+  05/10/2026 não recebe nada: bloco `desenvolvimento` em `observabilidade.tf`,
+  a variável, as linhas `TF_VAR_alertas_email_desenvolvimento` dos workflows e
+  o secret `ALERTAS_EMAIL_DESENVOLVIMENTO` (`transferencia.md` 4.3).
 - [ ] 👤 Remover seus acessos pessoais, ou registrar por escrito quais ficam
   nos 30 dias de garantia e por quê.
 - [ ] 👤 O Henrique convida o Auan em `/admin/administradores`; depois que o

@@ -22,7 +22,14 @@ import { readFileSync } from 'node:fs';
 const TERRAFORM = 'infra/terraform/observabilidade.tf';
 const ROTEAMENTO = 'infra/terraform/alertas-roteamento.json';
 
-const DESTINOS = ['acordar', 'pendente', 'registrar'];
+/*
+ * DECIDIDO EM 05/10/2026 (decisoes.md 5.2): todo alerta vai por e-mail para o
+ * suporte, e NENHUM acorda alguem — sem SMS, sem telefone, sem plantao. Por isso
+ * `acordar` deixou de ser destino aceito: reintroduzi-lo e mudar esta lista, e
+ * nao so o arquivo de roteamento, e a mudanca aparece na revisao. `pendente`
+ * saiu junto, porque a decisao que ele esperava foi tomada.
+ */
+const DESTINOS = ['suporte', 'registrar'];
 
 const terraform = readFileSync(TERRAFORM, 'utf8');
 const roteamento = JSON.parse(readFileSync(ROTEAMENTO, 'utf8'));
@@ -73,13 +80,6 @@ if (problemas.length > 0) {
   process.exit(1);
 }
 
-const pendentes = declaradas.filter(
-  (chave) => roteamento[chave] === 'pendente',
-).length;
-
 console.log(
-  `✔ ${String(declaradas.length)} alerta(s) roteado(s)` +
-    (pendentes > 0
-      ? `; ${String(pendentes)} ainda em "pendente" — decisao da CONTRATANTE (Etapa 12).`
-      : '.'),
+  `✔ ${String(declaradas.length)} alerta(s) roteado(s); nenhum acorda alguem.`,
 );

@@ -1,3 +1,9 @@
+<!--
+  Os quatro itens são exigência da análise do AbacatePay e precisam estar no
+  HTML pré-renderizado da home (há teste no e2e): nome, CNPJ, e-mail de contato
+  e os links para termos e privacidade. Nada mais entra aqui — em especial,
+  nenhum link para âncora da landing, que no celular não tem as seções.
+-->
 <footer class="rodape">
   <div class="rodape__grade">
     <div class="rodape__marca">
@@ -5,16 +11,9 @@
       <p>Contratação e acompanhamento de serviços jurídicos para empresas.</p>
       <p>CNPJ: {{ contato.cnpj }}</p>
     </div>
-    <nav aria-label="Plataforma">
-      <h2>Plataforma</h2>
-      <a href="/#como">Como funciona</a><a href="/servicos">Serviços e preços</a
-      ><a href="/entrar">Entrar na sua área</a>
-    </nav>
     <nav aria-label="Atendimento">
       <h2>Contato</h2>
-      <a [href]="'mailto:' + contato.email">{{ contato.email }}</a
-      ><a [href]="contato.telefoneHref">{{ contato.telefone }}</a
-      ><a href="/#duvidas">Dúvidas frequentes</a>
+      <a [href]="'mailto:' + contato.email">{{ contato.email }}</a>
     </nav>
     <nav aria-label="Informações legais">
       <h2>Informações legais</h2>

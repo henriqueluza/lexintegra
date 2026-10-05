@@ -7,9 +7,11 @@ import {
 describe('rodape de todo e-mail (decisoes.md 5.1)', () => {
   const base = { para: ['a@x.test'], assunto: 'A', corpoTexto: 'Corpo.' };
 
-  it('diz que a caixa nao e lida e aponta privacidade@', () => {
+  /** decisoes.md 1.3, emenda de 05/10/2026: um e-mail de contato so. */
+  it('diz que a caixa nao e lida e aponta o e-mail unico de contato', () => {
     expect(RODAPE_EMAIL).toContain('Esta caixa não é lida');
-    expect(RODAPE_EMAIL).toContain('privacidade@lexintegra.com.br');
+    expect(RODAPE_EMAIL).toContain('suportelexintegra@gmail.com');
+    expect(RODAPE_EMAIL).not.toContain('privacidade@');
   });
 
   it('vai depois do corpo, sem mexer no resto', () => {
@@ -30,7 +32,7 @@ describe('rodape de todo e-mail (decisoes.md 5.1)', () => {
     expect(RODAPE_EMAIL_COM_RESPOSTA).toContain('equipe de suporte');
     expect(RODAPE_EMAIL_COM_RESPOSTA).not.toContain('não é lida');
     expect(RODAPE_EMAIL_COM_RESPOSTA).toContain(
-      'privacidade@lexintegra.com.br',
+      'suportelexintegra@gmail.com',
     );
   });
 
@@ -39,7 +41,7 @@ describe('rodape de todo e-mail (decisoes.md 5.1)', () => {
     expect(mensagem.corpoHtml).toContain('CNPJ: 33.906.250/0001-44');
     expect(mensagem.corpoHtml).toContain('suportelexintegra@gmail.com');
     expect(mensagem.corpoHtml).toContain('Esta caixa não é lida');
-    expect(mensagem.corpoHtml).toContain('privacidade@lexintegra.com.br');
+    expect(mensagem.corpoHtml).not.toContain('privacidade@');
     expect(mensagem.corpoHtml).not.toContain('TODO');
     expect(mensagem.corpoHtml!.indexOf('Esta mensagem')).toBeLessThan(
       mensagem.corpoHtml!.indexOf('</body>'),

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { LgpdModule } from '../lgpd/lgpd.module.js';
 import { OutboxModule } from '../outbox/outbox.module.js';
 import { RetencaoController } from './retencao.controller.js';
 import { RetencaoService } from './retencao.service.js';
@@ -15,10 +16,11 @@ import { RetencaoService } from './retencao.service.js';
  * confirmacao do ultimo entregavel (`EntregaveisService`). Cada passagem
  * concluida escreve `retencao.passagem`, que o alerta de ausencia le.
  *
- * NAO FAZ: nao elimina o titular, que e o executor bloqueado de `lgpd/`.
+ * NAO FAZ: nao elimina o titular — isso e o `EliminacaoTitular` de `lgpd/`,
+ * que o controlador chama na mesma passagem.
  */
 @Module({
-  imports: [OutboxModule],
+  imports: [OutboxModule, LgpdModule],
   controllers: [RetencaoController],
   providers: [RetencaoService],
   exports: [RetencaoService],

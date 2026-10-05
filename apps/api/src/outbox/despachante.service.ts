@@ -24,8 +24,10 @@ import type { TipoEvento } from 'shared';
 import type { RegistroOutbox } from './evento.js';
 import { montarLinkDeSenha, urlDaAplicacao } from './link-de-senha.js';
 import {
+  ASSUNTO_AVISO_ELIMINACAO,
   ASSUNTO_AVISO_EXCLUSAO,
   ASSUNTO_PAUSA_CONTESTACAO,
+  TEXTO_AVISO_ELIMINACAO,
   TEXTO_AVISO_EXCLUSAO,
   TEXTO_PAUSA_CONTESTACAO,
 } from '../termos/termos.textos.js';
@@ -61,6 +63,10 @@ const TEXTOS_FIXOS = {
   'pausa-contestacao': {
     assunto: ASSUNTO_PAUSA_CONTESTACAO,
     corpoTexto: TEXTO_PAUSA_CONTESTACAO,
+  },
+  'aviso-eliminacao-titular': {
+    assunto: ASSUNTO_AVISO_ELIMINACAO,
+    corpoTexto: TEXTO_AVISO_ELIMINACAO,
   },
 } as const;
 
@@ -246,7 +252,7 @@ export class DespachanteOutbox {
   /**
    * A UNICA SAIDA DE E-MAIL DO DESPACHANTE, e e ela que poe o reply-to e o
    * rodape (B2, decisoes.md 5.1): a caixa do remetente nao e lida, a resposta
-   * vai para o suporte (`EMAIL_REPLY_TO`), e todo e-mail aponta `privacidade@`.
+   * vai para o suporte (`EMAIL_REPLY_TO`), e todo e-mail aponta o contato unico.
    * Nenhum montador precisa lembrar. O rodape le o reply-to da mensagem, entao
    * a ordem importa: primeiro o endereco, depois o texto que fala dele.
    */

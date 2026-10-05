@@ -199,7 +199,11 @@ it('recusa execucao com compromisso futuro e identifica o pedido em andamento', 
   await db
     .doc('pedidos/p-ana/entregaveis/001')
     .update({ estado: 'em_elaboracao' });
+  // Sem solicitacao, nao ha o que executar.
+  await post('eliminacao/executar').expect(404);
+  expect((await post('eliminacao').expect(200)).body.estado).toBe('impedida');
   const resposta = await post('eliminacao/executar').expect(409);
+  expect(resposta.body.motivo).toBe('impedida');
   expect(resposta.body.impedimentos).toEqual([
     { tipo: 'pedido_em_andamento', caminho: 'pedidos/p-ana' },
     { tipo: 'reuniao_futura', caminho: 'pedidos/p-ana/reunioes/r001' },
@@ -208,7 +212,7 @@ it('recusa execucao com compromisso futuro e identifica o pedido em andamento', 
 });
 
 it(
-  'repeticao concorrente retoma um protocolo; politica pendente nunca apaga nem envia aviso',
+  'repeticao concorrente retoma um protocolo, avisa uma vez e nao apaga antes do prazo',
   async () => {
     const db = firestoreDeTeste();
     const outroAntes = (await db.doc('clientes/bruno').get()).data();
@@ -218,12 +222,19 @@ it(
       post('eliminacao').expect(200),
     ]);
     expect(respostas[0].body.protocolo).toBe(respostas[1].body.protocolo);
-    expect(respostas[0].body.estado).toBe('aguardando_politica');
+    expect(respostas[0].body.estado).toBe('aguardando_execucao');
     expect((await db.collection('solicitacoes-lgpd').get()).size).toBe(1);
-    await post('eliminacao/executar').expect(409);
+    const recusa = await post('eliminacao/executar').expect(409);
+    expect(recusa.body.motivo).toBe('aguardando_prazo_do_aviso');
     expect((await db.doc('clientes/bruno').get()).data()).toEqual(outroAntes);
     expect(armazenamento.caminhos).toEqual(objetosAntes);
-    expect((await db.collection('outbox').get()).size).toBe(6);
+    // Os seis semeados e UM aviso, apesar das duas solicitacoes simultaneas.
+    expect((await db.collection('outbox').get()).size).toBe(7);
+    const aviso = await db
+      .collection('outbox')
+      .where('tipo', '==', 'aviso-eliminacao-titular')
+      .get();
+    expect(aviso.docs.map((d) => d.data()['estado'])).toEqual(['enviado']);
     expect((await authDeTeste().getUser('ana')).disabled).toBe(false);
   },
   PRAZO_DE_CONCORRENCIA_NO_EMULADOR,
@@ -239,7 +250,80 @@ it('reavalia impedimento removido sem perder o autor da solicitacao', async () =
   await db.doc('pedidos/p-ana/entregaveis/001').update({ estado: 'entregue' });
   const retomada = await post('eliminacao').expect(200);
   expect(retomada.body.protocolo).toBe(primeira.body.protocolo);
-  expect(retomada.body.estado).toBe('aguardando_politica');
+  expect(retomada.body.estado).toBe('aguardando_execucao');
+});
+
+/**
+ * A eliminacao de ponta a ponta contra o emulador (decisoes.md 2.1). O tempo
+ * nao anda no emulador, entao o envio do aviso e recuado 8 dias no proprio
+ * registro do outbox — e e exatamente esse campo que o executor confere.
+ */
+it('executa a eliminacao parcial 7 dias depois do aviso, sem tocar no outro titular', async () => {
+  const db = firestoreDeTeste();
+  const outroAntes = (await db.doc('clientes/bruno').get()).data();
+  const solicitada = await post('eliminacao').expect(200);
+  const aviso = db.doc(`outbox/${String(solicitada.body.avisoOutboxId)}`);
+  expect((await aviso.get()).data()?.['estado']).toBe('enviado');
+  await aviso.update({
+    enviadoEm: new Date(Date.now() - 8 * 86_400_000),
+  });
+
+  const resposta = await post('eliminacao/executar').expect(200);
+
+  expect(resposta.body).toMatchObject({
+    estado: 'concluida',
+    escopo: 'parcial',
+    eliminados: { conta: true },
+  });
+  await expect(authDeTeste().getUser('ana')).rejects.toMatchObject({
+    code: 'auth/user-not-found',
+  });
+  expect((await db.doc('clientes/ana').get()).exists).toBe(true);
+  expect((await db.doc('pedidos/p-ana').get()).exists).toBe(true);
+  expect((await db.doc('checkouts/c-ana').get()).exists).toBe(false);
+  expect(
+    (await db.doc(`pre-cadastros/${idDoPreCadastro('ana@exemplo.test')}`).get())
+      .exists,
+  ).toBe(false);
+  expect(armazenamento.caminhos.some((c) => c.includes('p-ana'))).toBe(false);
+  expect(armazenamento.caminhos.some((c) => c.includes('p-bruno'))).toBe(true);
+  expect((await db.doc('clientes/bruno').get()).data()).toEqual(outroAntes);
+  expect((await authDeTeste().getUser('bruno')).disabled).toBe(false);
+  // O cliente sem conta continua alcancavel pelo cadastro: a simulacao responde.
+  const simulacao = await request(app.getHttpServer())
+    .get('/api/admin/lgpd/clientes/ana/simulacao')
+    .set('Authorization', `Bearer ${admin}`)
+    .expect(200);
+  expect(simulacao.body.conta.presente).toBe(false);
+  // Repetir e idempotente.
+  await post('eliminacao/executar').expect(200);
+});
+
+it('retencao legal por HTTP: valida, impede e sai', async () => {
+  const caminho = '/api/admin/lgpd/clientes/ana/retencao-legal';
+  await request(app.getHttpServer())
+    .put(caminho)
+    .set('Authorization', `Bearer ${admin}`)
+    .send({ motivo: 'vontade', descricao: 'x' })
+    .expect(400);
+  await request(app.getHttpServer())
+    .put(caminho)
+    .set('Authorization', `Bearer ${cliente}`)
+    .send({ motivo: 'processo_em_curso', descricao: 'Processo 0001' })
+    .expect(403);
+  await request(app.getHttpServer())
+    .put(caminho)
+    .set('Authorization', `Bearer ${admin}`)
+    .send({ motivo: 'processo_em_curso', descricao: 'Processo 0001' })
+    .expect(200);
+  expect((await post('eliminacao').expect(200)).body.estado).toBe('impedida');
+  await request(app.getHttpServer())
+    .delete(caminho)
+    .set('Authorization', `Bearer ${admin}`)
+    .expect(204);
+  expect((await post('eliminacao').expect(200)).body.estado).toBe(
+    'aguardando_execucao',
+  );
 });
 
 it('inclui lead que nunca comprou e pagamentos anormais ligados ao checkout dele', async () => {

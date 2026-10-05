@@ -176,20 +176,33 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       # Etapa 8. Obrigatoria em producao: ausente, a API RECUSA SUBIR (ver
-      # `pagamentos/gateway/modo.ts`). `desligado` e decisao, e nao esquecimento:
-      # checkout e webhook respondem 503 ate a chave de producao existir e a
-      # primeira transacao real ser feita a mao ("So voce — Etapa 8").
+      # `pagamentos/gateway/modo.ts`). `desligado` e decisao, e nao
+      # esquecimento: checkout e webhook respondem 503 ate a chave de producao
+      # existir e a primeira transacao real ser feita a mao.
       #
-      # NENHUM SECRET DO ABACATEPAY E REFERENCIADO AQUI AINDA, de proposito. Um
-      # `secret_key_ref` para um secret sem versao impede a revisao de subir (ver
-      # o `RESEND_API_KEY` abaixo), e os segredos do webhook so existem quando o
-      # endpoint for configurado no painel do escritorio.
-      #
-      # `producao` NAO e um valor aceito pelo codigo nesta etapa (regra
-      # inviolavel 20): trocar a string aqui derruba o deploy, nao liga cobranca.
+      # `producao` SO SOBE COM A TRAVA DO CODIGO ABERTA (`PRODUCAO_DESTRAVADA`,
+      # regra inviolavel 20): trocar so a variavel derruba o deploy, nao liga
+      # cobranca. O commit de destravamento (`docs/runbooks/ligar-terceiros.md`)
+      # troca as duas coisas juntas.
       env {
         name  = "PAGAMENTOS_MODO"
-        value = "desligado"
+        value = var.pagamentos_modo
+      }
+
+      # Os tres secrets do AbacatePay de producao, so com `producao`. Antes
+      # disso NAO sao referenciados: secret sem versao impede a revisao de
+      # subir (ver `secrets.tf`).
+      dynamic "env" {
+        for_each = var.pagamentos_modo == "producao" ? local.secrets_abacatepay : {}
+        content {
+          name = env.key
+          value_source {
+            secret_key_ref {
+              secret  = env.value
+              version = "latest"
+            }
+          }
+        }
       }
 
       # B2 (decisoes.md 3.4). Obrigatoria em producao, como `PAGAMENTOS_MODO`:
@@ -211,15 +224,42 @@ resource "google_cloud_run_v2_service" "api" {
       # cartao do cliente le esse estado e diz que o agendamento esta
       # indisponivel, em vez de oferecer um botao que falha.
       #
-      # OS DOIS OUTROS VALORES SAO RECUSADOS EM PRODUCAO, e trocar a string aqui
-      # derruba o deploy em vez de ligar coisa nenhuma: `graph` porque a
-      # integracao real exige os passos manuais acima, e `falso` porque a sala
+      # `graph` SO SOBE COM A TRAVA DO CODIGO ABERTA (`INTEGRACAO_GRAPH_DESTRAVADA`)
+      # e com as credenciais: trocar so a variavel derruba o deploy. `falso` e
+      # recusado em producao sempre, porque a sala
       # falsa devolve SUCESSO com um link `teams.microsoft.test` — a reuniao
       # viraria `confirmada` e o convite sairia para o cliente com um link que
       # nao existe.
       env {
         name  = "REUNIOES_MODO"
-        value = "desligado"
+        value = var.reunioes_modo
+      }
+
+      # O Graph, so com `graph` (e com `INTEGRACAO_GRAPH_DESTRAVADA` no codigo).
+      # Tenant e aplicativo sao identificadores, nao segredo; o client secret
+      # vem do Secret Manager.
+      dynamic "env" {
+        for_each = var.reunioes_modo == "graph" ? {
+          GRAPH_TENANT_ID = var.graph_tenant_id
+          GRAPH_CLIENT_ID = var.graph_client_id
+        } : {}
+        content {
+          name  = env.key
+          value = env.value
+        }
+      }
+
+      dynamic "env" {
+        for_each = var.reunioes_modo == "graph" ? local.secrets_graph : {}
+        content {
+          name = env.key
+          value_source {
+            secret_key_ref {
+              secret  = env.value
+              version = "latest"
+            }
+          }
+        }
       }
 
       # A chave chega por referencia ao Secret Manager, nunca como valor no
@@ -257,6 +297,7 @@ resource "google_cloud_run_v2_service" "api" {
   depends_on = [
     google_project_service.apis,
     google_firestore_database.default,
+    google_secret_manager_secret_iam_member.api_runtime,
   ]
 }
 

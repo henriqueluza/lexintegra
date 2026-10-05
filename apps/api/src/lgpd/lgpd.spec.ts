@@ -9,6 +9,12 @@ import { TermosService } from '../termos/termos.service.js';
 import { EmissorDeLinkDeLeitura } from '../arquivos/leitura.js';
 import { PortaoDeArquivos } from '../arquivos/portao.js';
 import { idDoPreCadastro } from '../pre-cadastros/liberacao.js';
+import { AlertaFalso } from '../alertas/alerta.js';
+import type { DespachanteOutbox } from '../outbox/despachante.service.js';
+import { OutboxService } from '../outbox/outbox.service.js';
+import { EliminacaoTitular } from './eliminacao.service.js';
+import { Eliminador } from './eliminador.js';
+import { RetencaoLegalService } from './retencao-legal.service.js';
 import { InventarioTitular } from './inventario.service.js';
 import { LgpdService } from './lgpd.service.js';
 import { LgpdController } from './lgpd.controller.js';
@@ -25,6 +31,7 @@ let db: Firestore;
 let armazenamento: ArmazenamentoFalso;
 let inventario: InventarioTitular;
 let servico: LgpdService;
+let retencao: RetencaoLegalService;
 let portao: PortaoDeArquivos;
 let auth: Auth;
 const conta = {
@@ -51,7 +58,23 @@ beforeEach(() => {
     new EmissorDeLinkDeLeitura(armazenamento),
   );
   inventario = new InventarioTitular(db, auth, armazenamento);
-  servico = new LgpdService(db, inventario, portao);
+  const eliminacao = new EliminacaoTitular(
+    db,
+    auth,
+    new AlertaFalso(),
+    inventario,
+    new OutboxService(db, {
+      atrasoDoVarredorMs: 0,
+      arrendamentoMs: 60_000,
+      loteDoVarredor: 100,
+    }),
+    {
+      despachar: () => Promise.resolve('falhou'),
+    } as unknown as DespachanteOutbox,
+    new Eliminador(db, auth, armazenamento),
+  );
+  retencao = new RetencaoLegalService(db, auth);
+  servico = new LgpdService(db, inventario, portao, eliminacao);
   banco.documentos.set('clientes/ana', { nome: 'Ana' });
   banco.documentos.set('pedidos/p1', {
     clienteId: 'ana',
@@ -98,11 +121,17 @@ it('o mapa percorre filhos e referencias sem varrer outros titulares', async () 
   );
 });
 
-it('solicitar e retomar nao apaga; executar sempre recusa por politica pendente', async () => {
+/**
+ * O caminho inteiro do executor esta em `eliminacao.spec.ts`. Aqui, so a
+ * costura do servico: solicitar nao apaga nada, e executar antes do aviso
+ * ENVIADO recusa com o motivo.
+ */
+it('solicitar e retomar nao apaga; executar antes do aviso enviado recusa', async () => {
   const primeira = await servico.solicitar('clientes', 'ana', ATOR);
-  expect(primeira['estado']).toBe('aguardando_politica');
+  expect(primeira['estado']).toBe('aguardando_execucao');
   expect(await servico.solicitar('clientes', 'ana', ATOR)).toMatchObject({
     protocolo: primeira['protocolo'],
+    ciclo: 0,
   });
   await expect(
     servico.executar('clientes', 'ana', ATOR),
@@ -110,6 +139,29 @@ it('solicitar e retomar nao apaga; executar sempre recusa por politica pendente'
   expect(banco.documentos.has('clientes/ana')).toBe(true);
   expect(armazenamento.caminhos).toHaveLength(1);
   expect(banco.escritas.some((s) => s.startsWith('delete'))).toBe(false);
+});
+
+it('retencao legal: registra com auditoria, impede e e removida', async () => {
+  await retencao.registrar(
+    'clientes',
+    'ana',
+    { motivo: 'processo_em_curso', descricao: 'Processo 0001234-56' },
+    ATOR,
+  );
+  const simulacao = await servico.simular('clientes', 'ana');
+  expect(simulacao.executavel).toBe(false);
+  expect(simulacao.impedimentos.map((i) => i.tipo)).toContain('retencao_legal');
+  const auditoria = [...banco.documentos.entries()].filter(([c]) =>
+    c.startsWith('auditoria/'),
+  );
+  expect(auditoria.map(([, d]) => d['acao'])).toEqual([
+    'lgpd.retencao-legal.registrada',
+  ]);
+  await retencao.remover('clientes', 'ana', ATOR);
+  expect((await servico.simular('clientes', 'ana')).executavel).toBe(true);
+  await expect(retencao.remover('clientes', 'ana', ATOR)).rejects.toThrow(
+    'Nao ha retencao',
+  );
 });
 
 it('simula impedimento com os caminhos e mantem arquivo nao limpo fora do pacote', async () => {
@@ -127,13 +179,14 @@ it('simula impedimento com os caminhos e mantem arquivo nao limpo fora do pacote
 });
 
 it('controlador usa download e encaminha o ator autenticado', async () => {
-  const controller = new LgpdController(servico);
+  const controller = new LgpdController(servico, retencao);
   expect(await controller.exportar('clientes', 'ana', ATOR)).toBeInstanceOf(
     StreamableFile,
   );
-  expect((await controller.simular('clientes', 'ana')).executavel).toBe(false);
+  expect((await controller.simular('clientes', 'ana')).executavel).toBe(true);
+  expect((await controller.simular('clientes', 'ana')).escopo).toBe('parcial');
   expect((await controller.solicitar('clientes', 'ana', ATOR))['estado']).toBe(
-    'aguardando_politica',
+    'aguardando_execucao',
   );
   await expect(
     controller.executar('clientes', 'ana', ATOR),

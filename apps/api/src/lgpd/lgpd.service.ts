@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import {
-  ConflictException,
   Inject,
   Injectable,
   Logger,
@@ -20,7 +19,17 @@ import {
   type RegistroTitular,
 } from './mapa.js';
 import { dadosLegiveis, pacoteTar, type EntradaPacote } from './pacote.js';
-import { impedimentos, POLITICA_TITULAR } from './politica.js';
+import { EliminacaoTitular } from './eliminacao.service.js';
+import type { ResultadoDaExecucao } from './protocolo.js';
+import {
+  eliminaNoEscopo,
+  escopoDaEliminacao,
+  impedimentos,
+  POLITICA_TITULAR,
+  type Escopo,
+  type Impedimento,
+} from './politica.js';
+import { COLECAO_RETENCOES_LEGAIS, lerRetencao } from './retencao-legal.js';
 
 @Injectable()
 export class LgpdService {
@@ -29,6 +38,7 @@ export class LgpdService {
     @Inject(FIRESTORE) private readonly db: Firestore,
     private readonly inventario: InventarioTitular,
     private readonly portao: PortaoDeArquivos,
+    private readonly eliminacao: EliminacaoTitular,
   ) {}
 
   async exportar(
@@ -89,63 +99,36 @@ export class LgpdService {
     tipo: string,
     id: string,
   ): Promise<ReturnType<typeof simulacao>> {
-    return simulacao(await this.inventario.reunir(tipo, id));
+    const inventario = await this.inventario.reunir(tipo, id);
+    const retencao = await lerRetencao(this.db, inventario.titular.chave);
+    return simulacao(inventario, retencao.exists);
   }
 
-  /** Retoma o mesmo protocolo e recalcula impedimentos. Nunca apaga, anonimiza,
-   * suspende conta ou anuncia exclusao antes de haver politica aprovada.
+  /**
+   * Cria ou reavalia o protocolo e, sem impedimento, escreve o aviso no outbox.
+   * NADA E ELIMINADO AQUI: a execucao so anda 7 dias depois do envio
+   * confirmado do aviso (`EliminacaoTitular`).
    */
   async solicitar(
     tipo: string,
     id: string,
     ator: UsuarioAutenticado,
   ): Promise<Record<string, unknown>> {
-    const inventario = await this.inventario.reunir(tipo, id);
-    const plano = simulacao(inventario);
-    const protocolo = `eliminacao_${inventario.titular.chave}`;
-    const referencia = this.db
-      .collection(MAPA_TITULAR.solicitacoes.colecao)
-      .doc(protocolo);
-    const estado =
-      plano.impedimentos.length > 0 ? 'impedida' : 'aguardando_politica';
-    await this.db.runTransaction(async (transacao) => {
-      const anterior = await transacao.get(referencia);
-      const atualizacao = {
-        estado,
-        politicaVersao: POLITICA_TITULAR.versao,
-        reavaliadoPor: ator.uid,
-        reavaliadoEm: FieldValue.serverTimestamp(),
-      };
-      if (anterior.exists) transacao.update(referencia, atualizacao);
-      else
-        transacao.create(referencia, {
-          ...atualizacao,
-          titularUid: inventario.titular.uid,
-          titularChave: inventario.titular.chave,
-          acao: 'eliminacao',
-          solicitadoPor: ator.uid,
-          criadoEm: FieldValue.serverTimestamp(),
-        });
-    });
-    this.log.log({
-      message: 'Solicitacao de eliminacao registrada',
-      protocolo,
-      estado,
-    });
-    return { protocolo, estado, ...plano };
+    const resultado = await this.eliminacao.solicitar(
+      tipo,
+      id,
+      ator.uid,
+      'titular',
+    );
+    return { ...(await this.simular(tipo, id)), ...resultado };
   }
 
-  async executar(
+  executar(
     tipo: string,
     id: string,
     ator: UsuarioAutenticado,
-  ): Promise<never> {
-    const resultado = await this.solicitar(tipo, id, ator);
-    throw new ConflictException({
-      message:
-        'Eliminacao bloqueada. Consulte os impedimentos e a politica de guarda pendente.',
-      ...resultado,
-    });
+  ): Promise<ResultadoDaExecucao> {
+    return this.eliminacao.executar(tipo, id, ator.uid);
   }
 
   private async arquivos(
@@ -222,22 +205,41 @@ export function arquivoDoRegistro(
   return null;
 }
 
-function simulacao(inventario: Inventario): {
+function simulacao(
+  inventario: Inventario,
+  retencaoLegal: boolean,
+): {
   politica: typeof POLITICA_TITULAR;
-  executavel: false;
-  impedimentos: ReturnType<typeof impedimentos>;
+  executavel: boolean;
+  impedimentos: Impedimento[];
+  escopo: Escopo;
+  guardaAte: string | null;
   documentos: Record<string, unknown>[];
   objetos: Inventario['objetos'];
   conta: { presente: boolean; guarda: string };
 } {
+  const agoraMs = agora();
+  const lista = impedimentos(inventario.registros, agoraMs);
+  if (retencaoLegal)
+    lista.push({
+      tipo: 'retencao_legal',
+      caminho: `${COLECAO_RETENCOES_LEGAIS}/${inventario.titular.chave}`,
+    });
+  const { escopo, guardaAte } = escopoDaEliminacao(
+    inventario.registros,
+    agoraMs,
+  );
   return {
     politica: POLITICA_TITULAR,
-    executavel: false,
-    impedimentos: impedimentos(inventario.registros, agora()),
+    executavel: lista.length === 0,
+    impedimentos: lista,
+    escopo,
+    guardaAte: guardaAte === null ? null : guardaAte.toISOString(),
     documentos: inventario.registros.map((r) => ({
       caminho: r.caminho,
       grupo: r.grupo,
-      guardaProposta: MAPA_TITULAR[r.grupo].guarda,
+      guarda: MAPA_TITULAR[r.grupo].guarda,
+      eliminadoNesteEscopo: eliminaNoEscopo(r.grupo, escopo),
     })),
     objetos: inventario.objetos,
     conta: {

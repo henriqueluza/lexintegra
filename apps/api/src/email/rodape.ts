@@ -3,8 +3,9 @@ import { ENCARREGADO } from 'shared/encarregado';
 import type { EmailRedigido } from './email-transport.js';
 
 /**
- * O endereco do encarregado (decisoes.md, 1.3): a caixa compartilhada
- * `privacidade@`. Vem de `shared/encarregado`, o mesmo da politica publica.
+ * O canal do encarregado (decisoes.md, 1.3): desde 05/10/2026 e o e-mail unico
+ * de contato do projeto. Vem de `shared/encarregado`, o mesmo da politica
+ * publica.
  */
 export const EMAIL_PRIVACIDADE = ENCARREGADO.email;
 

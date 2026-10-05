@@ -51,6 +51,11 @@ export const catalogoRoutes: Routes = [
           import('./secoes/selecao.secao').then((m) => m.SecaoSelecao),
       },
       {
+        path: 'grupo-opcoes',
+        loadComponent: () =>
+          import('./secoes/grupo-opcoes.secao').then((m) => m.SecaoGrupoOpcoes),
+      },
+      {
         path: 'cartao',
         loadComponent: () =>
           import('./secoes/cartao.secao').then((m) => m.SecaoCartao),

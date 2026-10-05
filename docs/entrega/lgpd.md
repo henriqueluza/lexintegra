@@ -16,9 +16,16 @@ construção.
 | Rotina | Estado |
 |---|---|
 | Exportação dos dados de um titular | **Pronta** |
-| Simulação e registro da solicitação de eliminação | **Pronta**. Não elimina nada |
-| Aviso prévio por e-mail antes da eliminação | **Bloqueado.** Não envia |
-| Eliminação efetiva | **Bloqueada.** Não existe executor |
+| Simulação e registro da solicitação de eliminação | **Pronta** |
+| Aviso prévio por e-mail antes da eliminação | **Pronto** (05/10/2026): outbox, 7 dias do envio confirmado |
+| Eliminação efetiva, a pedido e por prazo | **Pronta** (05/10/2026), pela política de guarda (seção 3) |
+| Retenção legal (exceções que suspendem) | **Pronta** (05/10/2026), registrada pelo administrador |
+| Registros de acesso por 6 meses (Marco Civil) | **Pronta** (05/10/2026): bucket de logs com 186 dias |
+
+**A política de guarda é proposta do Henrique, sujeita à aprovação do
+escritório na revisão do Bloco I** (decisões 2.1). O executor roda com ela
+desde já; se o escritório mudar um prazo, muda-se a constante em
+`packages/shared/src/politica-de-guarda.ts`, a versão e o texto juntos.
 
 ## 2. Exportação: pronta
 
@@ -41,55 +48,76 @@ construção.
   liberação, tokens, hashes e detalhes de falha do outbox. Também ficam fora os
   dados que estão com terceiros (seção 4).
 
-## 3. Aviso prévio e eliminação: bloqueados, por decisão
+## 3. Política de guarda, aviso e eliminação
 
-**A eliminação efetiva de um titular está bloqueada.** Ela só pode ser liberada
-depois de duas coisas:
+### Os prazos (decisões 2.1, 05/10/2026)
 
-1. o controlador aprovar a política de retenção e guarda: documentos, campos,
-   fundamento e prazo, por categoria;
-2. um executor destrutivo ser construído, testado e revisado.
+| O quê | Guarda | Fundamento |
+|---|---|---|
+| Cadastro, ficha de anamnese, pedidos, pagamentos, estornos, contestações, aceites e comunicações | **5 anos depois do último pedido** do cliente | CDC, art. 27; prazos fiscais |
+| Cadastro inicial (pré-cadastro) que nunca virou conta | **6 meses depois do último envio** | Minimização |
+| Registros de acesso à aplicação | **6 meses** (186 dias no bucket de logs `registros-de-acesso`) | Marco Civil, art. 15 (prazo mínimo) |
+| Anexos e entregáveis | **30 dias depois de entregue** (rotina própria, abaixo) | Decisões 2.2 e 2.3 |
 
-Hoje nenhuma das duas existe.
+**Exceções que suspendem tudo:** obrigação legal ou regulatória, processo
+judicial ou administrativo em curso, pedido de autoridade competente. O
+sistema não tem como descobri-las sozinho: o administrador as registra como
+**retenção legal** do titular
+(`PUT /api/admin/lgpd/{clientes|pre-cadastros}/{id}/retencao-legal`, com
+`motivo` e `descricao`; `DELETE` remove), com auditoria. Contestação aberta,
+pedido em andamento e reunião futura também impedem.
 
-**Trocar `aprovada` para `true` em
-[`apps/api/src/lgpd/politica.ts`](../../apps/api/src/lgpd/politica.ts) não
-libera nada.** A constante não é uma chave de liberação. Não existe executor
-destrutivo para ela destravar, e nenhuma variável de ambiente liga essa parte.
-`POST .../eliminacao/executar` responde **409** em qualquer caso.
+### Como a eliminação acontece
 
-**O aviso prévio também não sai.** Sem política e sem data, o e-mail
-anunciaria uma exclusão que não pode acontecer. A base aceita, e ainda não
-implementada, é de sete dias corridos contados do **envio confirmado** pelo
-provedor.
+O executor é `apps/api/src/lgpd/eliminacao.service.ts`. O mapa
+(`apps/api/src/lgpd/mapa.ts`) diz a guarda de cada coleção:
 
-O que hoje existe: `simulacao` (inventário e impedimentos) e `eliminacao`,
-que cria ou reavalia um protocolo retomável em `solicitacoes-lgpd`, com o
-estado `impedida` ou `aguardando_politica`. **Nenhum desses estados quer dizer
-dado eliminado.**
+- **`contrato`**: cadastro, ficha, pedidos e o que pende deles, pagamentos,
+  estornos, contestações, aceites e outbox. Ficam 5 anos depois do último
+  pedido.
+- **`eliminavel`**: cadastro inicial, intenções de compra (`checkouts`),
+  arquivos (os dois buckets) e a conta de login. Saem a pedido a qualquer
+  momento: nenhuma obrigação legal os segura (nome e e-mail ficam no cadastro
+  do cliente, que é `contrato`).
+- **`trilha`**: os protocolos de `solicitacoes-lgpd` e a auditoria. Ficam, só
+  com pseudônimos: são a prova de que o pedido foi atendido.
+- A grade do advogado (`disponibilidades`) é de outra pessoa: perde só a
+  referência ao pedido.
 
-### O que falta para liberar
+**A pedido do titular** (art. 18, VI):
 
-Tirado da seção *Aviso e executor* do runbook:
+1. O encarregado recebe o pedido em `suportelexintegra@gmail.com` e o
+   administrador registra a solicitação (`POST .../eliminacao`). Com algum
+   impedimento, fica `impedida`, com a lista.
+2. Sem impedimento, fica `aguardando_execucao` e o **aviso** sai pelo outbox
+   (`aviso-eliminacao-titular`), na mesma transação. Titular sem conta ativa
+   não tem a quem avisar: `avisoDispensado: sem_conta`.
+3. **7 dias depois do envio confirmado** (`estado: enviado` e `enviadoEm` do
+   outbox), a rotina diária executa — ou o administrador, por
+   `POST .../eliminacao/executar`. Antes disso, `409` com o `motivo`.
+4. A execução toma o protocolo, reinventaria, confere os impedimentos de novo,
+   bloqueia a conta e elimina conforme o **escopo**: dentro dos 5 anos,
+   **parcial** (só o `eliminavel`); depois, **total** (tudo menos a `trilha`).
+   O protocolo fecha `concluida`, com o que saiu e o que ficou (`mantidos`,
+   `guardaAte`) — é a resposta ao titular: "eliminamos X; Y fica guardado até
+   tal data, por obrigação legal".
 
-1. Registrar a versão aprovada da política e a decisão do controlador para cada
-   categoria: conservação identificável, minimização e prazo. Contestação
-   (chargeback) aberta já é impedimento na simulação, e
-   `temContestacaoAberta` (`apps/api/src/lgpd/politica.ts`) está exportada para
-   o executor conferir de novo, dentro da própria trava (`decisoes.md`, 5.4).
-2. Uma trava transacional contra novas escritas, pagamentos, uploads, reuniões
-   e tarefas durante o processamento.
-3. Reaproveitar o evento `aviso-exclusao-arquivos` do outbox, com chave por
-   solicitação, e aprovar o texto do aviso.
-4. Conferir `estado: enviado` e `enviadoEm` do outbox, e só então contar os
-   sete dias.
-5. Um executor idempotente, com checkpoint por documento, objeto e conta, que
-   confira de novo impedimentos, escopo e versão da política.
-6. Tratar falhas entre sistemas, reentregas do outbox, URLs de upload ainda
-   válidas, restauração de backup e dados de subprocessadores.
+**Por prazo**, na rotina diária (`retencao-diaria`, sem job novo):
 
-Tudo isso é código, teste e revisão. `[CONFIRMAR: quem constrói o executor, e
-quando]`.
+- cadastro inicial de quem nunca virou cliente, 6 meses depois do último envio:
+  eliminado **sem aviso** (não há conta nem arquivo, e escrever para o lead só
+  para dizer que ele vai sair seria tratar o dado mais uma vez);
+- cliente cujo último pedido tem 5 anos: abre a solicitação por prazo, com
+  aviso, e segue o caminho acima, com escopo total.
+
+**Todo passo é idempotente** e a execução é retomável: um processo que morre
+no meio deixa o protocolo `em_execucao`; vencido o arrendamento de 15 minutos,
+a rotina seguinte retoma. Falha no meio emite o alerta crítico
+`lgpd.eliminacao-falhou`.
+
+**O que o sistema não elimina** (seção 4): cópias já baixadas pelo escritório,
+registros no AbacatePay, no Resend e no Microsoft 365, e a janela de 7 dias do
+PITR e do soft delete. A resposta ao titular precisa dizer isso.
 
 ### A rotina de 30 dias dos arquivos é outra coisa
 
@@ -132,34 +160,38 @@ um dia depois do deploy que a aplicou.
 | **Backups agendados** | Nenhum. Não há `backup schedule` no Terraform. Se o escritório criar um, a política precisa cobrir |
 | **Versões antigas no bucket de arquivos** | O versionamento saiu no Bloco E, e a regra de ciclo de vida apaga as versões não atuais que sobraram (seção 3) |
 | **Soft delete do Cloud Storage** | Declarado em `storage.tf`: **7 dias** no bucket de arquivos (a janela de recuperação) e no de state; **zero** na quarentena, nos source maps e na base do ClamAV. Um arquivo excluído é recuperável por até 7 dias ([`operacao.md`](operacao.md), seção 6) |
-| **Logs** | Bucket `_Default` do Cloud Logging, com 30 dias. A aplicação não loga dado pessoal por regra, mas mensagens de terceiros podem conter. O motivo de falha de e-mail tem o endereço redigido |
+| **Logs** | Bucket `_Default` do Cloud Logging, com 30 dias. A aplicação não loga dado pessoal por regra, mas mensagens de terceiros podem conter. O motivo de falha de e-mail tem o endereço redigido. **Registros de acesso** (log de requisição da API: data, hora, IP, caminho) também no bucket `registros-de-acesso`, por 186 dias (Marco Civil, art. 15), sem o `webhookSecret` |
 | **AbacatePay** | Guarda os dados de quem pagou com cartão, digitados na página hospedada, e o histórico das cobranças. O PIX sai sem `customer`. Eliminação é pedido ao AbacatePay |
 | **Resend** | Guarda endereço, assunto e registro das mensagens enviadas, fora do Brasil (arquitetura, seção 13). Eliminação é pedido ao Resend |
 | **Microsoft 365** | Quando o Teams for ligado: salas criadas em nome do advogado, que **não são apagadas** no cancelamento (ADR-21, decisão 7), e convites nas caixas de cliente e advogado |
 | **Firebase Auth** | A conta de login do cliente. Fora do Brasil (arquitetura, seção 13) |
 | **Cópias baixadas pelo escritório** | Entregáveis e anexos baixados por advogados ficam nas máquinas deles, fora do sistema |
 | **Pagamentos órfãos** | `pagamentos/{cobrancaId}` com `situacao` anômala guarda só ids e valor. Sem vínculo recuperável, o sistema não sabe de qual titular é, e a conciliação é humana (runbook do titular e [`pagamento-orfao.md`](../runbooks/pagamento-orfao.md)) |
-| **Ficha de anamnese** | `clientes/{uid}/anamnese/definitiva-v1` (e a `provisoria-v0`, de quem respondeu o stub). Dados da **empresa**, sem dado sensível do art. 5º, II; faturamento, passivo trabalhista, autuações e reclamações são confidenciais. Lida só pelo advogado atribuído e pelo administrador; entra na exportação do titular. Prazo de guarda: o da política (decisoes.md, 2.1) |
+| **Ficha de anamnese** | `clientes/{uid}/anamnese/definitiva-v1` (e a `provisoria-v0`, de quem respondeu o stub). Dados da **empresa**, sem dado sensível do art. 5º, II; faturamento, passivo trabalhista, autuações e reclamações são confidenciais. Lida só pelo advogado atribuído e pelo administrador; entra na exportação do titular. Prazo de guarda: o do cadastro, 5 anos depois do último pedido (decisoes.md, 2.1) |
 | **Anexos do cliente** | 30 dias depois de todos os entregáveis do pedido em `entregue`, no mesmo ciclo dos entregáveis (seção 3) |
-| **Equipe (advogados e administradores)** | `advogados/{uid}` e `administradores/{uid}` guardam nome e e-mail de quem trabalha na plataforma, fora do mapa do **cliente** (`lgpd/mapa.ts`). O log de auditoria (`auditoria/`, B2) guarda quem fez cada ação administrativa e, na edição de advogado, o e-mail antes e depois; está no mapa pelo `alvo`. Prazo de guarda: o da política (decisoes.md, 2.1) |
-| **Pré-cadastros que nunca compraram** | Sem prazo. A arquitetura (seção 8) lista a limpeza como rotina candidata |
+| **Equipe (advogados e administradores)** | `advogados/{uid}` e `administradores/{uid}` guardam nome e e-mail de quem trabalha na plataforma, fora do mapa do **cliente** (`lgpd/mapa.ts`). O log de auditoria (`auditoria/`, B2) guarda quem fez cada ação administrativa e, na edição de advogado, o e-mail antes e depois; está no mapa pelo `alvo`, como `trilha` (append-only, nunca eliminado). A guarda dos dados da equipe segue o contrato de trabalho de cada um, fora desta política |
+| **Pré-cadastros que nunca compraram** | Eliminados 6 meses depois do último envio, pela rotina diária (seção 3) |
 
-## 5. Quem atende um pedido de titular hoje
+## 5. Quem atende um pedido de titular
 
 - **Canal de entrada e encarregado (DPO):** Auan Bastos, dono do escritório,
-  pelo e-mail `privacidade@lexintegra.com.br` (decisões 1.3), caixa
-  compartilhada no Microsoft 365 da B&C. Publicados na política de privacidade
-  (`/privacidade`) e no rodapé de todo e-mail, a partir de uma constante só
-  (`packages/shared/src/encarregado.ts`). **A caixa ainda precisa ser criada**
-  (C › Microsoft do CHECKLIST): até lá, o endereço publicado não recebe.
-- **Quem executa a exportação:** um administrador global da plataforma, a
-  pedido do encarregado.
-- **Prazo legal:** a LGPD, art. 19, II, fixa até **15 dias** do requerimento
-  para confirmar a existência dos dados e dar acesso completo. Para os demais
-  direitos do art. 18, o prazo ainda é decisão do escritório (decisões 1.4); a
-  política publicada mostra o marcador `[PENDENTE-ESCRITORIO: …]` no lugar,
-  com teste que trava a lista (`pendencias-escritorio.ts`).
-- **Eliminação pedida hoje:** registre a solicitação
-  (`POST .../eliminacao`), informe ao titular que ela está registrada e
-  **não** diga que os dados foram eliminados. A resposta ao titular é do
-  controlador.
+  pelo e-mail **`suportelexintegra@gmail.com`** — desde 05/10/2026 o único
+  e-mail de contato do projeto (decisões 1.3, emenda). A caixa
+  `privacidade@lexintegra.com.br` não será criada. Publicados na política de
+  privacidade (`/privacidade`) e no rodapé de todo e-mail, a partir de uma
+  constante só (`packages/shared/src/contato-publico.ts`, reaproveitada por
+  `encarregado.ts`).
+- **Quem executa:** um administrador global da plataforma, a pedido do
+  encarregado (runbook [`lgpd-titular.md`](../runbooks/lgpd-titular.md)).
+- **Prazos:** a LGPD, art. 19, II, fixa até **15 dias** do requerimento para a
+  declaração completa de acesso. **Para os demais direitos do art. 18, o prazo
+  decidido é o mesmo: 15 dias corridos a partir da solicitação** (decisões 1.4,
+  05/10/2026), publicado na política de privacidade
+  (`PRAZO_DIREITOS_TITULAR_DIAS`). Na eliminação, o prazo de resposta é o do
+  registro e da resposta ao titular; a execução em si vem 7 dias depois do
+  aviso.
+- **Eliminação pedida:** registre a solicitação (`POST .../eliminacao`) e
+  responda ao titular com o que será eliminado e o que fica guardado, e até
+  quando (`GET .../simulacao` mostra o `escopo`, a `guardaAte` e, por
+  documento, `eliminadoNesteEscopo`). Depois da execução, o protocolo
+  `concluida` traz o resumo.
