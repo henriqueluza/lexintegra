@@ -15,10 +15,51 @@ describe('Landing institucional', () => {
   it('entrega conteúdo completo no primeiro render, com uma h1', async () => {
     const pagina = await montar();
     expect(pagina.querySelectorAll('h1')).toHaveLength(1);
-    for (const linha of ['Contrate.', 'Receba.']) {
+    for (const linha of NEVOA.hero.titulo) {
       expect(pagina.querySelector('h1')?.textContent).toContain(linha);
     }
     expect(pagina.textContent).toContain(NEVOA.passos[0].titulo);
+  });
+
+  /** A copia de 05/10/2026 ("Copys da plataforma VFinal"), bloco a bloco. */
+  it('publica a copia nova, sem "Brief" e sem o link "Como funciona" na hero', async () => {
+    const pagina = await montar();
+    const texto = pagina.textContent ?? '';
+    for (const trecho of [
+      NEVOA.hero.apoio,
+      NEVOA.lugar.destaque,
+      ...NEVOA.lugar.sem,
+      NEVOA.lugar.fecho,
+      NEVOA.simples.titulo,
+      ...NEVOA.simples.paragrafos,
+      NEVOA.organizado.titulo,
+      ...NEVOA.organizado.paragrafos,
+      NEVOA.necessidade.titulo,
+      NEVOA.necessidade.fecho,
+      ...NEVOA.fechamento.paragrafos,
+      ...NEVOA.passos.flatMap((p) => [p.etapa, p.texto, p.detalhe]),
+    ])
+      expect(texto).toContain(trecho);
+    expect(texto).not.toMatch(/\bbrief\b/i);
+    expect(texto).not.toContain('Ficha técnica do pedido');
+    expect(texto).not.toContain('Do pedido ao documento');
+    const hero = pagina.querySelector('section.hero') as HTMLElement;
+    expect(
+      [...hero.querySelectorAll('a')].map((a) => a.textContent?.trim()),
+    ).not.toContain('Como funciona');
+  });
+
+  /** Os CTAs de catalogo vao ao cadastro; `/cadastro` encaminha quem ja tem. */
+  it('os botões de catálogo levam direto ao cadastro', async () => {
+    const pagina = await montar();
+    for (const rotulo of ['Ver serviços e preços', NEVOA.necessidade.acao]) {
+      const links = [...pagina.querySelectorAll('a.pill')].filter((a) =>
+        a.textContent?.includes(rotulo),
+      );
+      expect(links.length).toBeGreaterThan(0);
+      for (const link of links)
+        expect(link.getAttribute('href')).toBe('/cadastro');
+    }
   });
   it('mantém cadastro, catálogo e carrinho fora da landing', async () => {
     const pagina = await montar();

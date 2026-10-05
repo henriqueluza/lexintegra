@@ -17,22 +17,18 @@
       />
     </div>
     <div class="faixa hero__texto">
-      <h1 id="titulo-home"><span>Contrate.</span><span>Receba.</span></h1>
+      <h1 id="titulo-home" class="hero__frase">
+        @for (linha of nevoa.hero.titulo; track linha; let ultima = $last) {
+        <span>{{ ultima ? linha : linha + ' ' }}</span>
+        }
+      </h1>
       <div class="hero__linha">
-        <p class="apoio">
-          A plataforma para <strong>contratar serviços jurídicos</strong> com
-          preço fechado antes de pagar e
-          <strong>advogado responsável</strong> em cada pedido. Do primeiro
-          passo ao documento entregue.
-        </p>
+        <p class="apoio">{{ nevoa.hero.apoio }}</p>
         <div class="hero__acoes">
-          <a class="pill" href="/servicos"
+          <!-- `/cadastro` leva direto ao catalogo quem ja tem o cadastro inicial. -->
+          <a class="pill" href="/cadastro"
             >Ver serviços e preços<svg class="icone" aria-hidden="true">
               <use href="/icones/nevoa.svg#i-arrow-right" /></svg
-          ></a>
-          <a class="link" href="#como"
-            >Como funciona<svg class="icone" aria-hidden="true">
-              <use href="/icones/nevoa.svg#i-arrow-down" /></svg
           ></a>
           <p class="nota">
             <svg class="icone" aria-hidden="true">
@@ -71,13 +67,24 @@
     </div>
   </section>
 
+  <section class="faixa secao lugar" aria-labelledby="titulo-lugar">
+    <h2 id="titulo-lugar" class="titulo-frase">{{ nevoa.lugar.destaque }}</h2>
+    <ul class="lugar__sem">
+      @for (item of nevoa.lugar.sem; track item) {
+      <li>{{ item }}</li>
+      }
+    </ul>
+    <p class="lugar__fecho">{{ nevoa.lugar.fecho }}</p>
+  </section>
+
   <section id="como" aria-labelledby="titulo-como">
     <header class="faixa secao introducao">
-      <h2 id="titulo-como">Cinco passos.<br />Uma volta só.</h2>
-      <p>
-        Escolha, contrate, envie as informações e receba. A elaboração é do
-        advogado responsável, e você acompanha tudo na sua área.
-      </p>
+      <h2 id="titulo-como" class="titulo-frase">{{ nevoa.simples.titulo }}</h2>
+      <div class="introducao__texto">
+        @for (paragrafo of nevoa.simples.paragrafos; track paragrafo) {
+        <p>{{ paragrafo }}</p>
+        }
+      </div>
     </header>
     @for (passo of nevoa.passos; track passo.titulo; let i = $index) {
     <article
@@ -105,7 +112,12 @@
           <span>Passo 0{{ i + 1 }} / 05</span><span>{{ passo.pessoa }}</span>
         </div>
         <div class="capitulo__linha">
-          <p>{{ passo.texto }}</p>
+          <p>
+            <strong class="capitulo__etapa">{{ passo.etapa }}</strong>{{
+            passo.texto }}
+            <!-- No passo 05 o lado direito e o exemplo: o complemento vem aqui. -->
+            @if (i === 4) { {{ passo.detalhe }} }
+          </p>
           @if (i === 4) {
           <div class="exemplo" aria-label="Exemplo ilustrativo de pedido">
             <p class="exemplo__topo label">
@@ -145,11 +157,12 @@
 
   <section class="faixa secao ficha" id="ficha" aria-labelledby="titulo-ficha">
     <div>
-      <h2 id="titulo-ficha">Ficha técnica do pedido.</h2>
-      <p class="apoio">
-        Tudo acontece dentro do pedido: documentos, reuniões, revisões e
-        entregas. Cada pedido tem seu espaço, com um advogado responsável.
-      </p>
+      <h2 id="titulo-ficha" class="titulo-frase">
+        {{ nevoa.organizado.titulo }}
+      </h2>
+      @for (paragrafo of nevoa.organizado.paragrafos; track paragrafo) {
+      <p class="apoio">{{ paragrafo }}</p>
+      }
     </div>
     <dl class="especificacoes">
       @for (item of nevoa.especificacoes; track item[0]) {
@@ -238,22 +251,25 @@
     </div>
   </section>
 
-  <section class="faixa secao comparacao" aria-labelledby="titulo-comparacao">
+  <section class="faixa secao necessidade" aria-labelledby="titulo-necessidade">
     <div class="introducao">
-      <h2 id="titulo-comparacao">Do pedido ao documento.</h2>
-      <p>
-        Um percurso com contexto. O que você envia, conversa e recebe fica junto
-        do serviço contratado.
-      </p>
+      <h2 id="titulo-necessidade" class="titulo-frase">
+        {{ nevoa.necessidade.titulo }}
+      </h2>
+      <p>{{ nevoa.necessidade.apoio }}</p>
     </div>
-    <ol>
-      @for (passo of nevoa.passos; track passo.titulo) {
-      <li>{{ passo.etapa }}</li>
+    <ul class="necessidade__exemplos">
+      @for (exemplo of nevoa.necessidade.exemplos; track exemplo[0]) {
+      <li><span>{{ exemplo[0] }}</span><strong>{{ exemplo[1] }}</strong></li>
       }
-    </ol>
-    <p class="nota">
-      As etapas mostram o fluxo do atendimento, não um prazo de entrega.
-    </p>
+    </ul>
+    <div class="necessidade__base">
+      <p>{{ nevoa.necessidade.fecho }}</p>
+      <a class="pill" href="/cadastro"
+        >{{ nevoa.necessidade.acao }}<svg class="icone" aria-hidden="true">
+          <use href="/icones/nevoa.svg#i-arrow-right" /></svg
+      ></a>
+    </div>
   </section>
 
   <section
@@ -325,12 +341,14 @@
         >}
       </h2>
       <div class="fechamento__linha">
-        <p>
-          Veja o catálogo com escopo e preço fechados. O cadastro é gratuito e
-          pede só nome, e-mail e telefone, sem documento e sem cartão.
-        </p>
-        <a class="pill" href="/servicos"
-          >Ver serviços e preços<svg class="icone" aria-hidden="true">
+        <div class="fechamento__texto">
+          @for (paragrafo of nevoa.fechamento.paragrafos; track paragrafo; let
+          primeiro = $first) {
+          <p [class.fechamento__chamada]="primeiro">{{ paragrafo }}</p>
+          }
+        </div>
+        <a class="pill" href="/cadastro"
+          >{{ nevoa.fechamento.acao }}<svg class="icone" aria-hidden="true">
             <use href="/icones/nevoa.svg#i-arrow-right" /></svg
         ></a>
       </div>

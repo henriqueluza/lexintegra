@@ -49,6 +49,20 @@ export class PreCadastroService {
     afterNextRender(() => this.guardada.set(this.ler()));
   }
 
+  /**
+   * Le o armazenamento AGORA e devolve se ha liberacao valida. Existe para as
+   * paginas que decidem a ROTA antes do primeiro render (05/10/2026: sem tela
+   * intermediaria antes do cadastro): o `afterNextRender` do construtor chega
+   * tarde demais para isso. No servidor (pre-renderizacao), `false`.
+   *
+   * SO LE, NAO MUDA O ESTADO: `liberado` continua sendo restaurado depois da
+   * hidratacao. Mudar o sinal aqui faria o primeiro render do cliente divergir
+   * do HTML pre-renderizado (sempre travado) — erro de hidratacao do Angular.
+   */
+  conferir(): boolean {
+    return this.ler() !== null;
+  }
+
   async enviar(dados: NovoPreCadastro): Promise<void> {
     const liberacao = await this.api.criarPreCadastro(dados);
 

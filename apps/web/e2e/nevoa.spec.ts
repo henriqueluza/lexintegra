@@ -99,7 +99,7 @@ test('movimento reduzido mantém capítulos, FAQ e trilho utilizáveis', async (
     await page.locator('#trilho-servicos').evaluate((el) => el.scrollLeft),
   ).toBeGreaterThan(0);
   const pergunta = page.getByRole('button', {
-    name: 'O cadastro inicial já cria minha conta?',
+    name: 'Vou ser atendido por um advogado ou o documento é gerado automaticamente?',
   });
   await pergunta.click();
   await expect(page.locator('#resposta-0')).toBeVisible();
@@ -186,7 +186,6 @@ test('a partir de 720 px, a hero mantém o percurso', async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1000 });
   await page.goto('/');
   const hero = page.locator('section.hero');
-  await expect(hero.getByRole('link', { name: 'Como funciona' })).toBeVisible();
   await expect(hero.locator('.nota')).toBeVisible();
   await expect(page.locator('.percurso')).toBeVisible();
 });

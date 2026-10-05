@@ -46,7 +46,10 @@ no bucket de logs `registros-de-acesso` (Marco Civil). Detalhe em
 do checkout em `checkout-v4-2026-10`); rodape publico com nome, CNPJ, e-mail e
 links legais, conferido no HTML pre-renderizado pelo CI; landing inteira no
 celular, com a primeira tela so com a hero (titulo, texto e "Ver servicos e
-precos"; `landing-celular.css`); PWA instalavel (manifesto e tags do Safari,
+precos"; `landing-celular.css`); copia "Copys da plataforma VFinal" na landing
+(05/10/2026, `conteudo-nevoa.ts`), sem pagina intermediaria antes do cadastro
+(`/cadastro` e `/servicos` se encaminham conforme o cadastro inicial, lido so
+do navegador); PWA instalavel (manifesto e tags do Safari,
 sem service worker de proposito, `src/app/pwa.spec.ts`); todos os alertas para o suporte por e-mail,
 nenhum acorda alguem (lint); WIF pronto para um segundo repositorio
 (`github_repositorios_adicionais`, vazio); AbacatePay e Microsoft prontos para

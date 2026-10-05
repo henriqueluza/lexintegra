@@ -3,10 +3,10 @@
  * hero mostra so o essencial — titulo, texto e "Ver servicos e precos" —, e o
  * resto da landing continua inteiro abaixo, ao rolar.
  *
- * Saem da hero, nesta largura: o link "Como funciona" (a secao vem logo depois,
- * ao rolar, e o menu tambem leva ate ela), a nota sobre o cadastro (o cadastro
- * esta no topo e na secao de servicos) e a faixa do percurso (os cinco passos
- * sao a secao seguinte, com as fotografias).
+ * Saem da hero, nesta largura: a nota sobre o cadastro (o cadastro esta no topo
+ * e na chamada final) e a faixa do percurso (os cinco passos sao a secao
+ * seguinte, com as fotografias). O link "Como funciona" saiu da hero em todas
+ * as larguras, pela copy de 05/10/2026.
  *
  * Um pedido anterior (PR #79) escondia a landing inteira no celular; foi
  * desfeito. Esta regra so mexe na hero.
@@ -16,7 +16,6 @@
  * API (regra 10).
  */
 @media (max-width: 719.98px) {
-  .hero__acoes > .link,
   .hero__acoes > .nota,
   .percurso {
     display: none;

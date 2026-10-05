@@ -224,6 +224,14 @@ e passe a lista ao Claude como "ajustes finais".
   dia:** o pedido era só a PRIMEIRA TELA. A landing voltou inteira no celular;
   ao abrir, a hero mostra só título, texto e "Ver serviços e preços" (sem
   "Como funciona", a nota de cadastro e o percurso), e o resto vem ao rolar.
+- [x] Cópia "Copys da plataforma VFinal" aplicada à landing (05/10/2026): hero
+  em frase, bloco "tudo no mesmo lugar", abertura dos cinco passos, passos sem
+  "Brief", bloco "organizado" com os cards renomeados, "Tem uma necessidade
+  jurídica concreta?" no lugar de "Do pedido ao documento", as quatro perguntas
+  novas e a chamada final. Sem "Como funciona" na hero. Sem página
+  intermediária: os botões de catálogo vão ao `/cadastro`, que leva direto a
+  `/servicos` quem já tem o cadastro inicial, e `/servicos` sem cadastro leva
+  ao `/cadastro`. Textos em `paginas/landing/conteudo-nevoa.ts` e `textos.ts`.
 - [x] PWA instalável no Chrome e no Safari (05/10/2026): manifesto, ícones a
   partir do símbolo do logo (192, 512, maskable e `apple-touch-icon` opaco) e
   as tags do Safari, sem service worker de propósito (`src/app/pwa.spec.ts`).

@@ -50,8 +50,9 @@ describe('textos da home', () => {
     expect(JSON.stringify(TEXTOS.planos)).not.toMatch(/mais contratad/i);
   });
 
-  it('tem seis perguntas, todas com resposta', () => {
-    expect(TEXTOS.duvidas.perguntas).toHaveLength(6);
+  /** A cópia de 05/10/2026 trocou as seis perguntas por quatro. */
+  it('tem quatro perguntas, todas com resposta', () => {
+    expect(TEXTOS.duvidas.perguntas).toHaveLength(4);
   });
 
   it('nao deixou nenhum texto em branco', () => {

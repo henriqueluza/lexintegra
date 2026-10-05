@@ -47,8 +47,16 @@
   --altura-topo-publico: 72px;
   --t-nano: var(--lex-text-min);
   --lex-title-hero: min(6rem, 11.5vh, 10.1vw);
+  /* A hero em FRASE (copy de 05/10/2026): uma linha de ~36 caracteres na fonte
+     estendida nao cabe na escala monumental de duas palavras. */
+  --lex-title-hero-frase: clamp(1.9rem, min(4.6vw, 7vh), 4.25rem);
+  /* Titulo de secao em FRASE (copy de 05/10/2026): as secoes novas tem uma
+     frase inteira onde as antigas tinham duas palavras. */
+  --lex-title-frase: clamp(1.4rem, 3.2vw, 2.75rem);
   --lex-title-chapter: clamp(1.5rem, 8.6vw, 9rem);
-  --lex-title-close: clamp(3rem, 16.5vw, 17rem);
+  /* "AGORA." precisa caber numa linha: com 16.5vw, seis letras largas passavam
+     da faixa em 1280 px e a palavra partia em "AGO/RA.". */
+  --lex-title-close: clamp(3rem, 14.6vw, 17rem);
   --lex-hero-bottom: clamp(1.25rem, 3.5vh, 2.5rem);
   --lex-hero-top: 96px;
   --lex-chapter-y: clamp(2rem, 6vh, 4rem);
@@ -87,7 +95,8 @@
 @media (max-width: 640px) {
   .publica-nevoa {
     --lex-title-hero: 10.1vw;
+    --lex-title-hero-frase: 7.6vw;
     --lex-title-chapter: 8.1vw;
-    --lex-title-close: 16vw;
+    --lex-title-close: 14vw;
   }
 }

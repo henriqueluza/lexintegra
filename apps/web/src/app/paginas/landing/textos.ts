@@ -169,36 +169,33 @@ export const TEXTOS = {
   duvidas: {
     titulo: ['Antes de começar,', 'vale saber.'],
     apoio: 'Respostas para os primeiros passos na LexIntegra.',
+    /*
+     * As quatro perguntas da cópia de 05/10/2026 ("Copys da plataforma VFinal",
+     * item 8), que substituem as seis anteriores. Cadastro, pagamento e
+     * cancelamento continuam explicados nos termos de uso e na ficha do pedido.
+     */
     perguntas: [
       {
-        pergunta: 'O cadastro inicial já cria minha conta?',
+        pergunta:
+          'Vou ser atendido por um advogado ou o documento é gerado automaticamente?',
         resposta:
-          'O cadastro inicial pede só nome, e-mail e telefone e libera o catálogo. O acesso com senha é criado após a primeira compra, com as orientações enviadas por e-mail.',
+          'O serviço jurídico é realizado por advogado responsável pelo pedido. A plataforma organiza contratação, informações, documentos, comunicação e entrega. Ela facilita o atendimento — não substitui a análise jurídica.',
       },
       {
-        pergunta: 'Como sei o que está incluído?',
+        pergunta: 'Preciso fazer uma reunião antes de contratar?',
         resposta:
-          'Cada serviço apresenta seus entregáveis, reuniões e revisões incluídas antes da contratação.',
+          'Não. Cada serviço apresenta previamente seu escopo, preço e o que está incluído. Você pode contratar diretamente. Quando uma reunião fizer parte ou for necessária ao serviço, o agendamento é realizado dentro do próprio pedido.',
       },
       {
-        pergunta: 'Quais formas de pagamento são aceitas?',
+        pergunta: 'Como o advogado entende meu caso sem uma reunião inicial?',
         resposta:
-          'PIX. O cartão de crédito entra assim que for liberado pelo meio de pagamento; quando estiver disponível, você conclui o pagamento numa página segura dele e volta para a LexIntegra.',
+          'Cada serviço possui uma ficha de informações preparada de acordo com aquela demanda. Você responde às perguntas relevantes e envia os documentos necessários. Se o advogado identificar que falta alguma informação, poderá solicitar esclarecimentos durante o atendimento.',
       },
       {
-        pergunta: 'Onde acompanho meu pedido?',
+        pergunta:
+          'Qual é a diferença entre contratar pela LexIntegra e contratar um escritório?',
         resposta:
-          'Na sua área do cliente. Cada pedido reúne seus documentos, estados de andamento, observações e reuniões.',
-      },
-      {
-        pergunta: 'Como funcionam as reuniões?',
-        resposta:
-          'Você escolhe um horário disponível do advogado dentro do pedido, conforme o saldo do serviço contratado. O link do Teams chega no convite.',
-      },
-      {
-        pergunta: 'E se eu desistir?',
-        resposta:
-          'Enquanto o trabalho não começou, nenhum documento foi enviado e nenhuma reunião aconteceu, você pode cancelar o pedido pela sua área. Cancelar não devolve o valor automaticamente: o estorno é pedido ao atendimento, e as condições estão nos termos de uso.',
+          'O trabalho jurídico continua sendo realizado por advogado. A principal diferença está na experiência: a LexIntegra concentra contratação, informações, documentos, reuniões, acompanhamento e entrega em um único ambiente, reduzindo etapas administrativas e dando maior previsibilidade ao cliente.',
       },
     ],
   },

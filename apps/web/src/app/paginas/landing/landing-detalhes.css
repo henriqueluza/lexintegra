@@ -159,14 +159,55 @@ dd {
 .trilho dd {
   text-align: right;
 }
-.comparacao ol {
+/* O restante da primeira dobra (copy de 05/10/2026). */
+.titulo-frase {
+  font-size: var(--lex-title-frase);
+  max-width: 30ch;
+  text-wrap: balance;
+  /* "ACOMPANHAMENTO" em caixa alta, na fonte estendida, mal cabe em 320 px:
+     a palavra quebra so se nao couber. Sem `hyphens: auto`, de proposito: o
+     Chrome carrega o dicionario de hifenizacao depois, e a mesma pagina saia
+     com alturas diferentes de uma medicao para outra. */
+  overflow-wrap: break-word;
+}
+.lugar__sem,
+.necessidade__exemplos {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   list-style: none;
   padding: var(--lex-space-5) 0;
-  margin: var(--lex-space-8) 0 var(--lex-space-5);
+  margin: var(--lex-space-7) 0 var(--lex-space-5);
   border-top: var(--borda-media) solid var(--lex-gold);
   gap: var(--lex-space-5);
+}
+.lugar__sem li {
+  color: var(--lex-text-secondary);
+  font-size: var(--lex-text-lead);
+}
+.lugar__fecho {
+  font-size: var(--lex-text-lead);
+  max-width: 48ch;
+}
+.necessidade__exemplos span,
+.necessidade__exemplos strong {
+  display: block;
+}
+.necessidade__exemplos span {
+  color: var(--lex-text-secondary);
+}
+.necessidade__exemplos strong {
+  margin-top: var(--lex-space-2);
+  font-weight: var(--lex-weight-medium);
+}
+.necessidade__base {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: var(--lex-space-7);
+}
+.necessidade__base p {
+  font-size: var(--lex-text-lead);
+  max-width: 48ch;
 }
 .pergunta {
   border-top: var(--borda-fina) solid var(--lex-border-hairline);
@@ -204,6 +245,9 @@ dd {
   min-height: 85svh;
   display: flex;
   align-items: end;
+  /* A animacao do "Agora." comeca com as letras espalhadas na horizontal
+     (ate +0,75em); em 320 px isso criava rolagem lateral na pagina inteira. */
+  overflow-x: clip;
 }
 .fechamento .foto::after {
   background: var(--lex-photo-close-veil);
@@ -217,6 +261,7 @@ dd {
 .fechamento h2 {
   font-size: var(--lex-title-close);
   line-height: var(--lex-leading-display);
+  white-space: nowrap;
 }
 .fechamento__linha {
   display: flex;
@@ -230,6 +275,12 @@ dd {
   color: var(--lex-text-secondary);
   font-size: var(--lex-text-lead);
 }
+.fechamento__texto p + p {
+  margin-top: var(--lex-space-4);
+}
+.fechamento__linha .fechamento__chamada {
+  color: var(--lex-text-primary);
+}
 @media (max-width: 800px) {
   .ficha,
   .duvidas {
@@ -238,11 +289,13 @@ dd {
   }
   .servicos__cabecalho,
   .servicos__base,
+  .necessidade__base,
   .fechamento__linha {
     align-items: flex-start;
     flex-direction: column;
   }
-  .comparacao ol {
+  .lugar__sem,
+  .necessidade__exemplos {
     grid-template-columns: minmax(0, 1fr);
     margin-top: var(--lex-space-6);
   }
