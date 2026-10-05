@@ -1236,12 +1236,12 @@ atendimento ao titular, sem exigir o aceite comercial de download. Nao cria
 bucket, Scheduler nem URL de acesso persistida.
 
 A solicitacao de eliminacao fica em `solicitacoes-lgpd`, com autor e protocolo
-retomavel. A execucao responde 409 enquanto a politica de guarda estiver
-pendente; o executor destrutivo ainda nao foi implementado. A proposta aceita
-como base e aviso com sete dias corridos apos envio confirmado, exclusao do que
-nao tiver finalidade e conservacao minima justificada pelo controlador, com
-prazo por categoria. Preservar evidencia identificavel nao e anonimizacao.
-Nao sai aviso anunciando exclusao antes de a politica ser aprovada. O caminho
+retomavel. **Desde 05/10/2026 a eliminacao executa** (`lgpd/eliminacao.service.ts`),
+pela politica de guarda decidida (decisoes 2.1, proposta sujeita a aprovacao
+do escritorio): aviso pelo outbox, execucao 7 dias depois do envio confirmado,
+escopo parcial dentro dos 5 anos de guarda e total depois, retencao legal como
+impedimento, e a rotina por prazo dentro da `retencao-diaria`. Preservar
+evidencia identificavel nao e anonimizacao. O caminho
 de retomada, as limitacoes e os criterios estao em `docs/runbooks/lgpd-titular.md`.
 
 **Governança de contas, definida na reunião.** O Marcos vai orientar o escritório a criar todas as contas de serviço (Resend, AbacatePay, e demais) usando e-mails no domínio próprio da B&C, não e-mails pessoais dos sócios. Isso facilita a transferência de titularidade na Etapa 13 e reduz a chance de uma conta crítica ficar amarrada à saída de uma pessoa específica do escritório.

@@ -1,14 +1,63 @@
+import { Timestamp } from 'firebase-admin/firestore';
 import {
+  eliminaNoEscopo,
+  escopoDaEliminacao,
   impedimentos,
   POLITICA_TITULAR,
   temContestacaoAberta,
 } from './politica.js';
 
-describe('politica provisoria do titular', () => {
-  it('nao autoriza eliminar nem inventa prazos de guarda', () => {
-    expect(POLITICA_TITULAR.aprovada).toBe(false);
-    expect(POLITICA_TITULAR.antecedenciaDias).toBe(7);
-    expect(POLITICA_TITULAR.prazoGuardaDias).toBeNull();
+describe('politica de guarda do titular (decisoes.md 2.1, 05/10/2026)', () => {
+  it('registra a versao proposta e os prazos de shared', () => {
+    expect(POLITICA_TITULAR).toMatchObject({
+      versao: 'guarda-v1-2026-10-proposta',
+      aprovadaPeloEscritorio: false,
+      antecedenciaDias: 7,
+      guardaClienteAnos: 5,
+      guardaPreCadastroMeses: 6,
+    });
+  });
+
+  it('sem pedido e total; com pedido, parcial ate 5 anos do ULTIMO', () => {
+    const agora = Date.parse('2031-10-05T00:00:00Z');
+    expect(escopoDaEliminacao([], agora)).toEqual({
+      escopo: 'total',
+      guardaAte: null,
+    });
+    const pedidos = [
+      {
+        caminho: 'pedidos/a',
+        dados: {
+          criadoEm: Timestamp.fromDate(new Date('2026-10-04T00:00:00Z')),
+        },
+      },
+      {
+        caminho: 'pedidos/b',
+        dados: {
+          criadoEm: Timestamp.fromDate(new Date('2026-10-06T00:00:00Z')),
+        },
+      },
+    ];
+    expect(escopoDaEliminacao(pedidos, agora)).toEqual({
+      escopo: 'parcial',
+      guardaAte: new Date('2031-10-06T00:00:00Z'),
+    });
+    expect(escopoDaEliminacao(pedidos.slice(0, 1), agora).escopo).toBe('total');
+    // Data ilegivel conta como agora: errar para o lado de guardar.
+    expect(
+      escopoDaEliminacao([{ caminho: 'pedidos/c', dados: {} }], agora).escopo,
+    ).toBe('parcial');
+  });
+
+  it('a parcial so leva o eliminavel; a total nunca leva a trilha', () => {
+    expect(eliminaNoEscopo('preCadastros', 'parcial')).toBe(true);
+    expect(eliminaNoEscopo('checkouts', 'parcial')).toBe(true);
+    expect(eliminaNoEscopo('pedidos', 'parcial')).toBe(false);
+    expect(eliminaNoEscopo('pedidos', 'total')).toBe(true);
+    expect(eliminaNoEscopo('anamnese', 'total')).toBe(true);
+    expect(eliminaNoEscopo('solicitacoes', 'total')).toBe(false);
+    expect(eliminaNoEscopo('auditoria', 'total')).toBe(false);
+    expect(eliminaNoEscopo('disponibilidades', 'total')).toBe(false);
   });
 
   it('identifica pedido em andamento e reuniao futura sem link', () => {

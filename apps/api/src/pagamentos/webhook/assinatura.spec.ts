@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { ExecutionContext } from '@nestjs/common';
 import {
@@ -196,5 +196,29 @@ describe('o parametro do segredo do webhook', () => {
     expect(filtro).toBe(
       `httpRequest.requestUrl:\\"${PARAMETRO_SEGREDO_WEBHOOK}=\\"`,
     );
+  });
+  /**
+   * A exclusao de projeto so vale para o `_Default`. Todo sink novo precisa
+   * repeti-la — o dos registros de acesso (Marco Civil, 05/10/2026) guarda o
+   * log de requisicao por seis meses, e sem o filtro guardaria o segredo junto.
+   */
+  it('todo sink do Terraform repete a exclusao', () => {
+    const pasta = fileURLToPath(
+      new URL('../../../../../infra/terraform/', import.meta.url),
+    );
+    const sinks = readdirSync(pasta)
+      .filter((nome) => nome.endsWith('.tf'))
+      .flatMap((nome) => [
+        ...readFileSync(`${pasta}${nome}`, 'utf8').matchAll(
+          /resource "google_logging_project_sink" "[^"]+" \{[\s\S]*?\n\}/g,
+        ),
+      ])
+      .map(([bloco]) => bloco);
+    expect(sinks.length).toBeGreaterThan(0);
+    for (const sink of sinks) {
+      expect(sink).toContain(
+        `httpRequest.requestUrl:\\"${PARAMETRO_SEGREDO_WEBHOOK}=\\"`,
+      );
+    }
   });
 });

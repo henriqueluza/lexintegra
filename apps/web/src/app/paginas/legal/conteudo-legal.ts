@@ -5,13 +5,13 @@ import { CONTATO_PUBLICO } from '../../shell/rodape-publico/contato-publico';
 /**
  * As páginas públicas de termos e privacidade (redesign Névoa, 30/09/2026;
  * textos da B2, decisoes.md 1.2 e 1.3). O corpo vem de `shared/documentos-legais`,
- * o mesmo texto aceito no checkout; aqui entram a identificação, os contatos
- * do rodapé e o encarregado. As versões de aceite já registradas não mudam com
+ * o mesmo texto aceito no checkout; aqui entram a identificação, o contato do
+ * rodapé (o e-mail único desde 05/10/2026) e o encarregado. As versões de aceite já registradas não mudam com
  * esta página.
  */
 const identificacao = {
   titulo: 'Identificação e contato',
-  texto: `LexIntegra — CNPJ ${CONTATO_PUBLICO.cnpj}. Para assuntos da plataforma e dos serviços contratados, escreva para ${CONTATO_PUBLICO.email} ou ligue para ${CONTATO_PUBLICO.telefone}, informando o número do pedido, se houver. Para assuntos de dados pessoais, escreva para ${ENCARREGADO.email}. Os e-mails automáticos da plataforma não recebem respostas. Nunca envie senhas, códigos de acesso ou dados de cartão por esses canais.`,
+  texto: `LexIntegra — CNPJ ${CONTATO_PUBLICO.cnpj}. O contato da plataforma é um só: ${CONTATO_PUBLICO.email}, para os serviços contratados, para o acesso à sua área e para os seus dados pessoais. Informe o número do pedido, se houver. As respostas aos e-mails automáticos da plataforma também chegam a esse endereço. Nunca envie senhas, códigos de acesso ou dados de cartão por esse canal.`,
 };
 
 export const TERMOS_PUBLICOS = [

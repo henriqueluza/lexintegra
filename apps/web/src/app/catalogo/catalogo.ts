@@ -12,6 +12,7 @@ export const PECAS: readonly {
   { rota: 'link-acao', nome: 'Link de ação' },
   { rota: 'campo', nome: 'Campo' },
   { rota: 'selecao', nome: 'Seleção' },
+  { rota: 'grupo-opcoes', nome: 'Grupo de opções' },
   { rota: 'cartao', nome: 'Cartão' },
   { rota: 'abas', nome: 'Abas' },
   { rota: 'tabela', nome: 'Tabela' },

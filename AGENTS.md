@@ -31,11 +31,26 @@ contornar uma restrição de seu ambiente.
 `apps/api/src/lgpd/mapa.ts`, exportacao TAR (JSON + arquivos atuais limpos),
 simulacao e protocolo de eliminacao retomavel, somente para admin. Rotas sob
 `/api/admin/lgpd/{clientes|pre-cadastros}/{id}`. Runbook:
-`docs/runbooks/lgpd-titular.md`. **Nao ha executor destrutivo liberado**: o
-controlador ainda precisa definir prazos e excecoes de guarda. Sete dias de
-aviso apos envio confirmado foram aceitos como base; nao enviar aviso nem
-eliminar enquanto faltar a politica. A constante `aprovada` nao e uma chave
-para habilitar exclusao. Auan ficou fora do escopo, a pedido do solicitante.
+`docs/runbooks/lgpd-titular.md`. **Desde 05/10/2026 (PR `feat/fechamento-sem-terceiros`)
+o executor elimina**, pela politica de guarda de `packages/shared/src/politica-de-guarda.ts`
+(decisoes 2.1, proposta sujeita a aprovacao do escritorio no Bloco I): 5 anos
+depois do ultimo pedido para o que e `contrato`, 6 meses para o cadastro inicial
+sem conta, aviso pelo outbox 7 dias antes do envio confirmado, retencao legal
+registrada pelo admin. A rotina por prazo roda dentro da `retencao-diaria`.
+Prazo dos direitos do art. 18: 15 dias corridos. Registros de acesso: 186 dias
+no bucket de logs `registros-de-acesso` (Marco Civil). Detalhe em
+`docs/entrega/lgpd.md`, secao 3.
+
+**Fechamento sem terceiros (05/10/2026):** e-mail UNICO de contato
+`suportelexintegra@gmail.com` (a caixa `privacidade@` nao sera criada; termos
+do checkout em `checkout-v4-2026-10`); rodape publico com nome, CNPJ, e-mail e
+links legais, conferido no HTML pre-renderizado pelo CI; landing abaixo de
+720 px so com a hero e o rodape; todos os alertas para o suporte por e-mail,
+nenhum acorda alguem (lint); WIF pronto para um segundo repositorio
+(`github_repositorios_adicionais`, vazio); AbacatePay e Microsoft prontos para
+receber credenciais — secrets declarados sem valor, codigo de producao e de
+Graph atras de constantes de destravamento (`PRODUCAO_DESTRAVADA`,
+`INTEGRACAO_GRAPH_DESTRAVADA`). Ligar: `docs/runbooks/ligar-terceiros.md`.
 
 **Bloco B — resíduos do checkout (branch `fix/residuos-checkout`):** o
 `webhookSecret` saiu do log de requisição (exclusão no Cloud Logging pelo nome do
@@ -210,7 +225,7 @@ segurança registrado: a confirmação consultar a cobrança no gateway.
 - **Os listeners globais de erro sao do Angular** (`provideBrowserGlobalErrorListeners`), nao nossos — acrescentar os proprios duplicaria cada relato.
 - **A base do ClamAV e publicada DUAS VEZES POR DIA por causa do alerta**, nao da base: a condicao de ausencia do Monitoring tem teto de 23h30m, e com publicacao diaria o intervalo normal (24h) ja e maior que a janela — o alerta gritaria todo dia. Filtro de alerta tambem exige `resource.type`, e o do job e `cloud_run_job`, nao `cloud_run_revision`.
 - **A sonda `POST /api/interno/sinais`** (5º job do Scheduler, US$ 0,10/mes) existe porque o Monitoring nao consulta o Firestore. So le e loga; o limiar vive na politica.
-- **Roteamento de alerta e ARQUIVO** (`infra/terraform/alertas-roteamento.json`), hoje tudo em `pendente`. `pnpm lint` confere os dois lados. O destinatario vem do secret `ALERTAS_EMAIL_DESENVOLVIMENTO` do GitHub — **nao do repositorio**, que ficou publico de 03/09 a 29/09/2026 e e privado desde entao.
+- **Roteamento de alerta e ARQUIVO** (`infra/terraform/alertas-roteamento.json`); desde 05/10/2026 tudo em `suporte` (e-mail para `suportelexintegra@gmail.com`), e `acordar` nao e destino aceito. `pnpm lint` confere os dois lados. O destinatario vem do secret `ALERTAS_EMAIL_DESENVOLVIMENTO` do GitHub — **nao do repositorio**, que ficou publico de 03/09 a 29/09/2026 e e privado desde entao.
 - **A falta de papel do CI virou LINT** (`scripts/conferir-papeis-de-bootstrap.mjs`). Tipo de recurso novo exige declarar o papel em `papeis-de-bootstrap.json` e conceder A MAO antes do merge: o `plan` do PR nao cria nada e passa verde, e o 403 aparece so no deploy. Mordeu na Etapa 7 e de novo na 12, com sete recursos recusados.
 - **Jornadas autenticadas** (`pnpm test:jornadas`, portas 8090/4201/9299 para nao disputar com o `pnpm dev`). Elas acharam tres defeitos silenciosos: dependencia circular no `ErrorHandler` que derrubava o **login**, `ng serve` sem resolver `zod` nas rotas autenticadas, e o ouvinte do armazenamento falso recortando o caminho errado.
 - **Upload passou a funcionar em desenvolvimento**: o armazenamento falso ouve HTTP (`ARMAZENAMENTO_FALSO_PORTA`, proxy em `proxy.conf.json`) e a varredura ganhou fila em processo. A semente passou a gravar `advogados/{uid}` — sem eles o seletor do administrador vinha vazio.
@@ -480,7 +495,7 @@ Estas vêm de decisões registradas nos ADRs. Violá-las é bug, não preferênc
 
 19. **A API é acessada via `/api/**` no mesmo domínio do frontend, não por subdomínio.** Rewrite do Firebase Hosting para o Cloud Run (ver ADR-15). Não criar mapeamento de domínio próprio (`api.lexintegra.com.br`) sem antes verificar se a região do serviço já suporta essa funcionalidade do Cloud Run — na região `southamerica-east1`, não suporta.
 
-20. **Pagamento real está travado no código, e o estorno real só sai pelo outbox** (Etapa 8, ADR-19). `PAGAMENTOS_MODO=producao` **recusa subir**, independentemente do que estiver no Secret Manager — destravar é ato humano e explícito de uma etapa futura, com a chave de produção aprovada e a primeira transação real feita à mão, nunca uma troca de variável. Em `sandbox`, a chave precisa ter o prefixo `abc_dev_` e todo evento e toda resposta do gateway precisam trazer `devMode: true`. E **nenhum endpoint síncrono chama `GatewayPagamento.estornar`**: o estorno integral nasce como evento `estorno-integral` no outbox, na transação que decide o estorno, e quem chama o gateway é o despachante. Só `pagamentos/gateway/criar-gateway.ts` importa o adaptador real — regra de dependency-cruiser.
+20. **Pagamento real está travado no código, e o estorno real só sai pelo outbox** (Etapa 8, ADR-19). `PAGAMENTOS_MODO=producao` **recusa subir** enquanto a constante `PRODUCAO_DESTRAVADA` (`pagamentos/gateway/modo.ts`) for `false`, independentemente do que estiver no Secret Manager — destravar é ato humano e explícito, o commit de destravamento de `docs/runbooks/ligar-terceiros.md`, com a chave de produção aprovada e a primeira transação real feita à mão, nunca uma troca de variável. Destravado, `producao` exige `NODE_ENV=production`, chave `abc_prod_` e espera `devMode: false`. Em `sandbox`, a chave precisa ter o prefixo `abc_dev_` e todo evento e toda resposta do gateway precisam trazer `devMode: true`. E **nenhum endpoint síncrono chama `GatewayPagamento.estornar`**: o estorno integral nasce como evento `estorno-integral` no outbox, na transação que decide o estorno, e quem chama o gateway é o despachante. Só `pagamentos/gateway/criar-gateway.ts` importa o adaptador real — regra de dependency-cruiser.
 
 ## Fronteiras de autorização
 

@@ -38,7 +38,16 @@ export class InventarioTitular {
   ) {}
 
   async reunir(tipo: string, id: string): Promise<Inventario> {
-    const titular = await resolverTitular(this.db, this.auth, tipo, id);
+    return this.reunirDe(await resolverTitular(this.db, this.auth, tipo, id));
+  }
+
+  /**
+   * O inventario de um titular ja resolvido. O executor usa este caminho com o
+   * titular GRAVADO no protocolo: ao retomar uma eliminacao interrompida, a
+   * conta ou o cadastro inicial podem ja ter saido, e resolver de novo pelo
+   * alvo daria 404 no meio do trabalho.
+   */
+  async reunirDe(titular: Titular): Promise<Inventario> {
     const encontrados = new Map<string, RegistroTitular>();
     let bytes = 0;
     const adicionar = (grupo: Grupo, doc: DocumentSnapshot): void => {

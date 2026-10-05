@@ -48,15 +48,29 @@ resource "google_logging_project_exclusion" "webhook_segredo_na_url" {
 
 # --- Quem recebe --------------------------------------------------------------
 #
-# O canal de DESENVOLVIMENTO e provisorio e esta marcado como tal no
-# `.env.example`. O e-mail nao mora no repositorio — privado desde 29/09/2026, mas
-# publico antes disso e a ser transferido — e sim num secret do GitHub Actions; sem ela, nenhum canal e criado e os incidentes
-# existem apenas no console do Monitoring.
+# DECIDIDO EM 05/10/2026 (decisoes.md 5.2): todo alerta vai por E-MAIL para o
+# suporte, e nenhum acorda alguem. O endereco e o contato publico do projeto
+# (`packages/shared/src/contato-publico.ts`), ja publicado no site e nos e-mails,
+# por isso e `default` aqui e nao secret.
+resource "google_monitoring_notification_channel" "suporte" {
+  project      = var.project_id
+  display_name = "Suporte LexIntegra (decisoes.md 5.2)"
+  type         = "email"
+
+  labels = {
+    email_address = var.alertas_email_suporte
+  }
+}
+
+# O canal PROVISORIO de desenvolvimento (Etapa 12) continua existindo, mas desde
+# 05/10/2026 nenhum alerta e roteado para ele. Fica ate a transferencia
+# (CHECKLIST, D), quando sai junto com o secret ALERTAS_EMAIL_DESENVOLVIMENTO do
+# GitHub — tira-lo agora apagaria um recurso por ganho nenhum.
 resource "google_monitoring_notification_channel" "desenvolvimento" {
   count = var.alertas_email_desenvolvimento == "" ? 0 : 1
 
   project      = var.project_id
-  display_name = "Desenvolvimento (PROVISORIO — substituir antes da Etapa 13)"
+  display_name = "Desenvolvimento (PROVISORIO — sem alertas roteados desde 05/10/2026)"
   type         = "email"
 
   labels = {
@@ -67,18 +81,12 @@ resource "google_monitoring_notification_channel" "desenvolvimento" {
 locals {
   roteamento = jsondecode(file("${path.module}/alertas-roteamento.json"))
 
-  canal_desenvolvimento = [
-    for canal in google_monitoring_notification_channel.desenvolvimento : canal.id
-  ]
-
-  # `acordar` soma o plantao ao desenvolvimento; `pendente` e so desenvolvimento;
-  # `registrar` nao notifica ninguem. Ver o cabecalho do arquivo de roteamento.
+  # `suporte` e o e-mail do suporte; `registrar` nao notifica ninguem. Nao ha
+  # destino que acorde alguem (ver o cabecalho do arquivo de roteamento).
   canais_por_alerta = {
     for nome, destino in local.roteamento :
     nome => (
-      destino == "registrar" ? [] :
-      destino == "acordar" ? concat(var.alertas_canais_plantao, local.canal_desenvolvimento) :
-      local.canal_desenvolvimento
+      destino == "suporte" ? [google_monitoring_notification_channel.suporte.id] : []
     )
     if !startswith(nome, "_")
   }

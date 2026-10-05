@@ -90,6 +90,12 @@ export interface NovoEvento {
    * receberia o link.
    */
   readonly versao?: number;
+  /**
+   * So em `aviso-eliminacao-titular`: a solicitacao de eliminacao e o ciclo
+   * dela (`{protocolo}_c{n}`). E a chave do id — um aviso por ciclo — e o que o
+   * executor da LGPD le de volta para conferir o envio antes de eliminar.
+   */
+  readonly solicitacao?: string;
 }
 
 export interface RegistroOutbox {
@@ -99,6 +105,7 @@ export interface RegistroOutbox {
   readonly reuniao?: ReuniaoDoEvento;
   readonly cobrancaId?: string;
   readonly pedidoId?: string;
+  readonly solicitacao?: string;
   readonly estado: EstadoEntrega;
   readonly criadoEm: Timestamp;
   /** Quantas vezes o registro foi REIVINDICADO. Ver `OutboxService.reivindicar`. */
@@ -214,6 +221,14 @@ export function idDoEvento(
     case 'aviso-exclusao-arquivos':
       return `aviso-exclusao_${uid}`;
 
+    /*
+     * Um aviso por CICLO da solicitacao de eliminacao (ver `chaveDoEvento`): a
+     * rotina diaria e o administrador podem reavaliar a mesma solicitacao
+     * quantas vezes for, e o aviso nao sai de novo.
+     */
+    case 'aviso-eliminacao-titular':
+      return `aviso-eliminacao_${uid}`;
+
     case 'redefinir-senha': {
       const janela = Math.floor(agora / JANELA_REDEFINICAO_MS);
       return `redefinir-senha_${uid}_${janela}`;
@@ -292,6 +307,7 @@ export function ehDuplicata(erro: unknown): boolean {
  */
 export function chaveDoEvento(evento: NovoEvento): string {
   if (evento.estorno !== undefined) return evento.estorno.pagamentoId;
+  if (evento.solicitacao !== undefined) return evento.solicitacao;
   if (evento.versao !== undefined) {
     return `${evento.destinatarioUid}_v${String(evento.versao)}`;
   }

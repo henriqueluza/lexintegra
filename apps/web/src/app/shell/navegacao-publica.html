@@ -63,12 +63,22 @@
     ></a>
   </div>
   <nav aria-label="Navegação principal" class="topo__links">
-    <a routerLink="/" fragment="como" (click)="fechar()">Como funciona</a>
+    <a class="ancora-landing" routerLink="/" fragment="como" (click)="fechar()"
+      >Como funciona</a
+    >
     <a routerLink="/servicos" routerLinkActive="ativo" (click)="fechar()"
       >Serviços</a
     >
-    <a routerLink="/" fragment="ficha" (click)="fechar()">Seu pedido</a>
-    <a routerLink="/" fragment="duvidas" (click)="fechar()">Dúvidas</a>
+    <a class="ancora-landing" routerLink="/" fragment="ficha" (click)="fechar()"
+      >Seu pedido</a
+    >
+    <a
+      class="ancora-landing"
+      routerLink="/"
+      fragment="duvidas"
+      (click)="fechar()"
+      >Dúvidas</a
+    >
   </nav>
   <div class="topo__acoes">
     @if (sessao.usuario(); as usuario) {

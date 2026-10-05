@@ -1,0 +1,25 @@
+/*
+ * A landing no celular (05/10/2026): abaixo de 720 px a página é só a hero —
+ * imagem, título, texto e as ações principais (catálogo, cadastro, entrar) — e
+ * o rodapé completo, que vem da moldura pública.
+ *
+ * SÓ CSS, por largura, sem detecção de user agent: a página pré-renderizada é a
+ * mesma para todo visitante, e a regra 10 proíbe chamar a API aqui.
+ *
+ * `display: none`, e não opacidade ou deslocamento: tira as seções também da
+ * árvore de acessibilidade e da ordem de foco. O percurso e o "Como funciona"
+ * saem junto porque apontam para âncoras que deixam de existir na tela.
+ */
+.hero__so-celular {
+  display: none;
+}
+@media (max-width: 719.98px) {
+  main > section:not(.hero),
+  .percurso,
+  .hero__so-largo {
+    display: none;
+  }
+  .hero__so-celular {
+    display: inline-flex;
+  }
+}

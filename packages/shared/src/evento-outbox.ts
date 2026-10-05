@@ -41,6 +41,7 @@ export const TIPOS_EVENTO = [
   'reuniao-desmarcada-escritorio',
   'acesso-advogado-atualizado',
   'convite-administrador',
+  'aviso-eliminacao-titular',
 ] as const;
 
 export type TipoEvento = (typeof TIPOS_EVENTO)[number];
@@ -102,6 +103,15 @@ export type TipoEvento = (typeof TIPOS_EVENTO)[number];
  * que o escritorio desmarcou a reuniao: o credito voltou ao saldo, e ele pode
  * marcar outro horario. Sai sempre que o administrador cancela — inclusive
  * quando a reuniao nunca ganhou sala e, portanto, nao ha `METHOD:CANCEL`.
+ */
+
+/*
+ * `aviso-eliminacao-titular` (B2, decisoes.md 2.1, 05/10/2026) e o aviso de que
+ * os dados do titular serao eliminados — a pedido dele ou no fim do prazo de
+ * guarda. E evento DIFERENTE de `aviso-exclusao-arquivos`: aquele fala dos
+ * arquivos de UM pedido e nao toca a conta; este anuncia o fim da conta. A chave
+ * e a solicitacao e o ciclo dela, e a eliminacao so corre 7 dias depois do envio
+ * CONFIRMADO deste registro (`estado: enviado` e `enviadoEm`).
  */
 
 /*

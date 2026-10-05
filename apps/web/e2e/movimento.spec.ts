@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
 
+/*
+ * Abaixo de 720 px a landing é só a hero e o rodapé (landing-celular.css): os
+ * testes que precisam do percurso, dos capítulos ou do trilho fixam a largura.
+ */
+test.beforeEach(async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+});
+
 test('capítulos acompanham a rolagem, ciclo segura no hover e encerra ao sair da landing', async ({
   page,
 }) => {
@@ -71,7 +79,8 @@ test('preferência de movimento reduzido desliga efeitos já em execução', asy
 test('line-up responde ao arraste e menu móvel pode ser puxado para fechar', async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+  // O trilho só existe a partir de 720 px; o menu móvel, abaixo de 800.
+  await page.setViewportSize({ width: 768, height: 900 });
   await page.goto('/');
   await expect(page.locator('.percurso')).toHaveClass(/is-cycle/);
   const trilho = page.locator('.trilho');
@@ -84,6 +93,7 @@ test('line-up responde ao arraste e menu móvel pode ser puxado para fechar', as
   await expect
     .poll(() => trilho.evaluate((el) => el.scrollLeft))
     .toBeGreaterThan(100);
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
   const alca = page.locator('.alca');
   await expect(alca).toBeVisible();

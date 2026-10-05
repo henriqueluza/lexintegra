@@ -1,17 +1,31 @@
 export const CONFIGURACAO_REUNIOES = Symbol('CONFIGURACAO_REUNIOES');
 
 /**
- * Os modos que o processo aceita SUBIR nesta etapa. `graph` nao esta aqui, e isso
- * nao e esquecimento: ver `configuracaoDeReunioes`.
+ * Os modos do processo. `graph` so SOBE com `INTEGRACAO_GRAPH_DESTRAVADA`: ver
+ * `configuracaoDeReunioes`.
  */
-export type ModoReunioes = 'desligado' | 'falso';
+export type ModoReunioes = 'desligado' | 'falso' | 'graph';
+
+/**
+ * A TRAVA DA INTEGRACAO REAL, no codigo, como `PRODUCAO_DESTRAVADA` no
+ * pagamento. O caminho do Graph esta escrito e testado (o teste passa `true`),
+ * e o que o separa do ar e esta constante. Trocar para `true` e o COMMIT DE
+ * DESTRAVAMENTO de `docs/runbooks/ligar-terceiros.md`: so depois de o
+ * aplicativo estar registrado no Entra ID com consentimento, a application
+ * access policy propagada, as credenciais no Secret Manager e a chamada de
+ * teste manual ter criado uma sala.
+ */
+export const INTEGRACAO_GRAPH_DESTRAVADA = false;
+
+/** Tenant e aplicativo do Entra ID sao GUIDs; outra coisa e erro de colagem. */
+const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
 export interface ConfiguracaoReunioes {
   readonly modo: ModoReunioes;
   /**
-   * As credenciais do Graph, quando existirem. Hoje sempre `null`: nenhum modo
-   * que as use e aceito, e por isso nenhum secret novo foi declarado no
-   * `cloud_run.tf`.
+   * As credenciais do Graph, so no modo `graph`: `GRAPH_TENANT_ID` e
+   * `GRAPH_CLIENT_ID` (variaveis comuns; identificam o tenant e o aplicativo)
+   * e `GRAPH_CLIENT_SECRET` (Secret Manager, `graph-client-secret`).
    */
   readonly graph: CredenciaisGraph | null;
 }
@@ -41,9 +55,12 @@ const DESLIGADO: ConfiguracaoReunioes = { modo: 'desligado', graph: null };
  *
  * AS REGRAS, e o estrago que cada uma evita:
  *
- * - `graph` RECUSA SUBIR em qualquer ambiente. Liberar exige o registro no Entra
- *   ID, o consentimento do administrador do tenant, a application access policy
- *   por PowerShell e uma chamada de teste manual — tudo em commit proprio.
+ * - `graph` RECUSA SUBIR enquanto `INTEGRACAO_GRAPH_DESTRAVADA` for `false`.
+ *   Liberar exige o registro no Entra ID, o consentimento do administrador do
+ *   tenant, a application access policy por PowerShell e uma chamada de teste
+ *   manual — e o destravamento em commit proprio. Destravado, so sobe com
+ *   `NODE_ENV=production` e com as tres credenciais: o teste a partir de uma
+ *   maquina de desenvolvimento e a chamada manual do runbook, nunca a aplicacao.
  * - `falso` RECUSA SUBIR EM PRODUCAO. Ver abaixo: e a correcao de um defeito
  *   real, nao rigor decorativo.
  * - Em producao a variavel e OBRIGATORIA. Um padrao silencioso escolheria
@@ -73,24 +90,61 @@ const DESLIGADO: ConfiguracaoReunioes = { modo: 'desligado', graph: null };
  */
 export function configuracaoDeReunioes(
   ambiente: NodeJS.ProcessEnv = process.env,
+  destravada: boolean = INTEGRACAO_GRAPH_DESTRAVADA,
 ): ConfiguracaoReunioes {
   const producao = ambiente['NODE_ENV'] === 'production';
-  const modo = lerModo(texto(ambiente['REUNIOES_MODO']), producao);
+  const modo = lerModo(texto(ambiente['REUNIOES_MODO']), producao, destravada);
 
   if (modo === 'desligado') return DESLIGADO;
+  if (modo === 'graph') return { modo: 'graph', graph: credenciais(ambiente) };
 
   return { modo: 'falso', graph: null };
 }
 
-function lerModo(bruto: string | null, producao: boolean): ModoReunioes {
-  if (bruto === 'graph') {
+/** A mensagem nunca repete o client secret (regra 9). */
+function credenciais(ambiente: NodeJS.ProcessEnv): CredenciaisGraph {
+  const tenantId = texto(ambiente['GRAPH_TENANT_ID']);
+  const clientId = texto(ambiente['GRAPH_CLIENT_ID']);
+  const clientSecret = texto(ambiente['GRAPH_CLIENT_SECRET']);
+  if (tenantId === null || clientId === null || clientSecret === null) {
     throw new Error(
-      'REUNIOES_MODO=graph nao sobe nesta etapa (Etapa 10, ADR-21). Liberar ' +
-        'exige o aplicativo registrado no Entra ID com consentimento para ' +
-        'OnlineMeetings.ReadWrite.All, a application access policy configurada ' +
-        'por PowerShell (propagacao de ate 48h) e uma chamada de teste manual — ' +
-        'ver "So voce — Etapa 10" no plano de execucao.',
+      'REUNIOES_MODO=graph exige GRAPH_TENANT_ID, GRAPH_CLIENT_ID e ' +
+        'GRAPH_CLIENT_SECRET. Sem eles nenhuma sala seria criada, e toda ' +
+        'reuniao ficaria em "reservada_sem_link".',
     );
+  }
+  if (!GUID.test(tenantId) || !GUID.test(clientId)) {
+    throw new Error(
+      'GRAPH_TENANT_ID e GRAPH_CLIENT_ID sao GUIDs do Entra ID (Directory ' +
+        'tenant ID e Application client ID, na pagina do aplicativo).',
+    );
+  }
+  return { tenantId, clientId, clientSecret };
+}
+
+function lerModo(
+  bruto: string | null,
+  producao: boolean,
+  destravada: boolean,
+): ModoReunioes {
+  if (bruto === 'graph') {
+    if (!destravada) {
+      throw new Error(
+        'REUNIOES_MODO=graph nao sobe com a trava fechada ' +
+          '(INTEGRACAO_GRAPH_DESTRAVADA em reunioes/sala/modo.ts). Liberar ' +
+          'exige o aplicativo registrado no Entra ID com consentimento para ' +
+          'OnlineMeetings.ReadWrite.All e User.Read.All, a application access ' +
+          'policy configurada por PowerShell (propagacao de ate 48h) e uma ' +
+          'chamada de teste manual — ver docs/runbooks/ligar-terceiros.md.',
+      );
+    }
+    if (!producao) {
+      throw new Error(
+        'REUNIOES_MODO=graph so sobe com NODE_ENV=production: fora dele, a ' +
+          'sala seria criada no tenant da B&C a partir de um ambiente de teste.',
+      );
+    }
+    return 'graph';
   }
   if (bruto === 'falso' && producao) {
     throw new Error(
@@ -104,7 +158,7 @@ function lerModo(bruto: string | null, producao: boolean): ModoReunioes {
   if (bruto === 'desligado' || bruto === 'falso') return bruto;
   if (bruto !== null) {
     throw new Error(
-      `REUNIOES_MODO invalido: "${bruto}". Aceitos: "desligado" e "falso".`,
+      `REUNIOES_MODO invalido: "${bruto}". Aceitos: "desligado", "falso" e "graph".`,
     );
   }
   if (producao) {

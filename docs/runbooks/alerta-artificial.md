@@ -16,10 +16,12 @@ inclusive na Etapa 13, quando a operação passar para a CONTRATANTE.
 
 ## Antes de começar
 
-1. **O destinatário existe?** O canal só é criado quando
-   `ALERTAS_EMAIL_DESENVOLVIMENTO` está definido como **secret** do repositório
-   no GitHub (a reserva por *variable* saiu em 30/09/2026). Sem valor, o Terraform não cria canal nenhum e o incidente aparece
-   só no console — comportamento certo, mas não fecha o critério de aceite.
+1. **O destinatário existe?** Desde 05/10/2026 (decisões 5.2) todo alerta vai
+   para o canal *Suporte LexIntegra*, com `alertas_email_suporte`
+   (`suportelexintegra@gmail.com`), criado sempre pelo Terraform. Confira em
+   Monitoring → Alerting → Notification channels que ele existe e que as
+   políticas o listam. O canal provisório de desenvolvimento não recebe mais
+   nada.
 
 2. **O deploy já aplicou as políticas?** Confirme no console:
    Monitoring → Alerting → Policies. Devem existir todas as de `observabilidade.tf`, entre elas
@@ -102,5 +104,6 @@ incidente e e-mail às 14:22).
   É essa linha que comprova o critério de aceite para a CONTRATANTE. Registro
   atual: em 29/09/2026, às 14:22 UTC, um alerta artificial chegou a
   `henriqueluza@gmail.com`.
-- **Na Etapa 13, repita o teste depois de trocar o destinatário** (o canal
-  provisório é o e-mail do desenvolvedor).
+- **Repita o teste depois do deploy que trocou o destinatário para o suporte**
+  (PR `feat/fechamento-sem-terceiros`, 05/10/2026): o e-mail precisa chegar em
+  `suportelexintegra@gmail.com`. Disparo do Henrique, depois do deploy.

@@ -85,7 +85,7 @@ Leituras recorrentes, independentes de usuário:
 
 | Item | Arquivo | Quantidade |
 |---|---|---|
-| Secret Manager | `secrets.tf` | **2 secrets** (`resend-api-key`, `abacatepay-api-key-dev`), replicação automática, **1 versão ativa cada** (`gcloud secrets versions list`). Acessos: um por inicialização de instância da API (`RESEND_API_KEY`) |
+| Secret Manager | `secrets.tf` | **6 secrets** desde 05/10/2026: `resend-api-key` e `abacatepay-api-key-dev` com versão, e `abacatepay-api-key`, `abacatepay-webhook-secret`, `abacatepay-webhook-chave-hmac` e `graph-client-secret` **declarados sem versão** (secret sem versão não é cobrado). Ligados os terceiros, são cerca de 6 versões ativas, dentro das 6 gratuitas; cada uma a mais custa US$ 0,06/mês. Acessos: um por inicialização de instância da API por secret referenciado |
 | KMS | `kms.tf` / `google_kms_key_ring.lexintegra`, `google_kms_crypto_key.storage` | 1 keyring, **1 chave** `storage-cmek`, **1 versão ativa** hoje. Rotação a cada 90 dias, e cada rotação soma uma versão ativa. Operações de criptografia a cada leitura e escrita nos buckets de quarentena e de arquivos |
 | Artifact Registry | `artifact_registry.tf` / `google_artifact_registry_repository.lexintegra` | 1 repositório Docker, **1,75 GB** em 24/09/2026, com 31 versões de `api` e 16 de `scanner`. Limpeza: mantém as 5 mais recentes, apaga as sem tag com mais de 7 dias e as com tag com mais de 30 dias. Como o projeto tem menos de 30 dias, a limpeza por idade ainda não apagou nada. Uma imagem de API e uma de scanner por deploy |
 
@@ -101,7 +101,7 @@ Tudo em `observabilidade.tf`, salvo indicação.
 | Painel | 1 (`paineis/operacao.json`) |
 | Canal de notificação | 1 e-mail, e só existe com a variável do GitHub definida |
 | Exclusão de log | 1 (`webhook-segredo-na-url`), que **reduz** o volume ingerido |
-| Logging | Bucket `_Default`, retenção de 30 dias. Uma linha estruturada por requisição relevante, uma por execução da sonda (a cada 5 min) e uma por entrega do outbox |
+| Logging | Bucket `_Default`, retenção de 30 dias. Uma linha estruturada por requisição relevante, uma por execução da sonda (a cada 5 min) e uma por entrega do outbox. **Desde 05/10/2026, também o bucket `registros-de-acesso`** (`registros-de-acesso.tf`, Marco Civil art. 15): só o log de requisição da API, 186 dias. A ingestão cabe nos 50 GiB/mês gratuitos; a retenção além de 30 dias custa US$ 0,01/GiB-mês — no volume previsto (poucos MiB/mês), centavos |
 | Trace | `RASTREIO_AMOSTRAGEM = 0.1` (10% das requisições), por OTLP para a Telemetry API (`cloud_run.tf`, ADR-20) |
 
 ## 7. Firebase e serviços de terceiros usados pelo código

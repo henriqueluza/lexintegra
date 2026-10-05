@@ -1,4 +1,7 @@
-import { pendente } from './pendencias-escritorio.js';
+import {
+  PRAZO_DIREITOS_TITULAR_DIAS,
+  TEXTO_POLITICA_DE_GUARDA,
+} from './politica-de-guarda.js';
 import {
   TEXTO_CANCELAR_NAO_DEVOLVE,
   TEXTO_DIREITOS_PRESERVADOS,
@@ -13,8 +16,10 @@ import {
  * encarregado e canal (1.3), remetente (5.1) e cartão (3.4). O escritório não
  * enviou texto próprio: o Henrique revisa e leva para aprovação.
  *
- * O QUE AINDA DEPENDE DO ESCRITÓRIO aparece como `[PENDENTE-ESCRITORIO: …]`,
+ * O QUE AINDA DEPENDER DO ESCRITÓRIO aparece como `[PENDENTE-ESCRITORIO: …]`,
  * pela função `pendente` — nunca escrito à mão (ver `pendencias-escritorio.ts`).
+ * Desde 05/10/2026 não há nenhum: o prazo do art. 18 e a política de guarda
+ * vêm de `politica-de-guarda.ts`.
  *
  * A ORDEM DAS SEÇÕES IMPORTA: a página pública (`apps/web/.../conteudo-legal.ts`)
  * troca a última seção dos termos e a primeira e as duas últimas da
@@ -34,7 +39,7 @@ export const SECOES_TERMOS = [
   {
     titulo: 'Conta e acesso à área do cliente',
     texto:
-      'A conta nasce com a confirmação do primeiro pagamento: você recebe por e-mail um link pessoal para criar a sua senha. A conta reúne todos os pedidos feitos com o mesmo e-mail. Não compartilhe a senha nem os links recebidos. Se perder o acesso, use "Esqueci minha senha" na página de entrada. Os e-mails da plataforma saem de um endereço que não recebe respostas; use os canais indicados nesta página.',
+      'A conta nasce com a confirmação do primeiro pagamento: você recebe por e-mail um link pessoal para criar a sua senha. A conta reúne todos os pedidos feitos com o mesmo e-mail. Não compartilhe a senha nem os links recebidos. Se perder o acesso, use "Esqueci minha senha" na página de entrada. Os e-mails da plataforma são automáticos; as respostas a eles chegam ao atendimento, pelo e-mail de contato indicado nesta página.',
   },
   {
     titulo: 'Escopo, entregáveis e condições da oferta',
@@ -145,11 +150,11 @@ export const SECOES_PRIVACIDADE = [
   },
   {
     titulo: 'Por quanto tempo guardamos',
-    texto: `Os documentos entregues e os arquivos de apoio de cada pedido são excluídos 30 dias depois de todos os documentos do pedido terem a entrega confirmada, com aviso por e-mail pelo menos 7 dias antes; durante uma contestação do pagamento, a exclusão fica suspensa. Os demais registros — cadastro, pedidos, pagamentos e aceites — seguem a política de guarda do escritório: ${pendente('politica-de-guarda')}.`,
+    texto: `Os documentos entregues e os arquivos de apoio de cada pedido são excluídos 30 dias depois de todos os documentos do pedido terem a entrega confirmada, com aviso por e-mail pelo menos 7 dias antes; durante uma contestação do pagamento, a exclusão fica suspensa. ${TEXTO_POLITICA_DE_GUARDA}`,
   },
   {
     titulo: 'Seus direitos',
-    texto: `Você pode pedir confirmação de que tratamos seus dados, acesso, correção, anonimização ou eliminação do que for desnecessário, portabilidade, informação sobre compartilhamento e revisão de decisões, além de revogar consentimentos. A confirmação e o acesso em formato simplificado são respondidos imediatamente, e a declaração completa em até 15 dias, como prevê a LGPD. Para os demais pedidos: ${pendente('prazo-direitos-art-18')}. Poderemos pedir uma confirmação proporcional de identidade. Você também pode peticionar à Autoridade Nacional de Proteção de Dados.`,
+    texto: `Você pode pedir confirmação de que tratamos seus dados, acesso, correção, anonimização ou eliminação do que for desnecessário, portabilidade, informação sobre compartilhamento e revisão de decisões, além de revogar consentimentos. A confirmação e o acesso em formato simplificado são respondidos imediatamente, e a declaração completa em até 15 dias, como prevê a LGPD. Os demais pedidos são respondidos em até ${String(PRAZO_DIREITOS_TITULAR_DIAS)} dias corridos a partir da solicitação. Se você pedir a eliminação, eliminamos o que não precisar ser guardado por obrigação legal; o que precisar fica guardado até o fim do prazo da seção anterior, e a resposta diz o quê e por quê. Poderemos pedir uma confirmação proporcional de identidade. Você também pode peticionar à Autoridade Nacional de Proteção de Dados.`,
   },
   {
     titulo: 'Atualizações',

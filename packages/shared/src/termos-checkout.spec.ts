@@ -7,7 +7,7 @@ import { TEXTO_PRAZOS_ESTORNO, TEXTO_REGRA_ESTORNO } from './regra-estorno.js';
 
 describe('termos do checkout', () => {
   it('versiona o texto da B2 sem reaproveitar o aceite anterior', () => {
-    expect(VERSAO_TERMOS_CHECKOUT).toBe('checkout-v3-2026-10');
+    expect(VERSAO_TERMOS_CHECKOUT).toBe('checkout-v4-2026-10');
   });
 
   /** decisoes.md 3.3 e 5.3: a regra e os prazos vem da constante unica. */

@@ -31,15 +31,20 @@ Os dois têm `secretAccessor` só para `api-lexintegra-run` (`secrets.tf`) e
 `prevent_destroy`. O Terraform gere o container, e o valor é gravado por uma
 pessoa.
 
-### 1.2 Previstas, ainda inexistentes
+### 1.2 Declaradas sem valor (05/10/2026)
 
-| Nome (variável) | Onde vai ficar | Quando nasce |
+Os containers existem no Secret Manager desde o PR
+`feat/fechamento-sem-terceiros`, **sem versão**, com `secretAccessor` para
+`api-lexintegra-run`. O Cloud Run só os referencia quando o modo sai de
+`desligado`. Gravar os valores: [`runbooks/ligar-terceiros.md`](../runbooks/ligar-terceiros.md).
+
+| Nome (variável) | Onde fica | Quem cria o valor |
 |---|---|---|
-| `ABACATEPAY_API_KEY` de produção (`abc_prod_`) | secret novo **`abacatepay-api-key`** (mesmo padrão kebab-case de `resend-api-key` e `abacatepay-api-key-dev`) | Ao ligar o pagamento ([`operacao.md`](operacao.md), 4.2) |
-| `ABACATEPAY_WEBHOOK_SECRET` | secret novo **`abacatepay-webhook-secret`** | Idem. É **nosso**: gerado com `openssl rand` e cadastrado no painel |
-| `ABACATEPAY_WEBHOOK_CHAVE_HMAC` | variável comum. É pública e fixa, publicada pelo AbacatePay (ADR-19) | Idem. **Não é credencial** |
-| `GRAPH_CLIENT_SECRET` | secret novo | Ao ligar o Teams ([`operacao.md`](operacao.md), 4.3). **Vence**: secrets do Entra ID têm validade |
-| `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID` | variáveis comuns | Idem. Identificadores, não credenciais |
+| `ABACATEPAY_API_KEY` de produção (`abc_prod_`) | secret **`abacatepay-api-key`** | O Caique, no painel do AbacatePay, depois da aprovação; permissões em `operacao.md` 4.2 |
+| `ABACATEPAY_WEBHOOK_SECRET` | secret **`abacatepay-webhook-secret`** | **O Henrique**: `openssl rand -hex 24`, gravado direto no secret e digitado no painel |
+| `ABACATEPAY_WEBHOOK_CHAVE_HMAC` | secret **`abacatepay-webhook-chave-hmac`** | O Caique, do painel. A chave é pública (ADR-19); fica em secret mesmo assim |
+| `GRAPH_CLIENT_SECRET` | secret **`graph-client-secret`** | O administrador do Entra ID da B&C. **Vence**: secrets do Entra ID têm validade |
+| `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID` | variáveis `graph_tenant_id` e `graph_client_id` do Terraform (placeholder até o destravamento) | Idem. Identificadores, não credenciais |
 
 ### 1.3 GitHub Actions
 
@@ -87,7 +92,9 @@ Não há o que rotacionar.
 
 **O que protege a federação** são duas condições em
 [`infra/terraform/iam.tf`](../../infra/terraform/iam.tf), as duas amarradas a
-`var.github_repository` (padrão `henriqueluza/lexintegra`):
+`var.github_repository` (padrão `henriqueluza/lexintegra`) e, desde
+05/10/2026, a `var.github_repositorios_adicionais` (vazia; o repositório de
+destino da transferência entra aqui, com binding próprio):
 
 1. `attribute_condition = "assertion.repository=='${var.github_repository}'"`
    no provider. Token de outro repositório é recusado na troca.

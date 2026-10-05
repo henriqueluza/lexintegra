@@ -30,6 +30,14 @@ async function violacoes(
 
 test.describe('acessibilidade da area publica', () => {
   test.beforeEach(async ({ page }) => {
+    /*
+     * O axe mede a cor CALCULADA, e a hero anima a entrada dos textos e das
+     * acoes com opacidade: medida no meio, a cor sai misturada ao fundo e o
+     * contraste reprova num CI e passa no seguinte (05/10/2026, nos links de
+     * cadastro e entrada da hero do celular). Movimento reduzido mostra o estado
+     * final, que e o que a regra avalia — como em `redesign.spec.ts`.
+     */
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.route('**/api/vitrine', (rota) =>
       rota.fulfill({
         status: 200,

@@ -14,11 +14,10 @@ import type { SalaDeReuniao } from './sala-de-reuniao.js';
  * em outro modulo passaria por cima da trava de modo inteira — e o que esta do
  * outro lado dela e o tenant da B&C, com advogados e clientes reais.
  *
- * O RAMO DO GRAPH E INALCANCAVEL NESTA ETAPA, e de proposito: `configuracaoDeReunioes`
- * nunca devolve credencial (`graph` derruba o boot), entao `configuracao.graph`
- * e sempre `null`. O ramo existe escrito para que ligar a integracao seja um
- * commit que muda `modo.ts`, e nao um que precise descobrir onde instanciar o
- * adaptador.
+ * O RAMO DO GRAPH SO E ALCANCADO COM A TRAVA ABERTA: `configuracaoDeReunioes`
+ * so devolve credencial no modo `graph`, e `graph` derruba o boot enquanto
+ * `INTEGRACAO_GRAPH_DESTRAVADA` for `false`. Ligar e o commit que troca a
+ * constante, sem descobrir onde instanciar o adaptador.
  *
  * Nenhuma validacao acontece aqui: ramos na ordem de prioridade, e nada mais.
  * Quem valida e `configuracaoDeReunioes`, no boot.
