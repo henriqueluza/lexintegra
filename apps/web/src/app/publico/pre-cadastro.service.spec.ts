@@ -101,6 +101,23 @@ describe('PreCadastroService', () => {
       expect(montar().servico.liberado()).toBe(false);
     });
 
+    /** 05/10/2026: as paginas que decidem rota antes do primeiro render. */
+    it('conferir le o armazenamento na hora, sem esperar o render', () => {
+      localStorage.setItem(
+        CHAVE_LIBERACAO,
+        JSON.stringify({
+          token: 'id.segredo',
+          expiraEm: new Date(Date.now() + 86_400_000).toISOString(),
+        }),
+      );
+      const { servico } = montar();
+      expect(servico.conferir()).toBe(true);
+      // So le: o estado continua o da pre-renderizacao ate a hidratacao.
+      expect(servico.liberado()).toBe(false);
+      localStorage.removeItem(CHAVE_LIBERACAO);
+      expect(servico.conferir()).toBe(false);
+    });
+
     it('restaura a liberacao guardada apos a hidratacao', async () => {
       localStorage.setItem(
         CHAVE_LIBERACAO,

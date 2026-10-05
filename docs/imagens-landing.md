@@ -37,6 +37,8 @@ commit em que entra no repositório.
 | Arquivo | Origem |
 |---|---|
 | `imagens/confianca-lexintegra.jpg`, `analise-lexintegra.jpg`, `criterio-lexintegra.jpg`, `assinatura-lexintegra.jpg` | Geradas com `imagegen` em 21/09/2026, com os prompts desta página |
+| `icones/pwa/icone-192.png`, `icone-512.png`, `icone-maskable-512.png`, `apple-touch-icon.png` | **Derivados de `imagens/nevoa/logo-lexintegra.png`** em 05/10/2026 para o PWA: só o símbolo da balança, recortado com `sips` (macOS), achatado sobre fundo branco (o iOS pinta de preto o ícone transparente) e redimensionado; o `maskable` com margem para a área segura. Obra derivada da arte original, como o logo (ADR-10) |
+| `manifest.webmanifest` | Escrito à mão (05/10/2026); não é mídia, está aqui por listar os ícones acima |
 | `imagens/logo-lexintegra.png` | Gerada com `imagegen` a partir da logo enviada pela contratante, com o wordmark trocado para LexIntegra. Prompt em [`identidade-navegacao.md`](identidade-navegacao.md). É obra derivada da arte original (ADR-10) |
 | `favicon.png` (64 px) | Gerado com `imagegen` a partir da mesma logo, só o símbolo. Prompt em [`identidade-navegacao.md`](identidade-navegacao.md) |
 | `favicon.ico` (16, 32, 48 e 64 px) | **Derivado de `favicon.png`** no Bloco E: redimensionado com `sips` (macOS) e empacotado como ICO com entradas PNG. Substitui o ícone padrão do Angular CLI, que veio no esqueleto da Etapa 2 (`0dfe53b`) e continuava publicado, porque navegadores pedem `/favicon.ico` sem precisar de `<link>` |

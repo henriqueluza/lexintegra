@@ -21,24 +21,10 @@ const fotosDaLanding = (page: Page): Locator[] => [
 
 /** Espera hidratação, fontes e imagens antes da captura estática. */
 async function assentar(page: Page): Promise<void> {
-  const pergunta = page.locator('.pergunta button').first();
-  if (
-    (await page.locator('app-landing').count()) &&
-    !(await pergunta.isVisible())
-  ) {
-    // Abaixo de 720 px a landing nao tem o FAQ (landing-celular.css): a prova
-    // de que o componente esta vivo e abrir e fechar o menu, sem deixar foco.
-    const menu = page.getByRole('button', { name: 'Menu', exact: true });
-    await expect(async () => {
-      await menu.click();
-      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 500 });
-    }).toPass({ timeout: 15_000 });
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog')).not.toBeVisible();
-    await page.evaluate(() => (document.activeElement as HTMLElement).blur());
-  } else if (await page.locator('app-landing').count()) {
+  if (await page.locator('app-landing').count()) {
     // A rota e seus estilos chegam depois do HTML inicial. Abrir e fechar uma
     // resposta prova que o componente está vivo sem deixar marcas na captura.
+    const pergunta = page.locator('.pergunta button').first();
     await expect(async () => {
       await pergunta.click();
       await expect(pergunta).toHaveAttribute('aria-expanded', 'true', {

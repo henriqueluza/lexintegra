@@ -91,8 +91,6 @@ test('catálogo de componentes mantém o tema existente após sair da home', asy
 test('movimento reduzido mantém capítulos, FAQ e trilho utilizáveis', async ({
   page,
 }) => {
-  // As seções só existem a partir de 720 px (landing-celular.css).
-  await page.setViewportSize({ width: 1280, height: 900 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   await expect(page.locator('.capitulo')).toHaveCount(5);
@@ -101,7 +99,7 @@ test('movimento reduzido mantém capítulos, FAQ e trilho utilizáveis', async (
     await page.locator('#trilho-servicos').evaluate((el) => el.scrollLeft),
   ).toBeGreaterThan(0);
   const pergunta = page.getByRole('button', {
-    name: 'O cadastro inicial já cria minha conta?',
+    name: 'Vou ser atendido por um advogado ou o documento é gerado automaticamente?',
   });
   await pergunta.click();
   await expect(page.locator('#resposta-0')).toBeVisible();
@@ -123,17 +121,12 @@ test('composição aprovada em 1440 e 390 e limites responsivos', async ({
     ).toBe(true);
     if (width === 390 || width === 1440) {
       await page.screenshot({ path: testInfo.outputPath(`hero-${width}.png`) });
-      // No celular a página é só a hero e o rodapé (landing-celular.css).
-      const secoes =
-        width < 720
-          ? ([['rodape', 'footer']] as const)
-          : ([
-              ['capitulo', '#passo-0'],
-              ['ficha', '#ficha'],
-              ['servicos', '#servicos'],
-              ['rodape', 'footer'],
-            ] as const);
-      for (const [nome, seletor] of secoes) {
+      for (const [nome, seletor] of [
+        ['capitulo', '#passo-0'],
+        ['ficha', '#ficha'],
+        ['servicos', '#servicos'],
+        ['rodape', 'footer'],
+      ] as const) {
         const secao = page.locator(seletor);
         await secao.scrollIntoViewIfNeeded();
         for (const img of await secao.locator('img').all()) {
@@ -152,67 +145,49 @@ test('composição aprovada em 1440 e 390 e limites responsivos', async ({
 });
 
 /**
- * Abaixo de 720 px (05/10/2026): só a hero, com as ações principais, e o rodapé
- * completo. As seções escondidas saem também da árvore de acessibilidade, e o
- * menu não aponta para âncoras que não existem na tela.
+ * O celular (05/10/2026): ao abrir, a PRIMEIRA TELA e so a hero — titulo,
+ * texto e "Ver servicos e precos" —, e a landing continua inteira ao rolar. Um
+ * pedido anterior escondia as secoes no celular (PR #79); foi desfeito.
  */
-test('no celular, a landing é só a hero e o rodapé', async ({ page }) => {
-  // Movimento reduzido: o axe mede a cor calculada (ver o teste do rodapé).
+test('no celular, a primeira tela é só a hero e a landing segue inteira', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  const main = page.locator('main');
-  await expect(main.locator('section:visible')).toHaveCount(1);
-  await expect(main.locator('section.hero')).toBeVisible();
-  for (const id of ['como', 'ficha', 'servicos', 'duvidas']) {
-    await expect(page.locator('#' + id)).toBeHidden();
-  }
-  await expect(page.locator('.percurso')).toBeHidden();
-  await expect(page.getByRole('heading', { name: 'Dúvidas.' })).toHaveCount(0);
   const hero = page.locator('section.hero');
+  await expect(hero.getByRole('heading', { level: 1 })).toBeInViewport();
   await expect(
     hero.getByRole('link', { name: 'Ver serviços e preços' }),
-  ).toHaveAttribute('href', '/servicos');
-  await expect(
-    hero.getByRole('link', { name: 'Cadastro gratuito' }),
-  ).toHaveAttribute('href', '/cadastro');
-  await expect(
-    hero.getByRole('link', { name: 'Entrar', exact: true }),
-  ).toHaveAttribute('href', '/entrar');
+  ).toBeInViewport();
   await expect(hero.getByRole('link', { name: 'Como funciona' })).toHaveCount(
     0,
   );
-  const rodape = page.locator('app-rodape-publico');
-  await expect(rodape).toBeVisible();
-  await expect(rodape).toContainText('33.906.250/0001-44');
+  await expect(hero.locator('.nota')).toBeHidden();
+  await expect(page.locator('.percurso')).toBeHidden();
+  await expect(page.locator('#como')).not.toBeInViewport();
+
+  for (const id of ['como', 'ficha', 'servicos', 'duvidas']) {
+    const secao = page.locator('#' + id);
+    await secao.scrollIntoViewIfNeeded();
+    await expect(secao).toBeVisible();
+  }
+  await expect(page.locator('.capitulo')).toHaveCount(5);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
   const menu = page.getByRole('dialog');
-  await expect(menu.getByRole('link', { name: 'Serviços' })).toBeVisible();
   for (const ancora of ['Como funciona', 'Seu pedido', 'Dúvidas']) {
-    await expect(menu.getByRole('link', { name: ancora })).toHaveCount(0);
+    await expect(menu.getByRole('link', { name: ancora })).toBeVisible();
   }
-  const axe = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
-    .analyze();
-  expect(axe.violations).toEqual([]);
 });
 
-test('a partir de 720 px, a landing mostra as seções', async ({ page }) => {
-  await page.setViewportSize({ width: 720, height: 900 });
+/** A partir de 720 px a hero continua com o link, a nota e o percurso. */
+test('a partir de 720 px, a hero mantém o percurso', async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 1000 });
   await page.goto('/');
-  for (const id of ['como', 'ficha', 'servicos', 'duvidas']) {
-    await expect(page.locator('#' + id)).toBeAttached();
-    expect(
-      await page
-        .locator('#' + id)
-        .evaluate((el) => getComputedStyle(el).display),
-    ).not.toBe('none');
-  }
-  await expect(
-    page
-      .locator('section.hero')
-      .getByRole('link', { name: 'Cadastro gratuito' }),
-  ).toHaveCount(0);
+  const hero = page.locator('section.hero');
+  await expect(hero.locator('.nota')).toBeVisible();
+  await expect(page.locator('.percurso')).toBeVisible();
 });
 
 /**

@@ -29,15 +29,16 @@ test.describe('pre-renderizacao da area publica', () => {
   test('serve o conteudo sem JavaScript', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.locator('h1')).toContainText('Seu jurídico conectado.');
-    await expect(
-      page.getByRole('heading', {
-        name: 'Começar é simples. Acompanhar também.',
-      }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole('heading', { name: 'Conheça os serviços' }),
-    ).toBeVisible();
+    await expect(page.locator('h1')).toContainText(
+      'Contrate serviços jurídicos',
+    );
+    for (const titulo of [
+      'Resolver uma necessidade jurídica deveria ser mais simples.',
+      'Seu jurídico organizado em um único lugar.',
+      'Tem uma necessidade jurídica concreta? Comece por ela.',
+    ]) {
+      await expect(page.getByRole('heading', { name: titulo })).toBeVisible();
+    }
   });
 
   /**
@@ -83,6 +84,21 @@ test.describe('pre-renderizacao da area publica', () => {
    * O marcador que o CI ja confere no `index.html`. Aqui ele e conferido na
    * pagina servida, que e onde ele importa.
    */
+  /** O PWA e o rodape exigido pelo AbacatePay estao no HTML servido. */
+  test('serve o manifesto do PWA e o rodape completo', async ({ page }) => {
+    await page.goto('/');
+
+    await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
+      'href',
+      '/manifest.webmanifest',
+    );
+    const rodape = page.locator('app-rodape-publico');
+    await expect(rodape).toContainText('33.906.250/0001-44');
+    await expect(
+      rodape.getByRole('link', { name: 'Termos de uso' }),
+    ).toBeVisible();
+  });
+
   test('o HTML e pre-renderizado, e nao uma casca vazia', async ({ page }) => {
     await page.goto('/');
 

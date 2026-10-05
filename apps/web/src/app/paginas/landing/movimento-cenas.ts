@@ -42,7 +42,7 @@ function revelacoes(raiz: HTMLElement): Limpeza {
   const limpezas: Limpeza[] = [];
   raiz
     .querySelectorAll<HTMLElement>(
-      '.especificacoes > div, .comparacao li, .exemplo dl > div, .servicos__cabecalho, .duvidas h2',
+      '.especificacoes > div, .lugar li, .necessidade li, .exemplo dl > div, .servicos__cabecalho, .duvidas h2',
     )
     .forEach((el, i) => {
       limpezas.push(

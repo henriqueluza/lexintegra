@@ -111,7 +111,7 @@ test.describe('area publica', () => {
 
     await page.goto('/');
     await percorrerAPaginaInteira(page);
-    // Abaixo de 720 px a landing não tem a seção nem o link (landing-celular.css).
+    // Abaixo de 720 px a hero nao tem o link (landing-celular.css).
     const comoFunciona = page.getByRole('link', {
       name: 'Como funciona',
       exact: true,
@@ -141,7 +141,9 @@ test.describe('area publica', () => {
     await interceptar(page);
 
     await page.goto('/');
-    await page.getByRole('heading', { name: /Contrate.*Receba/i }).waitFor();
+    await page
+      .getByRole('heading', { name: /Contrate serviços jurídicos/i })
+      .waitFor();
     await page.evaluate(() => {
       setTimeout(() => {
         throw new Error('erro de teste na home');
@@ -152,14 +154,38 @@ test.describe('area publica', () => {
     expect(chamadas).toEqual([]);
   });
 
+  /**
+   * Sem pagina intermediaria (05/10/2026): sem cadastro, `/servicos` leva direto
+   * ao formulario. O HTML pre-renderizado da rota continua travado
+   * (`publico.prerender.spec.ts`).
+   */
   test('o catalogo nao aparece antes do cadastro', async ({ page }) => {
     await interceptar(page);
     await page.goto('/servicos');
 
-    await expect(
-      page.getByText('Os preços aparecem depois do cadastro'),
-    ).toBeVisible();
+    await expect(page).toHaveURL(/\/cadastro$/);
+    await expect(page.getByLabel('Nome completo')).toBeVisible();
     await expect(page.getByText('Due diligence societária')).toHaveCount(0);
+  });
+
+  /** O outro lado: quem ja tem o cadastro vai de `/cadastro` direto ao catalogo. */
+  test('com cadastro, o botao da landing leva direto ao catalogo', async ({
+    page,
+  }) => {
+    await interceptar(page);
+    await page.goto('/cadastro');
+    await preencherEEnviar(page);
+    await expect(
+      page.getByRole('link', { name: 'Explorar os serviços' }),
+    ).toBeVisible();
+
+    await page.goto('/');
+    await page
+      .getByRole('link', { name: 'Ver serviços e preços' })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/servicos$/);
+    await expect(page.getByText('Due diligence societária')).toBeVisible();
   });
 
   /**

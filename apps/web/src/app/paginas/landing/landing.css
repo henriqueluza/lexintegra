@@ -142,6 +142,15 @@ h1 {
 h1 span {
   display: block;
 }
+/* A hero em frase (copy de 05/10/2026), na escala propria do token. */
+h1.hero__frase {
+  font-size: var(--lex-title-hero-frase);
+  text-wrap: balance;
+}
+/* As duas metades fluem como uma frase so; a quebra e do navegador. */
+h1.hero__frase span {
+  display: inline;
+}
 .hero__linha {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
@@ -216,6 +225,9 @@ h1 span {
   color: var(--lex-text-secondary);
   max-width: 44ch;
 }
+.introducao__texto p + p {
+  margin-top: var(--lex-space-4);
+}
 .capitulo {
   position: relative;
   isolation: isolate;
@@ -255,6 +267,15 @@ h1 span {
 .capitulo__linha > p {
   font-size: var(--lex-text-lead);
   max-width: 40ch;
+}
+.capitulo__etapa {
+  display: block;
+  margin-bottom: var(--lex-space-3);
+  font-size: var(--lex-text-label);
+  font-weight: var(--lex-weight-medium);
+  letter-spacing: var(--lex-tracking-label);
+  text-transform: uppercase;
+  color: var(--lex-accent);
 }
 .capitulo__linha .detalhe {
   display: flex;
