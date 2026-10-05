@@ -1,25 +1,24 @@
 /*
- * A landing no celular (05/10/2026): abaixo de 720 px a página é só a hero —
- * imagem, título, texto e as ações principais (catálogo, cadastro, entrar) — e
- * o rodapé completo, que vem da moldura pública.
+ * A PRIMEIRA TELA no celular (05/10/2026): ao abrir o site abaixo de 720 px, a
+ * hero mostra so o essencial — titulo, texto e "Ver servicos e precos" —, e o
+ * resto da landing continua inteiro abaixo, ao rolar.
  *
- * SÓ CSS, por largura, sem detecção de user agent: a página pré-renderizada é a
- * mesma para todo visitante, e a regra 10 proíbe chamar a API aqui.
+ * Saem da hero, nesta largura: o link "Como funciona" (a secao vem logo depois,
+ * ao rolar, e o menu tambem leva ate ela), a nota sobre o cadastro (o cadastro
+ * esta no topo e na secao de servicos) e a faixa do percurso (os cinco passos
+ * sao a secao seguinte, com as fotografias).
  *
- * `display: none`, e não opacidade ou deslocamento: tira as seções também da
- * árvore de acessibilidade e da ordem de foco. O percurso e o "Como funciona"
- * saem junto porque apontam para âncoras que deixam de existir na tela.
+ * Um pedido anterior (PR #79) escondia a landing inteira no celular; foi
+ * desfeito. Esta regra so mexe na hero.
+ *
+ * `display: none`, e nao opacidade: o que nao aparece tambem sai da arvore de
+ * acessibilidade e da ordem de foco. So CSS, sem detectar dispositivo, e sem
+ * API (regra 10).
  */
-.hero__so-celular {
-  display: none;
-}
 @media (max-width: 719.98px) {
-  main > section:not(.hero),
-  .percurso,
-  .hero__so-largo {
+  .hero__acoes > .link,
+  .hero__acoes > .nota,
+  .percurso {
     display: none;
-  }
-  .hero__so-celular {
-    display: inline-flex;
   }
 }

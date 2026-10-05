@@ -44,8 +44,10 @@ no bucket de logs `registros-de-acesso` (Marco Civil). Detalhe em
 **Fechamento sem terceiros (05/10/2026):** e-mail UNICO de contato
 `suportelexintegra@gmail.com` (a caixa `privacidade@` nao sera criada; termos
 do checkout em `checkout-v4-2026-10`); rodape publico com nome, CNPJ, e-mail e
-links legais, conferido no HTML pre-renderizado pelo CI; landing abaixo de
-720 px so com a hero e o rodape; todos os alertas para o suporte por e-mail,
+links legais, conferido no HTML pre-renderizado pelo CI; landing inteira no
+celular, com a primeira tela so com a hero (titulo, texto e "Ver servicos e
+precos"; `landing-celular.css`); PWA instalavel (manifesto e tags do Safari,
+sem service worker de proposito, `src/app/pwa.spec.ts`); todos os alertas para o suporte por e-mail,
 nenhum acorda alguem (lint); WIF pronto para um segundo repositorio
 (`github_repositorios_adicionais`, vazio); AbacatePay e Microsoft prontos para
 receber credenciais — secrets declarados sem valor, codigo de producao e de

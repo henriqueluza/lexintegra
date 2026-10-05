@@ -31,6 +31,23 @@
     <meta name="twitter:card" content="summary_large_image" />
 
     <link rel="icon" type="image/png" href="/favicon.png" />
+
+    <!--
+      PWA (05/10/2026): instalavel no Chrome (Android e desktop) e no Safari
+      (iOS e macOS, "Adicionar a Tela de Inicio" / "Adicionar ao Dock"). O
+      manifesto basta para o Chrome desde que ele deixou de exigir service
+      worker; o Safari le o manifesto para abrir em tela cheia e o
+      `apple-touch-icon` para o icone, que precisa ser opaco (transparente vira
+      preto no iOS). `theme-color` e o `--lex-bg` da Nevoa. Sem service worker,
+      de proposito: ver `src/pwa.spec.ts`.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#e2e8ee" />
+    <link rel="apple-touch-icon" href="/icones/pwa/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="LexIntegra" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   </head>
   <body>
     <app-root></app-root>

@@ -220,7 +220,16 @@ e passe a lista ao Claude como "ajustes finais".
 - [x] Landing no celular (abaixo de 720 px): só a hero, com catálogo, cadastro
   e entrar, e o rodapé completo. Só CSS, sem detecção de user agent nem API;
   seções ocultas fora da árvore de acessibilidade, e o menu sem âncoras para
-  elas (05/10/2026, `landing-celular.css`, com e2e e axe).
+  elas (05/10/2026, `landing-celular.css`, com e2e e axe). **Revisto no mesmo
+  dia:** o pedido era só a PRIMEIRA TELA. A landing voltou inteira no celular;
+  ao abrir, a hero mostra só título, texto e "Ver serviços e preços" (sem
+  "Como funciona", a nota de cadastro e o percurso), e o resto vem ao rolar.
+- [x] PWA instalável no Chrome e no Safari (05/10/2026): manifesto, ícones a
+  partir do símbolo do logo (192, 512, maskable e `apple-touch-icon` opaco) e
+  as tags do Safari, sem service worker de propósito (`src/app/pwa.spec.ts`).
+  - [ ] 👤 Instalar no celular: no Android, Chrome → *Instalar app*; no
+    iPhone, Safari → Compartilhar → *Adicionar à Tela de Início*. Conferir o
+    ícone e a abertura em tela cheia.
   - [ ] 👤 Aprovar, uma a uma, as referências visuais regravadas no PR
     `feat/fechamento-sem-terceiros` (rodapé em todas as telas públicas,
     landing estreita, catálogo estreito e o grupo de opções).

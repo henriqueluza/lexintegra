@@ -111,7 +111,7 @@ test.describe('area publica', () => {
 
     await page.goto('/');
     await percorrerAPaginaInteira(page);
-    // Abaixo de 720 px a landing não tem a seção nem o link (landing-celular.css).
+    // Abaixo de 720 px a hero nao tem o link (landing-celular.css).
     const comoFunciona = page.getByRole('link', {
       name: 'Como funciona',
       exact: true,
