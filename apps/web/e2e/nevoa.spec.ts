@@ -214,3 +214,24 @@ test('a partir de 720 px, a landing mostra as seções', async ({ page }) => {
       .getByRole('link', { name: 'Cadastro gratuito' }),
   ).toHaveCount(0);
 });
+
+/**
+ * Regressao de 05/10/2026: com `<base href="/">`, o `#secao-n` sozinho levava
+ * para a home. O sumario precisa ficar na mesma pagina e levar a secao ao topo,
+ * abaixo do cabecalho fixo.
+ */
+for (const rota of ['/termos', '/privacidade']) {
+  test(`"Nesta página" leva à seção em ${rota}`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(rota);
+    const sumario = page.getByRole('navigation', { name: 'Nesta página' });
+    const links = sumario.getByRole('link');
+    const ultimo = links.last();
+    const titulo = (await ultimo.textContent())?.trim() ?? '';
+    await ultimo.click();
+    await expect(page).toHaveURL(new RegExp(`${rota}#secao-\\d+$`));
+    const secao = page.getByRole('heading', { name: titulo, level: 2 }).last();
+    await expect(secao).toBeInViewport();
+    expect(new URL(page.url()).pathname).toBe(rota);
+  });
+}

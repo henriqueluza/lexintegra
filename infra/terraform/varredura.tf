@@ -314,6 +314,24 @@ resource "google_cloud_scheduler_job" "retencao" {
 # uma URL, o SDK chama a API de IAM (`signBlob`) — o que exige que a service
 # account possa criar token PARA SI MESMA. Sem isto, a emissao falha em producao e
 # funciona na maquina do desenvolvedor, que tem credencial de usuario com chave.
+# --- A API pode CRIAR TAREFAS que se apresentam como `tarefas-lexintegra` -----
+# ⚠️ A OUTRA CONCESSAO NAO OBVIA, e esta faltou ate 05/10/2026.
+#
+# As duas filas (`eventos`, do outbox, e `varredura`, dos uploads) entregam com
+# token OIDC de `tarefas-lexintegra`, que e quem `TarefaGuard` aceita do outro
+# lado. Para criar uma tarefa com o OIDC de uma service account, o Cloud Tasks
+# exige que QUEM CRIA tenha `iam.serviceAccounts.actAs` sobre ela — e
+# `cloudtasks.enqueuer` na fila nao basta. Sem isto, todo enfileiramento da API
+# volta `PERMISSION_DENIED`: nenhum e-mail do outbox saia (convite de
+# administrador, acesso de advogado, redefinicao de senha, acesso do cliente) e
+# nenhum upload era varrido. O emulador e `pnpm dev` usam a fila em processo,
+# entao so producao mostrava. `tarefas-agem-como.spec.ts` le este arquivo.
+resource "google_service_account_iam_member" "api_age_como_tarefas" {
+  service_account_id = google_service_account.tarefas.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.api_runtime.email}"
+}
+
 resource "google_service_account_iam_member" "api_assina_urls" {
   service_account_id = google_service_account.api_runtime.name
   role               = "roles/iam.serviceAccountTokenCreator"

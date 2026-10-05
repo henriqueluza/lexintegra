@@ -28,9 +28,16 @@ describe('Documentos públicos', () => {
       expect(el.textContent).not.toContain('94450-9715');
       expect(el.textContent).not.toContain('privacidade@');
       expect(el.textContent).not.toContain('TODO');
+      /*
+       * O link leva o caminho da propria pagina: com `<base href="/">`, um
+       * `#secao-n` sozinho resolve para a home (05/10/2026).
+       */
+      const caminho = termos ? '/termos' : '/privacidade';
       for (const link of el.querySelectorAll('nav a')) {
+        const href = link.getAttribute('href') ?? '';
+        expect(href.startsWith(`${caminho}#secao-`)).toBe(true);
         expect(
-          el.querySelector(link.getAttribute('href') ?? '')?.textContent,
+          el.querySelector(href.slice(caminho.length))?.textContent,
         ).toContain(link.textContent);
       }
       expect(el.textContent).toContain(

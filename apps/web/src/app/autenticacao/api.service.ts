@@ -47,8 +47,9 @@ export class ApiService {
   /* ---------------------------------------------------------------------- */
 
   /**
-   * As duas chamadas da area publica sao as unicas que levam o cabecalho de App
-   * Check, e sao as unicas que o servidor verifica.
+   * As chamadas publicas deste servico (pre-cadastro, vitrine e redefinicao de
+   * senha) levam o cabecalho de App Check; o checkout leva o seu em
+   * `api-checkout.service.ts`. Sao as que o servidor verifica.
    *
    * Anexado AQUI e nao num interceptor: um interceptor sobre `/api` inteiro
    * inicializaria o App Check tambem no painel administrativo, baixando o
@@ -178,9 +179,20 @@ export class ApiService {
     );
   }
 
-  pedirRedefinicaoDeSenha(email: string): Promise<unknown> {
+  /**
+   * Rota `@Publico()`, entao o servidor EXIGE o App Check desde que
+   * `APP_CHECK_ENFORCE` foi ligado (29/09/2026). Sem o cabecalho, o guard
+   * respondia 401 a todo pedido e ninguem conseguia redefinir a senha
+   * (05/10/2026) — os testes nao pegavam porque o App Check fica desligado fora
+   * de producao.
+   */
+  async pedirRedefinicaoDeSenha(email: string): Promise<unknown> {
     return firstValueFrom(
-      this.http.post('/api/auth/redefinicao-senha', { email }),
+      this.http.post(
+        '/api/auth/redefinicao-senha',
+        { email },
+        { headers: await this.cabecalhosPublicos() },
+      ),
     );
   }
 }
