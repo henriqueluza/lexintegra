@@ -1,4 +1,5 @@
 import { Timestamp, type Firestore } from 'firebase-admin/firestore';
+import { AlertaFalso } from '../alertas/alerta.js';
 import { FirestoreFalso } from '../firestore-falso.js';
 import { FilaFalsa } from '../tarefas/fila.js';
 import { EnfileiradorDeEventos } from './enfileirador.service.js';
@@ -155,5 +156,55 @@ describe('EnfileiradorDeEventos', () => {
       enfileirador.enfileirarPorId('sumido'),
     ).resolves.toBeUndefined();
     expect(fila.tarefas).toEqual([]);
+  });
+});
+
+/**
+ * 05/10/2026: em producao o Cloud Tasks recusava toda tarefa (`PERMISSION_DENIED`,
+ * faltava `actAs` sobre `tarefas-lexintegra`), e o convite de administrador
+ * respondia 500 com o administrador JA CRIADO. Depois do commit, a falha de
+ * enfileirar nao derruba quem chama: o registro fica pendente para o varredor, e
+ * o alerta critico avisa o suporte.
+ */
+describe('EnfileiradorDeEventos depois do commit', () => {
+  it('enfileirarPorId nao propaga a falha da fila e alerta', async () => {
+    semear('pendente-1');
+    const alertas = new AlertaFalso();
+    const recusada = {
+      enfileirar: () =>
+        Promise.reject(new Error('7 PERMISSION_DENIED: lacks actAs')),
+    };
+    const enfileiradorQueFalha = new EnfileiradorDeEventos(
+      outbox,
+      recusada,
+      alertas,
+    );
+
+    await expect(
+      enfileiradorQueFalha.enfileirarPorId('pendente-1'),
+    ).resolves.toBeUndefined();
+    expect(alertas.emitidos).toEqual([
+      expect.objectContaining({
+        nivel: 'critico',
+        assunto: 'outbox.enfileiramento-falhou',
+      }),
+    ]);
+    expect(
+      banco.documentos.get(`${COLECAO_OUTBOX}/pendente-1`)?.['estado'],
+    ).toBe('pendente');
+  });
+
+  /** O varredor, ao contrario, falha alto: a passagem nao pode dizer que deu certo. */
+  it('enfileirar (o caminho do varredor) continua propagando', async () => {
+    const recusada = {
+      enfileirar: () => Promise.reject(new Error('PERMISSION_DENIED')),
+    };
+    await expect(
+      new EnfileiradorDeEventos(outbox, recusada).enfileirar({
+        id: 'x',
+        ciclo: 0,
+        tentativas: 0,
+      }),
+    ).rejects.toThrow('PERMISSION_DENIED');
   });
 });
