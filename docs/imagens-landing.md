@@ -45,9 +45,38 @@ commit em que entra no repositório.
 **Ícones da interface** (`apps/web/src/app/ui/icone/icone.ts`): os traços são
 cópia literal dos `<symbol>` de `docs/prototipos/direcao-B-pauta.html`, o
 protótipo da Etapa 1 (compare `i-doc`, `i-up`, `i-video`, `i-alert` e
-`i-lock` com `documento`, `enviar`, `video`, `alerta` e `cadeado`). O
-repositório **não registra** de onde o protótipo tirou esses desenhos: não há
-menção a biblioteca de ícones no protótipo, no `design.md` ou no histórico do
-git. São primitivas geométricas simples (retângulos, linhas e um arco), com
-terminação reta, o que não identifica nenhuma biblioteca conhecida. **A origem
-anterior ao protótipo segue indeterminada.**
+`i-lock` com `documento`, `enviar`, `video`, `alerta` e `cadeado`).
+
+**Investigação da origem (B2, decisão de 05/10/2026).** O protótipo entrou no
+commit `75b9bb5` (03/09/2026, "docs: adiciona design.md e direcoes visuais do
+projeto") já com os oito `<symbol>`, sem comentário, licença ou nome de
+biblioteca; o `design.md` e o histórico do git também não citam nenhuma. O que
+foi verificado, traço a traço, contra as bibliotecas de 24 px mais comuns
+(Lucide e Feather, que compartilham a geometria, consultadas no repositório
+oficial do Lucide em 05/10/2026):
+
+| Símbolo | Traço no protótipo | Lucide / Feather | Conclusão |
+|---|---|---|---|
+| `i-check` (`confere`) | `M4 12l5 5L20 6` | `M20 6 9 17l-5-5` | Mesmos três pontos, em ordem inversa |
+| `i-up` (`enviar`) | `M12 19V5` + `M5 12l7-7 7 7` | `M12 19V5` + `m5 12 7-7 7 7` | Mesma geometria |
+| `i-search` (`busca`) | círculo r=7 em (11,11) + `M16 16l5 5` | círculo r=8 + `m21 21-4.3-4.3` | Diferente |
+| `i-lock` (`cadeado`) | `M5 11h14v9H5z` + arco de raio 4 | retângulo 18×11 com `rx=2` + arco de raio 5 | Diferente |
+| `i-doc`, `i-video`, `i-alert` | só retas, cantos vivos | curvas e cantos arredondados | Diferentes |
+| `i-mark` (`marca`) | colchetes e barra | — | Desenho próprio da marca |
+
+Os traços do protótipo usam terminação e junção retas (`butt` e `miter`), ao
+contrário do Lucide e do Feather (`round`). As duas coincidências são as formas
+mais simples possíveis numa grade de 24 px (um "visto" de três pontos e uma
+seta de linha mais chevron), comuns a qualquer conjunto; os demais traços
+divergem. **Conclusão: os ícones do protótipo não vêm de uma biblioteca
+identificável; foram desenhados com o protótipo** (gerado com assistente de IA
+na Etapa 1). Nenhuma licença de terceiro a registrar. Se um dia se preferir
+cautela máxima, o Lucide é ISC: a atribuição bastaria.
+
+**Ícones da área pública Névoa** (`apps/web/public/icones/nevoa.svg`, desde
+01/10/2026): **não** vêm do protótipo Pauta. São do **Phosphor Icons**, peso
+*regular* (grade de 256, nomes como `lock-simple`, `magnifying-glass` e
+`paper-plane-tilt`); o traço de `i-scales` é idêntico ao `scales.svg` do
+repositório `phosphor-icons/core` (conferido em 05/10/2026). Licença **MIT**,
+registrada em [`licencas-terceiros.md`](entrega/licencas-terceiros.md), seção 5,
+e o aviso de copyright foi acrescentado ao próprio arquivo.

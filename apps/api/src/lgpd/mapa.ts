@@ -1,69 +1,85 @@
-/** Fonte unica do inventario, da exportacao e da simulacao de eliminacao.
- * Guarda PROVISORIA: nao constitui autorizacao para conservar ou destruir.
+/**
+ * Fonte unica do inventario, da exportacao, da simulacao e do EXECUTOR de
+ * eliminacao. A `guarda` de cada grupo e a politica de 05/10/2026
+ * (`shared/politica-de-guarda`, decisoes.md 2.1), proposta sujeita a aprovacao
+ * do escritorio na revisao do Bloco I:
+ *
+ * - `contrato`: cadastro, ficha, pedidos, pagamentos, aceites e comunicacoes.
+ *   Guardado 5 anos depois do ULTIMO pedido; so a eliminacao TOTAL (depois
+ *   disso) os apaga. A pedido do titular dentro do prazo, ficam.
+ * - `eliminavel`: o que nenhuma obrigacao legal segura — cadastro inicial (o
+ *   nome e o e-mail ja estao em `clientes`), intencoes de compra, arquivos e a
+ *   conta de login. Sai a pedido do titular a qualquer momento.
+ * - `limpar_referencia`: documento de OUTRA pessoa (a grade do advogado) que
+ *   aponta para o pedido. Nao se apaga; tira-se a referencia.
+ * - `trilha`: a prova de que o pedido do titular foi atendido (protocolos) e o
+ *   log de auditoria, que e append-only. Guardam so pseudonimos.
  */
+export type Guarda = 'contrato' | 'eliminavel' | 'limpar_referencia' | 'trilha';
+
 export const MAPA_TITULAR = {
-  clientes: { colecao: 'clientes', vinculo: 'uid', guarda: 'eliminar' },
+  clientes: { colecao: 'clientes', vinculo: 'uid', guarda: 'contrato' },
   anamnese: {
     colecao: 'anamnese',
     pai: 'clientes',
-    guarda: 'avaliar_documentos',
+    guarda: 'contrato',
   },
-  pedidos: { colecao: 'pedidos', campo: 'clienteId', guarda: 'definir_guarda' },
+  pedidos: { colecao: 'pedidos', campo: 'clienteId', guarda: 'contrato' },
   entregaveis: {
     colecao: 'entregaveis',
     pai: 'pedidos',
-    guarda: 'avaliar_documentos',
+    guarda: 'contrato',
   },
   transicoes: {
     colecao: 'transicoes',
     pai: 'entregaveis',
-    guarda: 'definir_guarda',
+    guarda: 'contrato',
   },
   observacoes: {
     colecao: 'observacoes',
     pai: 'pedidos',
-    guarda: 'avaliar_documentos',
+    guarda: 'contrato',
   },
-  anexos: { colecao: 'anexos', pai: 'pedidos', guarda: 'avaliar_documentos' },
+  anexos: { colecao: 'anexos', pai: 'pedidos', guarda: 'contrato' },
   reunioes: {
     colecao: 'reunioes',
     pai: 'pedidos',
-    guarda: 'avaliar_evidencias',
+    guarda: 'contrato',
   },
   checkouts: {
     colecao: 'checkouts',
     campo: 'preCadastroId',
-    guarda: 'eliminar',
+    guarda: 'eliminavel',
   },
   pagamentos: {
     colecao: 'pagamentos',
     campo: 'clienteId',
-    guarda: 'definir_guarda',
+    guarda: 'contrato',
   },
   estornos: {
     colecao: 'estornos',
     campo: 'clienteId',
-    guarda: 'definir_guarda',
+    guarda: 'contrato',
   },
   contestacoes: {
     colecao: 'contestacoes',
     campo: 'clienteId',
-    guarda: 'definir_guarda',
+    guarda: 'contrato',
   },
   preCadastros: {
     colecao: 'pre-cadastros',
     vinculo: 'email',
-    guarda: 'eliminar',
+    guarda: 'eliminavel',
   },
   outbox: {
     colecao: 'outbox',
     campo: 'destinatarioUid',
-    guarda: 'avaliar_evidencias',
+    guarda: 'contrato',
   },
   aceites: {
     colecao: 'aceites-de-termos',
     campo: 'usuarioUid',
-    guarda: 'definir_guarda',
+    guarda: 'contrato',
   },
   disponibilidades: {
     colecao: 'disponibilidades',
@@ -73,31 +89,32 @@ export const MAPA_TITULAR = {
   /*
    * B2 (decisoes.md 4.1, 4.2 e 5.5): o log de auditoria das acoes
    * administrativas. O `alvo` e o uid de quem foi editado (advogado,
-   * administrador) ou a cobranca do pagamento resolvido; `antes`/`depois` podem
-   * levar e-mail. Guarda a definir como as outras trilhas (2.1).
+   * administrador), a cobranca do pagamento resolvido ou a chave do titular na
+   * retencao legal; `antes`/`depois` podem levar e-mail de membro da equipe.
+   * Append-only: nenhum caminho o apaga, nem a eliminacao total.
    */
   auditoria: {
     colecao: 'auditoria',
     campo: 'alvo',
-    guarda: 'definir_guarda',
+    guarda: 'trilha',
   },
   solicitacoes: {
     colecao: 'solicitacoes-lgpd',
     campo: 'titularChave',
-    guarda: 'definir_guarda',
+    guarda: 'trilha',
   },
 } as const;
 
 export const MAPA_OBJETOS = {
   baldes: ['quarentena', 'arquivos'],
   prefixos: ['anexos', 'entregaveis'],
-  guarda: 'avaliar_documentos',
+  guarda: 'eliminavel',
 } as const;
 
 export const MAPA_AUTH = {
   origem: 'Firebase Auth',
   vinculo: 'uid',
-  guarda: 'eliminar',
+  guarda: 'eliminavel',
   campos: [
     'uid',
     'email',

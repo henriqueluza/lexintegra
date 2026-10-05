@@ -55,7 +55,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
   workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
   workload_identity_pool_provider_id = "github-provider"
 
-  attribute_condition = "assertion.repository=='${var.github_repository}'"
+  attribute_condition = local.condicao_dos_repositorios
 
   attribute_mapping = {
     "google.subject"       = "assertion.sub"
@@ -75,6 +75,39 @@ resource "google_service_account_iam_member" "ci_workload_identity" {
   service_account_id = google_service_account.terraform_ci.name
   role               = "roles/iam.workloadIdentityUser"
   member             = "principalSet://iam.googleapis.com/projects/${var.project_number}/locations/global/workloadIdentityPools/${google_iam_workload_identity_pool.github.workload_identity_pool_id}/attribute.repository/${var.github_repository}"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+# --- Repositorio de destino (transferencia.md 2.1) ---------------------------
+#
+# A federacao aceita o repositorio de origem e, quando a lista tiver item, os
+# ADICIONAIS — o de destino da transferencia. Com a lista vazia (hoje), a
+# condicao e EXATAMENTE a de antes, e o plan nao mostra diferenca nenhuma: o
+# mecanismo esta pronto sem tocar no que autentica o pipeline.
+#
+# O binding do repositorio de origem NAO MUDA, nem de endereco: os adicionais
+# ganham bindings proprios, recursos novos. E o que a ordem segura da
+# transferencia exige — o PR A so pode mostrar `update in-place` do provider e
+# `create` do binding novo, sem nenhum `destroy`.
+locals {
+  repositorios_do_ci = concat([var.github_repository], var.github_repositorios_adicionais)
+
+  condicao_dos_repositorios = (
+    length(var.github_repositorios_adicionais) == 0
+    ? "assertion.repository=='${var.github_repository}'"
+    : "assertion.repository in [${join(", ", [for r in local.repositorios_do_ci : "'${r}'"])}]"
+  )
+}
+
+resource "google_service_account_iam_member" "ci_workload_identity_adicional" {
+  for_each = toset(var.github_repositorios_adicionais)
+
+  service_account_id = google_service_account.terraform_ci.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/projects/${var.project_number}/locations/global/workloadIdentityPools/${google_iam_workload_identity_pool.github.workload_identity_pool_id}/attribute.repository/${each.value}"
 
   lifecycle {
     prevent_destroy = true

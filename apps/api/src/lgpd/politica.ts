@@ -1,13 +1,27 @@
+import {
+  ANOS_GUARDA_CLIENTE,
+  DIAS_AVISO_ELIMINACAO,
+  MESES_GUARDA_PRE_CADASTRO,
+  VERSAO_POLITICA_DE_GUARDA,
+  fimDaGuardaDoCliente,
+} from 'shared/politica-de-guarda';
+import { MAPA_TITULAR, type Grupo } from './mapa.js';
+
+/**
+ * A politica que o executor aplica (decisoes.md 2.1, 05/10/2026). Os numeros
+ * vem de `shared/politica-de-guarda`, os mesmos da politica de privacidade
+ * publica. `aprovadaPeloEscritorio` e REGISTRO, e nao chave: a politica e uma
+ * proposta do Henrique sujeita a revisao do escritorio no Bloco I, e o executor
+ * roda com ela desde ja — so o administrador dispara a eliminacao a pedido, e a
+ * eliminacao por prazo so alcanca dado com mais de 6 meses (cadastro inicial)
+ * ou 5 anos (cliente).
+ */
 export const POLITICA_TITULAR = {
-  versao: 'titular-v0-provisoria',
-  aprovada: false,
-  antecedenciaDias: 7,
-  prazoGuardaDias: null,
-  pendencias: [
-    'Controlador deve definir documentos, campos, fundamento e prazo de guarda.',
-    'Conservacao identificavel nao pode ser chamada de anonimizacao.',
-    'Execucao destrutiva bloqueada ate revisao da politica e do executor.',
-  ],
+  versao: VERSAO_POLITICA_DE_GUARDA,
+  aprovadaPeloEscritorio: false,
+  antecedenciaDias: DIAS_AVISO_ELIMINACAO,
+  guardaClienteAnos: ANOS_GUARDA_CLIENTE,
+  guardaPreCadastroMeses: MESES_GUARDA_PRE_CADASTRO,
 } as const;
 
 interface Registro {
@@ -19,7 +33,8 @@ export interface Impedimento {
     | 'pedido_em_andamento'
     | 'reuniao_futura'
     | 'reuniao_inconsistente'
-    | 'contestacao_aberta';
+    | 'contestacao_aberta'
+    | 'retencao_legal';
   readonly caminho: string;
 }
 
@@ -84,8 +99,8 @@ export function impedimentos(
  * Contestacao (chargeback) aberta impede a eliminacao (`docs/decisoes.md`, 5.4
  * e 2.1): os dados sao a prova que o escritorio apresenta no gateway.
  *
- * EXPORTADA PARA O EXECUTOR que ainda nao existe — ele precisa conferir isto de
- * novo, dentro da propria trava, e nao confiar na simulacao. A pausa e o
+ * O EXECUTOR (`eliminacao.service.ts`) confere isto de novo depois de tomar o
+ * protocolo, e nao confia na simulacao. A pausa e o
  * marcador `contestacao` no pedido (`pedidos/pausa.ts`).
  */
 export function temContestacaoAberta(registros: readonly Registro[]): boolean {
@@ -99,4 +114,53 @@ function pedidoEmContestacao(registro: Registro): boolean {
     contestacao !== undefined &&
     contestacao !== null
   );
+}
+
+export type Escopo = 'parcial' | 'total';
+
+/**
+ * O quanto a eliminacao alcanca AGORA.
+ *
+ * - Sem pedido nenhum, nada segura o dado: `total`.
+ * - Com pedido, os registros de `contrato` ficam ate 5 anos depois do ULTIMO
+ *   (`fimDaGuardaDoCliente`). Antes disso, `parcial`: sai so o que e
+ *   `eliminavel`. Depois, `total`.
+ *
+ * Pedido sem `criadoEm` legivel conta como de AGORA: errar para o lado de
+ * guardar e corrigivel; eliminar cedo, nao.
+ */
+export function escopoDaEliminacao(
+  registros: readonly Registro[],
+  agora: number,
+): { escopo: Escopo; guardaAte: Date | null } {
+  const pedidos = registros.filter((r) => /^pedidos\/[^/]+$/.test(r.caminho));
+  if (pedidos.length === 0) return { escopo: 'total', guardaAte: null };
+  const ultimo = Math.max(
+    ...pedidos.map((p) => emMilissegundos(p.dados['criadoEm']) ?? agora),
+  );
+  const guardaAte = fimDaGuardaDoCliente(new Date(ultimo));
+  return {
+    escopo: agora >= guardaAte.getTime() ? 'total' : 'parcial',
+    guardaAte,
+  };
+}
+
+/** Se o grupo sai na eliminacao deste escopo. `trilha` nunca sai. */
+export function eliminaNoEscopo(grupo: Grupo, escopo: Escopo): boolean {
+  const guarda = MAPA_TITULAR[grupo].guarda;
+  if (guarda === 'eliminavel') return true;
+  return escopo === 'total' && guarda === 'contrato';
+}
+
+export function emMilissegundos(valor: unknown): number | null {
+  if (typeof valor === 'object' && valor !== null) {
+    const toMillis = (valor as { toMillis?: unknown }).toMillis;
+    if (typeof toMillis === 'function')
+      return (toMillis as () => number).call(valor);
+  }
+  if (typeof valor === 'string') {
+    const ms = Date.parse(valor);
+    return Number.isFinite(ms) ? ms : null;
+  }
+  return null;
 }

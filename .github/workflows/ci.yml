@@ -85,6 +85,11 @@ jobs:
             || { echo "index.html nao foi pre-renderizado"; exit 1; }
           echo "Pre-renderizacao confirmada."
 
+      - name: Conferir o rodape exigido pelo AbacatePay no HTML servido
+        # Nome, CNPJ, e-mail e links de termos e privacidade (05/10/2026). O
+        # analista le o HTML pre-renderizado, nao a pagina hidratada.
+        run: node scripts/conferir-rodape-prerenderizado.mjs
+
       - name: Conferir que a configuracao publica foi para o pacote
         # O `deploy.yml` reescreve este arquivo com a site key do App Check antes
         # de publicar. Se ele deixasse de ser copiado — um `public/` renomeado, um

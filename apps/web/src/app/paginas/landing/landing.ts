@@ -18,6 +18,7 @@ import { NEVOA } from './conteudo-nevoa';
     './landing-detalhes.css',
     './landing-movimento.css',
     './landing-catalogo.css',
+    './landing-celular.css',
   ],
 })
 export class Landing {

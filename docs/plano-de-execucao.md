@@ -332,7 +332,7 @@ qualquer coisa que não seja um projeto `demo-`.
   e a alternativa (cache de revogação por alguns segundos, ou checar só em rotas
   que escrevem) troca segurança por latência antes de haver problema medido.
   Rever se o volume autenticado crescer ou se o p95 da requisição passar de 1 s.
-  Decisão do Henrique.
+  **Decidido em 05/10/2026: manter** (decisões 7.1). Nada a construir.
 
 **Descobertas de infraestrutura que teriam quebrado o deploy:**
 
@@ -940,8 +940,7 @@ quebra dois pontos abaixo do piso observado. O sobrevivente que valia matar era
 
 **Impossível delegar**
 
-- Definir quais alertas acordam alguém e quais só registram. É decisão operacional que depende de quem vai atender. A estrutura está pronta: `infra/terraform/alertas-roteamento.json`, hoje com os oito alertas em `pendente`.
-- Confirmar com a CONTRATANTE quem receberá os alertas depois da entrega, já que a operação passa a ser dela. Hoje o destinatário é provisório e vem do secret `ALERTAS_EMAIL_DESENVOLVIMENTO` do GitHub — sem ela, nenhum canal é criado.
+- ~~Definir quais alertas acordam alguém e quem os recebe.~~ **Decidido em 05/10/2026** (decisões 5.2): todos por e-mail para `suportelexintegra@gmail.com`, nenhum acorda alguém.
 - **Disparar o alerta artificial e confirmar que ele chega** — é o critério de aceite da etapa, e não há como automatizá-lo. Roteiro em `docs/runbooks/alerta-artificial.md`.
 - Conferir em produção, depois do primeiro deploy: o `traceparent` sobrevivendo ao rewrite do Hosting e ao Cloud Tasks (nenhuma documentação promete isso), e a primeira exportação por OTLP chegando ao Cloud Trace — só depois disso o papel `roles/cloudtrace.agent` pode sair. *(Confirmado e removido no Bloco D; roteiro em `docs/runbooks/limpeza-infra.md`, seção 4.)*
 - Medir o custo de `verifyIdToken(checkRevoked)` com o trace agora disponível (pendência aberta desde a Etapa 4).

@@ -232,3 +232,12 @@ dialog::backdrop {
     display: none;
   }
 }
+/*
+ * Abaixo de 720 px a landing é só a hero e o rodapé (landing-celular.css): as
+ * âncoras para as seções dela apontariam para o nada.
+ */
+@media (max-width: 719.98px) {
+  .ancora-landing {
+    display: none;
+  }
+}

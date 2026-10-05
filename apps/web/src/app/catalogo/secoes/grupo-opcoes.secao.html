@@ -1,0 +1,54 @@
+<app-pagina
+  titulo="Grupo de opções"
+  descricao="Fieldset com legend e controles nativos: radio na escolha única, caixa de marcar na múltipla. Na múltipla, a opção exclusiva desmarca as outras."
+>
+  <ng-template #estados>
+    <app-amostra rotulo="Única, sem escolha">
+      <app-grupo-opcoes
+        [formControl]="unicaVazia"
+        rotulo="Tempo de atividade"
+        [opcoes]="TEMPO"
+        [obrigatorio]="true"
+      />
+    </app-amostra>
+    <app-amostra rotulo="Única, escolhida">
+      <app-grupo-opcoes
+        [formControl]="unicaEscolhida"
+        rotulo="Tempo de atividade"
+        [opcoes]="TEMPO"
+      />
+    </app-amostra>
+    <app-amostra rotulo="Múltipla, com dica">
+      <app-grupo-opcoes
+        [formControl]="multipla"
+        rotulo="Contratos da equipe"
+        [opcoes]="CONTRATOS"
+        [multipla]="true"
+        dica="Marque todos os que a empresa usa."
+      />
+    </app-amostra>
+    <app-amostra rotulo="Erro">
+      <app-grupo-opcoes
+        [formControl]="comErro"
+        rotulo="Tempo de atividade"
+        [opcoes]="TEMPO"
+        [obrigatorio]="true"
+        erro="Escolha uma opção."
+      />
+    </app-amostra>
+    <app-amostra rotulo="Desabilitado">
+      <app-grupo-opcoes
+        [formControl]="inerte"
+        rotulo="Tempo de atividade"
+        [opcoes]="TEMPO"
+      />
+    </app-amostra>
+  </ng-template>
+
+  <app-vitrine direcao="catedra">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+  <app-vitrine direcao="pauta">
+    <ng-container [ngTemplateOutlet]="estados" />
+  </app-vitrine>
+</app-pagina>

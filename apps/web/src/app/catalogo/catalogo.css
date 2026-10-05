@@ -94,8 +94,21 @@
     border-bottom: 1px solid #dededa;
   }
 
+  /*
+   * UMA LINHA SO, com rolagem lateral, e nao `flex-wrap`. Abaixo de 720 px o
+   * indice fica ACIMA do palco; quebrando em varias linhas, a altura dele
+   * dependia de quantas pecas existem, e uma peca a mais mudava a posicao
+   * subpixel do palco e invalidava todas as referencias estreitas da regressao
+   * visual sem nenhum componente mudar (achado ao incluir o grupo de opcoes,
+   * B1). Em uma linha, a altura do indice nao depende do numero de pecas.
+   */
   .catalogo__indice ul {
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .catalogo__indice a {
+    white-space: nowrap;
   }
 }

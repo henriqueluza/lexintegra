@@ -28,7 +28,7 @@ export async function resolverTitular(
   id: string,
 ): Promise<Titular> {
   validarAlvo(tipo, id);
-  if (tipo === 'clientes') return deConta(await obterConta(auth, id));
+  if (tipo === 'clientes') return deCliente(db, auth, id);
   const pre = await db
     .collection(MAPA_TITULAR.preCadastros.colecao)
     .doc(id)
@@ -54,6 +54,39 @@ export async function resolverTitular(
   };
 }
 
+/**
+ * O cliente pela conta ou, sem ela, pelo documento de cadastro.
+ *
+ * A conta de login sai na eliminacao PARCIAL (a pedido do titular, dentro dos
+ * 5 anos de guarda), e o cadastro fica. Sem este caminho, esse cliente nunca
+ * mais seria alcancavel: nem exportacao, nem a eliminacao total quando o prazo
+ * vencer.
+ */
+async function deCliente(
+  db: Firestore,
+  auth: Auth,
+  uid: string,
+): Promise<Titular> {
+  try {
+    return deConta(await auth.getUser(uid));
+  } catch (erro) {
+    if (!usuarioAusente(erro)) throw erro;
+  }
+  const cadastro = await db
+    .collection(MAPA_TITULAR.clientes.colecao)
+    .doc(uid)
+    .get();
+  const email = cadastro.data()?.['email'] as unknown;
+  if (!cadastro.exists || typeof email !== 'string')
+    throw new NotFoundException('Titular nao encontrado.');
+  return {
+    chave: chaveDoTitular(`uid:${uid}`),
+    uid,
+    conta: null,
+    preCadastroId: idDoPreCadastro(email.trim().toLowerCase()),
+  };
+}
+
 function deConta(conta: UserRecord): Titular {
   if (conta.customClaims?.['role'] !== 'cliente' || conta.email === undefined) {
     throw new NotFoundException('Titular cliente nao encontrado.');
@@ -70,16 +103,6 @@ export function chaveDoTitular(valor: string): string {
   return createHash('sha256').update(valor).digest('hex');
 }
 
-async function obterConta(auth: Auth, uid: string): Promise<UserRecord> {
-  try {
-    return await auth.getUser(uid);
-  } catch (erro) {
-    if (usuarioAusente(erro))
-      throw new NotFoundException('Titular nao encontrado.');
-    throw erro;
-  }
-}
-
-function usuarioAusente(erro: unknown): boolean {
+export function usuarioAusente(erro: unknown): boolean {
   return (erro as { code?: string } | null)?.code === 'auth/user-not-found';
 }

@@ -78,7 +78,7 @@ ou o ADR de `docs/arquitetura.md` e as regras invioláveis do `AGENTS.md`.
 | `estornos/` | Estorno feito pelo administrador (manual ou integral via outbox) e confirmação pelo webhook | ADR-12, regras 15 e 20 |
 | `firebase/` | Inicializa o Admin SDK. Sob emulador, usa o projeto do emulador | ADR-01, seção 6.1 |
 | `health/` | `GET /api/health`: liveness sem dependência externa e com o `commitSha` publicado | ADR-15, Etapa 2 |
-| `lgpd/` | Inventário, exportação e simulação por titular. A eliminação está **bloqueada** | seção 13 |
+| `lgpd/` | Inventário, exportação e simulação por titular; executor de eliminação (`eliminacao.service.ts`, `eliminador.ts`), rotina por prazo (`rotina-de-guarda.ts`) e retenção legal, pela política de guarda de 05/10/2026 | seção 13 |
 | `limite/` | Limite de requisições em memória. É o primeiro guard da cadeia | ADR-16, ADR-02 |
 | `observabilidade/` | Logger estruturado (`severity`), amostragem e trace por OTLP | ADR-20, seção 9 |
 | `observacoes/` | Observações do pedido, só acréscimo (append-only) | 5.1 |

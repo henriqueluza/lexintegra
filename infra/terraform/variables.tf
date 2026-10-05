@@ -22,6 +22,25 @@ variable "github_repository" {
   default     = "henriqueluza/lexintegra"
 }
 
+variable "github_repositorios_adicionais" {
+  description = <<-EOT
+    Repositorios ALEM do de origem que podem assumir `terraform-ci` pela
+    federacao (transferencia.md 2.1, decisoes.md 6.1). Vazio ate o nome do
+    repositorio de destino ser conhecido: o PR A da transferencia e acrescentar
+    o nome aqui, no formato `dono/nome`, e mais nada.
+  EOT
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition = alltrue([
+      for r in var.github_repositorios_adicionais :
+      can(regex("^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$", r)) && r != var.github_repository
+    ])
+    error_message = "Use dono/nome, diferente de github_repository."
+  }
+}
+
 variable "api_image" {
   description = <<-EOT
     Imagem do Cloud Run, com tag imutavel (SHA do commit). O pipeline passa via
@@ -60,6 +79,70 @@ variable "email_resposta" {
   EOT
   type        = string
   default     = "suportelexintegra@gmail.com"
+}
+
+variable "pagamentos_modo" {
+  description = <<-EOT
+    Valor de PAGAMENTOS_MODO no Cloud Run. `desligado` ate o commit de
+    destravamento (docs/runbooks/ligar-terceiros.md), que troca para `producao`
+    junto com `PRODUCAO_DESTRAVADA` no codigo — a variavel sozinha derruba o
+    boot (regra inviolavel 20). Com `producao`, o Cloud Run passa a ler os tres
+    secrets do AbacatePay, que precisam ter versao antes do merge.
+  EOT
+  type        = string
+  default     = "desligado"
+
+  validation {
+    condition     = contains(["desligado", "producao"], var.pagamentos_modo)
+    error_message = "pagamentos_modo aceita so \"desligado\" ou \"producao\"."
+  }
+}
+
+variable "reunioes_modo" {
+  description = <<-EOT
+    Valor de REUNIOES_MODO no Cloud Run. `desligado` ate o commit de
+    destravamento (docs/runbooks/ligar-terceiros.md), que troca para `graph`
+    junto com `INTEGRACAO_GRAPH_DESTRAVADA` no codigo. Com `graph`, o Cloud Run
+    recebe GRAPH_TENANT_ID e GRAPH_CLIENT_ID destas variaveis e
+    GRAPH_CLIENT_SECRET do secret `graph-client-secret`. `falso` nunca: a sala
+    falsa mandaria convite com link inexistente (ver cloud_run.tf).
+  EOT
+  type        = string
+  default     = "desligado"
+
+  validation {
+    condition     = contains(["desligado", "graph"], var.reunioes_modo)
+    error_message = "reunioes_modo aceita so \"desligado\" ou \"graph\"."
+  }
+}
+
+variable "graph_tenant_id" {
+  description = <<-EOT
+    Directory (tenant) ID do Entra ID da B&C. Nao e segredo. PLACEHOLDER ate o
+    commit de destravamento; com `reunioes_modo = "graph"`, precisa ser o GUID.
+  EOT
+  type        = string
+  default     = "PREENCHER-NO-DESTRAVAMENTO"
+
+  validation {
+    condition     = var.reunioes_modo != "graph" || can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", var.graph_tenant_id))
+    error_message = "Com reunioes_modo = \"graph\", graph_tenant_id precisa ser o GUID do tenant."
+  }
+}
+
+variable "graph_client_id" {
+  description = <<-EOT
+    Application (client) ID do aplicativo registrado no Entra ID. Nao e segredo.
+    PLACEHOLDER ate o commit de destravamento; com `reunioes_modo = "graph"`,
+    precisa ser o GUID.
+  EOT
+  type        = string
+  default     = "PREENCHER-NO-DESTRAVAMENTO"
+
+  validation {
+    condition     = var.reunioes_modo != "graph" || can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", var.graph_client_id))
+    error_message = "Com reunioes_modo = \"graph\", graph_client_id precisa ser o GUID do aplicativo."
+  }
 }
 
 variable "pagamentos_cartao" {
@@ -188,17 +271,12 @@ variable "rastreio_amostragem" {
 
 variable "alertas_email_desenvolvimento" {
   description = <<-EOT
-    E-mail que recebe os alertas ENQUANTO a decisao operacional nao existe.
+    E-mail do canal PROVISORIO de desenvolvimento (Etapa 12). Desde 05/10/2026
+    nenhum alerta e roteado para ele: todos vao para `alertas_email_suporte`
+    (decisoes.md 5.2). O canal fica ate a transferencia (CHECKLIST, D).
 
-    PROVISORIO, e marcado como tal no `.env.example`. Quem recebe alerta depois da
-    entrega e decisao da CONTRATANTE (plano de execucao, "So voce" da Etapa 12), e
-    inventar um destinatario seria responder por ela.
-
-    O VALOR NAO MORA NO REPOSITORIO (privado desde 29/09/2026, publico antes e a
-    ser transferido): ele vem do secret ALERTAS_EMAIL_DESENVOLVIMENTO do GitHub
-    Actions (so o secret; a reserva por variable saiu em 30/09/2026). Vazio, nenhum canal e criado
-    e os incidentes existem apenas no console do Monitoring — que e o
-    comportamento certo para um plan rodado por quem nao configurou a variavel.
+    O VALOR NAO MORA NO REPOSITORIO: vem do secret ALERTAS_EMAIL_DESENVOLVIMENTO
+    do GitHub Actions. Vazio, o canal nao e criado.
 
     `sensitive` para nao aparecer no plan comentado no PR.
   EOT
@@ -207,21 +285,15 @@ variable "alertas_email_desenvolvimento" {
   sensitive   = true
 }
 
-variable "alertas_canais_plantao" {
+variable "alertas_email_suporte" {
   description = <<-EOT
-    Canais de notificacao que ACORDAM alguem, por id
-    (`projects/<projeto>/notificationChannels/<id>`).
-
-    Vazio ate a CONTRATANTE decidir quem atende e por qual meio. Enquanto isso,
-    todo alerta esta como `pendente` em `alertas-roteamento.json` e vai so para o
-    canal de desenvolvimento.
-
-    Sao ids de canais criados FORA do Terraform de proposito: canal de plantao
-    costuma envolver telefone ou integracao de terceiro, e criar isso a partir de
-    um plan comentado em PR publico nao e o caminho.
+    E-mail que recebe TODOS os alertas (decisoes.md 5.2, 05/10/2026). E o contato
+    publico do projeto, ja publicado no site, nos e-mails e na politica de
+    privacidade: nao e segredo, e por isso e `default` aqui. Nenhum alerta acorda
+    alguem — sem SMS, sem telefone (ver `alertas-roteamento.json`).
   EOT
-  type        = list(string)
-  default     = []
+  type        = string
+  default     = "suportelexintegra@gmail.com"
 }
 
 variable "limite_outbox_minutos" {

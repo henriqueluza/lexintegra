@@ -111,10 +111,12 @@ test.describe('area publica', () => {
 
     await page.goto('/');
     await percorrerAPaginaInteira(page);
-    await page
-      .getByRole('link', { name: 'Como funciona', exact: true })
-      .last()
-      .click();
+    // Abaixo de 720 px a landing não tem a seção nem o link (landing-celular.css).
+    const comoFunciona = page.getByRole('link', {
+      name: 'Como funciona',
+      exact: true,
+    });
+    if ((await comoFunciona.count()) > 0) await comoFunciona.last().click();
     await page
       .getByRole('link', { name: 'Ver serviços e preços' })
       .first()
@@ -139,9 +141,7 @@ test.describe('area publica', () => {
     await interceptar(page);
 
     await page.goto('/');
-    await page
-      .getByRole('heading', { name: /Contrate.*Receba/i })
-      .waitFor();
+    await page.getByRole('heading', { name: /Contrate.*Receba/i }).waitFor();
     await page.evaluate(() => {
       setTimeout(() => {
         throw new Error('erro de teste na home');

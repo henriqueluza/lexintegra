@@ -24,6 +24,22 @@ function inicioDeJanela(instante: number): number {
 }
 
 describe('idDoEvento', () => {
+  /** B2, 2.1: um aviso de eliminacao por ciclo da solicitacao. */
+  it('o aviso de eliminacao do titular tem a solicitacao como chave', () => {
+    const evento = {
+      tipo: 'aviso-eliminacao-titular' as const,
+      destinatarioUid: 'ana',
+      solicitacao: 'eliminacao_abc_c0',
+    };
+    expect(chaveDoEvento(evento)).toBe('eliminacao_abc_c0');
+    expect(idDoEvento(evento.tipo, chaveDoEvento(evento))).toBe(
+      'aviso-eliminacao_eliminacao_abc_c0',
+    );
+    expect(
+      chaveDoEvento({ ...evento, solicitacao: 'eliminacao_abc_c1' }),
+    ).not.toBe(chaveDoEvento(evento));
+  });
+
   it('da o mesmo id para a criacao de acesso do mesmo advogado', () => {
     expect(idDoEvento('definir-senha', 'uid-1')).toBe(
       idDoEvento('definir-senha', 'uid-1'),
@@ -468,6 +484,7 @@ function montarCenario(opcoes: {
 describe('DespachanteOutbox', () => {
   it.each([
     'aviso-exclusao-arquivos',
+    'aviso-eliminacao-titular',
     'pausa-contestacao',
     'convite-reuniao',
     'cancelamento-reuniao',
@@ -510,7 +527,8 @@ describe('DespachanteOutbox', () => {
     expect(mensagem.corpoTexto).toContain(
       'http://localhost:4200/definir-senha?oobCode=CODIGO',
     );
-    expect(mensagem.corpoTexto).toContain('privacidade@lexintegra.com.br');
+    expect(mensagem.corpoTexto).toContain('suportelexintegra@gmail.com');
+    expect(mensagem.corpoTexto).not.toContain('privacidade@');
     expect(mensagem.corpoTexto).toContain('Esta caixa não é lida');
     expect(mensagem.replyTo).toBeUndefined();
   });

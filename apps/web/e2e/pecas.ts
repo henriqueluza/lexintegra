@@ -12,6 +12,7 @@ export const PECAS = [
   'link-acao',
   'campo',
   'selecao',
+  'grupo-opcoes',
   'cartao',
   'abas',
   'tabela',

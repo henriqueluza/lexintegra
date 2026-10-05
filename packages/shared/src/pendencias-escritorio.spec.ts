@@ -1,6 +1,7 @@
 import { SECOES_PRIVACIDADE, SECOES_TERMOS } from './documentos-legais.js';
 import {
   PENDENCIAS_ESCRITORIO,
+  PREFIXO_PENDENCIA,
   marcadoresEm,
   pendente,
 } from './pendencias-escritorio.js';
@@ -25,24 +26,18 @@ const TODOS_OS_TEXTOS = [
 ].join('\n');
 
 describe('pendencias do escritorio nos textos', () => {
-  it('a lista e exatamente a do decisoes.md (1.4 e 2.1)', () => {
-    expect(Object.keys(PENDENCIAS_ESCRITORIO)).toEqual([
-      'prazo-direitos-art-18',
-      'politica-de-guarda',
-    ]);
+  /** 1.4 e 2.1 decididos em 05/10/2026: nao sobra pendencia nos textos. */
+  it('a lista esta vazia desde 05/10/2026', () => {
+    expect(Object.keys(PENDENCIAS_ESCRITORIO)).toEqual([]);
   });
 
-  it('cada pendencia aparece uma vez, e nenhum marcador fora da lista', () => {
-    const esperados = Object.keys(PENDENCIAS_ESCRITORIO).map((chave) =>
-      pendente(chave as keyof typeof PENDENCIAS_ESCRITORIO),
-    );
-    expect(marcadoresEm(TODOS_OS_TEXTOS).sort()).toEqual(esperados.sort());
+  it('nenhum texto carrega marcador de pendencia', () => {
+    expect(marcadoresEm(TODOS_OS_TEXTOS)).toEqual([]);
+    expect(TODOS_OS_TEXTOS).not.toContain(PREFIXO_PENDENCIA);
   });
 
-  it('o marcador e visivel e diz o que falta', () => {
-    expect(pendente('politica-de-guarda')).toMatch(
-      /^\[PENDENTE-ESCRITORIO: prazos de guarda .+\]$/u,
-    );
+  it('o marcador, quando houver, e visivel', () => {
+    expect(pendente('x' as never)).toMatch(/^\[PENDENTE-ESCRITORIO: .+\]$/u);
   });
 
   it('marcadoresEm acha os marcadores na ordem', () => {

@@ -17,3 +17,15 @@ export const ASSUNTO_PAUSA_CONTESTACAO =
   'Seus pedidos estão pausados por uma contestação do pagamento';
 export const TEXTO_PAUSA_CONTESTACAO =
   'Recebemos uma contestação do pagamento de um ou mais pedidos seus junto ao meio de pagamento. Enquanto ela estiver em análise, esses pedidos ficam pausados: nada muda neles até a conclusão, e não é possível cancelar, estornar, enviar arquivos ou marcar reuniões. As reuniões que estavam marcadas foram desmarcadas e voltaram ao saldo de cada pedido. Se a contestação for encerrada a favor do escritório, os pedidos voltam ao normal e você pode marcar as reuniões de novo. Se for encerrada a seu favor, os pedidos são encerrados como estornados, sem nova devolução, porque o valor já voltou pelo meio de pagamento. Se você não reconhece essa contestação, procure o atendimento pela sua área.';
+
+/**
+ * O aviso de eliminacao dos dados do titular (B2, decisoes.md 2.1; politica de
+ * guarda de 05/10/2026). Sai pelo outbox (`aviso-eliminacao-titular`) a pedido
+ * do titular ou no fim do prazo de guarda, e a eliminacao so acontece 7 dias
+ * depois do ENVIO CONFIRMADO. Um texto so para os dois casos: o titular pode
+ * nao lembrar de ter pedido, e o e-mail diz como contestar.
+ */
+export const ASSUNTO_AVISO_ELIMINACAO =
+  'Seus dados na LexIntegra serão eliminados em 7 dias';
+export const TEXTO_AVISO_ELIMINACAO =
+  'Recebemos um pedido de eliminação dos seus dados pessoais, ou chegou ao fim o prazo pelo qual precisamos guardá-los. A eliminação acontece daqui a 7 dias. A partir dela, a sua conta deixa de existir: você não poderá mais entrar na plataforma nem baixar documentos. Se quiser guardar alguma cópia, acesse a sua área antes disso. O que a lei nos obriga a manter — pedidos, pagamentos, registros de aceite e comunicações, por 5 anos depois do seu último pedido — continua guardado até o fim desse prazo e é eliminado depois. Se você não fez esse pedido ou tem alguma dúvida, responda a este e-mail.';

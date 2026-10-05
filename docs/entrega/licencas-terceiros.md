@@ -193,7 +193,8 @@ Arquivos versionados em `apps/web/public/`:
 | `imagens/logo-lexintegra.png` | Gerada com `imagegen` **a partir da logo enviada pela contratante**. É obra derivada da arte original, com o monograma da balança preservado | [`docs/identidade-navegacao.md`](../identidade-navegacao.md). Direitos da arte original: ADR-10 |
 | `favicon.png` | Idem, só o símbolo | `docs/identidade-navegacao.md` |
 | `favicon.ico` | Derivado de `favicon.png` no Bloco E (16, 32, 48 e 64 px). Substituiu o ícone padrão do Angular CLI que vinha do esqueleto da Etapa 2 | [`docs/imagens-landing.md`](../imagens-landing.md) |
-| Ícones do sistema (`apps/web/src/app/ui/icone/`) | Cópia literal dos traços do protótipo `docs/prototipos/direcao-B-pauta.html` (Etapa 1). **A origem do desenho no protótipo não está registrada**: nenhuma biblioteca é citada em lugar nenhum do repositório | [`docs/imagens-landing.md`](../imagens-landing.md) |
+| Ícones do sistema (`apps/web/src/app/ui/icone/`) | Cópia literal dos traços do protótipo `docs/prototipos/direcao-B-pauta.html` (Etapa 1). Investigado em 05/10/2026: **não vêm de biblioteca identificável** (desenhados com o protótipo); dois coincidem com o Lucide por serem formas triviais. Nenhuma licença de terceiro | [`docs/imagens-landing.md`](../imagens-landing.md) |
+| Ícones da área pública (`icones/nevoa.svg`) | **Phosphor Icons**, peso *regular*. **MIT**, "Copyright (c) 2023 Phosphor Icons" (https://github.com/phosphor-icons/core). O aviso está no topo do próprio arquivo, como a MIT pede para cópias | [`docs/imagens-landing.md`](../imagens-landing.md) |
 
 As ilustrações de arquitetura `docs/imagens/arquitetura-lexintegra.jpg` e
 `.png` estão **versionadas em `docs/imagens/`** e ilustram o `README.md` da

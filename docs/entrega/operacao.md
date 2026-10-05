@@ -91,12 +91,14 @@ servindo.
 | `VARREDOR_LOTE` | não | não definida | Inválido ou ausente, usa 100 | `outbox/politica.ts` |
 | `APP_CHECK_ENFORCE` | sim | `true` | Fora de `"true"`/`"false"`, **recusa subir** em produção | `app-check/exigencia.ts` |
 | `PROXIES_CONFIAVEIS` | não | `2` | Inválido, usa 0. Com o número errado, o limitador conta todo mundo como um visitante só, **sem falhar** | `configurar.ts` |
-| `PAGAMENTOS_MODO` | sim | `desligado` | Ausente ou inválido, recusa subir. `producao` **sempre** recusa (regra 20) | `pagamentos/gateway/modo.ts` |
+| `PAGAMENTOS_MODO` | sim | `desligado` | Ausente ou inválido, recusa subir. `producao` recusa enquanto `PRODUCAO_DESTRAVADA` for `false` (regra 20) e, destravado, exige `NODE_ENV=production`, chave `abc_prod_` e os dois segredos do webhook | `pagamentos/gateway/modo.ts` |
 | `PAGAMENTOS_CARTAO` | sim | `desabilitado` (B2, decisões 3.4) | Ausente ou inválido, recusa subir. `desabilitado`: o checkout recusa cartão com 422 e a tela mostra "em breve" | `pagamentos/gateway/cartao.ts` |
-| `ABACATEPAY_API_KEY` | só com `sandbox` | não definida | Em `sandbox`, recusa subir sem ela e recusa chave sem o prefixo `abc_dev_` | `pagamentos/gateway/modo.ts` |
-| `ABACATEPAY_WEBHOOK_SECRET` | com a chave | não definida | Com a chave e sem ela, recusa subir | `pagamentos/gateway/modo.ts` |
-| `ABACATEPAY_WEBHOOK_CHAVE_HMAC` | com a chave | não definida | Com a chave e sem ela, recusa subir | `pagamentos/gateway/modo.ts` |
-| `REUNIOES_MODO` | sim | `desligado` | Ausente ou inválido, recusa subir. `graph` sempre recusa. `falso` recusa em produção | `reunioes/sala/modo.ts` |
+| `ABACATEPAY_API_KEY` | com `sandbox` ou `producao` | não definida (secret `abacatepay-api-key`, sem versão, só referenciado com `producao`) | Em `sandbox`, recusa subir sem ela e recusa chave sem o prefixo `abc_dev_`; em `producao`, sem o prefixo `abc_prod_` | `pagamentos/gateway/modo.ts` |
+| `ABACATEPAY_WEBHOOK_SECRET` | com a chave | não definida (secret `abacatepay-webhook-secret`) | Com a chave e sem ela, recusa subir | `pagamentos/gateway/modo.ts` |
+| `ABACATEPAY_WEBHOOK_CHAVE_HMAC` | com a chave | não definida (secret `abacatepay-webhook-chave-hmac`) | Com a chave e sem ela, recusa subir | `pagamentos/gateway/modo.ts` |
+| `REUNIOES_MODO` | sim | `desligado` | Ausente ou inválido, recusa subir. `graph` recusa enquanto `INTEGRACAO_GRAPH_DESTRAVADA` for `false` e, destravado, exige `NODE_ENV=production` e as três `GRAPH_*`. `falso` recusa em produção | `reunioes/sala/modo.ts` |
+| `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID` | com `graph` | não definidas (variáveis `graph_tenant_id` e `graph_client_id`, com placeholder) | Com `graph`, ausentes ou fora do formato GUID, recusa subir | `reunioes/sala/modo.ts` |
+| `GRAPH_CLIENT_SECRET` | com `graph` | não definida (secret `graph-client-secret`, sem versão) | Com `graph` e sem ela, recusa subir | `reunioes/sala/modo.ts` |
 | `RELOGIO_FIXO` | **proibida** | não definida | Fora de emulador, **recusa subir** | `relogio.ts`, conferida em `reunioes/sala/sala.module.ts` |
 | `RASTREIO_AMOSTRAGEM` | não | `0.1` | Vazia ou `0` desliga o rastreio. Valor fora de 0–1 **recusa subir** | `observabilidade/amostragem.ts` |
 | `LOG_FORMATO` | não | `json` | Valor desconhecido recusa subir. Ausente, usa `json` em produção | `observabilidade/criar-logger.ts` |
@@ -107,9 +109,13 @@ servindo.
 Os caminhos da última coluna são relativos a `apps/api/src/`. Os valores de
 exemplo e os comentários estão em [`.env.example`](../../.env.example).
 
-**Variáveis que ainda não existem.** Entram quando o Teams for ligado (seção
-4.3): `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID` e `GRAPH_CLIENT_SECRET`, este último
-só no Secret Manager.
+**Secrets declarados sem valor (05/10/2026).** `abacatepay-api-key`,
+`abacatepay-webhook-secret`, `abacatepay-webhook-chave-hmac` e
+`graph-client-secret` existem no Secret Manager, vazios, com
+`secretAccessor` para a `api-lexintegra-run`. O Cloud Run só os referencia
+quando o modo correspondente sai de `desligado`, porque secret sem versão
+impede a revisão de subir. Gravar os valores e destravar:
+[`runbooks/ligar-terceiros.md`](../runbooks/ligar-terceiros.md).
 
 ### 2.2 Scanner e job da base (`scanner-lexintegra`, `clamav-atualizar-base`)
 
@@ -132,10 +138,14 @@ delas: commit, PR e deploy. Nunca um `apply` local.
 | `app_check_enforce` | `"true"` (padrão; o deploy não sobrescreve) | Vira `APP_CHECK_ENFORCE` |
 | `proxies_confiaveis` | `2` | Vira `PROXIES_CONFIAVEIS` |
 | `rastreio_amostragem` | `"0.1"` | Vira `RASTREIO_AMOSTRAGEM` |
-| `alertas_email_desenvolvimento` | vem do GitHub (`ALERTAS_EMAIL_DESENVOLVIMENTO`) | Cria o canal de e-mail dos alertas |
-| `alertas_canais_plantao` | `[]` | Canais que recebem os alertas marcados `acordar` |
+| `pagamentos_modo` | `desligado` | Vira `PAGAMENTOS_MODO`; com `producao`, liga os três secrets do AbacatePay. Só junto com `PRODUCAO_DESTRAVADA` ([`ligar-terceiros.md`](../runbooks/ligar-terceiros.md)) |
+| `reunioes_modo` | `desligado` | Vira `REUNIOES_MODO`; com `graph`, liga `GRAPH_*`. Só junto com `INTEGRACAO_GRAPH_DESTRAVADA` |
+| `graph_tenant_id`, `graph_client_id` | `PREENCHER-NO-DESTRAVAMENTO` | GUIDs do Entra ID; o Terraform recusa o placeholder com `graph` |
+| `alertas_email_suporte` | `suportelexintegra@gmail.com` | Canal de e-mail que recebe **todos** os alertas (decisões 5.2) |
+| `alertas_email_desenvolvimento` | vem do GitHub (`ALERTAS_EMAIL_DESENVOLVIMENTO`) | Canal provisório, sem alerta roteado desde 05/10/2026; sai na transferência |
 | `limite_outbox_minutos`, `limite_falhas_de_entrega`, `limite_quarentena_minutos`, `limite_base_clamav_horas` | 30, 5, 60, 48 | Limiares das políticas de alerta |
 | `github_repository` | `henriqueluza/lexintegra` | Qual repositório pode assumir o CI. Ver [`transferencia.md`](transferencia.md) |
+| `github_repositorios_adicionais` | `[]` | Outros repositórios aceitos pela federação; o de destino entra aqui (transferência 2.1) |
 
 ---
 
@@ -146,8 +156,8 @@ em vez de assumir um valor padrão.
 
 | Modo | Estado hoje | O que ele faz agora | O que o destrava |
 |---|---|---|---|
-| `PAGAMENTOS_MODO` | `desligado` | Checkout e webhook respondem 503 | Chave de produção aprovada, **mudança de código** que aceite `producao` e primeira transação real feita por uma pessoa. Ver a seção 4.2 |
-| `REUNIOES_MODO` | `desligado` | O cartão do pedido diz que o agendamento está indisponível | Entra ID configurado, policy propagada, `usuarioTeams` preenchido, **mudança de código** que aceite `graph`. Ver a seção 4.3 |
+| `PAGAMENTOS_MODO` | `desligado` | Checkout e webhook respondem 503 | Chave de produção nos secrets, primeira transação real feita por uma pessoa e o **commit de destravamento** (`PRODUCAO_DESTRAVADA = true` e `pagamentos_modo = "producao"`). Ver a seção 4.2 |
+| `REUNIOES_MODO` | `desligado` | O cartão do pedido diz que o agendamento está indisponível | Entra ID configurado, policy propagada, chamada manual de teste, `usuarioTeams` preenchido e o **commit de destravamento** (`INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"` e os GUIDs). Ver a seção 4.3 |
 | `APP_CHECK_ENFORCE` | `true` | Rotas `@Publico()`, fora health e webhook e relato de erro, exigem token de App Check | Já está ligado (commit `67be0ca`). O provedor usa a site key de `vars.APP_CHECK_SITE_KEY` e, sem `vars.APP_CHECK_PROVEDOR`, o provedor `recaptcha-enterprise`. Para desligar numa emergência: `app_check_enforce = "false"` por PR |
 | `RELOGIO_FIXO` | ausente | — | **Nunca em produção.** Só jornadas e regressão visual, sob emulador |
 
@@ -176,7 +186,8 @@ verificado. Quem responde a um e-mail da plataforma fala com o reply-to, a
 caixa de suporte. O despachante do outbox põe o reply-to em **todo** e-mail
 (`outbox/despachante.service.ts`, a saída única), e o rodapé
 (`apps/api/src/email/rodape.ts`) diz que a resposta chega ao suporte e indica
-`privacidade@lexintegra.com.br` para dados pessoais. Sem `EMAIL_REPLY_TO`, o
+o mesmo `suportelexintegra@gmail.com` para dados pessoais — desde 05/10/2026 é
+o único e-mail de contato do projeto (decisões 1.3). Sem `EMAIL_REPLY_TO`, o
 e-mail sai sem o cabeçalho e o rodapé volta a dizer que a caixa não é lida. O
 remetente também é o `ORGANIZER` do convite de reunião
 (`reunioes/convites.service.ts`): cliente de e-mail desconfia de convite cujo
@@ -262,76 +273,63 @@ não tiver sido revogada no painel.
 
 ### 4.2 AbacatePay em produção
 
-**Pré-requisitos**, todos de terceiros:
+**O passo a passo, com os comandos, está em
+[`runbooks/ligar-terceiros.md`](../runbooks/ligar-terceiros.md), seção 1.**
+Desde 05/10/2026 o código de produção existe e está testado, atrás da trava
+`PRODUCAO_DESTRAVADA` (regra 20), e os três secrets existem vazios. Falta só o
+que é de terceiros: a nova análise do site e a aprovação da conta, a chave, o
+webhook e a chave do HMAC de produção (criados pelo Caique no painel, com o
+segredo do webhook gerado pelo Henrique), a primeira transação feita à mão e o
+commit de destravamento.
 
-- a conta do escritório aprovada, com chave `abc_prod_`;
-- a homologação de cartão. **Decidido (decisões 3.4): se ela não sair antes
-  do lançamento, lança só com PIX** — `pagamentos_cartao = "desabilitado"` (o
-  padrão), o checkout recusa cartão com 422 e a tela mostra o cartão
-  desabilitado com "em breve". Quando a homologação sair, um PR troca o padrão
-  para `habilitado`; nenhum código muda;
-- os textos jurídicos (Bloco I da B2) aprovados pelo escritório;
-- a ficha de anamnese definitiva (construída no Bloco A da B2).
+**Rotas que o código chama e permissão da chave.** O adaptador
+(`apps/api/src/pagamentos/gateway/abacatepay.gateway.ts`) usa a API v2,
+`https://api.abacatepay.com/v2`. A permissão vem do topo da página de cada rota
+na documentação (consulta em 05/10/2026):
 
-1. **Destravar o código, em PR próprio.** `PAGAMENTOS_MODO=producao` recusa
-   subir por construção (`apps/api/src/pagamentos/gateway/modo.ts`, regra
-   inviolável 20). Liberar é desenvolvimento, não troca de variável. O PR
-   precisa fazer três coisas:
-   - aceitar `producao` só com chave `abc_prod_`;
-   - esperar `devMode: false` nas respostas e nos eventos;
-   - manter a recusa de `sandbox` com chave de produção.
+| Rota | Uso | Permissão da chave |
+|---|---|---|
+| `POST /transparents/create` | Cobrança PIX | `CHECKOUT:READ` (declarada) |
+| `GET /transparents/check` | Situação do PIX, no estorno | `CHECKOUT:READ` (declarada) |
+| `POST /transparents/refund` | Estorno integral do PIX | não declarada |
+| `POST /products/create` | Produto do cartão | não declarada (`PRODUCT:CREATE`, pelo padrão) |
+| `GET /products/list` | Reaproveitar produto, por `externalId` | `PRODUCT:READ` (declarada) |
+| `POST /checkouts/create` | Checkout hospedado do cartão | não declarada (`CHECKOUT:CREATE`, pelo padrão) |
+| `GET /checkouts/get` | Situação do checkout, no estorno | `CHECKOUT:READ` (declarada) |
+| `POST /checkouts/refund` | Estorno integral do cartão | não declarada |
 
-   Depois disso, atualize esta seção e a seção 3.
-2. **Criar os containers dos secrets pelo Terraform.** Em
-   [`secrets.tf`](../../infra/terraform/secrets.tf), declare um secret para a
-   chave de produção e outro para o segredo do webhook, com o
-   `secretAccessor` da `api-lexintegra-run`, e faça o merge.
-   Nomes propostos, conferidos contra o que o código lê (`apps/api/src`) e a
-   convenção de `secrets.tf` (kebab-case, sufixo `-dev` só na chave de sandbox):
+A chave de produção recebe `CHECKOUT:CREATE`, `CHECKOUT:READ`,
+`PRODUCT:CREATE` e `PRODUCT:READ`, e nada de saque, cliente, loja ou extrato.
+A permissão dos dois estornos é conferida no teste manual do runbook (1.6): se
+o gateway recusar, acrescenta-se `CHECKOUT:DELETE`.
 
-   | Variável de ambiente | Secret | Tipo |
-   |---|---|---|
-   | `ABACATEPAY_API_KEY` | `abacatepay-api-key` | secret |
-   | `ABACATEPAY_WEBHOOK_SECRET` | `abacatepay-webhook-secret` | secret |
-   | `ABACATEPAY_WEBHOOK_CHAVE_HMAC` | — | variável comum: a chave é pública (ADR-19), não é secret |
+**Secrets** (vazios desde 05/10/2026, `infra/terraform/secrets.tf`):
 
-   São **dois** secrets, não três.
-   **Não os referencie ainda no `cloud_run.tf`.** Secret sem versão impede a
-   revisão de subir.
-3. **Gravar os valores, à mão.** Quem tem acesso ao painel do escritório gera a
-   chave e grava a versão:
-   `gcloud secrets versions add <secret> --data-file=- --project=plataforma-juridica-36bda`,
-   colando o valor na entrada padrão, nunca em arquivo nem no histórico do
-   shell. O segredo do webhook é **nosso**. Gere com `openssl rand -hex 24` e
-   grave da mesma forma.
-4. **Cadastrar o webhook no painel do AbacatePay** (conta do escritório):
-   - URL `https://lexintegra.com.br/api/pagamentos/webhook`, com o segredo do
-     passo 3 no campo de secret (o AbacatePay o repete na query como
-     `webhookSecret`);
-   - assine os seis eventos: `transparent.completed`, `checkout.completed`,
-     `transparent.refunded`, `checkout.refunded`, `transparent.disputed` e
-     `checkout.disputed`.
+| Variável de ambiente | Secret |
+|---|---|
+| `ABACATEPAY_API_KEY` | `abacatepay-api-key` |
+| `ABACATEPAY_WEBHOOK_SECRET` | `abacatepay-webhook-secret` (gerado pelo Henrique, `openssl rand -hex 24`) |
+| `ABACATEPAY_WEBHOOK_CHAVE_HMAC` | `abacatepay-webhook-chave-hmac` (a chave é pública, ADR-19; fica em secret mesmo assim) |
 
-   **Quem tem acesso ao painel tem acesso ao segredo** (ADR-19).
-5. **Referenciar no `cloud_run.tf` e ligar o modo, em PR próprio:**
-   - `ABACATEPAY_API_KEY` e `ABACATEPAY_WEBHOOK_SECRET` por `secret_key_ref`;
-   - `ABACATEPAY_WEBHOOK_CHAVE_HMAC` como valor comum, porque a chave do HMAC
-     é pública e fixa, publicada pelo AbacatePay (ADR-19);
-   - `PAGAMENTOS_MODO = "producao"`.
+**URL do webhook de produção: `https://lexintegra.com.br/api/pagamentos/webhook`**,
+pelo rewrite do Hosting, e não a URL `*.run.app` que o sandbox usa. O domínio
+sobrevive a recriação do serviço e à transferência do projeto; a URL do Cloud
+Run, não. Corpo e query chegam intactos, e a exclusão de log pelo nome do
+parâmetro cobre também o log do Hosting. A chamada de 22/09 para
+`/api/webhook` era a rota antiga, sem o prefixo `pagamentos/`: respondeu 404, e
+nenhum webhook do painel deve apontar para ela. Detalhe em
+[`ligar-terceiros.md`](../runbooks/ligar-terceiros.md), 1.7.
 
-   O deploy prova o boot. Com qualquer peça faltando, a revisão não sobe, e a
-   anterior segue com `desligado`.
-6. **Primeira transação real, por uma pessoa.** Uma compra PIX de valor baixo,
-   com um e-mail que a pessoa lê. Confira:
-   - o pedido aparece em `/admin/distribuicao`;
-   - o e-mail de acesso chega;
-   - `pagamentos/{cobrancaId}` fica `confirmado`.
-7. **Conferência financeira.** O escritório confere que o valor caiu na conta
-   do AbacatePay. É verificação financeira, não técnica.
-8. **Cartão, só depois da homologação.** Refaça antes a seção 4 de
-   [`runbooks/checkout-sandbox.md`](../runbooks/checkout-sandbox.md). O nome do
-   evento de conclusão do cartão **não foi confirmado**. Até lá, a proteção é o
-   alerta `pagamento.webhook-evento-desconhecido`.
+Os seis eventos: `transparent.completed`, `checkout.completed`,
+`transparent.refunded`, `checkout.refunded`, `transparent.disputed` e
+`checkout.disputed`. **Quem tem acesso ao painel tem acesso ao segredo**
+(ADR-19).
+
+**Cartão, só depois da homologação.** Decidido (decisões 3.4): sem ela, lança
+só com PIX (`pagamentos_cartao = "desabilitado"`). Antes de habilitar, refaça a
+seção 4 de [`runbooks/checkout-sandbox.md`](../runbooks/checkout-sandbox.md): o
+nome do evento de conclusão do cartão **não foi confirmado**. Até lá, a
+proteção é o alerta `pagamento.webhook-evento-desconhecido`.
 
 **Voltar atrás:** `PAGAMENTOS_MODO = "desligado"` por PR. O checkout e o
 webhook voltam a responder 503. Um QR já emitido e pago nesse intervalo depende
@@ -348,46 +346,27 @@ Confira nos *Webhook Logs* do painel antes de desligar com cobrança em aberto.
 
 ### 4.3 Microsoft Teams
 
-1. **Licenças.** Todo advogado precisa de Microsoft 365 com Teams (ADR-05).
-   `[CONFIRMAR: licenças conferidas, e por quem]`.
-2. **Registrar o aplicativo no Entra ID do escritório.** Um administrador do
-   tenant faz isto:
-   - registra o aplicativo;
-   - concede a permissão **de aplicação** `OnlineMeetings.ReadWrite.All`, com
-     consentimento do administrador;
-   - concede também `User.Read.All` (de aplicação). É só leitura do
-     diretório, e é o que deixa a edição do advogado conferir o `usuarioTeams`
-     antes de salvar (`GET /users/{id}`). Sem ela a conferência responde
-     "indisponível" e a tela salva sem conferir;
-   - cria um client secret.
+**O passo a passo, com os comandos e a chamada manual de teste do Graph, está
+em [`runbooks/ligar-terceiros.md`](../runbooks/ligar-terceiros.md), seção 2.**
+Desde 05/10/2026 o modo `graph` lê as credenciais e instancia o adaptador
+(`reunioes/sala/graph.sala-de-reuniao.ts`), atrás da trava
+`INTEGRACAO_GRAPH_DESTRAVADA`; o secret `graph-client-secret` existe vazio, e
+tenant e client id são variáveis do Terraform com placeholder.
 
-   Nada de `Calendars.ReadWrite`: não é necessária (ADR-05). Guarde o tenant
-   id, o client id e o client secret. O secret vai para o Secret Manager, nunca
-   para arquivo.
-3. **Criar a application access policy, por PowerShell do Teams.** Os comandos
-   são `New-CsApplicationAccessPolicy`, com o client id do aplicativo, e
-   `Grant-CsApplicationAccessPolicy`, para os advogados ou para um grupo.
-   Confira a documentação atual da Microsoft antes de rodar. **A propagação
-   leva até 48 horas**, e há relatos de erro mesmo com tudo certo (ADR-05,
-   risco 1).
-4. **Preencher `usuarioTeams` de cada advogado.** É o **object ID do Entra**, um
-   GUID, e não o e-mail nem o uid do Firebase (ADR-21, decisão B). O formulário
-   de criação e o de edição em `/admin/advogados` aceitam o campo. Para os que
-   já existem, use **Editar** na linha do advogado (B2, Bloco F1). Com o
-   Graph ligado, um id que não existe no tenant é recusado antes de salvar.
-5. **Chamada de teste manual**, fora da aplicação. Com as credenciais do passo
-   2, crie uma reunião para um advogado por
-   `POST /users/{usuarioTeams}/onlineMeetings/createOrGet`. Se responder 403
-   com `No application access policy found`, a policy não propagou.
-6. **Destravar o código, em PR próprio.** `REUNIOES_MODO=graph` recusa subir
-   por construção (`apps/api/src/reunioes/sala/modo.ts`). O adaptador já existe
-   (`reunioes/sala/graph.sala-de-reuniao.ts`) mas não é alcançável. O PR liga o
-   modo e lê `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID` e `GRAPH_CLIENT_SECRET`, com a
-   mesma sequência de secret da seção 4.2: container, versão e referência.
-7. **Ligar.** `REUNIOES_MODO = "graph"` no `cloud_run.tf`, em commit próprio.
-8. **Conferir.** Marque uma reunião de teste. Ela precisa sair de
-   `reservada_sem_link` para `confirmada`, com link do Teams. O convite
-   precisa chegar e abrir em Gmail, Outlook e Apple Mail.
+**Permissões de aplicação no Entra ID, conferidas contra o código
+(05/10/2026)**, ambas com consentimento do administrador:
+
+| Permissão (Application) | Chamada | Onde |
+|---|---|---|
+| `OnlineMeetings.ReadWrite.All` | `POST /users/{usuarioTeams}/onlineMeetings/createOrGet` | `GraphSalaDeReuniao.criar` |
+| `User.Read.All` | `GET /users/{usuarioTeams}?$select=id` | `GraphSalaDeReuniao.conferirUsuario`, na edição do advogado |
+
+O token é de aplicação (client credentials, escopo
+`https://graph.microsoft.com/.default`). Nenhuma permissão delegada, e nada de
+`Calendars.ReadWrite` (ADR-05). Além das permissões, a **application access
+policy** do Teams (PowerShell, propagação de até 48 h) precisa conceder o
+aplicativo a cada advogado. O `usuarioTeams` é o **object ID** do Entra, não o
+e-mail (ADR-21, decisão B).
 
 **Voltar atrás:** `REUNIOES_MODO = "desligado"`. As reuniões já marcadas
 continuam, e as sem sala aparecem em `/admin/reunioes`.
@@ -407,7 +386,7 @@ Conferidas em 24/09/2026 com `gcloud scheduler jobs list` e
 |---|---|---|---|---|
 | `varredor-outbox` | Scheduler, em [`outbox.tf`](../../infra/terraform/outbox.tf) | a cada minuto | `POST /api/interno/outbox/varredura`: reenfileira o que ficou sem tarefa | Registro perdido entre gravar e enfileirar não é mais entregue. Alerta *Outbox parado* |
 | `clamav-base-diaria` | Scheduler, em [`varredura.tf`](../../infra/terraform/varredura.tf) | 4h e 16h | Executa o job `clamav-atualizar-base`, que publica a base no bucket | A base envelhece e o scanner continua dizendo "limpo". Alertas *Base do ClamAV velha* e *sem publicação* |
-| `retencao-diaria` | Scheduler, em `varredura.tf` | 5h e 17h | `POST /api/interno/retencao`: aviso 7 dias antes (um por pedido) e, 30 dias depois de o último entregável chegar a `entregue` — nunca antes de 7 dias depois do aviso —, exclusão de todas as versões dos entregáveis e dos anexos do cliente. Pula pedido com contestação aberta. Duas vezes por dia por causa do alerta de ausência | Arquivos ficam além dos 30 dias. Alerta *Retencao parada* |
+| `retencao-diaria` | Scheduler, em `varredura.tf` | 5h e 17h | `POST /api/interno/retencao`: aviso 7 dias antes (um por pedido) e, 30 dias depois de o último entregável chegar a `entregue` — nunca antes de 7 dias depois do aviso —, exclusão de todas as versões dos entregáveis e dos anexos do cliente. Pula pedido com contestação aberta. Duas vezes por dia por causa do alerta de ausência. **Desde 05/10/2026 roda também a rotina da política de guarda** (`lgpd/eliminacao.service.ts`): elimina o cadastro inicial sem conta 6 meses depois do último envio, abre a eliminação do cliente 5 anos depois do último pedido e executa as eliminações cujo aviso já deu 7 dias | Arquivos ficam além dos 30 dias; dados além da guarda. Alerta *Retencao parada*; falha da eliminação emite `lgpd.eliminacao-falhou` |
 | `sinais-operacionais` | Scheduler, em [`sinais.tf`](../../infra/terraform/sinais.tf) | a cada 5 minutos | `POST /api/interno/sinais`: mede e grava em log a idade do outbox, da quarentena e da reunião sem sala, e os advogados sem `usuarioTeams` | As métricas ficam sem dado, e os alertas que dependem delas **não disparam**. Alerta *Sonda de sinais parada* |
 | fila `eventos` | Cloud Tasks, em `outbox.tf` | sob demanda | Entrega o outbox em `POST /api/interno/outbox`. Até 12 tentativas em 1 hora, backoff de 10 a 300 s | E-mail, sala e estorno param. Alerta *Outbox parado* |
 | fila `varredura` | Cloud Tasks, em `varredura.tf` | sob demanda | Chama `POST /api/interno/varredura`, que chama o scanner. Até 10 tentativas em 1 hora | Arquivo parado em quarentena. Alerta *Arquivo parado em quarentena* |
@@ -440,14 +419,20 @@ bloqueado.
 | `lexintegra-clamav-db-36bda` | Base de assinaturas do ClamAV | Google | Sem regra; o job sobrescreve | **nenhum** |
 | `lexintegra-tfstate-36bda` | State do Terraform | Google | Versionado, com `prevent_destroy` | **7 dias** |
 
+**Registros de acesso: 186 dias (Marco Civil, art. 15; desde 05/10/2026).** O
+log de requisição da API vai também para o bucket de logs
+`registros-de-acesso` (Cloud Logging, `southamerica-east1`), pelo sink de mesmo
+nome, com retenção de 186 dias; o `_Default` continua com 30. O sink repete a
+exclusão do `webhookSecret`. Declarados em `infra/terraform/registros-de-acesso.tf`.
+Consulta: *Logs Explorer → Refine scope → Log bucket → registros-de-acesso*.
+
 **Quanto tempo um arquivo sobrevive depois de excluído: até 7 dias.** A
-exclusão pela aplicação (a retenção de hoje, a eliminação LGPD quando existir)
+exclusão pela aplicação (a retenção e a eliminação LGPD do titular)
 apaga o objeto, e o que sobra é o soft delete de 7 dias do bucket de arquivos.
 É a janela para desfazer uma exclusão errada: nesse prazo, o objeto é
 restaurável no console do Cloud Storage. Os dois valores estão declarados em
 `storage.tf`: `soft_delete_policy` e o versionamento desligado. Esse número
-precisa entrar na política de retenção que o escritório aprovar
-([`lgpd.md`](lgpd.md)).
+entra na política de guarda ([`lgpd.md`](lgpd.md)).
 
 **A retenção apaga todas as versões do entregável**, e não só a atual: cada
 revisão é um objeto próprio (`caminhoDaVersao`, em
@@ -492,15 +477,17 @@ continua recuperável por até 7 dias. A única coleção com TTL é `checkouts`
 | Sonda de sinais parada | A sonda não mede há 15 min. Quatro alertas ficam cegos | [`sonda-parada.md`](../runbooks/sonda-parada.md) |
 | API fora do ar | O uptime check de `https://lexintegra.com.br/api/health` falha | [`api-fora-do-ar.md`](../runbooks/api-fora-do-ar.md) |
 
-**Quem recebe.** Um canal de e-mail, *Desenvolvimento (PROVISORIO)*, criado só
-quando `ALERTAS_EMAIL_DESENVOLVIMENTO` existe no GitHub. Desde 29/09/2026 o
-valor está num *secret* do repositório. A *variable* de mesmo nome foi apagada
-em 30/09/2026, depois de o `plan` confirmar que o secret chega ao workflow. O roteamento está em
-[`alertas-roteamento.json`](../../infra/terraform/alertas-roteamento.json), e
-todos os alertas estão em `pendente` (só o canal provisório recebe). Trocar o
-destino e decidir o roteamento faz parte da transferência
-([`transferencia.md`](transferencia.md)). Depois de qualquer troca, siga
-[`runbooks/alerta-artificial.md`](../runbooks/alerta-artificial.md).
+**Quem recebe (decidido em 05/10/2026, decisões 5.2).** Todos os alertas vão
+por e-mail para `suportelexintegra@gmail.com`, pelo canal *Suporte LexIntegra*
+(`alertas_email_suporte`). **Nenhum alerta acorda alguém**: sem SMS, sem
+telefone, sem plantão — e isso é lint: `scripts/conferir-roteamento-alertas.mjs`
+só aceita os destinos `suporte` e `registrar`. O roteamento está em
+[`alertas-roteamento.json`](../../infra/terraform/alertas-roteamento.json). O
+canal *Desenvolvimento (PROVISORIO)*, do secret
+`ALERTAS_EMAIL_DESENVOLVIMENTO`, continua existindo sem alerta roteado e sai
+na transferência. Depois do deploy que trocou o destinatário, o Henrique
+dispara o alerta artificial
+([`runbooks/alerta-artificial.md`](../runbooks/alerta-artificial.md)).
 
 **Incidente do ClamAV, 14/09 a 29/09/2026.** O job `clamav-atualizar-base` nunca rodou: o Scheduler recebia
 `PERMISSION_DENIED` (403), porque a conta `tarefas-lexintegra` não tinha `roles/run.invoker` no job (o

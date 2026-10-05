@@ -17,7 +17,8 @@ variáveis de ambiente.
 | Resend + `EMAIL_FROM` | Remetente dos e-mails da plataforma | `LexIntegra <suporte@notificacoes.lexintegra.com.br>` (até 01/10/2026, `nao-responda@`) |
 | `EMAIL_REPLY_TO` | Para onde vai a resposta de quem recebe | `suportelexintegra@gmail.com` (01/10/2026) |
 | Resend | Domínio de envio a verificar (registros DNS no Registro.br) | `notificacoes.lexintegra.com.br` |
-| Microsoft 365 da B&C | Caixa compartilhada do encarregado | `privacidade@lexintegra.com.br` |
+| Site, e-mails, política de privacidade e encarregado | **Único** e-mail de contato do projeto (05/10/2026) | `suportelexintegra@gmail.com` |
+| Terraform `alertas_email_suporte` | Destinatário de todos os alertas (05/10/2026) | `suportelexintegra@gmail.com` |
 
 O remetente **não precisa de caixa de e-mail**: o Resend só exige o domínio
 `notificacoes.lexintegra.com.br` verificado. O `EMAIL_FROM` não é segredo; vai
@@ -88,19 +89,69 @@ de exclusão dependem delas.
 → **Checklist:** acrescentar em C › Microsoft › Obter: "Domínio
 `lexintegra.com.br` no tenant e caixa compartilhada `privacidade@`".
 
-### 1.4 Prazo para os demais direitos do art. 18 — ⏳ reunião com o Auan (30/09)
+**Emenda de 05/10/2026 — e-mail único de contato.** O único e-mail de contato
+do projeto passa a ser **`suportelexintegra@gmail.com`**. A caixa
+`privacidade@lexintegra.com.br` **não será criada**, e o item de C › Microsoft
+que a criava saiu do checklist. O encarregado continua sendo o **Auan Bastos**,
+com esse canal. Valem o mesmo endereço: política de privacidade, termos de uso
+(página pública), rodapé do site, rodapé de todo e-mail, layout MJML e
+`lgpd.md`. Uma constante só: `packages/shared/src/contato-publico.ts`, que
+`encarregado.ts` reaproveita. O telefone saiu do rodapé e das páginas legais
+na mesma data. Os termos aceitos no checkout subiram para
+`checkout-v4-2026-10`, por uma frase que dizia que os e-mails automáticos não
+recebem resposta (desde 01/10 a resposta chega ao suporte).
 
-Proposta: **15 dias** para todos os direitos. A LGPD já fixa 15 dias para a
-declaração completa de acesso (art. 19, II); usar o mesmo prazo para o resto é
-o mais simples de explicar e de cumprir.
+### 1.4 Prazo para os demais direitos do art. 18 — ✅ decidido (05/10/2026)
 
-→ **Construir:** `lgpd.md`.
+**15 dias corridos a partir da solicitação**, para todos os direitos do art.
+18. A LGPD já fixa 15 dias para a declaração completa de acesso (art. 19, II);
+usar o mesmo prazo para o resto é o mais simples de explicar e de cumprir.
+
+→ **Construído (05/10/2026):** `lgpd.md` §5, o marcador
+`[PENDENTE-ESCRITORIO: …]` saiu de `pendencias-escritorio.ts` e da política de
+privacidade, e o número vive em `PRAZO_DIREITOS_TITULAR_DIAS`
+(`packages/shared/src/politica-de-guarda.ts`).
 
 ---
 
 ## 2. LGPD e retenção
 
-### 2.1 Política de guarda — ⏳ reunião com o Auan (30/09)
+### 2.1 Política de guarda — ✅ decidido (05/10/2026), como proposta
+
+**Decisão do Henrique, proposta sujeita à aprovação do escritório na revisão
+do Bloco I:**
+
+| O quê | Guarda |
+|---|---|
+| Cadastro, pedidos, pagamentos e comunicações | **5 anos após o último pedido do cliente** (CDC art. 27; prazos fiscais) |
+| Pré-cadastro que nunca virou conta | **6 meses após o envio** |
+| Registros de acesso à aplicação | **6 meses** (Marco Civil, art. 15) |
+| Anexos e entregáveis | **30 dias após entregue** (2.2 e 2.3) |
+| Ficha de anamnese | O mesmo prazo do cadastro |
+
+**Exceções que suspendem a eliminação:** obrigação legal ou regulatória,
+processo judicial ou administrativo em curso, pedido de autoridade competente.
+
+→ **Construído (05/10/2026):**
+- o executor de eliminação e o aviso, que estavam bloqueados
+  (`apps/api/src/lgpd/eliminacao.service.ts`): a pedido do titular, dentro da
+  guarda, sai só o que nenhuma obrigação segura (arquivos, cadastro inicial,
+  intenções de compra e a conta de login); depois dos 5 anos, sai tudo menos a
+  trilha (protocolos e auditoria, com pseudônimos). O aviso sai pelo outbox
+  (`aviso-eliminacao-titular`) e a execução espera **7 dias do envio
+  confirmado** — a base aceita antes;
+- as exceções como **retenção legal** registrada pelo administrador
+  (`PUT/DELETE /api/admin/lgpd/{tipo}/{id}/retencao-legal`, com auditoria);
+- a rotina diária, dentro da `retencao-diaria` (sem job novo): elimina o
+  cadastro inicial vencido sem aviso, abre a eliminação de quem tem o último
+  pedido há 5 anos e executa as avisadas;
+- os registros de acesso por 186 dias, no bucket de logs `registros-de-acesso`
+  (`infra/terraform/registros-de-acesso.tf`);
+- a política de privacidade sem o marcador `[PENDENTE-ESCRITORIO: …]`; os
+  números vivem em `packages/shared/src/politica-de-guarda.ts`
+  (`guarda-v1-2026-10-proposta`).
+
+A proposta abaixo, levada à reunião de 30/09, fica como histórico.
 
 Vai para a reunião porque a política de retenção é decisão do controlador (o
 escritório), não do desenvolvedor (`arquitetura.md` §13).
@@ -265,7 +316,18 @@ O `privacidade@` continua indicado para dados pessoais.
 
 → **Construir:** `EMAIL_FROM` e `operacao.md`.
 
-### 5.2 Destinatários dos alertas — ⏳ reunião com o Auan (30/09)
+### 5.2 Destinatários dos alertas — ✅ decidido (05/10/2026)
+
+**Todos os alertas vão por e-mail para `suportelexintegra@gmail.com`. Nenhum
+alerta acorda alguém fora do horário: sem SMS, sem telefone.**
+
+→ **Construído (05/10/2026):** canal *Suporte LexIntegra*
+(`alertas_email_suporte`), todos os alertas em `suporte` no
+`alertas-roteamento.json`, e o lint passou a recusar o destino `acordar`. O
+canal provisório de desenvolvimento ficou sem alerta roteado, até a
+transferência. O alerta artificial é disparado pelo Henrique depois do deploy.
+
+Histórico da pauta de 30/09:
 
 Pergunta inteira levada à reunião:
 - Quem recebe os alertas da plataforma (falha de pagamento, pagamento órfão,
@@ -340,6 +402,13 @@ Lembrete contratual: pela cláusula 8.1, com o pagamento quitado, a titularidade
 do código passa à CONTRATANTE. A transferência do repositório faz parte da
 entrega final (`transferencia.md`).
 
+**Atualização de 05/10/2026.** O WIF ficou **pronto para aceitar os dois
+repositórios**: a variável `github_repositorios_adicionais` (vazia) entra na
+`attribute_condition` e ganha binding próprio, sem tocar no do repositório de
+origem (`infra/terraform/iam.tf`). Com a lista vazia, o plan não muda nada. O
+**nome do repositório de destino ainda não foi informado**: o PR A da
+`transferencia.md` 2.1 passa a ser acrescentar esse nome na variável.
+
 ### 6.2 Imagens de arquitetura — ✅ decidido
 
 As imagens `arquitetura-lexintegra.{jpg,png}` ficam e passam a ilustrar o
@@ -377,6 +446,28 @@ Caminhos possíveis (escolha pendente):
   contrato): só depois de assinada, em repositório novo, sem o histórico de
   commits, sem textos jurídicos, ficha de anamnese, nomes, domínios, IDs de
   projeto e configuração de infraestrutura.
+
+### 6.6 Origem dos traços dos ícones — ✅ investigado (05/10/2026)
+
+Os ícones da interface (`ui/icone`) copiam os do protótipo
+`direcao-B-pauta.html`, que **não vêm de biblioteca identificável**: dois
+coincidem com o Lucide por serem formas triviais, os outros divergem, e nada no
+repositório cita biblioteca. Na investigação apareceu outro achado: o sprite da
+área pública (`apps/web/public/icones/nevoa.svg`) é **Phosphor Icons (MIT)**,
+sem atribuição até aqui. Registrado em `docs/imagens-landing.md` e
+`docs/entrega/licencas-terceiros.md`, com o aviso MIT no próprio arquivo.
+
+---
+
+## 7. Segurança
+
+### 7.1 `verifyIdToken(token, true)` em toda requisição — ✅ decidido (05/10/2026)
+
+**Manter** a verificação com `checkRevoked` em toda requisição autenticada,
+pelo motivo da Etapa 4 (`docs/plano-de-execucao.md`): é a metade que faz a
+suspensão de advogado e a remoção de administrador valerem contra sessão já
+aberta. O custo medido em 30/09 (`accounts:lookup`, p50 327 ms) fica aceito.
+Nada a construir: nem cache de revogação, nem recorte por rota.
 
 ---
 

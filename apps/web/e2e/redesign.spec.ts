@@ -48,6 +48,8 @@ for (const caminho of [
 test('a home carrega a fotografia e as rotas antigas redirecionam', async ({
   page,
 }) => {
+  // As fotografias dos capitulos so existem a partir de 720 px (landing-celular.css).
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/com-movimento');
   await expect(page).toHaveURL(/\/$/);
   await expect(page.locator('main img')).toHaveCount(7);
@@ -86,6 +88,8 @@ test('a navegação oferece acesso independente aos fluxos', async ({ page }) =>
 test('as perguntas animam abertura e fechamento com redução de movimento', async ({
   page,
 }) => {
+  // O FAQ so existe a partir de 720 px (landing-celular.css).
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   for (const botao of await page.locator('.pergunta button').all()) {

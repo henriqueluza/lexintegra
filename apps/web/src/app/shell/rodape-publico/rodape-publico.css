@@ -10,7 +10,7 @@
 }
 .rodape__grade {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1.2fr 1fr;
+  grid-template-columns: 1.4fr 1fr 1fr;
   gap: var(--lex-space-7);
 }
 .rodape__marca > a {
@@ -53,11 +53,6 @@ a:hover {
   margin-top: var(--lex-space-7);
   padding-top: var(--lex-space-5);
   font-size: var(--lex-text-caption);
-}
-@media (max-width: 1000px) {
-  .rodape__grade {
-    grid-template-columns: 1fr 1fr;
-  }
 }
 @media (max-width: 560px) {
   .rodape__grade {

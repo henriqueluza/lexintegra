@@ -29,7 +29,7 @@ Estado conferido em 24/09/2026:
 | # | Passo | Quem | Conferir depois | Voltar atrás |
 |---|---|---|---|---|
 | 0.1 | O escritório escolhe as contas de destino: uma conta Google para dono do projeto, uma organização ou conta no GitHub, e e-mails no domínio do escritório para Resend e alertas (arquitetura, seção 13, "Governança de contas") | Escritório | Lista escrita das contas | — |
-| 0.2 | Decidir quem recebe alertas e o roteamento de cada um (`acordar`, `pendente` ou `registrar`) | Escritório | Decisão escrita para cada alerta de `alertas-roteamento.json` | — |
+| 0.2 | ~~Decidir quem recebe alertas~~ **Decidido em 05/10/2026** (decisões 5.2): todos por e-mail para `suportelexintegra@gmail.com`, nenhum acorda alguém. Só muda se o escritório quiser outro endereço (Fase 4) | — | — | — |
 | 0.3 | Preencher a tabela de acessos que ficam durante a garantia, em [`credenciais.md`](credenciais.md), seção 4 | Dev | Tabela preenchida e aceita pelo escritório | — |
 | 0.4 | Rotação que não depende de ninguém: apagar a chave JSON da `firebase-adminsdk-fbsvc` e tirar `roles/editor` da SA padrão do Compute ([`credenciais.md`](credenciais.md), 3.1, item 1) | Dev | `gcloud iam service-accounts keys list --managed-by=user` vazio para ela. Seção 2.4 de [`limpeza-infra.md`](../runbooks/limpeza-infra.md) | Seção 2.5 de `limpeza-infra.md`. A chave apagada não volta: se algo depender dela, crie uma identidade nova |
 
@@ -73,12 +73,12 @@ depois pelo pipeline**.
 
 | # | Passo | Quem | Conferir depois | Voltar atrás |
 |---|---|---|---|---|
-| 2.1 | **PR A, no repositório de origem.** Aceitar os **dois** nomes. (a) A `attribute_condition` passa a `assertion.repository in ['henriqueluza/lexintegra', '<org>/lexintegra']`. (b) Um **segundo** binding, recurso novo, com `principalSet://…/attribute.repository/<org>/lexintegra` e `prevent_destroy`. **O binding antigo não muda.** O `terraform plan` do PR precisa mostrar só `update in-place` do provider e `create` do binding novo, sem nenhum `destroy`. **1º apply**, pelo deploy do merge. `[CONFIRMAR: nome exato do repositório de destino]` | Dev | Deploy do merge verde. `gcloud iam workload-identity-pools providers describe github-provider --location=global --workload-identity-pool=github-pool --project=plataforma-juridica-36bda --format='value(attributeCondition)'` mostra os dois nomes | `git revert` do PR A e deploy |
+| 2.1 | **PR A, no repositório de origem.** Aceitar os **dois** nomes. **Pronto desde 05/10/2026**: o PR A é **uma linha**, o nome do repositório de destino em `github_repositorios_adicionais` (`infra/terraform/variables.tf`). Com ela preenchida, (a) a `attribute_condition` passa a `assertion.repository in ['henriqueluza/lexintegra', '<org>/lexintegra']` e (b) nasce um **segundo** binding, `google_service_account_iam_member.ci_workload_identity_adicional["<org>/lexintegra"]`, com `prevent_destroy`. **O binding antigo não muda.** O `terraform plan` do PR precisa mostrar só `update in-place` do provider e `create` do binding novo, sem nenhum `destroy`. **1º apply**, pelo deploy do merge. `[CONFIRMAR: nome exato do repositório de destino]` | Dev | Deploy do merge verde. `gcloud iam workload-identity-pools providers describe github-provider --location=global --workload-identity-pool=github-pool --project=plataforma-juridica-36bda --format='value(attributeCondition)'` mostra os dois nomes | `git revert` do PR A e deploy |
 | 2.2 | **Anotar os segredos e variáveis do GitHub** (tabela *Segredos e variáveis* abaixo). Eles não acompanham a transferência de forma confiável | Dev | Lista conferida | — |
 | 2.3 | **Transferir o repositório** (Settings → Transfer), para a organização ou conta do escritório | Dev inicia, escritório aceita | O repositório aparece em `<org>/lexintegra`. O endereço antigo redireciona | Transferir de volta. A condição ainda aceita o nome antigo |
 | 2.4 | **Recriar segredos e variáveis** no repositório novo (tabela abaixo). Confira também, nas configurações da organização, que o Actions está habilitado e pode pedir `id-token: write` | Escritório | `gh secret list` e `gh variable list` no repositório novo | — |
 | 2.5 | **Conferir um deploy verde a partir do repositório novo:** *Run workflow* no *Deploy*, ou um commit trivial na `main`. **Não siga sem isto** | Ambos | Workflow verde até o *Smoke test*. `/api/health` com o `commitSha` | Se falhar na autenticação, a condição ou o binding novo estão errados. Corrija por PR no repositório **de origem**, que continua autorizado, e transfira de novo, se preciso |
-| 2.6 | **PR B, no repositório novo.** Tirar o nome antigo. (a) `attribute_condition` só com `<org>/lexintegra`. (b) **Remover o bloco inteiro** do binding antigo. Um recurso tirado da configuração é destruído mesmo com `prevent_destroy`: a trava só vale enquanto o bloco existe. (c) `github_repository` com o nome novo no `default`, apontado pelo binding que ficou. O plano precisa mostrar `update in-place` do provider e `destroy` **só** do binding antigo. **2º apply**, pelo deploy do merge | Escritório, ou Dev dentro da garantia | Deploy verde. `gcloud iam service-accounts get-iam-policy terraform-ci@plataforma-juridica-36bda.iam.gserviceaccount.com` mostra um único `principalSet`, o do nome novo | `git revert` do PR B **enquanto** o pipeline do repositório novo funciona |
+| 2.6 | **PR B, no repositório novo.** Tirar o nome antigo. (a) `attribute_condition` só com `<org>/lexintegra`. (b) **Remover o bloco inteiro** do binding antigo. Um recurso tirado da configuração é destruído mesmo com `prevent_destroy`: a trava só vale enquanto o bloco existe. (c) `github_repository` com o nome novo no `default` e `github_repositorios_adicionais` de volta a `[]` — o binding adicional do nome novo sai da lista, e por isso o PR precisa de um bloco `moved` do endereço `ci_workload_identity_adicional["<org>/lexintegra"]` para `ci_workload_identity`, senão o `prevent_destroy` recusa o plano. O plano precisa mostrar `update in-place` do provider e `destroy` **só** do binding antigo. **2º apply**, pelo deploy do merge | Escritório, ou Dev dentro da garantia | Deploy verde. `gcloud iam service-accounts get-iam-policy terraform-ci@plataforma-juridica-36bda.iam.gserviceaccount.com` mostra um único `principalSet`, o do nome novo | `git revert` do PR B **enquanto** o pipeline do repositório novo funciona |
 
 **Não deixe tempo entre 2.5 e 2.6.** Enquanto a condição aceitar
 `henriqueluza/lexintegra`, qualquer repositório criado com esse nome depois da
@@ -127,19 +127,22 @@ workflows e não mudam.
 
 Hoje:
 
-- o único canal é *Desenvolvimento (PROVISORIO — substituir antes da Etapa
-  13)* (`google_monitoring_notification_channel.desenvolvimento`, em
-  [`observabilidade.tf`](../../infra/terraform/observabilidade.tf)), com o
-  e-mail que vem de `ALERTAS_EMAIL_DESENVOLVIMENTO`;
-- todos os alertas estão em `pendente` em
-  [`alertas-roteamento.json`](../../infra/terraform/alertas-roteamento.json).
+- todos os alertas vão para o canal *Suporte LexIntegra*
+  (`google_monitoring_notification_channel.suporte`, em
+  [`observabilidade.tf`](../../infra/terraform/observabilidade.tf)), com
+  `alertas_email_suporte = suportelexintegra@gmail.com` (decisões 5.2);
+- todos estão em `suporte` em
+  [`alertas-roteamento.json`](../../infra/terraform/alertas-roteamento.json), e
+  nenhum acorda alguém (o lint recusa `acordar`);
+- o canal *Desenvolvimento (PROVISORIO)*, do secret
+  `ALERTAS_EMAIL_DESENVOLVIMENTO`, existe sem alerta roteado.
 
 | # | Passo | Quem | Onde se muda | Conferir depois | Voltar atrás |
 |---|---|---|---|---|---|
-| 4.1 | Trocar o destinatário do canal de e-mail pelo endereço do escritório | Escritório | Secret `ALERTAS_EMAIL_DESENVOLVIMENTO` no GitHub, e um deploy | O canal no Monitoring mostra o endereço novo | Voltar o valor |
-| 4.2 | Se houver plantão (SMS, telefone, integração): criar o canal **no console**, fora do Terraform, e pôr o id dele em `alertas_canais_plantao` | Escritório | `infra/terraform/variables.tf`, por PR | As políticas `acordar` listam o canal | Reverter o PR |
-| 4.3 | Aplicar a decisão da Fase 0.2 | Escritório | `alertas-roteamento.json`, por PR. `pnpm lint` confere | Plano do PR muda só os `notification_channels` | Reverter o PR |
-| 4.4 | Renomear o canal, tirando o "PROVISORIO", e a variável, se quiser: `display_name` e o nome em `observabilidade.tf` e `variables.tf` | Escritório | Por PR | — | Reverter o PR |
+| 4.1 | Se o escritório quiser outro destinatário, trocar `alertas_email_suporte` | Escritório | `infra/terraform/variables.tf`, por PR | O canal *Suporte LexIntegra* mostra o endereço novo | Reverter o PR |
+| 4.2 | Plantão (SMS, telefone) **não existe por decisão** (decisões 5.2). Mudar isso exige reabrir `acordar` em `scripts/conferir-roteamento-alertas.mjs` e criar o canal | Escritório | Por PR | — | Reverter o PR |
+| 4.3 | Tirar o canal provisório: apagar o bloco `desenvolvimento` de `observabilidade.tf`, a variável `alertas_email_desenvolvimento`, as duas linhas `TF_VAR_alertas_email_desenvolvimento` dos workflows e o secret `ALERTAS_EMAIL_DESENVOLVIMENTO` | Escritório, ou Dev na garantia | Por PR; o secret, no GitHub | Plano mostra só o `destroy` do canal provisório | Reverter o PR |
+| 4.4 | — | — | — | — | — |
 | 4.5 | **Disparar o alerta artificial** e confirmar que chega | Escritório | [`runbooks/alerta-artificial.md`](../runbooks/alerta-artificial.md) | O e-mail chegou. Registre data e destinatário | — |
 
 ## Fase 5 — Rotação que dependia das contas

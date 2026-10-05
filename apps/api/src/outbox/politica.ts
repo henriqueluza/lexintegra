@@ -41,6 +41,12 @@ export const POLITICA: Readonly<Record<TipoEvento, PoliticaDeEvento>> = {
    */
   'aviso-exclusao-arquivos': { criticidade: 'critico', maxTentativas: 10 },
   /*
+   * Pelo mesmo motivo: a eliminacao do titular so corre depois do envio
+   * CONFIRMADO deste aviso. Abandonado, a eliminacao fica parada — e o alerta
+   * diz por que.
+   */
+  'aviso-eliminacao-titular': { criticidade: 'critico', maxTentativas: 10 },
+  /*
    * O evento mais critico do sistema (plano de execucao, Etapa 7): o cliente
    * pagou, e sem este e-mail nao entra na plataforma para ver o que comprou.
    */

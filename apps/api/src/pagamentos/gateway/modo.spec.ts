@@ -1,6 +1,7 @@
 import {
   CHAVE_HMAC_DESENVOLVIMENTO,
   configuracaoDePagamentos,
+  PRODUCAO_DESTRAVADA,
   SEGREDO_WEBHOOK_DESENVOLVIMENTO,
 } from './modo.js';
 
@@ -9,6 +10,7 @@ import {
  * esta sob teste, e o resto e texto qualquer.
  */
 const CHAVE_SANDBOX = 'abc_dev_chave-de-teste';
+const CHAVE_PRODUCAO = 'abc_prod_chave-de-teste-que-nao-existe';
 const CHAVE_SEM_PREFIXO = 'chave-sem-prefixo-de-ambiente';
 
 const SEGREDOS = {
@@ -50,13 +52,98 @@ describe('configuracaoDePagamentos', () => {
       expect(mensagem).toContain('abc_dev_');
       expect(mensagem).not.toContain(CHAVE_SEM_PREFIXO);
     });
+
+    /** O boot le a constante: so o commit de destravamento a troca. */
+    it('a trava esta fechada no codigo', () => {
+      expect(PRODUCAO_DESTRAVADA).toBe(false);
+    });
+  });
+
+  /**
+   * O caminho que o commit de destravamento liga (docs/runbooks/
+   * ligar-terceiros.md). Testado com a trava aberta pelo parametro, sem mexer
+   * na constante.
+   */
+  describe('producao destravada', () => {
+    const PRODUCAO = {
+      NODE_ENV: 'production',
+      PAGAMENTOS_MODO: 'producao',
+    };
+
+    it('sobe com a chave de producao e espera devMode false', () => {
+      expect(
+        configuracaoDePagamentos(
+          { ...PRODUCAO, ABACATEPAY_API_KEY: CHAVE_PRODUCAO, ...SEGREDOS },
+          true,
+        ),
+      ).toEqual({
+        modo: 'producao',
+        chaveApi: CHAVE_PRODUCAO,
+        segredoWebhook: 'segredo',
+        chaveHmacWebhook: 'hmac',
+        devModeEsperado: false,
+      });
+    });
+
+    it.each([
+      ['sem chave', {}],
+      ['com a chave de sandbox', { ABACATEPAY_API_KEY: CHAVE_SANDBOX }],
+      ['com chave sem prefixo', { ABACATEPAY_API_KEY: CHAVE_SEM_PREFIXO }],
+    ])('recusa %s, sem repetir a chave', (_caso, chave) => {
+      let mensagem = '';
+      try {
+        configuracaoDePagamentos({ ...PRODUCAO, ...chave, ...SEGREDOS }, true);
+      } catch (erro) {
+        mensagem = (erro as Error).message;
+      }
+      expect(mensagem).toContain('abc_prod_');
+      expect(mensagem).not.toContain(CHAVE_SANDBOX);
+      expect(mensagem).not.toContain(CHAVE_SEM_PREFIXO);
+    });
+
+    it('recusa sem os segredos do webhook', () => {
+      expect(() =>
+        configuracaoDePagamentos(
+          { ...PRODUCAO, ABACATEPAY_API_KEY: CHAVE_PRODUCAO },
+          true,
+        ),
+      ).toThrow(/obrigatorios/);
+    });
+
+    /** Maquina de desenvolvimento nunca cobra de verdade. */
+    it('recusa fora de NODE_ENV=production', () => {
+      expect(() =>
+        configuracaoDePagamentos(
+          {
+            PAGAMENTOS_MODO: 'producao',
+            ABACATEPAY_API_KEY: CHAVE_PRODUCAO,
+            ...SEGREDOS,
+          },
+          true,
+        ),
+      ).toThrow(/so sobe com NODE_ENV=production/);
+    });
+
+    it('sandbox continua recusando a chave de producao', () => {
+      expect(() =>
+        configuracaoDePagamentos(
+          {
+            NODE_ENV: 'production',
+            PAGAMENTOS_MODO: 'sandbox',
+            ABACATEPAY_API_KEY: CHAVE_PRODUCAO,
+            ...SEGREDOS,
+          },
+          true,
+        ),
+      ).toThrow(/abc_dev_/);
+    });
   });
 
   describe('em producao', () => {
     it('exige a variavel', () => {
       expect(() =>
         configuracaoDePagamentos({ NODE_ENV: 'production' }),
-      ).toThrow(/PAGAMENTOS_MODO precisa ser/);
+      ).toThrow(/PAGAMENTOS_MODO precisa ser declarado/);
     });
 
     it('aceita desligado sem chave nenhuma', () => {
