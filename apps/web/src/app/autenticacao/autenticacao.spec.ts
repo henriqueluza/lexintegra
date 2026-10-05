@@ -438,14 +438,6 @@ describe('ApiService', () => {
     await reativacao;
   });
 
-  it('pede redefinicao de senha no caminho publico', async () => {
-    const promessa = api.pedirRedefinicaoDeSenha('ana@escritorio.test');
-    const chamada = http.expectOne('/api/auth/redefinicao-senha');
-    expect(chamada.request.body).toEqual({ email: 'ana@escritorio.test' });
-    chamada.flush({ aceito: true });
-    await promessa;
-  });
-
   it('propaga a falha para a tela decidir a mensagem', async () => {
     const promessa = api.listarAdvogados();
     http
@@ -500,6 +492,32 @@ describe('ApiService', () => {
       expect(chamada.request.headers.get('X-Pre-Cadastro')).toBe('id.segredo');
       expect(chamada.request.urlWithParams).toBe('/api/vitrine');
       chamada.flush([]);
+      await promessa;
+    });
+
+    it('pede redefinicao de senha no caminho publico', async () => {
+      const promessa = api.pedirRedefinicaoDeSenha('ana@escritorio.test');
+      await proximoTique();
+      const chamada = http.expectOne('/api/auth/redefinicao-senha');
+      expect(chamada.request.body).toEqual({ email: 'ana@escritorio.test' });
+      chamada.flush({ aceito: true });
+      await promessa;
+    });
+
+    /**
+     * Regressao de 05/10/2026: a rota e `@Publico()` e o servidor exige App
+     * Check em producao. Sem o cabecalho, todo pedido de redefinicao voltava 401
+     * e a tela dizia "nao foi possivel registrar o pedido".
+     */
+    it('a redefinicao de senha leva o App Check', async () => {
+      tokenAppCheck = 'token-de-app-check';
+      const promessa = api.pedirRedefinicaoDeSenha('ana@escritorio.test');
+      await proximoTique();
+      const chamada = http.expectOne('/api/auth/redefinicao-senha');
+      expect(chamada.request.headers.get('X-Firebase-AppCheck')).toBe(
+        'token-de-app-check',
+      );
+      chamada.flush({ aceito: true });
       await promessa;
     });
 

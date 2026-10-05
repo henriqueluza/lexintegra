@@ -7,6 +7,7 @@ import {
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../autenticacao/api.service';
+import { AppCheckService } from '../../autenticacao/app-check';
 import { Botao } from '../../ui/botao/botao';
 import { Campo } from '../../ui/campo/campo';
 import { MolduraAcesso } from '../../shell/moldura-acesso/moldura-acesso';
@@ -42,6 +43,7 @@ import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
 export class RecuperarSenha {
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
+  private readonly appCheck = inject(AppCheckService);
 
   protected readonly enviando = signal(false);
   protected readonly enviado = signal(false);
@@ -57,6 +59,14 @@ export class RecuperarSenha {
     return controle.hasError('email')
       ? 'Informe um e-mail válido.'
       : 'Campo obrigatório.';
+  }
+
+  /**
+   * Comeca a carregar o App Check no primeiro foco, como o cadastro: quando a
+   * pessoa terminar de digitar, o token ja esta pronto (ver `app-check.ts`).
+   */
+  protected prepararVerificacao(): void {
+    this.appCheck.preparar();
   }
 
   protected voltarAoInicio(): void {

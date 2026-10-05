@@ -16,7 +16,11 @@
   } @else {
   <h1>Redefinir senha</h1>
   <p class="apoio">Informe o e-mail cadastrado e enviaremos um link.</p>
-  <form [formGroup]="formulario" (ngSubmit)="enviar()">
+  <form
+    [formGroup]="formulario"
+    (ngSubmit)="enviar()"
+    (focusin)="prepararVerificacao()"
+  >
     <app-campo
       rotulo="E-mail"
       tipo="email"

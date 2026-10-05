@@ -1,13 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { ApiService } from '../../autenticacao/api.service';
+import { AppCheckService } from '../../autenticacao/app-check';
 import { RecuperarSenha } from './recuperar-senha';
+
+let preparos = 0;
 
 function montar(falhar = false): {
   fixture: ComponentFixture<RecuperarSenha>;
   pedidos: string[];
   destinos: string[];
 } {
+  preparos = 0;
   const pedidos: string[] = [];
   const destinos: string[] = [];
 
@@ -15,6 +19,14 @@ function montar(falhar = false): {
     imports: [RecuperarSenha],
     providers: [
       provideRouter([]),
+      {
+        provide: AppCheckService,
+        useValue: {
+          preparar: () => {
+            preparos += 1;
+          },
+        },
+      },
       {
         provide: ApiService,
         useValue: {
@@ -129,4 +141,16 @@ describe('RecuperarSenha', () => {
 
     expect(destinos).toEqual(['/entrar']);
   });
+});
+
+/**
+ * O App Check comeca a carregar no primeiro foco do formulario, como no
+ * cadastro: a rota e publica e o servidor exige o token em producao.
+ */
+it('prepara o App Check ao focar o formulario', () => {
+  const { fixture } = montar();
+  const campo = (fixture.nativeElement as HTMLElement).querySelector('input')!;
+  campo.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+  expect(preparos).toBeGreaterThan(0);
+  TestBed.resetTestingModule();
 });
