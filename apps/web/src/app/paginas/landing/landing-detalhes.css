@@ -162,7 +162,13 @@ dd {
 /* O restante da primeira dobra (copy de 05/10/2026). */
 .titulo-frase {
   font-size: var(--lex-title-frase);
-  max-width: 30ch;
+  /* SEM `max-width` em `ch`, de proposito. O `ch` sai da fonte em uso, e o
+     Chrome as vezes o calcula com a fonte reserva enquanto a Panchang carrega
+     e so recalcula na captura seguinte: 30ch valia 750 px numa medicao e
+     1440 px na outra, e o titulo ia de 4 para 7 linhas — foi isso que derrubou
+     o deploy de 05/10/2026 na regressao visual. Com a Panchang, 30ch nunca
+     prendia (passa da faixa em qualquer largura), entao o limite nao fazia
+     nada alem de oscilar. */
   text-wrap: balance;
   /* "ACOMPANHAMENTO" em caixa alta, na fonte estendida, mal cabe em 320 px:
      a palavra quebra so se nao couber. Sem `hyphens: auto`, de proposito: o
