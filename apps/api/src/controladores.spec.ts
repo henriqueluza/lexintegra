@@ -1,5 +1,8 @@
 import type { CanActivate, ExecutionContext, Type } from '@nestjs/common';
-import { ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import {
   GUARDS_METADATA,
   ROUTE_ARGS_METADATA,
@@ -1560,6 +1563,10 @@ describe('DisponibilidadesController', () => {
           chamadas.push(`obter ${advogadoId} ${String(semana)}`);
           return Promise.resolve([]);
         },
+        obterDoMes: (advogadoId: string, mes: string) => {
+          chamadas.push(`mes ${advogadoId} ${mes}`);
+          return Promise.resolve([]);
+        },
         publicar: (advogadoId: string, corpo: { semana: string }) => {
           chamadas.push(`publicar ${advogadoId} ${corpo.semana}`);
           return Promise.resolve([]);
@@ -1580,8 +1587,26 @@ describe('DisponibilidadesController', () => {
 
     const resposta = await controlador.obter(ADVOGADO, '2026-09-07');
 
-    expect(resposta.semanas).toHaveLength(2);
+    /* Errata do ADR-06 (07/10/2026): da corrente a doze meses a frente. */
+    expect(resposta.semanas).toHaveLength(53);
     expect(chamadas).toEqual(['obter uid-ana 2026-09-07']);
+  });
+
+  /* O calendario do mes: as semanas inteiras que tocam o mes. */
+  it('com mes, pede a grade do mes', async () => {
+    const { controlador, chamadas } = montar();
+
+    await controlador.obter(ADVOGADO, undefined, '2026-10');
+
+    expect(chamadas).toEqual(['mes uid-ana 2026-10']);
+  });
+
+  it('recusa mes em formato errado, em vez de responder outro', async () => {
+    const { controlador } = montar();
+
+    await expect(
+      controlador.obter(ADVOGADO, undefined, '2026-13'),
+    ).rejects.toThrow(BadRequestException);
   });
 
   it('sem semana, deixa o servico calcular a corrente', async () => {

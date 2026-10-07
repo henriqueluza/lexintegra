@@ -125,8 +125,14 @@ export class ReunioesService {
     );
 
     if (idEvento !== null) {
-      // Depois do commit, nunca dentro (regra inviolavel 2).
-      await this.enfileirador.enfileirarPorId(idEvento);
+      /*
+       * Depois do commit, nunca dentro (regra inviolavel 2). No modo `sem-sala`
+       * o evento nasceu ESTACIONADO e nao vai para a fila: nao ha sala a criar
+       * ate o Teams ser ligado, e tentar so gastaria o orcamento e alertaria.
+       */
+      if (this.configuracao.modo !== 'sem-sala') {
+        await this.enfileirador.enfileirarPorId(idEvento);
+      }
       this.log.log(`reuniao ${resumo.id} marcada no pedido ${pedidoId}`);
     }
 
@@ -293,11 +299,17 @@ export class ReunioesService {
      * o Firestore recusa leitura depois de escrita — por isso ele vem antes dos
      * `set`/`update` abaixo, e nao junto deles.
      */
-    const idEvento = await this.outbox.registrarSeAusente(transacao, {
-      tipo: 'criar-sala-reuniao',
-      destinatarioUid: clienteUid,
-      reuniao: { pedidoId, reuniaoId, sequence: 0 },
-    });
+    const idEvento = await this.outbox.registrarSeAusente(
+      transacao,
+      {
+        tipo: 'criar-sala-reuniao',
+        destinatarioUid: clienteUid,
+        reuniao: { pedidoId, reuniaoId, sequence: 0 },
+      },
+      undefined,
+      /* Modo `sem-sala`: a sala espera o Teams. Ver `sala/modo.ts`. */
+      { estacionar: this.configuracao.modo === 'sem-sala' },
+    );
 
     const documento: DocumentoReuniao = {
       uid: uidDoCalendario(pedidoId, reuniaoId),

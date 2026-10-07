@@ -3,6 +3,7 @@ import type { ConfiguracaoReunioes } from './modo.js';
 import {
   SalaDeReuniaoDesligada,
   SalaDeReuniaoFalsa,
+  SalaDeReuniaoPendente,
 } from './sala-de-reuniao-falsa.js';
 import type { SalaDeReuniao } from './sala-de-reuniao.js';
 
@@ -26,6 +27,8 @@ export function criarSalaDeReuniao(
   configuracao: ConfiguracaoReunioes,
 ): SalaDeReuniao {
   if (configuracao.modo === 'desligado') return new SalaDeReuniaoDesligada();
+  /* ANTES do falso: `sem-sala` tambem tem `graph: null`, e cairia nele. */
+  if (configuracao.modo === 'sem-sala') return new SalaDeReuniaoPendente();
   if (configuracao.graph === null) return new SalaDeReuniaoFalsa();
 
   return new GraphSalaDeReuniao(configuracao.graph);

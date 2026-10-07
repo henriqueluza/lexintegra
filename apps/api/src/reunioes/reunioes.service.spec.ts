@@ -106,9 +106,14 @@ describe('ReunioesService.agendar', () => {
       estado: 'reservada_sem_link',
       link: null,
     });
-    expect(banco.documentos.get(`pedidos/${PEDIDO}/reunioes/r001`)).toMatchObject(
-      { estado: 'reservada_sem_link', link: null, sequence: 0, slotId: SLOT },
-    );
+    expect(
+      banco.documentos.get(`pedidos/${PEDIDO}/reunioes/r001`),
+    ).toMatchObject({
+      estado: 'reservada_sem_link',
+      link: null,
+      sequence: 0,
+      slotId: SLOT,
+    });
   });
 
   /**
@@ -121,9 +126,13 @@ describe('ReunioesService.agendar', () => {
 
     await servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA);
 
-    expect(banco.documentos.get(`pedidos/${PEDIDO}/reunioes/r001`)).toMatchObject(
-      { sequenceComunicada: null, idExterno: null, historico: [] },
-    );
+    expect(
+      banco.documentos.get(`pedidos/${PEDIDO}/reunioes/r001`),
+    ).toMatchObject({
+      sequenceComunicada: null,
+      idExterno: null,
+      historico: [],
+    });
   });
 
   it('reserva o slot e incrementa o contador do pedido', async () => {
@@ -154,6 +163,29 @@ describe('ReunioesService.agendar', () => {
   });
 
   /**
+   * MODO `sem-sala` (07/10/2026): marca, deixa sem link e nao inventa nada. O
+   * evento da sala nasce ESTACIONADO e nao vai para a fila: nao ha Teams para
+   * chamar, e tentar so gastaria o orcamento e alertaria. O id e o mesmo que o
+   * painel de reunioes sem sala calcula, e e por ele que o reenvio manual o
+   * acorda quando a integracao for ligada.
+   */
+  it('em sem-sala, a sala espera estacionada e nada vai para a fila', async () => {
+    const { servico, banco, fila } = montar({
+      configuracao: { modo: 'sem-sala', graph: null },
+    });
+
+    const resumo = await servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA);
+
+    expect(resumo).toMatchObject({ estado: 'reservada_sem_link', link: null });
+    const id = `criar-sala-reuniao_${PEDIDO}_r001`;
+    expect(banco.documentos.get(`outbox/${id}`)).toMatchObject({
+      tipo: 'criar-sala-reuniao',
+      estado: 'estacionado',
+    });
+    expect(fila.tarefas).toEqual([]);
+  });
+
+  /**
    * O `UID` do iCalendar e derivado dos ids e ESTAVEL. Regenera-lo numa
    * remarcacao faz o calendario do cliente criar um segundo evento em vez de
    * atualizar o primeiro (regra inviolavel 12).
@@ -163,9 +195,9 @@ describe('ReunioesService.agendar', () => {
 
     await servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA);
 
-    expect(banco.documentos.get(`pedidos/${PEDIDO}/reunioes/r001`)).toMatchObject(
-      { uid: 'pedido-1-r001@lexintegra.com.br' },
-    );
+    expect(
+      banco.documentos.get(`pedidos/${PEDIDO}/reunioes/r001`),
+    ).toMatchObject({ uid: 'pedido-1-r001@lexintegra.com.br' });
   });
 
   /** O id e sequencial e sai do contador, nao da contagem de documentos. */
@@ -221,9 +253,9 @@ describe('ReunioesService.agendar', () => {
   it('slot de outro advogado e recusado', async () => {
     const { servico } = montar({ slot: { advogadoId: 'uid-carlos' } });
 
-    await expect(
-      servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA),
-    ).rejects.toThrow(/nao e do advogado/);
+    await expect(servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA)).rejects.toThrow(
+      /nao e do advogado/,
+    );
   });
 
   it('slot ja reservado por OUTRO pedido e recusado', async () => {
@@ -231,18 +263,18 @@ describe('ReunioesService.agendar', () => {
       slot: { reserva: { pedidoId: 'pedido-2', reuniaoId: 'r001' } },
     });
 
-    await expect(
-      servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA),
-    ).rejects.toThrow(/ja foi reservado/);
+    await expect(servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA)).rejects.toThrow(
+      /ja foi reservado/,
+    );
   });
 
   /** ADR-21, decisao G. Lido na transacao, junto com o resto. */
   it('advogado suspenso e recusado', async () => {
     const { servico } = montar({ advogado: { status: 'suspenso' } });
 
-    await expect(
-      servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA),
-    ).rejects.toThrow(/indisponivel/);
+    await expect(servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA)).rejects.toThrow(
+      /indisponivel/,
+    );
   });
 
   it.each([
@@ -251,9 +283,9 @@ describe('ReunioesService.agendar', () => {
   ])('%s e recusado', async (_caso, ajuste, esperado) => {
     const { servico } = montar(ajuste);
 
-    await expect(
-      servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA),
-    ).rejects.toThrow(esperado);
+    await expect(servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA)).rejects.toThrow(
+      esperado,
+    );
   });
 
   /** A mensagem do 409 e a MESMA que a tela mostra (`MOTIVO_DO_IMPEDIMENTO`). */
@@ -268,18 +300,18 @@ describe('ReunioesService.agendar', () => {
       inicio: '2026-09-08T17:00:00.000Z',
     });
 
-    await expect(
-      servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA),
-    ).rejects.toThrow(/já foram usadas/);
+    await expect(servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA)).rejects.toThrow(
+      /já foram usadas/,
+    );
   });
 
   it('horario com menos de 24h de antecedencia e recusado', async () => {
     const { servico } = montar();
     const tarde = Date.parse(INICIO) - 3_600_000;
 
-    await expect(
-      servico.agendar(PEDIDO, CLIENTE, SLOT, tarde),
-    ).rejects.toThrow(/24 horas/);
+    await expect(servico.agendar(PEDIDO, CLIENTE, SLOT, tarde)).rejects.toThrow(
+      /24 horas/,
+    );
   });
 
   it('nada e gravado quando a regra recusa', async () => {
@@ -326,9 +358,9 @@ describe('ReunioesService.agendar', () => {
       configuracao: { modo: 'desligado', graph: null },
     });
 
-    await expect(
-      servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA),
-    ).rejects.toThrow(/desligado/);
+    await expect(servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA)).rejects.toThrow(
+      /desligado/,
+    );
     expect(banco.escritas).toEqual([]);
   });
 
@@ -353,7 +385,37 @@ describe('HorariosService.listar', () => {
     const { horarios } = montar();
 
     await expect(
-      horarios.listar(PEDIDO, CLIENTE, null, NA_SEMANA),
+      horarios.listar(PEDIDO, CLIENTE, null, null, NA_SEMANA),
+    ).resolves.toEqual([{ slotId: SLOT, inicio: INICIO, fim: FIM }]);
+  });
+
+  /**
+   * O CALENDARIO DO MES (07/10/2026): a tela pede um mes por vez. As semanas
+   * das pontas trazem dias do mes vizinho, e eles nao entram.
+   */
+  it('com mes, devolve so os horarios daquele mes', async () => {
+    const { horarios, banco } = montar();
+    const outubro = `${ADVOGADO}_2026-10-01T17:00:00.000Z`;
+    banco.documentos.set(`disponibilidades/${outubro}`, {
+      advogadoId: ADVOGADO,
+      inicio: '2026-10-01T17:00:00.000Z',
+      fim: '2026-10-01T18:00:00.000Z',
+      /* A semana de 28/09 toca setembro e outubro. */
+      semana: '2026-09-28',
+      reserva: null,
+    });
+
+    await expect(
+      horarios.listar(PEDIDO, CLIENTE, null, '2026-10', NA_SEMANA),
+    ).resolves.toEqual([
+      {
+        slotId: outubro,
+        inicio: '2026-10-01T17:00:00.000Z',
+        fim: '2026-10-01T18:00:00.000Z',
+      },
+    ]);
+    await expect(
+      horarios.listar(PEDIDO, CLIENTE, null, '2026-09', NA_SEMANA),
     ).resolves.toEqual([{ slotId: SLOT, inicio: INICIO, fim: FIM }]);
   });
 
@@ -363,7 +425,7 @@ describe('HorariosService.listar', () => {
     });
 
     await expect(
-      horarios.listar(PEDIDO, CLIENTE, null, NA_SEMANA),
+      horarios.listar(PEDIDO, CLIENTE, null, null, NA_SEMANA),
     ).resolves.toEqual([]);
   });
 
@@ -377,7 +439,7 @@ describe('HorariosService.listar', () => {
     const vespera = Date.parse(INICIO) - 3_600_000;
 
     await expect(
-      horarios.listar(PEDIDO, CLIENTE, null, vespera),
+      horarios.listar(PEDIDO, CLIENTE, null, null, vespera),
     ).resolves.toEqual([]);
   });
 
@@ -389,7 +451,7 @@ describe('HorariosService.listar', () => {
     });
 
     await expect(
-      horarios.listar(PEDIDO, CLIENTE, null, NA_SEMANA),
+      horarios.listar(PEDIDO, CLIENTE, null, null, NA_SEMANA),
     ).resolves.toEqual([]);
   });
 
@@ -407,7 +469,7 @@ describe('HorariosService.listar', () => {
     });
 
     await expect(
-      horarios.listar(PEDIDO, CLIENTE, null, NA_SEMANA),
+      horarios.listar(PEDIDO, CLIENTE, null, null, NA_SEMANA),
     ).resolves.toEqual([]);
   });
 
@@ -418,7 +480,7 @@ describe('HorariosService.listar', () => {
     });
 
     await expect(
-      horarios.listar(PEDIDO, CLIENTE, null, NA_SEMANA),
+      horarios.listar(PEDIDO, CLIENTE, null, null, NA_SEMANA),
     ).resolves.toEqual([]);
   });
 
@@ -426,7 +488,7 @@ describe('HorariosService.listar', () => {
     const { horarios } = montar({ slot: { advogadoId: 'uid-carlos' } });
 
     await expect(
-      horarios.listar(PEDIDO, CLIENTE, null, NA_SEMANA),
+      horarios.listar(PEDIDO, CLIENTE, null, null, NA_SEMANA),
     ).resolves.toEqual([]);
   });
 
@@ -434,7 +496,7 @@ describe('HorariosService.listar', () => {
     const { horarios } = montar();
 
     await expect(
-      horarios.listar(PEDIDO, 'uid-bruno', null, NA_SEMANA),
+      horarios.listar(PEDIDO, 'uid-bruno', null, null, NA_SEMANA),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

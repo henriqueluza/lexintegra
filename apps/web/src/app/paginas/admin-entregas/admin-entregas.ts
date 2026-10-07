@@ -27,6 +27,7 @@ const ROTULO_DO_ESTADO: Readonly<Record<string, string>> = {
   enviado: 'Entregue',
   falhou: 'Falhou',
   abandonado: 'Desistiu',
+  estacionado: 'Aguardando integração',
 };
 
 const ROTULO_DO_TIPO: Readonly<Record<string, string>> = {
@@ -90,6 +91,8 @@ export class AdminEntregas implements OnInit {
     { valor: 'abandonado', rotulo: 'Desistiu' },
     { valor: 'pendente', rotulo: 'Na fila' },
     { valor: 'enviado', rotulo: 'Entregues' },
+    /* Modo `sem-sala`: salas do Teams guardadas ate a integracao ser ligada. */
+    { valor: 'estacionado', rotulo: 'Aguardando integração' },
   ];
 
   protected readonly linhas = signal<readonly EntregaResumo[]>([]);

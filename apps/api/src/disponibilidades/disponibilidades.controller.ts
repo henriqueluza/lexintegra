@@ -1,5 +1,14 @@
-import { Body, Controller, Get, HttpCode, Put, Query } from '@nestjs/common';
 import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Put,
+  Query,
+} from '@nestjs/common';
+import {
+  ehMes,
   esquemaDisponibilidadeSemanal,
   semanasEditaveis,
   type DisponibilidadeSemanal,
@@ -37,13 +46,25 @@ export class DisponibilidadesController {
   async obter(
     @UsuarioAtual() advogado: UsuarioAutenticado,
     @Query('semana') semana?: string,
+    @Query('mes') mes?: string,
   ): Promise<{
     readonly semanas: readonly string[];
     readonly slots: readonly SlotResumo[];
   }> {
+    /*
+     * `mes` (AAAA-MM) e o calendario do mes: as semanas inteiras que o tocam.
+     * Formato errado e 400, e nao "o mes corrente": a tela pediu um mes que nao
+     * existe, e responder outro esconderia o defeito.
+     */
+    if (mes !== undefined && !ehMes(mes)) {
+      throw new BadRequestException('Mes invalido. Use AAAA-MM.');
+    }
     return {
       semanas: semanasEditaveis(new Date(agora())),
-      slots: await this.disponibilidades.obter(advogado.uid, semana),
+      slots:
+        mes === undefined
+          ? await this.disponibilidades.obter(advogado.uid, semana)
+          : await this.disponibilidades.obterDoMes(advogado.uid, mes),
     };
   }
 

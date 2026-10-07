@@ -57,6 +57,8 @@ export class OutboxController {
    * - `em-andamento` -> 200. Outra tarefa esta com o registro. Devolver erro faria
    *   a fila insistir em cima de quem ja esta trabalhando, e o varredor retoma
    *   sozinho se o arrendamento vencer sem conclusao.
+   * - `estacionado` -> 200. O registro espera o reenvio manual (modo
+   *   `sem-sala`); insistir nao muda nada.
    * - `ja-entregue` e `inexistente` -> 200. Nao ha nada a fazer, e reentregar so
    *   gastaria a fila.
    */

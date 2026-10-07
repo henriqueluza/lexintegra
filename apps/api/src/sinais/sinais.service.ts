@@ -62,7 +62,14 @@ export class SinaisService {
     const sinais: Sinais = {
       outboxSegundos: await this.idadeDoOutbox(agora),
       quarentenaSegundos: await this.idadeDaQuarentena(agora),
-      reuniaoSemSalaSegundos: await idadeDaReuniaoSemSala(this.db, agora),
+      /*
+       * No modo `sem-sala` TODA reuniao fica sem sala ate o Teams ser ligado,
+       * de proposito. Medir aqui faria o alerta disparar a cada reuniao marcada.
+       */
+      reuniaoSemSalaSegundos:
+        this.reunioes.modo === 'sem-sala'
+          ? 0
+          : await idadeDaReuniaoSemSala(this.db, agora),
     };
 
     this.log.log('sinais operacionais', { sinal: 'sinais', ...sinais });
@@ -88,7 +95,9 @@ export class SinaisService {
   private async medirDisponibilidadeSemLink(
     agora: number,
   ): Promise<number | null> {
-    if (this.reunioes.modo === 'desligado') return null;
+    /* Sem Teams ligado, usuario do Teams faltando nao impede nada. */
+    if (this.reunioes.modo === 'desligado' || this.reunioes.modo === 'sem-sala')
+      return null;
 
     const advogados = await advogadosSemLink(this.db, agora);
     for (const advogadoId of advogados) {

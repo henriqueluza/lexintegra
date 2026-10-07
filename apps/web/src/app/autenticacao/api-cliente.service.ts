@@ -80,14 +80,22 @@ export class ApiClienteService {
    * minimo e contra o saldo dela mesma, e a lista volta vazia. Ver
    * `HorariosService` na API.
    */
+  /**
+   * Os horarios livres de UM MES (`AAAA-MM`) do calendario do cliente. Sem
+   * `mes`, o servidor responde o mes corrente.
+   */
   horariosDeReuniao(
     pedidoId: string,
     reuniaoId?: string,
+    mes?: string,
   ): Promise<HorarioDisponivel[]> {
+    const params: Record<string, string> = {};
+    if (reuniaoId !== undefined) params['reuniao'] = reuniaoId;
+    if (mes !== undefined) params['mes'] = mes;
     return firstValueFrom(
       this.http.get<HorarioDisponivel[]>(
         `/api/pedidos/${encodeURIComponent(pedidoId)}/horarios`,
-        reuniaoId === undefined ? {} : { params: { reuniao: reuniaoId } },
+        { params },
       ),
     );
   }

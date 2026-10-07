@@ -1,0 +1,265 @@
+/* Direcao B (Pauta) por heranca da shell autenticada. Regra inviolavel 8: so
+ * token semantico, nunca primitivo. */
+.agendar {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: var(--s4);
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .agendar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.calendario {
+  padding: var(--s3);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio);
+  background: var(--superficie-elevada);
+}
+
+.calendario__cabeca {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  margin-bottom: var(--s2);
+}
+
+.calendario__titulo {
+  margin: 0;
+  font-size: var(--t-corpo);
+  font-weight: var(--peso-forte);
+  color: var(--texto);
+}
+
+.calendario__seta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--s6);
+  height: var(--s6);
+  padding: 0;
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio-pilula);
+  background: var(--superficie-elevada);
+  color: var(--texto);
+  cursor: pointer;
+}
+
+.calendario__seta:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* So existe a seta para a direita no jogo de icones; a de voltar e espelhada. */
+.calendario__seta--voltar app-icone {
+  transform: scaleX(-1);
+}
+
+.calendario__grade {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.calendario__grade th {
+  padding: 0 0 var(--s1);
+  font-size: var(--t-nano);
+  font-weight: var(--peso-forte);
+  color: var(--texto-3);
+  text-transform: uppercase;
+  letter-spacing: var(--letra-caixa-alta);
+}
+
+.calendario__grade td {
+  padding: var(--s1);
+  text-align: center;
+}
+
+.dia {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: var(--s9);
+  padding: 0;
+  border: var(--borda-fina) solid transparent;
+  border-radius: var(--raio);
+  background: transparent;
+  color: var(--texto-3);
+  font-size: var(--t-menor);
+  font-variant-numeric: tabular-nums;
+}
+
+.dia:disabled {
+  cursor: default;
+}
+
+.dia--livre {
+  background: var(--acento-fundo);
+  color: var(--texto);
+  font-weight: var(--peso-forte);
+  cursor: pointer;
+}
+
+.dia--livre:hover {
+  border-color: var(--acento);
+}
+
+/* O ponto de "tem horario" fica embaixo do numero. */
+.dia--livre::after {
+  content: '';
+  position: absolute;
+  bottom: 15%;
+  left: 50%;
+  width: var(--s1);
+  height: var(--s1);
+  border-radius: var(--raio-pilula);
+  background: var(--acento);
+  transform: translateX(-50%);
+}
+
+.dia[aria-pressed='true'] {
+  background: var(--acento);
+  color: var(--texto-sobre-acento);
+}
+
+.dia[aria-pressed='true']::after {
+  background: var(--texto-sobre-acento);
+}
+
+.dia--hoje {
+  border-color: var(--divisor-forte);
+}
+
+.dia--feriado {
+  color: var(--estado-alerta);
+}
+
+/* O ponto dourado do feriado fica no canto, para nao brigar com o de horario. */
+.dia--feriado::before {
+  content: '';
+  position: absolute;
+  top: 12%;
+  right: 12%;
+  width: var(--s1);
+  height: var(--s1);
+  border-radius: var(--raio-pilula);
+  background: var(--estado-alerta);
+}
+
+.calendario__legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s3);
+  margin: var(--s2) 0 0;
+  font-size: var(--t-mini);
+  color: var(--texto-2);
+}
+
+.legenda {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+}
+
+.legenda::before {
+  content: '';
+  width: var(--s2);
+  height: var(--s2);
+  border-radius: var(--raio-pilula);
+}
+
+.legenda--livre::before {
+  border: var(--borda-fina) solid var(--acento);
+  background: var(--acento-fundo);
+}
+
+.legenda--feriado::before {
+  background: var(--estado-alerta);
+}
+
+.horarios {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.horarios__aviso {
+  margin: 0;
+  padding: var(--s3);
+  border: var(--borda-fina) dashed var(--divisor-forte);
+  border-radius: var(--raio);
+  background: var(--superficie-sutil);
+  font-size: var(--t-menor);
+  color: var(--texto-2);
+}
+
+.horarios__grupo {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.horarios__titulo {
+  margin-bottom: var(--s2);
+  padding: 0;
+  font-size: var(--t-corpo);
+  font-weight: var(--peso-forte);
+  color: var(--texto);
+}
+
+.horarios__opcoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: var(--s2);
+}
+
+/* O radio nativo fica invisivel, mas no lugar: teclado e leitor de tela usam o
+ * grupo de radios de verdade, e a etiqueta e o que se ve. */
+.horario {
+  position: relative;
+  display: block;
+}
+
+.horario__radio {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.horario__rotulo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--s7);
+  padding: var(--s1) var(--s2);
+  border: var(--borda-fina) solid var(--divisor-forte);
+  border-radius: var(--raio);
+  background: var(--superficie-elevada);
+  color: var(--texto);
+  font-size: var(--t-menor);
+  font-weight: var(--peso-forte);
+  font-variant-numeric: tabular-nums;
+}
+
+.horario__radio:hover + .horario__rotulo {
+  border-color: var(--acento);
+  color: var(--acento);
+}
+
+.horario__radio:checked + .horario__rotulo {
+  border-color: var(--acento);
+  background: var(--acento);
+  color: var(--texto-sobre-acento);
+}
+
+.horario__radio:focus-visible + .horario__rotulo {
+  outline: var(--borda-media) solid var(--foco);
+  outline-offset: var(--foco-deslocamento);
+}

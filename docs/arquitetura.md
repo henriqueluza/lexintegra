@@ -211,6 +211,8 @@ Campos obrigatórios: `UID` estável por reunião, `DTSTART` e `DTEND` com fuso 
 
 **Risco.** Duplo agendamento fora da plataforma: o advogado marca compromisso pessoal em horário que declarou livre na LexIntegra. Sem leitura da agenda externa, não há detecção automática — a mitigação é organizacional, não técnica.
 
+**Errata (07/10/2026): calendário do mês e janela de doze meses.** A publicação continua por semana (`PUT` de substituição, regra de "toda leitura antes de toda escrita"), mas deixou de se limitar à semana corrente e à seguinte: vai da corrente até 52 semanas à frente (`SEMANAS_EDITAVEIS = 53`, `packages/shared/src/semana.ts`), que é o maior prazo de serviço do catálogo inicial. O motivo é o calendário do mês: o cliente navega mês a mês até o fim da validade do pedido, e com duas semanas os meses seguintes apareciam sempre vazios. A tela do advogado juntou "Disponibilidade" e "Agenda" num calendário do mês (`/advogado/agenda`; `/advogado/disponibilidade` redireciona); a do cliente trocou a lista de horários por um calendário do mês dentro do cartão do pedido. As consultas continuam de igualdade por semana (`semanasDoMes`, de 4 a 6 por mês), sobre o índice que já existia. Os feriados nacionais e os pontos facultativos federais (Carnaval e Corpus Christi) aparecem marcados (`packages/shared/src/feriados.ts`), sem bloquear nada: o advogado decide se atende.
+
 ### ADR-07 — Redefinição de senha por token em vez de senha inicial
 
 **Contexto.** Os itens 2.2.4 e 2.4.5 preveem envio de senha por e-mail. Isso foi substituído a pedido.

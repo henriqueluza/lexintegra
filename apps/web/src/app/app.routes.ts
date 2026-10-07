@@ -192,13 +192,14 @@ export const routes: Routes = [
           ),
         title: 'Minhas demandas — LexIntegra',
       },
+      /*
+       * 07/10/2026: a grade semanal virou parte da agenda do mes. O endereco
+       * antigo continua valendo para quem o tinha salvo.
+       */
       {
         path: 'disponibilidade',
-        loadComponent: () =>
-          import('./paginas/advogado-disponibilidade/advogado-disponibilidade').then(
-            (m) => m.AdvogadoDisponibilidade,
-          ),
-        title: 'Disponibilidade — LexIntegra',
+        redirectTo: 'agenda',
+        pathMatch: 'full',
       },
       /*
        * Etapa 10. A agenda atravessa os pedidos, entao e tela de topo — e o

@@ -133,6 +133,30 @@ export class SalaDeReuniaoDesligada implements SalaDeReuniao {
 }
 
 /**
+ * `REUNIOES_MODO=sem-sala` (07/10/2026): o agendamento funciona, a sala nao.
+ *
+ * NAO E O FALSO, e a diferenca e a regra inviolavel 13. O falso devolve SUCESSO
+ * com um link que nao existe; este devolve FALHA e nao inventa nada. Em
+ * operacao normal ele nem e chamado: o evento `criar-sala-reuniao` nasce
+ * estacionado e nao vai para a fila. So chega aqui se alguem reabrir o evento
+ * pelo painel antes de ligar o Teams — e entao a falha e a resposta certa.
+ */
+export class SalaDeReuniaoPendente implements SalaDeReuniao {
+  criar(): Promise<ResultadoDaSala> {
+    return Promise.resolve({
+      sucesso: false,
+      motivo:
+        'A integracao com o Teams ainda nao esta ligada (REUNIOES_MODO=sem-sala).',
+    });
+  }
+
+  /** Mesmo comportamento do desligado: o falso, sem chamar o Graph. */
+  conferirUsuario(usuarioTeams: string): Promise<ConferenciaDoUsuario> {
+    return Promise.resolve(conferirComoFalso(usuarioTeams));
+  }
+}
+
+/**
  * O object ID que o falso trata como INEXISTENTE no tenant. Tudo o mais
  * existe — o que o falso imita e o caminho do "nao encontrado", nao um
  * diretorio inteiro.

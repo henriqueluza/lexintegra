@@ -161,6 +161,22 @@ export class ApiAdvogadoService {
     );
   }
 
+  /**
+   * A grade de um MES (`AAAA-MM`): as semanas INTEIRAS que tocam o mes, para a
+   * publicacao por semana nao apagar a metade que cai no mes vizinho.
+   */
+  obterDisponibilidadeDoMes(mes: string): Promise<{
+    semanas: readonly string[];
+    slots: readonly SlotResumo[];
+  }> {
+    return firstValueFrom(
+      this.http.get<{
+        semanas: readonly string[];
+        slots: readonly SlotResumo[];
+      }>('/api/advogado/disponibilidade', { params: { mes } }),
+    );
+  }
+
   /** `PUT` porque o corpo descreve a semana COMO ELA FICA: mandar a mesma grade
    * duas vezes tem o mesmo efeito de mandar uma. */
   publicarDisponibilidade(

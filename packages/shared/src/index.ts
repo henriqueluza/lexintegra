@@ -36,6 +36,7 @@ export * from './politica-de-guarda.js';
 export * from './regras-reuniao.js';
 export * from './retencao.js';
 export * from './semana.js';
+export * from './feriados.js';
 export * from './situacao-pedido.js';
 export * from './telefone.js';
 export * from './termos-checkout.js';

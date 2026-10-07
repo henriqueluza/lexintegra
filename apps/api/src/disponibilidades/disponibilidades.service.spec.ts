@@ -245,14 +245,14 @@ describe('DisponibilidadesService', () => {
 
       await disponibilidades.publicar(ANA, { semana, slots: [manha] });
 
-      expect(banco.documentos.has(`disponibilidades/${ANA}_${tarde.inicio}`)).toBe(
-        false,
-      );
+      expect(
+        banco.documentos.has(`disponibilidades/${ANA}_${tarde.inicio}`),
+      ).toBe(false);
     });
   });
 
   describe('janela editavel', () => {
-    it('aceita a semana corrente e a seguinte', async () => {
+    it('aceita a semana corrente, a seguinte e a ultima dos doze meses', async () => {
       const { disponibilidades } = montar();
 
       await expect(
@@ -264,16 +264,24 @@ describe('DisponibilidadesService', () => {
           slots: [],
         }),
       ).resolves.toEqual([]);
+      /* Errata do ADR-06 (07/10/2026): a janela vai a doze meses (52 semanas). */
+      const [ano, mes, dia] = semanaAtual().split('-').map(Number);
+      const ultima = new Date(Date.UTC(ano, mes - 1, dia + 52 * 7))
+        .toISOString()
+        .slice(0, 10);
+      await expect(
+        disponibilidades.publicar(ANA, { semana: ultima, slots: [] }),
+      ).resolves.toEqual([]);
     });
 
     /**
      * Passado seria reescrever grade que ja produziu — ou deixou de produzir —
-     * reuniao. Futuro distante seria compromisso que ninguem lembra de ter
-     * assumido quando a data chegar.
+     * reuniao. Alem de doze meses passaria do maior prazo de servico do
+     * catalogo (errata do ADR-06, 07/10/2026).
      */
     it.each([
       ['no passado', -7],
-      ['muito a frente', 21],
+      ['alem de doze meses', 53 * 7],
     ])('recusa semana %s', async (_nome, dias) => {
       const { disponibilidades } = montar();
       const atual = semanaAtual();

@@ -146,8 +146,8 @@ describe('navegacao da shell', () => {
 
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/advogado/demandas',
+      /* Desde 07/10/2026 a agenda do mes inclui a disponibilidade. */
       '/advogado/agenda',
-      '/advogado/disponibilidade',
     ]);
   });
 
