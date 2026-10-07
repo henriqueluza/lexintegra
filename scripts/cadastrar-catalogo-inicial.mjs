@@ -29,6 +29,7 @@ import { createInterface } from 'node:readline/promises';
 import './fonte-ts.mjs';
 import { esquemaNovoProduto } from '../packages/shared/src/esquemas/produto.ts';
 import { paraCorpo } from './catalogo-inicial/expandir.ts';
+import { lerOculto } from './catalogo-inicial/terminal.mjs';
 import { CATALOGO_INICIAL } from './catalogo-inicial/produtos.data.ts';
 
 const DOMINIO_PRODUCAO = 'lexintegra.com.br';
@@ -112,28 +113,21 @@ function imprimirDetalhes(produtos) {
   }
 }
 
-async function perguntar(pergunta, { oculta = false } = {}) {
+async function perguntar(pergunta) {
   const leitor = createInterface({
     input: process.stdin,
     output: process.stdout,
     terminal: true,
   });
-  if (oculta) {
-    /* Escreve so a pergunta; o que se digita nao aparece no terminal. */
-    leitor._writeToOutput = (texto) => {
-      if (texto.includes(pergunta)) process.stdout.write(pergunta);
-    };
-  }
   const resposta = await leitor.question(pergunta);
   leitor.close();
-  if (oculta) process.stdout.write('\n');
   return resposta.trim();
 }
 
-async function entrar(urlDoLogin, email, senha) {
+async function entrar(urlDoLogin, email, senha, cabecalhos = {}) {
   const resposta = await fetch(urlDoLogin, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...cabecalhos },
     body: JSON.stringify({ email, password: senha, returnSecureToken: true }),
   });
   const corpo = await resposta.json().catch(() => ({}));
@@ -191,11 +185,21 @@ async function alvoDeProducao() {
   }
 
   const email = await perguntar('  E-mail do administrador: ');
-  const senha = await perguntar('  Senha: ', { oculta: true });
+  const senha = await lerOculto(
+    '  Senha (nada aparece enquanto voce digita): ',
+  ).catch((erro) => abortar(erro.message));
+  /*
+   * A chave do Firebase e de navegador e tem restricao por referenciador no
+   * Google Cloud: sem `Referer` do site, o Identity Toolkit responde 403
+   * "Requests from referer <empty> are blocked". A restricao nao e trava de
+   * seguranca (a chave e publica e o cabecalho e declarado por quem chama);
+   * quem autentica e a senha. O script age em nome do proprio site.
+   */
   const token = await entrar(
     `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${configuracao.apiKey}`,
     email,
     senha,
+    { referer: `https://${DOMINIO_PRODUCAO}/` },
   );
   return { api, token, rotulo: `PRODUCAO (${api})` };
 }
