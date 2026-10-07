@@ -255,6 +255,20 @@ e passe a lista ao Claude como "ajustes finais".
   cadastrar e publicar os produtos pelo módulo administrativo, com escopo,
   entregáveis e preços definitivos. Validar a exibição para usuários com acesso
   e o fluxo de contratação. Os placeholders da landing não são produtos reais.
+- [x] Script de cadastro dos seis produtos iniciais, pela API, idempotente pelo
+  nome (`scripts/cadastrar-catalogo-inicial.mjs`, dados em
+  `scripts/catalogo-inicial/produtos.data.ts`). Teto de entregáveis subiu de 20
+  para 60 por causa do Plano Prime de 12 meses (59).
+- [x] Confirmações do catálogo inicial (06/10/2026): 4 análises contratuais no
+  Prime 3 meses, 3 reuniões no Pacote 2, nenhuma no Pacote 3 por enquanto.
+- [ ] 👤 Confirmar com o escritório o número de revisões permitidas
+  (`REVISOES_PADRAO`, zero por enquanto em todos os produtos). Levar também: o Pacote 1 lista "Anamnese inicial" como entregável, separado da
+  ficha de anamnese que a plataforma já tem; as descrições prometem "3x" no
+  cartão, que segue bloqueado pela homologação; e os limites mensais
+  (tira-dúvidas, contratos por mês) ficam só no texto, sem trava no sistema.
+- [ ] 👤 Depois das confirmações, ajustar o arquivo de dados e rodar
+  `node scripts/cadastrar-catalogo-inicial.mjs --prod` (pede e-mail e senha de
+  administrador no terminal e confirmação pelo domínio).
 
 
 **Alertas e ClamAV (achados de 29/09)**
@@ -674,6 +688,16 @@ faz. Os comandos estão em
   aplicativo) e o object ID de cada advogado.
 - [ ] **Teste — Henrique:** chamada manual do Graph fora da aplicação
   (`GET /users/{id}` e `createOrGet`, runbook 2.3).
+- [x] Calendário do mês para cliente e advogado, feriados nacionais, janela de
+  publicação de doze meses e modo `REUNIOES_MODO=sem-sala` (07/10/2026, PR
+  `feat/calendario-reunioes`): em produção dá para marcar reunião sem o Teams;
+  o link fica pendente e o evento da sala, estacionado.
+- [ ] **Depois de ligar o Teams — Henrique:** acordar as salas das reuniões
+  marcadas no modo `sem-sala` (runbook 2.7: `/admin/reunioes`, "Tentar de
+  novo").
+- [ ] **Revisão — Henrique:** regravar e aprovar as imagens de referência dos
+  painéis do cliente e do advogado, que mudaram com o calendário
+  (`scripts/visual.sh paineis --update-snapshots`; não roda no CI).
 - [ ] **Configuração manual — admin da plataforma:** preencher o `usuarioTeams`
   de cada advogado em `/admin/advogados`.
 - [ ] **Commit de destravamento — Henrique (ou agente, a pedido):**

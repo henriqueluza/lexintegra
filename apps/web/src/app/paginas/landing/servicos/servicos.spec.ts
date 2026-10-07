@@ -130,6 +130,36 @@ describe('Servicos', () => {
       expect(texto(fixture).replace(/\s/g, ' ')).toContain('R$ 2.500,00');
     });
 
+    it('mostra as unidades repetidas numa linha so, com a quantidade', async () => {
+      resposta = [
+        {
+          ...PARECER,
+          entregaveis: [
+            'Parecer em PDF',
+            'Contrato personalizado (1 de 3)',
+            'Contrato personalizado (2 de 3)',
+            'Contrato personalizado (3 de 3)',
+          ],
+        },
+      ];
+      const fixture = montar();
+
+      await liberar(fixture);
+
+      const itens = [
+        ...(fixture.nativeElement as HTMLElement).querySelectorAll(
+          '.produto__entregaveis li',
+        ),
+      ].map((item) => item.textContent?.trim());
+      expect(itens).toEqual([
+        '1Parecer em PDF',
+        '3Contratos personalizados',
+        '2Reuniões',
+        '2Revisões por entregável',
+      ]);
+      resposta = [PARECER];
+    });
+
     it('mostra quantas reunioes e revisoes o servico inclui', async () => {
       const fixture = montar();
 

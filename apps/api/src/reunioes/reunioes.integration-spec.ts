@@ -328,6 +328,7 @@ describe('agendamento', () => {
       'pedido-1',
       CLIENTE,
       null,
+      null,
       NA_SEMANA,
     );
 
@@ -365,12 +366,14 @@ describe('agendamento', () => {
       'pedido-1',
       CLIENTE,
       null,
+      null,
       NA_SEMANA,
     );
     const paraRemarcar = await horarios.listar(
       'pedido-1',
       CLIENTE,
       reuniao.id,
+      null,
       NA_SEMANA,
     );
 
@@ -394,11 +397,11 @@ describe('agendamento', () => {
       AGORA,
     );
 
-    expect(await horarios.listar('pedido-1', CLIENTE, null, NA_SEMANA)).toEqual(
+    expect(await horarios.listar('pedido-1', CLIENTE, null, null, NA_SEMANA)).toEqual(
       [],
     );
     expect(
-      (await horarios.listar('pedido-1', CLIENTE, reuniao.id, NA_SEMANA)).map(
+      (await horarios.listar('pedido-1', CLIENTE, reuniao.id, null, NA_SEMANA)).map(
         (h) => h.slotId,
       ),
     ).toEqual([outro]);

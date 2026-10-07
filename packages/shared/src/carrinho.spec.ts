@@ -3,8 +3,9 @@ import { ordenarItens, TETO_ITENS_CARRINHO } from './carrinho.js';
 describe('carrinho', () => {
   /**
    * O teto e limite de transacao, nao comercial (ver o comentario no arquivo).
-   * Subir o numero sem refazer a conta de escritas por item quebra a
-   * confirmacao do pagamento so com o carrinho grande.
+   * Subir o numero sem refazer a conta do tamanho do commit (e sem rodar
+   * `compra-maxima.integration-spec.ts`) pode quebrar a confirmacao do
+   * pagamento so com o carrinho grande.
    */
   it('tem teto de dez itens', () => {
     expect(TETO_ITENS_CARRINHO).toBe(10);

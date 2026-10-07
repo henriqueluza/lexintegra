@@ -68,9 +68,20 @@ async function montar(
       {
         provide: ApiClienteService,
         useValue: {
-          horariosDeReuniao: (id: string, reuniaoId?: string) => {
+          /*
+           * O calendario pede um MES por vez. O duble devolve os horarios no dia
+           * 15 do mes pedido, para o dia aparecer destacado em qualquer data em
+           * que a suite rode.
+           */
+          horariosDeReuniao: (id: string, reuniaoId?: string, mes?: string) => {
             api.chamadas.push(`horarios ${id} ${reuniaoId ?? '-'}`);
-            return Promise.resolve(api.horarios);
+            return Promise.resolve(
+              api.horarios.map((horario) => ({
+                ...horario,
+                inicio: `${mes ?? ''}-15T17:00:00.000Z`,
+                fim: `${mes ?? ''}-15T18:00:00.000Z`,
+              })),
+            );
           },
           marcarReuniao: (id: string, slotId: string) => {
             api.chamadas.push(`marcar ${id} ${slotId}`);
@@ -129,9 +140,7 @@ describe('ReunioesDoPedido', () => {
   it('lista a reuniao marcada com o link da sala', async () => {
     const { fixture } = await montar(pedido({ reunioes: [reuniao()] }));
 
-    expect(
-      fixture.nativeElement.querySelector('.reuniao__link'),
-    ).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.reuniao__link')).toBeTruthy();
   });
 
   /**
@@ -140,7 +149,9 @@ describe('ReunioesDoPedido', () => {
    */
   it('reuniao sem sala diz que o link esta a caminho', async () => {
     const { fixture } = await montar(
-      pedido({ reunioes: [reuniao({ estado: 'reservada_sem_link', link: null })] }),
+      pedido({
+        reunioes: [reuniao({ estado: 'reservada_sem_link', link: null })],
+      }),
     );
 
     expect(texto(fixture)).toContain('Link a caminho');
@@ -173,9 +184,7 @@ describe('ReunioesDoPedido', () => {
    * processo, e a tela nao tem como saber.
    */
   it('agendamento indisponivel nao oferece marcar, e diz por que', async () => {
-    const { fixture } = await montar(
-      pedido({ agendamentoDisponivel: false }),
-    );
+    const { fixture } = await montar(pedido({ agendamentoDisponivel: false }));
 
     expect(texto(fixture)).toContain('ainda não está disponível');
     expect(
@@ -199,9 +208,7 @@ describe('ReunioesDoPedido', () => {
 
   /** O saldo continua visivel: o credito nao se perde por estar indisponivel. */
   it('indisponivel ainda mostra o saldo do pedido', async () => {
-    const { fixture } = await montar(
-      pedido({ agendamentoDisponivel: false }),
-    );
+    const { fixture } = await montar(pedido({ agendamentoDisponivel: false }));
 
     expect(texto(fixture)).toContain('0/2');
   });
@@ -214,14 +221,17 @@ describe('ReunioesDoPedido', () => {
     const { fixture } = await montar(pedido({ distribuido: false }));
 
     expect(texto(fixture)).toContain('em análise');
-    expect(botoes(fixture).some((b) => /Marcar reuni/u.test(b.textContent ?? ''))).toBe(
-      false,
-    );
+    expect(
+      botoes(fixture).some((b) => /Marcar reuni/u.test(b.textContent ?? '')),
+    ).toBe(false);
   });
 
   it('saldo esgotado diz que as reunioes ja foram usadas', async () => {
     const { fixture } = await montar(
-      pedido({ saldoDeReunioes: 0, reunioes: [reuniao(), reuniao({ id: 'r002' })] }),
+      pedido({
+        saldoDeReunioes: 0,
+        reunioes: [reuniao(), reuniao({ id: 'r002' })],
+      }),
     );
 
     expect(texto(fixture)).toContain('já foram usadas');
@@ -247,7 +257,7 @@ describe('ReunioesDoPedido', () => {
 
     await clicar(fixture, /Marcar reuni/u);
 
-    expect(texto(fixture)).toContain('Nenhum horário disponível');
+    expect(texto(fixture)).toContain('Nenhum horário livre neste mês');
   });
 
   /* ---------------------------------------------------------------------- */
@@ -260,10 +270,16 @@ describe('ReunioesDoPedido', () => {
     await clicar(fixture, /Marcar reuni/u);
     expect(api.chamadas).toContain('horarios pedido-1 -');
 
-    const selecao: HTMLSelectElement =
-      fixture.nativeElement.querySelector('select');
-    selecao.value = 'uid-ana_x';
-    selecao.dispatchEvent(new Event('change'));
+    /* O calendario: o dia destacado, depois a hora. */
+    const dia: HTMLButtonElement =
+      fixture.nativeElement.querySelector('button.dia--livre');
+    dia.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const hora: HTMLInputElement = fixture.nativeElement.querySelector(
+      'input[type="radio"]',
+    );
+    hora.click();
     fixture.detectChanges();
 
     await clicar(fixture, /Confirmar reuni/u);
@@ -310,7 +326,9 @@ describe('ReunioesDoPedido', () => {
   it('avisa que cancelar em cima da hora NAO devolve', async () => {
     const { fixture } = await montar(
       pedido({
-        reunioes: [reuniao({ inicio: new Date(Date.now() + 3_600_000).toISOString() })],
+        reunioes: [
+          reuniao({ inicio: new Date(Date.now() + 3_600_000).toISOString() }),
+        ],
       }),
     );
 
@@ -321,21 +339,23 @@ describe('ReunioesDoPedido', () => {
   it('nao oferece remarcar dentro das 24 horas', async () => {
     const { fixture } = await montar(
       pedido({
-        reunioes: [reuniao({ inicio: new Date(Date.now() + 3_600_000).toISOString() })],
+        reunioes: [
+          reuniao({ inicio: new Date(Date.now() + 3_600_000).toISOString() }),
+        ],
       }),
     );
 
-    expect(botoes(fixture).some((b) => /Remarcar/u.test(b.textContent ?? ''))).toBe(
-      false,
-    );
+    expect(
+      botoes(fixture).some((b) => /Remarcar/u.test(b.textContent ?? '')),
+    ).toBe(false);
   });
 
   it('oferece remarcar com folga', async () => {
     const { fixture } = await montar(pedido({ reunioes: [reuniao()] }));
 
-    expect(botoes(fixture).some((b) => /Remarcar/u.test(b.textContent ?? ''))).toBe(
-      true,
-    );
+    expect(
+      botoes(fixture).some((b) => /Remarcar/u.test(b.textContent ?? '')),
+    ).toBe(true);
   });
 
   it('mostra erro quando a acao falha', async () => {

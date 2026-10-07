@@ -191,6 +191,24 @@ describe('SinaisService', () => {
         linhasDoSinal(linhas, 'sinais')[0]?.campos['reuniaoSemSalaSegundos'],
       ).toBe(90 * 60);
     });
+
+    /**
+     * Em `sem-sala` toda reuniao fica sem sala ate o Teams ser ligado, de
+     * proposito. Medir faria o alerta disparar a cada reuniao marcada.
+     */
+    it('em sem-sala, nao mede: reuniao sem sala e o esperado', async () => {
+      const { servico, banco } = montar('sem-sala');
+      banco.documentos.set('pedidos/p1/reunioes/r001', {
+        estado: 'reservada_sem_link',
+        inicio: '2026-09-25T13:00:00.000Z',
+        criadoEm: minutosAtras(900),
+      });
+
+      const medicao = await servico.medir(AGORA);
+
+      expect(medicao.reuniaoSemSalaSegundos).toBe(0);
+      expect(medicao.advogadosSemLink).toBeNull();
+    });
   });
 
   describe('disponibilidade publicada sem link (achado 4.2, opcao a)', () => {

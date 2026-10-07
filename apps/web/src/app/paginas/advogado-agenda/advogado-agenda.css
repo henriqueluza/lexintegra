@@ -1,4 +1,5 @@
-/* Direcao B (Pauta) por heranca da shell autenticada. */
+/* Direcao B (Pauta) por heranca da shell autenticada. Regra inviolavel 8: so
+ * token semantico, nunca primitivo. */
 .agenda {
   display: flex;
   flex-direction: column;
@@ -20,12 +21,314 @@
   font-size: var(--t-menor);
 }
 
-.agenda__link {
+.agenda__corpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(16rem, 1fr);
+  gap: var(--s4);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .agenda__corpo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.mes,
+.dia {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s4);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio);
+  background: var(--superficie-elevada);
+}
+
+.mes__cabeca {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+}
+
+.mes__titulo,
+.dia__titulo {
+  margin: 0;
+  font-size: var(--t-t2);
+  font-weight: var(--peso-forte);
+  color: var(--texto);
+}
+
+.mes__seta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--s6);
+  height: var(--s6);
+  padding: 0;
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio-pilula);
+  background: var(--superficie-elevada);
+  color: var(--texto);
+  cursor: pointer;
+}
+
+.mes__seta:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* So existe a seta para a direita no jogo de icones; a de voltar e espelhada. */
+.mes__seta--voltar app-icone {
+  transform: scaleX(-1);
+}
+
+.mes__grade {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.mes__grade th {
+  padding: 0 0 var(--s1) var(--s1);
+  font-size: var(--t-nano);
+  font-weight: var(--peso-forte);
+  color: var(--texto-3);
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: var(--letra-caixa-alta);
+}
+
+.mes__grade td {
+  padding: var(--s1);
+  vertical-align: top;
+}
+
+.celula {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s1);
+  width: 100%;
+  min-height: var(--s9);
+  padding: var(--s1);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio);
+  background: var(--superficie-elevada);
+  color: var(--texto);
+  cursor: pointer;
+}
+
+.celula:hover {
+  border-color: var(--acento);
+}
+
+.celula--passado,
+.celula--fim {
+  background: var(--superficie-sutil);
+  color: var(--texto-3);
+}
+
+/* Fora da janela de publicacao: hachura, sem texto que polua a grade. */
+.celula--fechada {
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--superficie-sutil) 0 6px,
+    var(--superficie-elevada) 6px 12px
+  );
+}
+
+.celula[aria-pressed='true'] {
+  border-color: var(--acento);
+  box-shadow: inset 0 0 0 1px var(--acento);
+}
+
+.celula__numero {
+  font-size: var(--t-menor);
+  font-weight: var(--peso-forte);
+  font-variant-numeric: tabular-nums;
+}
+
+.celula--hoje .celula__numero {
+  padding: 0 var(--s1);
+  border-radius: var(--raio-pilula);
+  background: var(--texto);
+  color: var(--superficie-elevada);
+}
+
+/* Ponto dourado de feriado no canto. */
+.celula--feriado::after {
+  content: '';
+  position: absolute;
+  top: var(--s1);
+  right: var(--s1);
+  width: var(--s1);
+  height: var(--s1);
+  border-radius: var(--raio-pilula);
+  background: var(--estado-alerta);
+}
+
+.selo {
+  min-width: var(--s4);
+  padding: 0 var(--s1);
+  border-radius: var(--raio-pilula);
+  font-size: var(--t-nano);
+  font-weight: var(--peso-forte);
+  text-align: center;
+}
+
+.selo--reuniao {
+  background: var(--acento);
+  color: var(--texto-sobre-acento);
+}
+
+.selo--livre {
+  background: var(--superficie-sutil);
+  color: var(--estado-ok);
+  border: var(--borda-fina) solid var(--estado-ok);
+}
+
+.mes__legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s3);
+  margin: 0;
+  font-size: var(--t-mini);
+  color: var(--texto-2);
+}
+
+.legenda {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+}
+
+.legenda::before {
+  content: '';
+  width: var(--s2);
+  height: var(--s2);
+  border-radius: var(--raio-pilula);
+}
+
+.legenda--reuniao::before {
+  background: var(--acento);
+}
+
+.legenda--livre::before {
+  border: var(--borda-fina) solid var(--estado-ok);
+}
+
+.legenda--feriado::before {
+  background: var(--estado-alerta);
+}
+
+.dia__feriado {
+  margin: 0;
+  font-size: var(--t-mini);
+  color: var(--estado-alerta);
+}
+
+.dia__rotulo {
+  margin: var(--s2) 0 0;
+  font-size: var(--t-nano);
+  font-weight: var(--peso-forte);
+  color: var(--texto-3);
+  text-transform: uppercase;
+  letter-spacing: var(--letra-caixa-alta);
+}
+
+.dia__vazio {
+  margin: 0;
+  font-size: var(--t-mini);
+  color: var(--texto-2);
+}
+
+.dia__reunioes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reuniao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  padding: var(--s2);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio);
+  background: var(--superficie-sutil);
+}
+
+.reuniao__texto {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--t-menor);
+}
+
+.reuniao__texto small {
+  font-size: var(--t-mini);
+  color: var(--texto-2);
+}
+
+.reuniao__link {
   color: var(--acento);
+  font-size: var(--t-menor);
   font-weight: var(--peso-medio);
 }
 
-.agenda__sem-sala {
+.reuniao__sem-sala {
   color: var(--estado-alerta);
   font-size: var(--t-mini);
+}
+
+.horas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+  gap: var(--s1);
+}
+
+.hora {
+  min-height: var(--s7);
+  padding: 0;
+  border: var(--borda-fina) solid var(--divisor-forte);
+  border-radius: var(--raio);
+  background: var(--superficie-elevada);
+  color: var(--texto);
+  font-size: var(--t-menor);
+  font-weight: var(--peso-forte);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.hora[aria-pressed='true'] {
+  border-color: var(--estado-ok);
+  background: var(--superficie-sutil);
+  color: var(--estado-ok);
+}
+
+.hora--ocupada,
+.hora--ocupada[aria-pressed='true'] {
+  border-color: var(--acento);
+  background: var(--acento);
+  color: var(--texto-sobre-acento);
+  cursor: not-allowed;
+}
+
+.dia__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+  margin-top: var(--s2);
+}
+
+.dia__salvo {
+  font-size: var(--t-mini);
+  color: var(--estado-ok);
 }

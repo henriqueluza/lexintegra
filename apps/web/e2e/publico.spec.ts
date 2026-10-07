@@ -110,7 +110,7 @@ test.describe('area publica', () => {
     await interceptar(page);
 
     await page.addLocatorHandler(
-      page.getByRole('button', { name: 'Fechar convite' }),
+      page.getByRole('button', { name: 'Fechar' }),
       async (convite) => {
         await convite.click();
       },

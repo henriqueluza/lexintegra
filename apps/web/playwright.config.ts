@@ -21,6 +21,29 @@ const LARGURAS = [
   { nome: 'largo', width: 1280, height: 1000 },
 ] as const;
 
+const URL_BASE = process.env['URL_BASE'] ?? 'http://localhost:4200';
+
+/**
+ * O convite do fim da home (07/10/2026) e um popup MODAL: todo teste que rola a
+ * landing ate o fim o tomaria na frente do proximo clique, e toda captura de
+ * pagina inteira poderia pega-lo aberto. Por isso todo teste comeca com ele
+ * "fechado agora ha pouco" (`CHAVE_CONVITE` em `convite-cadastro.ts`; o nome
+ * esta repetido aqui porque a configuracao nao importa codigo da aplicacao). O
+ * instante e o da carga da configuracao: o silencio e de sete dias, e nenhuma
+ * execucao dura isso. So `convite-cadastro.spec.ts` volta ao armazenamento vazio.
+ */
+const CONVITE_JA_FECHADO = {
+  cookies: [],
+  origins: [
+    {
+      origin: new URL(URL_BASE).origin,
+      localStorage: [
+        { name: 'lexintegra:convite-cadastro', value: String(Date.now()) },
+      ],
+    },
+  ],
+};
+
 export default defineConfig({
   testDir: './e2e',
 
@@ -40,7 +63,8 @@ export default defineConfig({
   reporter: process.env['CI'] ? [['github'], ['list']] : [['list']],
 
   use: {
-    baseURL: process.env['URL_BASE'] ?? 'http://localhost:4200',
+    baseURL: URL_BASE,
+    storageState: CONVITE_JA_FECHADO,
     // Reduz o ruido entre execucoes: sem animacao em curso, sem cursor piscando.
     colorScheme: 'light',
   },

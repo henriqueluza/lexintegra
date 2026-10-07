@@ -12,7 +12,8 @@ import { PaginaServicos } from './pagina-servicos';
  * `/servicos`. No servidor (pre-renderizacao) nenhuma das duas redireciona.
  *
  * Quem esta logado, em qualquer perfil, fica em `/servicos` mesmo sem cadastro
- * inicial — essa decisao e do `CatalogoService.conferir`, testado a parte.
+ * inicial, e sai de `/cadastro` para `/servicos` — as duas decisoes sao do
+ * `CatalogoService.conferir`, testado a parte.
  */
 async function montar(
   componente: typeof PaginaServicos | typeof PaginaCadastro,
@@ -67,11 +68,11 @@ describe('sem pagina intermediaria antes do cadastro', () => {
     expect(await montar(PaginaServicos, true)).toEqual([]);
   });
 
-  it('/cadastro com cadastro vai para /servicos', async () => {
+  it('/cadastro com cadastro ou sessao vai para /servicos', async () => {
     expect(await montar(PaginaCadastro, true)).toEqual(['/servicos']);
   });
 
-  it('/cadastro sem cadastro fica', async () => {
+  it('/cadastro sem cadastro nem sessao fica', async () => {
     expect(await montar(PaginaCadastro, false)).toEqual([]);
   });
 

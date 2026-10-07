@@ -1,42 +1,161 @@
 <section class="agenda">
   <h1 class="agenda__titulo">Minha agenda</h1>
-
   <p class="agenda__nota">
-    As reuniões marcadas nos pedidos que você atende, da mais próxima para a
-    mais distante. Reunião cancelada não aparece aqui.
+    Reuniões marcadas e horários de atendimento no mesmo calendário. Clique num
+    dia para ver as reuniões e ligar ou desligar horários. Dá para publicar da
+    semana atual até doze meses à frente.
   </p>
 
-  @if (falha()) {
-  <app-mensagem-erro variante="bloco">
-    Não foi possível carregar a agenda. Recarregue a página.
-  </app-mensagem-erro>
-  } @if (carregando()) {
-  <app-carregando variante="tabela" rotulo="Carregando a agenda" />
-  } @else if (vazia()) {
-  <app-estado-vazio
-    icone="calendario"
-    mensagem="Nenhuma reunião marcada. Publique sua disponibilidade para os clientes poderem marcar."
-  />
-  } @else {
-  <app-tabela
-    legenda="Reuniões marcadas"
-    [colunas]="colunas"
-    [linhas]="linhas()"
-    mensagemVazia="Nenhuma reunião marcada."
-  >
-    <ng-template appCelulaTabela let-linha let-coluna="coluna">
-      @switch (coluna.chave) { @case ('quando') { {{ quando(comoReuniao(linha))
-      }} } @case ('cliente') { {{ comoReuniao(linha).cliente }} } @case
-      ('produto') { {{ comoReuniao(linha).produto }} } @case ('sala') { @if
-      (comoReuniao(linha).link; as link) {
-      <a class="agenda__link" [href]="link" target="_blank" rel="noopener">
-        Abrir sala
-      </a>
+  <div class="agenda__corpo">
+    <div class="mes">
+      <div class="mes__cabeca">
+        <button
+          type="button"
+          class="mes__seta mes__seta--voltar"
+          aria-label="Mês anterior"
+          [disabled]="!podeVoltar()"
+          (click)="navegar(-1)"
+        >
+          <app-icone nome="seta-direita" tamanho="p" />
+        </button>
+        <h2 class="mes__titulo" aria-live="polite">{{ titulo() }}</h2>
+        <button
+          type="button"
+          class="mes__seta"
+          aria-label="Próximo mês"
+          [disabled]="!podeAvancar()"
+          (click)="navegar(1)"
+        >
+          <app-icone nome="seta-direita" tamanho="p" />
+        </button>
+      </div>
+
+      @if (carregando()) {
+      <app-carregando variante="bloco" rotulo="Carregando a agenda" />
       } @else {
-      <!-- Regra inviolavel 13: a ausencia do link e dita, nunca disfarcada. -->
-      <span class="agenda__sem-sala">Link a caminho</span>
-      } } }
-    </ng-template>
-  </app-tabela>
-  }
+      <table class="mes__grade" [attr.aria-label]="titulo()">
+        <thead>
+          <tr>
+            @for (dia of diasDaSemana; track dia.curto) {
+            <th scope="col" [attr.abbr]="dia.longo">{{ dia.curto }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (semana of grade(); track semana[0].data) {
+          <tr>
+            @for (dia of semana; track dia.data) {
+            <td>
+              @if (dia.doMes) {
+              <button
+                type="button"
+                class="celula"
+                [class.celula--passado]="dia.passado"
+                [class.celula--fim]="dia.fimDeSemana"
+                [class.celula--fechada]="!dia.passado && !dia.fimDeSemana && !editavel(dia.data)"
+                [class.celula--hoje]="dia.hoje"
+                [class.celula--feriado]="dia.feriado !== null"
+                [attr.aria-pressed]="dia.data === diaEscolhido()"
+                [attr.aria-label]="rotulo(dia)"
+                [attr.title]="dia.feriado?.nome ?? null"
+                (click)="escolherDia(dia)"
+              >
+                <span class="celula__numero">{{ dia.numero }}</span>
+                @if (reunioesNo(dia) > 0) {
+                <span class="selo selo--reuniao" aria-hidden="true"
+                  >{{ reunioesNo(dia) }}</span
+                >
+                } @if (livresNo(dia) > 0) {
+                <span class="selo selo--livre" aria-hidden="true"
+                  >{{ livresNo(dia) }}</span
+                >
+                }
+              </button>
+              }
+            </td>
+            }
+          </tr>
+          }
+        </tbody>
+      </table>
+      }
+
+      <p class="mes__legenda">
+        <span class="legenda legenda--reuniao">Reunião marcada</span>
+        <span class="legenda legenda--livre">Horários livres</span>
+        <span class="legenda legenda--feriado">Feriado</span>
+      </p>
+    </div>
+
+    <div class="dia" aria-live="polite">
+      <h2 class="dia__titulo">{{ tituloDoDia() }}</h2>
+      @if (feriadoDoDia(); as feriado) {
+      <p class="dia__feriado">Feriado: {{ feriado }}</p>
+      }
+
+      <h3 class="dia__rotulo">Reuniões marcadas</h3>
+      @if (reunioesDoDia().length === 0) {
+      <p class="dia__vazio">Nenhuma reunião neste dia.</p>
+      } @else {
+      <ul class="dia__reunioes">
+        @for (reuniao of reunioesDoDia(); track reuniao.id) {
+        <li class="reuniao">
+          <span class="reuniao__texto">
+            <b>{{ horario(reuniao) }}</b>
+            <small>{{ reuniao.cliente }} · {{ reuniao.produto }}</small>
+          </span>
+          @if (reuniao.link; as link) {
+          <a class="reuniao__link" [href]="link" target="_blank" rel="noopener"
+            >Abrir sala</a
+          >
+          } @else {
+          <!-- Regra inviolavel 13: a ausencia do link e dita, nunca disfarcada. -->
+          <span class="reuniao__sem-sala">Link a caminho</span>
+          }
+        </li>
+        }
+      </ul>
+      }
+
+      <h3 class="dia__rotulo">Horários de atendimento</h3>
+      @if (editavel(diaEscolhido())) {
+      <div class="horas" role="group" aria-label="Horários de atendimento">
+        @for (hora of horas; track hora) {
+        <button
+          type="button"
+          class="hora"
+          [class.hora--ocupada]="ocupada(hora)"
+          [attr.aria-pressed]="publicada(hora) || ocupada(hora)"
+          [attr.aria-label]="rotuloDaHora(hora)"
+          [disabled]="ocupada(hora)"
+          (click)="alternar(hora)"
+        >
+          {{ hora }}h
+        </button>
+        }
+      </div>
+      } @else {
+      <p class="dia__vazio">
+        Este dia não pode ser editado: só dias úteis, da semana atual até doze
+        meses à frente.
+      </p>
+      } @if (falha(); as mensagem) {
+      <app-mensagem-erro variante="linha">{{ mensagem }}</app-mensagem-erro>
+      }
+
+      <div class="dia__acoes">
+        <app-botao
+          variante="primario"
+          [desabilitado]="!alterado()"
+          [carregando]="salvando()"
+          (click)="publicar()"
+        >
+          Publicar alterações
+        </app-botao>
+        @if (salvo()) {
+        <span class="dia__salvo" role="status">Agenda publicada.</span>
+        }
+      </div>
+    </div>
+  </div>
 </section>

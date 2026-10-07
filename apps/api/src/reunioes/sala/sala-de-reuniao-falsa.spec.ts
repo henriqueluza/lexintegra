@@ -3,6 +3,7 @@ import {
   FALHAS_PREVISTAS,
   SalaDeReuniaoDesligada,
   SalaDeReuniaoFalsa,
+  SalaDeReuniaoPendente,
 } from './sala-de-reuniao-falsa.js';
 import { ReunioesDesligadas, type NovaSala } from './sala-de-reuniao.js';
 
@@ -141,5 +142,26 @@ describe('criarSalaDeReuniao', () => {
     expect(criarSalaDeReuniao({ modo: 'falso', graph: null })).toBeInstanceOf(
       SalaDeReuniaoFalsa,
     );
+  });
+
+  /* `sem-sala` tambem tem `graph: null`: sem o ramo proprio, cairia no falso. */
+  it('sem-sala vira a sala pendente, e nao a falsa', () => {
+    expect(
+      criarSalaDeReuniao({ modo: 'sem-sala', graph: null }),
+    ).toBeInstanceOf(SalaDeReuniaoPendente);
+  });
+});
+
+/**
+ * `REUNIOES_MODO=sem-sala` (07/10/2026). A diferenca para o falso e a regra
+ * inviolavel 13: o falso devolve um link que nao existe; a pendente devolve
+ * falha e nao inventa nada.
+ */
+describe('SalaDeReuniaoPendente', () => {
+  it('nunca devolve link: reporta que o Teams nao esta ligado', async () => {
+    await expect(new SalaDeReuniaoPendente().criar()).resolves.toEqual({
+      sucesso: false,
+      motivo: expect.stringContaining('sem-sala') as unknown as string,
+    });
   });
 });

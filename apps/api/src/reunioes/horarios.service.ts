@@ -1,9 +1,10 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { Firestore } from 'firebase-admin/firestore';
 import {
+  dataLocal,
   impedimentoParaAgendar,
-  semanaDe,
-  semanaSeguinte,
+  mesDe,
+  semanasDoMes,
   type HorarioDisponivel,
 } from 'shared';
 import {
@@ -65,6 +66,7 @@ export class HorariosService {
     pedidoId: string,
     clienteUid: string,
     remarcando: string | null = null,
+    mes: string | null = null,
     agora: number = agora_(),
   ): Promise<HorarioDisponivel[]> {
     const pedido = await this.pedidoDoCliente(pedidoId, clienteUid);
@@ -73,7 +75,10 @@ export class HorariosService {
     if (pedido.advogadoId === null) return [];
 
     const reunioes = await this.reunioesDo(pedidoId);
-    const livres = await this.slotsDasSemanas(pedido.advogadoId, agora);
+    const livres = await this.slotsDoMes(
+      pedido.advogadoId,
+      mes ?? mesDe(new Date(agora)),
+    );
     const fimDaJanelaMs = fimDaJanelaDoPedido(pedido);
 
     return livres
@@ -129,27 +134,25 @@ export class HorariosService {
   }
 
   /**
-   * DUAS CONSULTAS DE IGUALDADE, uma por semana editavel, em vez de uma com `in`
-   * ou com faixa sobre `inicio`. Tres razoes, e a terceira e a que decide:
+   * Os slots livres de UM MES do calendario do cliente (07/10/2026).
    *
-   * - o dublê do Firestore recusa operador nao implementado;
-   * - o indice composto que JA EXISTE (`advogadoId` + `semana` + `inicio`) serve
-   *   as duas, entao esta consulta nao pede indice novo;
-   * - o advogado so publica a semana corrente e a seguinte (ADR-06), entao essas
-   *   duas SAO tudo que existe para escolher. Uma varredura por `advogadoId`
-   *   sozinho leria tambem todas as semanas passadas, que ficam na colecao para
-   *   sempre e cresceriam sem teto.
+   * UMA CONSULTA DE IGUALDADE POR SEMANA que toca o mes (de 4 a 6), em vez de
+   * uma faixa sobre `inicio`. As razoes de quando eram so duas semanas
+   * continuam: o dublê do Firestore recusa operador nao implementado, o indice
+   * composto que JA EXISTE (`advogadoId` + `semana` + `inicio`) serve, e uma
+   * varredura por `advogadoId` sozinho leria todas as semanas passadas, que
+   * ficam na colecao para sempre. O que mudou foi a janela de publicacao, de
+   * duas semanas para doze meses (errata do ADR-06): a tela pede um mes por vez.
    *
-   * E a mesma escolha que o varredor do outbox fez, e pelo mesmo motivo.
+   * As semanas das pontas trazem dias do mes vizinho; eles saem aqui, pela data
+   * civil brasileira do inicio, para o mes responder so por ele mesmo.
    */
-  private async slotsDasSemanas(
+  private async slotsDoMes(
     advogadoId: string,
-    agora: number,
+    mes: string,
   ): Promise<readonly (DocumentoSlot & { id: string })[]> {
-    const corrente = semanaDe(new Date(agora));
-
     const paginas = await Promise.all(
-      [corrente, semanaSeguinte(corrente)].map((semana) =>
+      semanasDoMes(mes).map((semana) =>
         this.db
           .collection(COLECAO_DISPONIBILIDADES)
           .where('advogadoId', '==', advogadoId)
@@ -165,6 +168,7 @@ export class HorariosService {
         id: documento.id,
         ...(documento.data() as DocumentoSlot),
       }))
-      .filter((slot) => slotLivre(slot));
+      .filter((slot) => slotLivre(slot))
+      .filter((slot) => dataLocal(new Date(slot.inicio)).startsWith(mes));
   }
 }

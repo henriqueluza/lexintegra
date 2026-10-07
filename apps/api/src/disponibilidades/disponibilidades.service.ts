@@ -3,6 +3,7 @@ import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import {
   idDoSlot,
   semanaDe,
+  semanasDoMes,
   semanasEditaveis,
   type DisponibilidadeSemanal,
   type SlotResumo,
@@ -79,6 +80,22 @@ export class DisponibilidadesService {
    * relogio e metade noutro, o advogado publicaria a grade de uma semana
    * enquanto o cliente escolheria horarios de outra, e nada falharia.
    */
+  /**
+   * A grade de um MES, para o calendario do advogado (07/10/2026): as semanas
+   * INTEIRAS que tocam o mes, inclusive os dias que caem no mes vizinho. A tela
+   * publica por semana (`PUT` e substituicao), e sem a semana inteira ela
+   * apagaria, sem querer, a metade que ficou fora do mes.
+   *
+   * Uma consulta de igualdade por semana, como `obter`: o indice que ja existe
+   * (`advogadoId` + `semana` + `inicio`) serve, e sao no maximo seis.
+   */
+  async obterDoMes(advogadoId: string, mes: string): Promise<SlotResumo[]> {
+    const semanas = await Promise.all(
+      semanasDoMes(mes).map((semana) => this.obter(advogadoId, semana)),
+    );
+    return semanas.flat();
+  }
+
   async obter(advogadoId: string, semana?: string): Promise<SlotResumo[]> {
     const alvo = semana ?? semanaDe(new Date(agora()));
 
@@ -220,17 +237,17 @@ export class DisponibilidadesService {
   }
 
   /**
-   * So a semana corrente e a seguinte (ver `semanasEditaveis`).
+   * Da semana corrente ate doze meses a frente (ver `semanasEditaveis` e a
+   * errata do ADR-06, 07/10/2026).
    *
    * O limite existe dos dois lados: publicar no PASSADO seria reescrever uma
-   * grade que ja produziu — ou deixou de produzir — reunioes; publicar tres meses
-   * a frente seria assumir compromisso que ninguem lembra de ter assumido quando
-   * a data chegar.
+   * grade que ja produziu — ou deixou de produzir — reunioes; publicar alem de
+   * doze meses passaria do maior prazo de servico do catalogo.
    */
   private exigirSemanaEditavel(semana: string): void {
     if (!semanasEditaveis(new Date(agora())).includes(semana)) {
       throw new ConflictException(
-        'So e possivel publicar a semana corrente ou a seguinte.',
+        'So e possivel publicar da semana corrente ate doze meses a frente.',
       );
     }
   }

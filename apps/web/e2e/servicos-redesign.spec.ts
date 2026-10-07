@@ -169,7 +169,11 @@ for (const reduzido of [false, true]) {
         chamadas.push(req.url());
     });
     await page.goto('/');
-    const dialogo = page.locator('app-convite-catalogo dialog');
+    await page.evaluate(() =>
+      localStorage.removeItem('lexintegra:convite-cadastro'),
+    );
+    await page.goto('/');
+    const dialogo = page.locator('app-convite-cadastro dialog');
     await expect(dialogo).not.toBeVisible();
     await page.locator('#servicos').scrollIntoViewIfNeeded();
     await expect(dialogo).toBeVisible();
@@ -177,12 +181,10 @@ for (const reduzido of [false, true]) {
       'href',
       '/cadastro',
     );
-    await expect(
-      dialogo.getByRole('button', { name: 'Fechar convite' }),
-    ).toBeFocused();
+    await expect(dialogo.getByRole('button', { name: 'Fechar' })).toBeFocused();
     await page.keyboard.press('Shift+Tab');
     await expect(
-      dialogo.getByRole('button', { name: 'Continuar explorando' }),
+      dialogo.getByRole('button', { name: 'Agora não' }),
     ).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(dialogo).not.toBeVisible();

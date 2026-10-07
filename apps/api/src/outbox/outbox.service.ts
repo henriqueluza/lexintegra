@@ -34,7 +34,16 @@ export type Reivindicacao =
   | { readonly situacao: 'inexistente' }
   | { readonly situacao: 'ja-entregue' }
   | { readonly situacao: 'abandonado' }
+  | { readonly situacao: 'estacionado' }
   | { readonly situacao: 'em-andamento' };
+
+/**
+ * `estacionar`: o registro nasce `estacionado`, fora da fila e do varredor, ate
+ * o reenvio manual (modo `sem-sala` das reunioes). Quem estaciona NAO enfileira.
+ */
+export interface OpcoesDoRegistro {
+  readonly estacionar?: boolean;
+}
 
 /**
  * O que o varredor precisa para reenfileirar: o id e o que compoe o NOME da
@@ -85,6 +94,7 @@ export class OutboxService {
     transacao: Transaction,
     evento: NovoEvento,
     agora: number = Date.now(),
+    opcoes: OpcoesDoRegistro = {},
   ): string {
     const id = idDoEvento(evento.tipo, chaveDoEvento(evento), agora);
 
@@ -109,7 +119,8 @@ export class OutboxService {
         ? {}
         : { solicitacao: evento.solicitacao }),
       ...(rastreio === undefined ? {} : { rastreio }),
-      estado: 'pendente',
+      /* Estacionado nao anda sozinho: ver `ESTADOS_ENTREGA` em `shared`. */
+      estado: opcoes.estacionar === true ? 'estacionado' : 'pendente',
       criadoEm: FieldValue.serverTimestamp(),
       tentativas: 0,
       ciclo: 0,
@@ -145,12 +156,13 @@ export class OutboxService {
     transacao: Transaction,
     evento: NovoEvento,
     agora?: number,
+    opcoes: OpcoesDoRegistro = {},
   ): Promise<string> {
     const id = idDoEvento(evento.tipo, chaveDoEvento(evento), agora);
     const existente = await transacao.get(this.referencia(id));
     if (existente.exists) return id;
 
-    return this.registrar(transacao, evento, agora);
+    return this.registrar(transacao, evento, agora, opcoes);
   }
 
   /**
@@ -227,6 +239,11 @@ export class OutboxService {
       }
       if (registro.estado === 'abandonado') {
         return { situacao: 'abandonado' } as const;
+      }
+      /* Uma tarefa que chegue a um estacionado (enfileirada a mao, por engano)
+       * nao entrega nada: so o reenvio manual o devolve a `pendente`. */
+      if (registro.estado === 'estacionado') {
+        return { situacao: 'estacionado' } as const;
       }
       if (
         registro.arrendadoAte !== undefined &&

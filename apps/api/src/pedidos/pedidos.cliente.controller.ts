@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -9,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { z } from 'zod';
 import {
+  ehMes,
   esquemaAgendamento,
   esquemaRemarcacao,
   esquemaNovaObservacao,
@@ -140,8 +142,18 @@ export class PedidosClienteController {
     @Param('pedidoId') pedidoId: string,
     @UsuarioAtual() cliente: UsuarioAutenticado,
     @Query('reuniao') reuniaoId?: string,
+    @Query('mes') mes?: string,
   ): Promise<HorarioDisponivel[]> {
-    return this.horarios.listar(pedidoId, cliente.uid, reuniaoId ?? null);
+    /* `mes` (AAAA-MM) e o mes do calendario; sem ele, o mes corrente. */
+    if (mes !== undefined && !ehMes(mes)) {
+      throw new BadRequestException('Mes invalido. Use AAAA-MM.');
+    }
+    return this.horarios.listar(
+      pedidoId,
+      cliente.uid,
+      reuniaoId ?? null,
+      mes ?? null,
+    );
   }
 
   /**

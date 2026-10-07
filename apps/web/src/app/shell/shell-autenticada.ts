@@ -93,13 +93,12 @@ export class ShellAutenticada {
     if (perfil === 'advogado') {
       return [
         { rota: '/advogado/demandas', rotulo: 'Demandas', icone: 'pasta' },
-        /* Etapa 10: o que ele tem marcado, atravessando os pedidos. */
+        /*
+         * Etapa 10, e desde 07/10/2026 o calendario do mes: as reunioes marcadas
+         * e os horarios de atendimento numa tela so (era "Agenda" mais
+         * "Disponibilidade").
+         */
         { rota: '/advogado/agenda', rotulo: 'Agenda', icone: 'calendario' },
-        {
-          rota: '/advogado/disponibilidade',
-          rotulo: 'Disponibilidade',
-          icone: 'relogio',
-        },
       ];
     }
 

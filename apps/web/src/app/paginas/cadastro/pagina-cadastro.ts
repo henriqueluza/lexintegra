@@ -6,7 +6,7 @@ import {
   PLATFORM_ID,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { PreCadastroService } from '../../publico/pre-cadastro.service';
+import { CatalogoService } from '../../publico/catalogo.service';
 import { MolduraAcesso } from '../../shell/moldura-acesso/moldura-acesso';
 import { Cadastro } from '../landing/cadastro/cadastro';
 
@@ -16,9 +16,14 @@ import { Cadastro } from '../landing/cadastro/cadastro';
  * `/servicos`, sem ver o formulario de novo; quem nao tem, preenche aqui — e
  * `/servicos` faz o inverso. Nenhuma das duas e uma tela intermediaria.
  *
- * Decidido no construtor, so no navegador, com a leitura sincrona do
- * armazenamento (`conferir`): a pre-renderizacao continua servindo o
- * formulario, e nenhuma chamada a API acontece (regra 10).
+ * Quem ESTA LOGADO, em qualquer perfil, tambem segue para `/servicos`
+ * (07/10/2026): o administrador que clicava em "Ver servicos e precos" caia no
+ * formulario de cadastro inicial, mesmo com conta. A decisao e a mesma de
+ * `/servicos`, em `CatalogoService.conferir`.
+ *
+ * Decidido no construtor, so no navegador: a pre-renderizacao continua servindo
+ * o formulario, e nenhuma chamada a API acontece (regra 10). O cadastro inicial
+ * e lido na hora; a sessao, quando o Firebase responde.
  */
 @Component({
   selector: 'app-pagina-cadastro',
@@ -29,11 +34,15 @@ import { Cadastro } from '../landing/cadastro/cadastro';
 })
 export class PaginaCadastro {
   constructor() {
-    if (
-      isPlatformBrowser(inject(PLATFORM_ID)) &&
-      inject(PreCadastroService).conferir()
-    ) {
-      void inject(Router).navigateByUrl('/servicos', { replaceUrl: true });
-    }
+    if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+
+    const roteador = inject(Router);
+    void inject(CatalogoService)
+      .conferir()
+      .then((liberado) => {
+        if (liberado) {
+          void roteador.navigateByUrl('/servicos', { replaceUrl: true });
+        }
+      });
   }
 }

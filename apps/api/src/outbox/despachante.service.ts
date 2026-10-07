@@ -101,6 +101,7 @@ export type ResultadoDoDespacho =
   | 'entregue'
   | 'falhou'
   | 'abandonado'
+  | 'estacionado'
   | 'inexistente'
   | 'ja-entregue'
   | 'em-andamento';

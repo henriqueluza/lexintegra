@@ -7,12 +7,12 @@ import {
   inject,
   DestroyRef,
 } from '@angular/core';
+import { ConviteCadastro } from './convite-cadastro/convite-cadastro';
 import { TEXTOS } from './textos';
 import { NEVOA } from './conteudo-nevoa';
-import { ConviteCatalogo } from './convite/convite';
 @Component({
   selector: 'app-landing',
-  imports: [ConviteCatalogo],
+  imports: [ConviteCadastro],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './landing.html',
   styleUrls: [
