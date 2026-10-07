@@ -1,6 +1,22 @@
-/* Um pixel no fim da landing; so serve de alvo ao observador. */
+/*
+ * O fim da landing; so serve de alvo ao observador. FORA DO FLUXO: um pixel a
+ * mais na altura da home reprova as capturas de referencia de pagina inteira
+ * (aconteceu no PR #85). O host nao ocupa altura (o `<dialog>` fechado nao e
+ * desenhado) e o alvo de 1px fica posicionado sobre a borda de baixo dele. Alvo
+ * de altura zero nao serve: o observador nao o reconheceu no Chrome.
+ */
+:host {
+  display: block;
+  position: relative;
+}
+
 .sentinela {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 1px;
   height: 1px;
+  pointer-events: none;
 }
 
 /*
