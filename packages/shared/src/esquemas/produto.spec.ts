@@ -3,6 +3,7 @@ import {
   esquemaNovoProduto,
   esquemaSituacao,
   SITUACOES_PRODUTO,
+  TETO_ENTREGAVEIS_POR_PRODUTO,
   type NovoProduto,
   type ProdutoResumo,
 } from './produto.js';
@@ -60,6 +61,17 @@ describe('esquemaNovoProduto', () => {
     ).toEqual([]);
   });
 
+  /** O Plano Prime de 12 meses do catalogo inicial tem 59. */
+  it('aceita ate sessenta entregaveis', () => {
+    expect(TETO_ENTREGAVEIS_POR_PRODUTO).toBe(60);
+    expect(
+      esquemaNovoProduto.safeParse({
+        ...VALIDO,
+        entregaveis: Array(60).fill('Parecer'),
+      }).success,
+    ).toBe(true);
+  });
+
   /**
    * O preco e inteiro em CENTAVOS. Um decimal aqui significa que alguem digitou
    * reais, e o snapshot do pedido (5.3) carregaria o engano congelado para sempre.
@@ -76,7 +88,7 @@ describe('esquemaNovoProduto', () => {
     ['descricao curta', { descricao: 'curta' }],
     ['sem entregavel', { entregaveis: [] }],
     ['entregavel vazio', { entregaveis: ['  '] }],
-    ['entregaveis demais', { entregaveis: Array(21).fill('Parecer') }],
+    ['entregaveis demais', { entregaveis: Array(61).fill('Parecer') }],
     ['reunioes negativas', { quantidadeReunioes: -1 }],
     ['reunioes fracionadas', { quantidadeReunioes: 1.5 }],
     ['prazo zero', { prazoValidadeReunioesDias: 0 }],

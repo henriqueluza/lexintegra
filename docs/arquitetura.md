@@ -877,7 +877,7 @@ Como o checkout é um carrinho com vários produtos, o pagamento deixou de ser s
 pagamento (1)  ->  pedido (N)  ->  entregáveis e reuniões
 ```
 
-O webhook precisa criar o pagamento e todos os pedidos numa única transação. Cliente que pagou três produtos e recebeu dois é falha inaceitável. O limite de 500 documentos por transação do Firestore não é restritivo neste caso.
+O webhook precisa criar o pagamento e todos os pedidos numa única transação. Cliente que pagou três produtos e recebeu dois é falha inaceitável. O Firestore não limita mais o número de escritas por transação (o limite de 500 caiu em 29/03/2023); o que resta é o tamanho da requisição, 10 MiB. O pior carrinho — 10 produtos com o teto de 60 entregáveis e textos no tamanho máximo — fica abaixo de 1 MiB, e `apps/api/src/pagamentos/webhook/compra-maxima.integration-spec.ts` o confirma contra o emulador.
 
 ### 5.3 Snapshot imutável
 

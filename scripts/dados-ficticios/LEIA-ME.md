@@ -3,8 +3,10 @@
 **Nada neste diretório é real.** São valores de exemplo, plausíveis mas inventados,
 para que o emulador e os testes de integração tenham com o que trabalhar.
 
-**Não existe "catálogo real a importar".** O catálogo de produção nasce vazio, e o
-escritório cria os produtos pelo painel de administração. Estes dados nunca vão para
+**O catálogo real não mora aqui.** O catálogo de produção nasce vazio; os produtos
+do escritório entram pelo painel de administração ou por
+`scripts/cadastrar-catalogo-inicial.mjs`, que grava os dados reais de
+`scripts/catalogo-inicial/` pela mesma API do painel. Estes dados nunca vão para
 produção: `apps/api/src/sem-dados-ficticios-em-producao.spec.ts` prova que nada
 publicado os importa, que o script de semente recusa rodar fora do emulador e que
 o CI não o executa.

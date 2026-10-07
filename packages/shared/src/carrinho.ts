@@ -17,8 +17,10 @@
  *
  * Nao e limite comercial, e limite de TRANSACAO: a confirmacao do pagamento cria
  * todos os pedidos, com seus entregaveis e trilhas, num commit so (arquitetura
- * 5.2), e o Firestore aceita 500 escritas por transacao. Dez itens com o maior
- * catalogo plausivel ficam longe disso; um carrinho sem teto nao fica.
+ * 5.2). O Firestore nao limita mais o numero de escritas por commit (desde
+ * 29/03/2023; antes eram 500), mas limita a requisicao a 10 MiB. Dez itens com
+ * o teto de entregaveis e textos no tamanho maximo ficam abaixo de 1 MiB, e
+ * `compra-maxima.integration-spec.ts` confirma; um carrinho sem teto nao fica.
  */
 export const TETO_ITENS_CARRINHO = 10;
 

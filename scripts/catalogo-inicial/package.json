@@ -1,0 +1,6 @@
+{
+  "name": "catalogo-inicial",
+  "private": true,
+  "type": "module",
+  "description": "Nao e pacote do workspace. Existe pelo mesmo motivo de scripts/dados-ficticios/package.json: sem 'type: module' o Node avisa MODULE_TYPELESS_PACKAGE_JSON a cada execucao do script de cadastro."
+}
