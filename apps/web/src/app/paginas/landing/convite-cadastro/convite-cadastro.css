@@ -1,0 +1,110 @@
+/* Um pixel no fim da landing; so serve de alvo ao observador. */
+.sentinela {
+  height: 1px;
+}
+
+/*
+ * O `<dialog>` em si nao tem preenchimento: o clique fora do conteudo cai nele,
+ * e e assim que `fecharPorFora` distingue o fundo do cartao.
+ */
+.convite {
+  width: min(100% - 2 * var(--lex-gutter), 32rem);
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--raio-grande);
+  background: var(--lex-surface);
+  color: var(--lex-text-primary);
+  box-shadow: var(--lex-shadow-modal);
+}
+
+.convite::backdrop {
+  background: var(--lex-overlay);
+}
+
+.convite__conteudo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--lex-space-4);
+  padding: var(--lex-space-7) var(--lex-space-6) var(--lex-space-6);
+}
+
+.convite__fechar {
+  position: absolute;
+  top: var(--lex-space-3);
+  right: var(--lex-space-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--lex-control-h);
+  min-height: var(--lex-control-h);
+  padding: 0;
+  border: 0;
+  border-radius: var(--lex-radius-pill);
+  background: transparent;
+  color: var(--lex-text-secondary);
+  cursor: pointer;
+}
+
+.convite__fechar:hover {
+  color: var(--lex-text-primary);
+}
+
+.convite__titulo {
+  margin: 0;
+  padding-right: var(--lex-space-6);
+  font-family: var(--lex-font-display);
+  font-size: var(--lex-text-title);
+  line-height: var(--lex-leading-heading);
+}
+
+.convite__texto {
+  margin: 0;
+  color: var(--lex-text-secondary);
+  font-size: var(--lex-text-lead);
+  line-height: var(--lex-leading-body);
+}
+
+.convite__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lex-space-4);
+  margin-top: var(--lex-space-3);
+}
+
+.convite__acao {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--lex-space-3);
+  min-height: var(--lex-control-h-lg);
+  padding: var(--lex-space-3) var(--lex-space-5);
+  border-radius: var(--lex-radius-pill);
+  background: var(--lex-accent);
+  color: var(--lex-text-on-accent);
+  font-size: var(--lex-text-label);
+  letter-spacing: var(--lex-tracking-label);
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.convite__acao:hover {
+  background: var(--lex-accent-hover);
+}
+
+.convite__depois {
+  min-height: var(--lex-control-h);
+  padding: 0 var(--lex-space-2);
+  border: 0;
+  background: transparent;
+  color: var(--lex-text-secondary);
+  font-size: var(--lex-text-small);
+  text-decoration: underline;
+  text-underline-offset: var(--lex-space-1);
+  cursor: pointer;
+}
+
+.convite__depois:hover {
+  color: var(--lex-text-primary);
+}

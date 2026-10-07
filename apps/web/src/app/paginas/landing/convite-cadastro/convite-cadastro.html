@@ -1,0 +1,34 @@
+<!-- O fim da landing: quando ele entra na tela, o convite abre. -->
+<div class="sentinela" #sentinela aria-hidden="true"></div>
+
+<dialog
+  #dialogo
+  class="convite"
+  aria-labelledby="convite-titulo"
+  aria-describedby="convite-texto"
+  data-lenis-prevent
+  (close)="lembrar()"
+>
+  <div class="convite__conteudo">
+    <button
+      type="button"
+      class="convite__fechar"
+      [attr.aria-label]="textos.fechar"
+      (click)="fechar()"
+    >
+      <app-icone nome="fecha" tamanho="p" />
+    </button>
+
+    <h2 id="convite-titulo" class="convite__titulo">{{ textos.titulo }}</h2>
+    <p id="convite-texto" class="convite__texto">{{ textos.texto }}</p>
+
+    <div class="convite__acoes">
+      <a class="convite__acao" routerLink="/cadastro" (click)="fechar()"
+        >{{ textos.acao }}<app-icone nome="seta-direita" tamanho="p"
+      /></a>
+      <button type="button" class="convite__depois" (click)="fechar()">
+        {{ textos.depois }}
+      </button>
+    </div>
+  </div>
+</dialog>

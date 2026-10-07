@@ -200,11 +200,14 @@ export const TEXTOS = {
     ],
   },
 
+  /** O popup do fim da home (`convite-cadastro`), 07/10/2026. */
   convite: {
     titulo: 'Seu próximo passo começa aqui.',
     texto:
       'O cadastro leva menos de um minuto e não pede documento nem cartão.',
     acao: 'Ver serviços e preços',
+    depois: 'Agora não',
+    fechar: 'Fechar',
   },
 
   servicos: {
