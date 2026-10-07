@@ -1,11 +1,18 @@
 import {
   dataLocal,
   dentroDaSemana,
+  ehMes,
   fimDaSemana,
+  mesDe,
+  SEMANAS_EDITAVEIS,
   semanaDe,
   semanaSeguinte,
+  semanasDoMes,
   semanasEditaveis,
+  semanasProximas,
   somarDias,
+  deslocarMes,
+  ultimoDiaDoMes,
 } from './semana.js';
 
 describe('dataLocal', () => {
@@ -103,10 +110,77 @@ describe('limites da semana', () => {
 });
 
 describe('semanasEditaveis', () => {
-  it('sao a corrente e a seguinte, nunca mais que duas', () => {
-    expect(semanasEditaveis(new Date('2026-09-09T12:00:00Z'))).toEqual([
+  /* Errata do ADR-06 (07/10/2026): de duas semanas para doze meses. */
+  it('vao da corrente ate doze meses a frente, de sete em sete dias', () => {
+    const semanas = semanasEditaveis(new Date('2026-09-09T12:00:00Z'));
+
+    expect(SEMANAS_EDITAVEIS).toBe(53);
+    expect(semanas).toHaveLength(53);
+    expect(semanas.slice(0, 2)).toEqual(['2026-09-07', '2026-09-14']);
+    expect(semanas.at(-1)).toBe('2027-09-06');
+  });
+});
+
+describe('semanasProximas', () => {
+  it('sao a corrente e a seguinte', () => {
+    expect(semanasProximas(new Date('2026-09-09T12:00:00Z'))).toEqual([
       '2026-09-07',
       '2026-09-14',
     ]);
+  });
+});
+
+describe('meses', () => {
+  it('reconhece so AAAA-MM com mes valido', () => {
+    expect(ehMes('2026-10')).toBe(true);
+    expect(ehMes('2026-13')).toBe(false);
+    expect(ehMes('2026-1')).toBe(false);
+    expect(ehMes('2026-10-01')).toBe(false);
+    expect(ehMes(202610)).toBe(false);
+  });
+
+  /* 31/10 as 22h em Sao Paulo ja e 1/11 em UTC. */
+  it('mesDe usa o fuso do escritorio', () => {
+    expect(mesDe(new Date('2026-11-01T01:00:00Z'))).toBe('2026-10');
+  });
+
+  it('soma meses atravessando o ano, nos dois sentidos', () => {
+    expect(deslocarMes('2026-11', 2)).toBe('2027-01');
+    expect(deslocarMes('2027-01', -1)).toBe('2026-12');
+    expect(deslocarMes('2026-10', 12)).toBe('2027-10');
+  });
+
+  it('acha o ultimo dia, inclusive em fevereiro bissexto', () => {
+    expect(ultimoDiaDoMes('2026-10')).toBe('2026-10-31');
+    expect(ultimoDiaDoMes('2028-02')).toBe('2028-02-29');
+    expect(ultimoDiaDoMes('2027-02')).toBe('2027-02-28');
+  });
+});
+
+describe('semanasDoMes', () => {
+  /* Outubro de 2026 comeca numa quinta: a primeira semana vem de setembro. */
+  it('inclui as semanas que comecam no mes anterior e terminam no seguinte', () => {
+    expect(semanasDoMes('2026-10')).toEqual([
+      '2026-09-28',
+      '2026-10-05',
+      '2026-10-12',
+      '2026-10-19',
+      '2026-10-26',
+    ]);
+  });
+
+  /* Fevereiro de 2027 comeca numa segunda e tem quatro semanas exatas. */
+  it('mes que comeca numa segunda nao puxa semana do anterior', () => {
+    expect(semanasDoMes('2027-02')).toEqual([
+      '2027-02-01',
+      '2027-02-08',
+      '2027-02-15',
+      '2027-02-22',
+    ]);
+  });
+
+  /* Agosto de 2027 comeca num domingo e precisa de seis linhas. */
+  it('chega a seis semanas', () => {
+    expect(semanasDoMes('2027-08')).toHaveLength(6);
   });
 });

@@ -24,9 +24,6 @@ import { CONTAS, entrar, expect, test } from './pilha';
  * entao o botao de marcar nao existe nele: `.first()` acha sempre o certo.
  */
 
-/** O primeiro item de um `app-selecao`: o indice 0 e o marcador, desabilitado. */
-const PRIMEIRO_HORARIO = { index: 1 };
-
 async function comoClara(page: Page): Promise<void> {
   await entrar(page, CONTAS.cliente);
   await page.goto('/painel');
@@ -41,15 +38,26 @@ async function comoClara(page: Page): Promise<void> {
  * inviolavel 13 exige que a ausencia do link seja DITA — nunca um link vazio,
  * nunca o de outra reuniao —, e e isso que a espera afirma.
  */
+/**
+ * O CALENDARIO DO MES (07/10/2026): o primeiro dia destacado, depois o primeiro
+ * horario dele. O relogio da pilha (21/09) poe a grade da semente no mesmo mes,
+ * entao o calendario ja abre nela.
+ */
+async function escolherHorario(page: Page): Promise<void> {
+  const calendario = page.locator('app-calendario-horarios').first();
+  const dia = calendario.locator('button.dia--livre').first();
+  await expect(dia).toBeVisible();
+  await dia.click();
+  await calendario.getByRole('radio').first().check();
+}
+
 async function marcar(page: Page): Promise<void> {
   await page
     .getByRole('button', { name: /Marcar reuni/i })
     .first()
     .click();
 
-  const horario = page.getByLabel('Horário').first();
-  await expect(horario).toBeVisible();
-  await horario.selectOption(PRIMEIRO_HORARIO);
+  await escolherHorario(page);
   await page.getByRole('button', { name: /Confirmar reuni/i }).click();
 
   await expect(
@@ -72,9 +80,7 @@ test.describe('reuniao', () => {
     /* ---------------------------------------------------------------- */
 
     await page.getByRole('button', { name: 'Remarcar' }).first().click();
-    const novo = page.getByLabel('Novo horário').first();
-    await expect(novo).toBeVisible();
-    await novo.selectOption(PRIMEIRO_HORARIO);
+    await escolherHorario(page);
     await page.getByRole('button', { name: /Confirmar novo hor/i }).click();
 
     /*
@@ -121,6 +127,9 @@ test.describe('reuniao', () => {
     await page.getByRole('button', { name: 'Sair' }).click();
     await entrar(page, CONTAS.advogado);
     await page.goto('/advogado/agenda');
+
+    /* A agenda do mes (07/10/2026) abre no dia de hoje: o dia com reuniao e um clique. */
+    await page.locator('button.celula:has(.selo--reuniao)').first().click();
 
     /* O nome vem de `clientes/{uid}`, com acento — nao do `displayName` do Auth. */
     await expect(page.getByText('Clara Nunes de Sá')).toBeVisible();

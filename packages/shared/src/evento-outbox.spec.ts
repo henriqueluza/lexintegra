@@ -30,12 +30,14 @@ describe('vocabulario do outbox', () => {
     ]);
   });
 
-  it('tem os quatro estados de entrega', () => {
+  /* `estacionado` (07/10/2026): a sala do Teams no modo `sem-sala`. */
+  it('tem os cinco estados de entrega', () => {
     expect(ESTADOS_ENTREGA).toEqual([
       'pendente',
       'enviado',
       'falhou',
       'abandonado',
+      'estacionado',
     ]);
   });
 });
@@ -64,6 +66,8 @@ describe('permiteReenvioManual', () => {
     ['enviado', false],
     ['falhou', true],
     ['abandonado', true],
+    /* Estacionado nao anda sozinho: so o reenvio manual o acorda. */
+    ['estacionado', true],
   ] as [EstadoEntrega, boolean][])('%s -> %s', (estado, esperado) => {
     expect(permiteReenvioManual(estado)).toBe(esperado);
   });

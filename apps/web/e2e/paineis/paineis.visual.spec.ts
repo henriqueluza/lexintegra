@@ -48,12 +48,8 @@ const TELAS = [
     rota: '/advogado/demandas',
     conta: CONTAS.advogado,
   },
+  /* Desde 07/10/2026 a agenda do mes inclui a antiga disponibilidade. */
   { nome: 'advogado-agenda', rota: '/advogado/agenda', conta: CONTAS.advogado },
-  {
-    nome: 'advogado-disponibilidade',
-    rota: '/advogado/disponibilidade',
-    conta: CONTAS.advogado,
-  },
   { nome: 'admin-advogados', rota: '/admin/advogados', conta: CONTAS.admin },
   { nome: 'admin-produtos', rota: '/admin/produtos', conta: CONTAS.admin },
   {

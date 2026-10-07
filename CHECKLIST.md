@@ -688,6 +688,16 @@ faz. Os comandos estão em
   aplicativo) e o object ID de cada advogado.
 - [ ] **Teste — Henrique:** chamada manual do Graph fora da aplicação
   (`GET /users/{id}` e `createOrGet`, runbook 2.3).
+- [x] Calendário do mês para cliente e advogado, feriados nacionais, janela de
+  publicação de doze meses e modo `REUNIOES_MODO=sem-sala` (07/10/2026, PR
+  `feat/calendario-reunioes`): em produção dá para marcar reunião sem o Teams;
+  o link fica pendente e o evento da sala, estacionado.
+- [ ] **Depois de ligar o Teams — Henrique:** acordar as salas das reuniões
+  marcadas no modo `sem-sala` (runbook 2.7: `/admin/reunioes`, "Tentar de
+  novo").
+- [ ] **Revisão — Henrique:** regravar e aprovar as imagens de referência dos
+  painéis do cliente e do advogado, que mudaram com o calendário
+  (`scripts/visual.sh paineis --update-snapshots`; não roda no CI).
 - [ ] **Configuração manual — admin da plataforma:** preencher o `usuarioTeams`
   de cada advogado em `/admin/advogados`.
 - [ ] **Commit de destravamento — Henrique (ou agente, a pedido):**

@@ -284,8 +284,20 @@ Marque uma reunião de teste: ela sai de `reservada_sem_link` para
 `confirmada`, com link do Teams, e o convite chega e abre em Gmail, Outlook e
 Apple Mail. Remarque e cancele; confira o `METHOD:CANCEL`.
 
-**Voltar atrás:** PR com `reunioes_modo = "desligado"`. As reuniões já
-marcadas continuam; as sem sala aparecem em `/admin/reunioes`.
+### 2.7 As reuniões marcadas no modo `sem-sala`
+
+Se a produção rodou com `REUNIOES_MODO=sem-sala` (desde 07/10/2026), as
+reuniões marcadas nesse período estão em `reservada_sem_link`, e o evento de
+criar a sala de cada uma está **estacionado** no outbox: nada as acorda
+sozinho, de propósito. Depois do 2.6, abra `/admin/reunioes` e use **Tentar de
+novo** em cada uma (ou `/admin/entregas`, filtro "Aguardando integração"). O
+reenvio devolve o evento ao fluxo normal: a sala nasce no Graph e o convite sai
+com o `SEQUENCE` atual — inclusive para reunião remarcada enquanto esperava.
+Reunião cancelada nesse meio-tempo não cria sala.
+
+**Voltar atrás:** PR com `reunioes_modo = "desligado"` (ou `"sem-sala"`, para
+continuar marcando sem link). As reuniões já marcadas continuam; as sem sala
+aparecem em `/admin/reunioes`.
 
 ---
 

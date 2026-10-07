@@ -1,5 +1,5 @@
 import type { Firestore, Timestamp } from 'firebase-admin/firestore';
-import { semanasEditaveis } from 'shared';
+import { semanasProximas } from 'shared';
 import { COLECAO_ADVOGADOS } from '../advogados/advogados.service.js';
 import { COLECAO_DISPONIBILIDADES } from '../disponibilidades/slot.js';
 
@@ -46,8 +46,9 @@ export async function idadeDaReuniaoSemSala(
 
   let maisAntiga = agora;
   for (const documento of pagina.docs) {
-    const criadoEm = (documento.data()['criadoEm'] as Timestamp | undefined)
-      ?.toMillis?.();
+    const criadoEm = (
+      documento.data()['criadoEm'] as Timestamp | undefined
+    )?.toMillis?.();
     if (criadoEm !== undefined && criadoEm < maisAntiga) maisAntiga = criadoEm;
   }
   return Math.max(0, Math.round((agora - maisAntiga) / 1_000));
@@ -55,7 +56,8 @@ export async function idadeDaReuniaoSemSala(
 
 /**
  * Os advogados ATIVOS, sem `usuarioTeams`, com algum horario publicado na semana
- * corrente ou na seguinte — as duas que o cliente enxerga (`semanasEditaveis`).
+ * corrente ou na seguinte — as que estao em uso agora (`semanasProximas`; a
+ * janela de publicacao inteira e de doze meses, e nao e o que este sinal mede).
  *
  * `usuarioTeams` vazio ou ausente conta como sem: o campo e sempre escrito, mas
  * documento anterior a Etapa 10 nao o tem. Suspenso nao conta — ele nao recebe
@@ -77,7 +79,7 @@ export async function advogadosSemLink(
     })
     .map((documento) => documento.id);
 
-  const semanas = semanasEditaveis(new Date(agora));
+  const semanas = semanasProximas(new Date(agora));
   const comHorario: string[] = [];
   for (const advogadoId of semusuario) {
     if (await temHorarioPublicado(db, advogadoId, semanas)) {

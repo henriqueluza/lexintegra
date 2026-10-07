@@ -59,6 +59,24 @@ describe('registrar', () => {
     });
   });
 
+  /* Modo `sem-sala` das reunioes: o registro existe, mas nao anda sozinho. */
+  it('com estacionar, nasce estacionado', async () => {
+    await banco.runTransaction((transacao) => {
+      outbox.registrar(
+        transacao,
+        { tipo: 'definir-senha', destinatarioUid: 'uid-1' },
+        AGORA,
+        { estacionar: true },
+      );
+      return Promise.resolve();
+    });
+
+    expect(lido('definir-senha_uid-1')).toMatchObject({
+      estado: 'estacionado',
+      tentativas: 0,
+    });
+  });
+
   /**
    * O registro nasce com atraso porque a tarefa e enfileirada logo depois do
    * commit. Um varredor que pudesse pega-lo no mesmo minuto criaria uma segunda
@@ -181,6 +199,16 @@ describe('reivindicar', () => {
     await expect(outbox.reivindicar('sumido', AGORA)).resolves.toEqual({
       situacao: 'inexistente',
     });
+  });
+
+  /* Uma tarefa que chegue a um estacionado nao entrega nada nem gasta tentativa. */
+  it('recusa registro estacionado, sem escrever', async () => {
+    semear('parado', { estado: 'estacionado' });
+
+    await expect(outbox.reivindicar('parado', AGORA)).resolves.toEqual({
+      situacao: 'estacionado',
+    });
+    expect(lido('parado').tentativas).toBe(0);
   });
 });
 

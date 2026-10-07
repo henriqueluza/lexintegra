@@ -24,18 +24,11 @@
     </p>
     } @if (escolhendo() === reuniao.id) {
     <div class="reunioes__escolha">
-      @if (carregando()) {
-      <p class="reunioes__aviso">Buscando horários…</p>
-      } @else if (opcoes().length === 0) {
-      <p class="reunioes__aviso">
-        Nenhum horário disponível para remarcar no momento.
-      </p>
-      } @else {
-      <app-selecao
-        rotulo="Novo horário"
-        marcador="Escolha um horário"
-        [opcoes]="opcoes()"
-        [formControl]="escolhido"
+      <app-calendario-horarios
+        [pedidoId]="pedido().id"
+        [reuniaoId]="reuniao.id"
+        [ate]="pedido().reunioesValidasAte"
+        (escolha)="escolhido.set($event)"
       />
       <div class="reunioes__acoes">
         <app-botao variante="texto" tamanho="p" (click)="fechar()">
@@ -44,13 +37,13 @@
         <app-botao
           variante="primario"
           tamanho="p"
+          [desabilitado]="escolhido() === null"
           [carregando]="emCurso() === 'remarcar-' + reuniao.id"
           (click)="remarcar(reuniao.id)"
         >
           Confirmar novo horário
         </app-botao>
       </div>
-      }
     </div>
     } @else {
     <div class="reunioes__acoes">
@@ -93,19 +86,10 @@
   <p class="reunioes__aviso">{{ texto }}</p>
   } @else if (escolhendo() === 'nova') {
   <div class="reunioes__escolha">
-    @if (carregando()) {
-    <p class="reunioes__aviso">Buscando horários…</p>
-    } @else if (opcoes().length === 0) {
-    <p class="reunioes__aviso">
-      Nenhum horário disponível no momento. O advogado publica a grade toda
-      segunda-feira.
-    </p>
-    } @else {
-    <app-selecao
-      rotulo="Horário"
-      marcador="Escolha um horário"
-      [opcoes]="opcoes()"
-      [formControl]="escolhido"
+    <app-calendario-horarios
+      [pedidoId]="pedido().id"
+      [ate]="pedido().reunioesValidasAte"
+      (escolha)="escolhido.set($event)"
     />
     <div class="reunioes__acoes">
       <app-botao variante="texto" tamanho="p" (click)="fechar()">
@@ -114,13 +98,13 @@
       <app-botao
         variante="primario"
         tamanho="p"
+        [desabilitado]="escolhido() === null"
         [carregando]="emCurso() === 'marcar'"
         (click)="marcar()"
       >
         Confirmar reunião
       </app-botao>
     </div>
-    }
   </div>
   } @else {
   <app-botao tamanho="p" (click)="abrir('nova')">

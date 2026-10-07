@@ -1,0 +1,107 @@
+<div class="agendar">
+  <div class="calendario">
+    <div class="calendario__cabeca">
+      <button
+        type="button"
+        class="calendario__seta calendario__seta--voltar"
+        aria-label="Mês anterior"
+        [disabled]="!podeVoltar()"
+        (click)="navegar(-1)"
+      >
+        <app-icone nome="seta-direita" tamanho="p" />
+      </button>
+      <p class="calendario__titulo" aria-live="polite">{{ titulo() }}</p>
+      <button
+        type="button"
+        class="calendario__seta"
+        aria-label="Próximo mês"
+        [disabled]="!podeAvancar()"
+        (click)="navegar(1)"
+      >
+        <app-icone nome="seta-direita" tamanho="p" />
+      </button>
+    </div>
+
+    <table class="calendario__grade" [attr.aria-label]="titulo()">
+      <thead>
+        <tr>
+          @for (dia of diasDaSemana; track dia.curto) {
+          <th scope="col" [attr.abbr]="dia.longo">{{ dia.curto }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (semana of grade(); track semana[0].data) {
+        <tr>
+          @for (dia of semana; track dia.data) {
+          <td>
+            @if (dia.doMes) {
+            <!--
+              Dia sem horario livre fica desabilitado, mas o rotulo continua
+              dizendo o que ele e (feriado, sem horario) para o leitor de tela.
+            -->
+            <button
+              type="button"
+              class="dia"
+              [class.dia--livre]="livres(dia) > 0"
+              [class.dia--hoje]="dia.hoje"
+              [class.dia--feriado]="dia.feriado !== null"
+              [attr.aria-label]="rotulo(dia)"
+              [attr.aria-pressed]="livres(dia) > 0 ? dia.data === diaEscolhido() : null"
+              [attr.title]="dia.feriado?.nome ?? null"
+              [disabled]="livres(dia) === 0"
+              (click)="escolherDia(dia)"
+            >
+              {{ dia.numero }}
+            </button>
+            }
+          </td>
+          }
+        </tr>
+        }
+      </tbody>
+    </table>
+
+    <p class="calendario__legenda">
+      <span class="legenda legenda--livre">Tem horário livre</span>
+      <span class="legenda legenda--feriado">Feriado</span>
+    </p>
+  </div>
+
+  <div class="horarios" aria-live="polite">
+    @if (falha(); as mensagem) {
+    <app-mensagem-erro variante="linha">{{ mensagem }}</app-mensagem-erro>
+    } @else if (carregando()) {
+    <p class="horarios__aviso">Buscando horários…</p>
+    } @else if (mesVazio()) {
+    <p class="horarios__aviso">
+      Nenhum horário livre neste mês. O advogado publica a agenda com
+      antecedência; veja os próximos meses.
+    </p>
+    } @else if (diaEscolhido() === null) {
+    <p class="horarios__aviso">
+      Os dias destacados têm horário livre. Escolha um dia para ver as horas.
+    </p>
+    } @else {
+    <fieldset class="horarios__grupo">
+      <legend class="horarios__titulo">{{ tituloDoDia() }}</legend>
+      <div class="horarios__opcoes">
+        @for (horario of horariosDoDia(); track horario.slotId) {
+        <label class="horario">
+          <input
+            type="radio"
+            class="horario__radio"
+            [name]="'horario-' + pedidoId()"
+            [value]="horario.slotId"
+            [attr.aria-label]="hora(horario)"
+            [checked]="horario.slotId === slot()"
+            (change)="escolherSlot(horario.slotId)"
+          />
+          <span class="horario__rotulo">{{ hora(horario) }}</span>
+        </label>
+        }
+      </div>
+    </fieldset>
+    }
+  </div>
+</div>

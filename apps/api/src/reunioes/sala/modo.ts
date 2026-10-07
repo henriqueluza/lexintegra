@@ -4,7 +4,7 @@ export const CONFIGURACAO_REUNIOES = Symbol('CONFIGURACAO_REUNIOES');
  * Os modos do processo. `graph` so SOBE com `INTEGRACAO_GRAPH_DESTRAVADA`: ver
  * `configuracaoDeReunioes`.
  */
-export type ModoReunioes = 'desligado' | 'falso' | 'graph';
+export type ModoReunioes = 'desligado' | 'sem-sala' | 'falso' | 'graph';
 
 /**
  * A TRAVA DA INTEGRACAO REAL, no codigo, como `PRODUCAO_DESTRAVADA` no
@@ -87,6 +87,15 @@ const DESLIGADO: ConfiguracaoReunioes = { modo: 'desligado', graph: null };
  * marca nada, e o cartao dele DIZ que o agendamento esta indisponivel
  * (`CartaoPedido.agendamentoDisponivel`), em vez de oferecer um botao que
  * responde 503.
+ *
+ * `sem-sala` (07/10/2026) e o meio-termo que produção aceita: o cliente MARCA,
+ * o horario fica reservado e a reuniao fica em `reservada_sem_link` — o estado
+ * que a regra inviolavel 13 ja previa para a sala que nao nasceu. Nenhum link e
+ * inventado e nenhum convite sai, porque convite so sai com link. O evento
+ * `criar-sala-reuniao` nasce ESTACIONADO no outbox (nao tenta, nao falha, nao
+ * alerta); quando o Teams for ligado, o administrador o reabre pelo painel de
+ * reunioes sem sala e a sala e o convite saem pelo caminho normal. Ver
+ * `ReunioesService.gravar` e `docs/runbooks/ligar-terceiros.md`.
  */
 export function configuracaoDeReunioes(
   ambiente: NodeJS.ProcessEnv = process.env,
@@ -96,6 +105,7 @@ export function configuracaoDeReunioes(
   const modo = lerModo(texto(ambiente['REUNIOES_MODO']), producao, destravada);
 
   if (modo === 'desligado') return DESLIGADO;
+  if (modo === 'sem-sala') return { modo: 'sem-sala', graph: null };
   if (modo === 'graph') return { modo: 'graph', graph: credenciais(ambiente) };
 
   return { modo: 'falso', graph: null };
@@ -127,44 +137,27 @@ function lerModo(
   producao: boolean,
   destravada: boolean,
 ): ModoReunioes {
-  if (bruto === 'graph') {
-    if (!destravada) {
-      throw new Error(
-        'REUNIOES_MODO=graph nao sobe com a trava fechada ' +
-          '(INTEGRACAO_GRAPH_DESTRAVADA em reunioes/sala/modo.ts). Liberar ' +
-          'exige o aplicativo registrado no Entra ID com consentimento para ' +
-          'OnlineMeetings.ReadWrite.All e User.Read.All, a application access ' +
-          'policy configurada por PowerShell (propagacao de ate 48h) e uma ' +
-          'chamada de teste manual — ver docs/runbooks/ligar-terceiros.md.',
-      );
-    }
-    if (!producao) {
-      throw new Error(
-        'REUNIOES_MODO=graph so sobe com NODE_ENV=production: fora dele, a ' +
-          'sala seria criada no tenant da B&C a partir de um ambiente de teste.',
-      );
-    }
-    return 'graph';
-  }
+  if (bruto === 'graph') return lerGraph(producao, destravada);
+  if (bruto === 'sem-sala') return 'sem-sala';
   if (bruto === 'falso' && producao) {
     throw new Error(
       'REUNIOES_MODO=falso nao sobe em producao (Etapa 10, ADR-21). A sala ' +
         'falsa devolve SUCESSO com um link teams.microsoft.test: a reuniao ' +
         'viraria "confirmada" e o convite iCalendar sairia para o cliente com ' +
-        'um link que nao existe. Use "desligado" — o cartao do cliente diz que ' +
-        'o agendamento esta indisponivel.',
+        'um link que nao existe. Use "desligado" ou "sem-sala" — este marca a ' +
+        'reuniao e deixa o link pendente, sem inventar nenhum.',
     );
   }
   if (bruto === 'desligado' || bruto === 'falso') return bruto;
   if (bruto !== null) {
     throw new Error(
-      `REUNIOES_MODO invalido: "${bruto}". Aceitos: "desligado", "falso" e "graph".`,
+      `REUNIOES_MODO invalido: "${bruto}". Aceitos: "desligado", "sem-sala", "falso" e "graph".`,
     );
   }
   if (producao) {
     throw new Error(
-      'REUNIOES_MODO precisa ser "desligado" em producao, e e o unico valor ' +
-        'aceito ali enquanto a integracao com o Teams nao existir. Recusando ' +
+      'REUNIOES_MODO precisa ser declarado em producao ("desligado" ou ' +
+        '"sem-sala" enquanto a integracao com o Teams nao existir). Recusando ' +
         'subir sem que alguem tenha decidido se o agendamento esta no ar.',
     );
   }
@@ -176,4 +169,25 @@ function texto(valor: string | undefined): string | null {
   if (valor === undefined) return null;
   const limpo = valor.trim();
   return limpo === '' ? null : limpo;
+}
+
+/** `graph` so sobe com a trava aberta e em producao. */
+function lerGraph(producao: boolean, destravada: boolean): ModoReunioes {
+  if (!destravada) {
+    throw new Error(
+      'REUNIOES_MODO=graph nao sobe com a trava fechada ' +
+        '(INTEGRACAO_GRAPH_DESTRAVADA em reunioes/sala/modo.ts). Liberar ' +
+        'exige o aplicativo registrado no Entra ID com consentimento para ' +
+        'OnlineMeetings.ReadWrite.All e User.Read.All, a application access ' +
+        'policy configurada por PowerShell (propagacao de ate 48h) e uma ' +
+        'chamada de teste manual — ver docs/runbooks/ligar-terceiros.md.',
+    );
+  }
+  if (!producao) {
+    throw new Error(
+      'REUNIOES_MODO=graph so sobe com NODE_ENV=production: fora dele, a ' +
+        'sala seria criada no tenant da B&C a partir de um ambiente de teste.',
+    );
+  }
+  return 'graph';
 }

@@ -138,9 +138,19 @@ export const ESTADOS_ENTREGA = [
   'enviado',
   'falhou',
   'abandonado',
+  'estacionado',
 ] as const;
 
 export type EstadoEntrega = (typeof ESTADOS_ENTREGA)[number];
+
+/*
+ * `estacionado` (07/10/2026): o registro EXISTE mas nao anda sozinho. Nao vai
+ * para a fila, o varredor nao o ve (so procura `pendente` e `falhou`), a sonda
+ * de idade do outbox nao o conta e `reivindicar` o recusa. Sai dai so por
+ * reenvio manual do administrador, como `abandonado`. Nasceu para a sala do
+ * Teams no modo `sem-sala`: o evento fica guardado, com o id deterministico que
+ * o painel de reunioes sem sala ja calcula, ate a integracao ser ligada.
+ */
 
 export function ehEstadoEntrega(valor: unknown): valor is EstadoEntrega {
   return (
@@ -169,5 +179,7 @@ export type Criticidade = (typeof CRITICIDADES)[number];
  * esconde o botao; o servidor recusa de qualquer jeito.
  */
 export function permiteReenvioManual(estado: EstadoEntrega): boolean {
-  return estado === 'falhou' || estado === 'abandonado';
+  return (
+    estado === 'falhou' || estado === 'abandonado' || estado === 'estacionado'
+  );
 }

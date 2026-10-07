@@ -29,10 +29,23 @@ describe('configuracaoDeReunioes', () => {
   });
 
   describe('em producao', () => {
-    it('exige a variavel, nomeando o unico valor aceito', () => {
+    it('exige a variavel, nomeando os valores aceitos', () => {
       expect(() => configuracaoDeReunioes({ NODE_ENV: 'production' })).toThrow(
-        /precisa ser "desligado"/,
+        /"desligado" ou\s+"sem-sala"/,
       );
+    });
+
+    /**
+     * `sem-sala` (07/10/2026): o cliente marca, a reuniao fica sem link e nada e
+     * inventado — a diferenca para o `falso`, que devolve um link que nao existe.
+     */
+    it('aceita sem-sala, sem credencial nenhuma', () => {
+      expect(
+        configuracaoDeReunioes({
+          NODE_ENV: 'production',
+          REUNIOES_MODO: 'sem-sala',
+        }),
+      ).toEqual({ modo: 'sem-sala', graph: null });
     });
 
     it('aceita desligado', () => {

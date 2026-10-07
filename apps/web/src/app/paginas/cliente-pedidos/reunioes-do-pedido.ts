@@ -7,7 +7,6 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import {
   cancelamentoDevolve,
   impedimentoParaAgendar,
@@ -17,12 +16,12 @@ import {
 } from 'shared/regras-reuniao';
 import { reuniaoAtiva } from 'shared/estado-reuniao';
 import type { CartaoPedido } from 'shared/esquemas/pedido';
-import type { HorarioDisponivel, ReuniaoResumo } from 'shared/esquemas/reuniao';
+import type { ReuniaoResumo } from 'shared/esquemas/reuniao';
 import { ApiClienteService } from '../../autenticacao/api-cliente.service';
 import { Botao } from '../../ui/botao/botao';
 import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
-import { Selecao } from '../../ui/selecao/selecao';
 import { mensagemDoErro } from '../erros';
+import { CalendarioHorarios } from './calendario-horarios';
 
 /**
  * As reunioes de UM pedido, dentro do cartao dele.
@@ -42,7 +41,7 @@ import { mensagemDoErro } from '../erros';
  */
 @Component({
   selector: 'app-reunioes-do-pedido',
-  imports: [Botao, MensagemErro, ReactiveFormsModule, Selecao],
+  imports: [Botao, CalendarioHorarios, MensagemErro],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './reunioes-do-pedido.html',
   styleUrl: './reunioes-do-pedido.css',
@@ -53,18 +52,14 @@ export class ReunioesDoPedido {
   readonly pedido = input.required<CartaoPedido>();
   readonly alterado = output<void>();
 
-  protected readonly horarios = signal<readonly HorarioDisponivel[]>([]);
   protected readonly escolhendo = signal<'nova' | string | null>(null);
-  protected readonly carregando = signal(false);
   protected readonly emCurso = signal<string | null>(null);
   protected readonly falha = signal<string | null>(null);
   /**
-   * `FormControl` e nao signal: `app-selecao` e um ControlValueAccessor, e e
-   * assim que o resto do projeto fala com ele (ver `admin-entregas`).
+   * O `slotId` que o calendario do mes devolveu (07/10/2026). Os horarios em si
+   * moram no calendario, que os pede a API mes a mes.
    */
-  protected readonly escolhido = new FormControl<string>('', {
-    nonNullable: true,
-  });
+  protected readonly escolhido = signal<string | null>(null);
 
   /** Só as ativas ficam na lista: cancelada nao pede nada e nao ocupa saldo. */
   protected readonly ativas = computed(() =>
@@ -106,13 +101,6 @@ export class ReunioesDoPedido {
     return impedimento === null ? null : MOTIVO_DO_IMPEDIMENTO[impedimento];
   });
 
-  protected readonly opcoes = computed(() =>
-    this.horarios().map((horario) => ({
-      valor: horario.slotId,
-      rotulo: rotuloDoHorario(horario.inicio, horario.fim),
-    })),
-  );
-
   /** A tela diz ANTES do clique se o cancelamento devolve o credito. */
   protected devolveCredito(reuniao: ReuniaoResumo): boolean {
     return cancelamentoDevolve(reuniao.inicio, Date.now());
@@ -131,36 +119,25 @@ export class ReunioesDoPedido {
     return ate === null ? null : formatadorDeData.format(new Date(ate));
   }
 
-  protected async abrir(alvo: 'nova' | string): Promise<void> {
+  /**
+   * `nova` e marcar; qualquer outro valor e o id da reuniao que esta sendo
+   * remarcada. O calendario recebe esse id e o repassa a API, que precisa dele
+   * para nao contar a reuniao movida contra ela mesma.
+   */
+  protected abrir(alvo: 'nova' | string): void {
     this.escolhendo.set(alvo);
-    this.escolhido.setValue('');
+    this.escolhido.set(null);
     this.falha.set(null);
-    this.carregando.set(true);
-    try {
-      /* `nova` e marcar; qualquer outro valor e o id da reuniao que esta sendo
-       * remarcada, e o servidor precisa saber disso para nao contar a reuniao
-       * movida contra ela mesma. */
-      this.horarios.set(
-        await this.api.horariosDeReuniao(
-          this.pedido().id,
-          alvo === 'nova' ? undefined : alvo,
-        ),
-      );
-    } catch (erro) {
-      this.falha.set(mensagemDoErro(erro));
-    } finally {
-      this.carregando.set(false);
-    }
   }
 
   protected fechar(): void {
     this.escolhendo.set(null);
-    this.horarios.set([]);
+    this.escolhido.set(null);
   }
 
   protected marcar(): Promise<void> {
-    const slotId = this.escolhido.value;
-    if (slotId === '') return Promise.resolve();
+    const slotId = this.escolhido();
+    if (slotId === null) return Promise.resolve();
 
     return this.agir('marcar', () =>
       this.api.marcarReuniao(this.pedido().id, slotId),
@@ -168,8 +145,8 @@ export class ReunioesDoPedido {
   }
 
   protected remarcar(reuniaoId: string): Promise<void> {
-    const slotId = this.escolhido.value;
-    if (slotId === '') return Promise.resolve();
+    const slotId = this.escolhido();
+    if (slotId === null) return Promise.resolve();
 
     return this.agir(`remarcar-${reuniaoId}`, () =>
       this.api.remarcarReuniao(this.pedido().id, reuniaoId, slotId),

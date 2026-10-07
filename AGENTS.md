@@ -57,6 +57,22 @@ receber credenciais — secrets declarados sem valor, codigo de producao e de
 Graph atras de constantes de destravamento (`PRODUCAO_DESTRAVADA`,
 `INTEGRACAO_GRAPH_DESTRAVADA`). Ligar: `docs/runbooks/ligar-terceiros.md`.
 
+**Calendário de reuniões e modo `sem-sala` (07/10/2026, branch `feat/calendario-reunioes`):**
+o cliente marca e remarca por um **calendário do mês** dentro do cartão do pedido
+(`cliente-pedidos/calendario-horarios`), navegando até o mês em que vencem as
+reuniões; a API devolve um mês por vez (`GET /api/pedidos/:id/horarios?mes=AAAA-MM`).
+O advogado tem **uma tela só**, `/advogado/agenda`: calendário do mês com reuniões
+e horários, e um painel do dia para ligar e desligar horas (`/advogado/disponibilidade`
+redireciona). A publicação continua **por semana**, agora da corrente até **52
+semanas à frente** (errata do ADR-06, `SEMANAS_EDITAVEIS`). Feriados nacionais e
+pontos facultativos federais vêm de `shared/feriados` e só são marcados. O modo
+**`REUNIOES_MODO=sem-sala`** é aceito em produção: marca a reunião, que fica em
+`reservada_sem_link`, sem convite e sem link inventado (regra 13). O evento
+`criar-sala-reuniao` nasce **`estacionado`** — estado novo do outbox que a fila, o
+varredor, a sonda de idade e `reivindicar` ignoram; só o reenvio manual o acorda,
+e é assim que as salas nascem quando o Teams for ligado. Em `sem-sala`, a sonda não
+mede reunião sem sala nem advogado sem `usuarioTeams`.
+
 **Bloco B — resíduos do checkout (branch `fix/residuos-checkout`):** o
 `webhookSecret` saiu do log de requisição (exclusão no Cloud Logging pelo nome do
 parâmetro) e dos spans (redação em `observabilidade/instrumentacao-http.ts`). **A
@@ -247,7 +263,7 @@ segurança registrado: a confirmação consultar a cobrança no gateway.
 - **`sequenceComunicada` decide se o `METHOD:CANCEL` sai.** É o último `SEQUENCE` **escrito no outbox** — não entregue. Cancelar reunião que nunca chegou ao calendário de ninguém produziria um cancelamento para um `UID` que o destinatário nunca viu.
 - **O despachante relê a reunião na transação.** Ele roda depois do commit e pode chegar tarde: cancelada não vira sala; remarcada emite o convite com o `sequence` **atual**, não o do registro. Convite só sai com link.
 - **`reservada_sem_link` é estado desenhado, não exceção** — quando a criação da sala falha, a reunião fica assim e o painel do admin a lista com o id do registro do outbox; o botão de tentar de novo reenvia **aquele** registro pelo caminho normal (regra 3).
-- **Em produção, `REUNIOES_MODO` só aceita `desligado`** — `graph` e `falso` derrubam o boot. `falso` foi proibido na revisão do PR #26: a sala falsa **devolve sucesso** com link `teams.microsoft.test`, então a reunião viraria `confirmada` e o convite iCalendar sairia para o cliente real com um link que não existe. É a regra inviolável 13 furada por configuração em vez de por código, e nenhuma das duas metades falha. A variável está no `cloud_run.tf` com `desligado` — faltava lá, e sem ela a revisão nova não passaria do startup probe.
+- **Em produção, `REUNIOES_MODO` só aceitava `desligado`** — `graph` e `falso` derrubam o boot. **Desde 07/10/2026 aceita também `sem-sala`** (ver "Calendário de reuniões e modo `sem-sala`" no topo). `falso` foi proibido na revisão do PR #26: a sala falsa **devolve sucesso** com link `teams.microsoft.test`, então a reunião viraria `confirmada` e o convite iCalendar sairia para o cliente real com um link que não existe. É a regra inviolável 13 furada por configuração em vez de por código, e nenhuma das duas metades falha. A variável está no `cloud_run.tf` com `desligado` — faltava lá, e sem ela a revisão nova não passaria do startup probe.
 - **Com `desligado`, o cartão diz que o agendamento está indisponível** em vez de oferecer um botão que responde 503. `CartaoPedido.agendamentoDisponivel` vem do servidor (é configuração de processo, a tela não tem como saber) e vem **antes** dos impedimentos do próprio pedido: não adianta dizer que o saldo acabou se nem daria para marcar. O padrão de `paraCartao` é `false` — com o padrão fechado, o pior que acontece é dizer "indisponível" onde havia agendamento.
 - **A janela de validade é calculada na leitura**, e o job de expiração de 12 meses que a arquitetura previa **não existe** — mesmo raciocínio da semana de disponibilidade da Etapa 9. Regra geral registrada na arquitetura, seção 8: estado derivável do tempo se calcula na leitura; rotina agendada é para efeito externo.
 - **`RELOGIO_FIXO` só é aceito sob emulador, e derruba o boot fora dele** — **no boot**, e não na primeira reunião: `agora()` lê a variável na primeira chamada, e até a revisão do PR #26 era só isso, então um relógio fixo esquecido em produção passava pelo startup probe e pelo smoke test e só aparecia como 500 para o primeiro cliente. A leitura vive em `configuracaoNaInicializacao`, ao lado de `configuracaoDeReunioes`. Servidor, navegador (`page.clock`) e semente leem o mesmo instante — sem isso a jornada e a regressão visual mudariam de resultado todo dia. Efeito colateral: `advogado/disponibilidade` entrou na regressão visual, de onde estava excluída porque a grade mudava toda segunda. **`DisponibilidadesService` lê o mesmo relógio**: com metade do servidor num relógio e metade noutro, o advogado publicaria a grade de uma semana e o cliente escolheria horários de outra, sem nada falhar.
