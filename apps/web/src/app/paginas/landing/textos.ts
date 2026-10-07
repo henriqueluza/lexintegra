@@ -252,7 +252,7 @@ export const TEXTOS = {
   cadastro: {
     titulo: 'Comece pelo cadastro.',
     apoio:
-      'Preencha seus dados para liberar o catálogo. A senha da área de acompanhamento é definida após sua primeira contratação.',
+      'Preencha seus dados para liberar o catálogo. Depois, se quiser, crie uma senha para voltar sem repetir o pré-cadastro.',
     acao: 'Liberar catálogo',
     concluido: {
       titulo: 'Pronto. Os serviços estão liberados.',

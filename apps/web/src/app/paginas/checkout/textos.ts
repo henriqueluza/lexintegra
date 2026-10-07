@@ -15,10 +15,10 @@ export const TEXTOS_CHECKOUT = {
   titulo: 'Finalizar compra',
 
   semLiberacao: {
-    titulo: 'Conclua o cadastro para continuar',
+    titulo: 'Retome seu acesso para continuar',
     texto:
-      'O checkout fica disponível depois do cadastro inicial, em sua página própria.',
-    acao: 'Ir para o cadastro',
+      'Volte aos serviços para renovar seu acesso. Se já tem uma senha, entre com seu e-mail; não é preciso repetir o pré-cadastro.',
+    acao: 'Retomar acesso aos serviços',
   },
 
   vazio: {

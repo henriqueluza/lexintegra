@@ -117,7 +117,15 @@ export class RotinaDeGuarda {
   private async virouCliente(email: string): Promise<boolean> {
     try {
       const conta = await this.auth.getUserByEmail(email);
-      return conta.customClaims?.['role'] === 'cliente';
+      if (conta.customClaims?.['role'] !== 'cliente') return false;
+      const pedidos = await this.db
+        .collection(MAPA_TITULAR.pedidos.colecao)
+        .where('clienteId', '==', conta.uid)
+        .limit(1)
+        .get();
+      if (pedidos.size === 0) await this.abrirSeVencido(conta.uid, 0);
+      // Conta sem compra tambem expira, pelo protocolo com aviso e exclusao do Auth.
+      return true;
     } catch (erro) {
       if (usuarioAusente(erro)) return false;
       throw erro;

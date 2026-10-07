@@ -30,7 +30,7 @@ interface TextoDeAcesso {
 }
 
 const VALIDADE =
-  'O link é pessoal e vale por tempo limitado. Se ele expirar, use "Esqueci minha ' +
+  'O link é pessoal e vale por tempo limitado. Se ele expirar, use "Criar ou recuperar ' +
   'senha" na página de entrada.';
 
 export const TEXTOS_DE_ACESSO: Readonly<
@@ -53,12 +53,12 @@ export const TEXTOS_DE_ACESSO: Readonly<
     fecho: VALIDADE,
   },
   'redefinir-senha': {
-    assunto: 'Redefinição de senha da LexIntegra',
+    assunto: 'Crie ou recupere sua senha da LexIntegra',
     abertura:
-      'Recebemos um pedido para redefinir a senha da sua conta. Para escolher ' +
+      'Recebemos um pedido para criar ou redefinir a senha da sua conta. Para escolher ' +
       'uma nova senha, use o link abaixo:',
     fecho:
-      'Se você não pediu a redefinição, ignore este e-mail: a sua senha atual ' +
+      'Se você não fez esse pedido, ignore este e-mail: sua senha, se já definida, ' +
       'continua valendo. ' +
       VALIDADE,
   },
@@ -98,7 +98,7 @@ export function mensagemDeAcesso(
     acao: {
       rotulo:
         tipo === 'redefinir-senha'
-          ? 'Redefinir minha senha'
+          ? 'Criar ou redefinir minha senha'
           : 'Definir minha senha',
       url: link,
     },

@@ -133,6 +133,13 @@ describe('exigirPerfil', () => {
 
 /** ⚠️ A ficha ainda e o stub provisorio da Etapa 8. */
 describe('exigirAnamnese', () => {
+  it('nao exige ficha de quem criou senha antes da primeira compra', async () => {
+    preparar({
+      perfil: 'cliente',
+      anamnese: () => Promise.resolve({ preenchida: false, exigida: false }),
+    });
+    await expect(executar(exigirAnamnese as never)).resolves.toBe(true);
+  });
   it('deixa entrar nos pedidos com a ficha preenchida', async () => {
     preparar({
       perfil: 'cliente',

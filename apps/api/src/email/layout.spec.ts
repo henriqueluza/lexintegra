@@ -54,7 +54,7 @@ describe('layout HTML compilado', () => {
       );
       expect(email.corpoHtml).toContain(
         tipo === 'redefinir-senha'
-          ? 'Redefinir minha senha'
+          ? 'Criar ou redefinir minha senha'
           : 'Definir minha senha',
       );
       expect(email.corpoHtml).toContain('bgcolor="#7a1a24"');

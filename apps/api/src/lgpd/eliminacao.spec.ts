@@ -537,3 +537,22 @@ describe('rotina diaria', () => {
     expect(contas.has('caio')).toBe(true);
   });
 });
+
+it('conta opcional sem compra expira com o pre-cadastro, depois do aviso', async () => {
+  banco.documentos.set(`pre-cadastros/${PRE}`, {
+    nome: 'Ana',
+    email: EMAIL,
+    telefone: '61999990000',
+    atualizadoEm: emDias(-200),
+  });
+  await rotina.executarPassagem();
+  expect(protocolo()).toMatchObject({
+    estado: 'aguardando_execucao',
+    origem: 'prazo',
+  });
+  expect(contas.has('ana')).toBe(true);
+  relogio = HOJE + 8 * DIA;
+  await rotina.executarPassagem();
+  expect(contas.has('ana')).toBe(false);
+  expect(banco.documentos.has(`pre-cadastros/${PRE}`)).toBe(false);
+});

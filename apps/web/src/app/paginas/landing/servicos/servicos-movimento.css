@@ -1,0 +1,142 @@
+.produto__superficie::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: var(--lex-radius-sm);
+  box-shadow: var(--lex-shadow-modal);
+  opacity: 0;
+  transition: opacity 500ms var(--lex-ease-out);
+}
+.fio {
+  position: absolute;
+  inset: -1px;
+  z-index: 3;
+  border-radius: var(--lex-radius-sm);
+  padding: var(--borda-media);
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  mask:
+    linear-gradient(currentColor 0 0) content-box exclude,
+    linear-gradient(currentColor 0 0);
+}
+.fio i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 250%;
+  min-height: 250%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background-image: conic-gradient(
+    transparent 62%,
+    var(--lex-gold) 93%,
+    var(--lex-elevated) 97%,
+    transparent
+  );
+}
+.brilho {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--lex-radius-sm);
+  pointer-events: none;
+  z-index: -1;
+}
+.brilho i {
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  opacity: 0;
+  background-image: radial-gradient(
+    closest-side,
+    var(--lex-elevated),
+    transparent
+  );
+  transition: opacity 400ms var(--lex-ease-out);
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .produto__superficie {
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+    backface-visibility: hidden;
+    transition: transform 500ms var(--lex-ease-out);
+  }
+  .produto:hover .produto__superficie,
+  .produto:focus-within .produto__superficie {
+    transform: translate3d(0, -4px, 0);
+  }
+  .produto:hover .produto__superficie::after,
+  .produto:focus-within .produto__superficie::after {
+    opacity: 1;
+  }
+  .produto:hover .brilho i {
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .produto:hover .fio,
+  .produto:focus-within .fio,
+  .entrada .fio {
+    animation: fio-opacidade 1500ms linear;
+  }
+  .produto:hover .fio i,
+  .produto:focus-within .fio i,
+  .entrada .fio i {
+    animation: fio-volta 1500ms var(--lex-ease-in-out);
+  }
+  .toast {
+    animation: aviso-entrada var(--lex-dur-base) var(--lex-ease-out);
+  }
+  .esqueleto {
+    animation: esqueleto-pulso 1400ms ease-in-out infinite;
+  }
+}
+@keyframes fio-volta {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+@keyframes fio-opacidade {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  10%,
+  82% {
+    opacity: 1;
+  }
+}
+@keyframes aviso-entrada {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+}
+@keyframes esqueleto-pulso {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none;
+    transition: none;
+  }
+}
+
+.ponto-carrinho {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+  border-radius: var(--lex-radius-pill);
+  background: var(--lex-accent);
+  pointer-events: none;
+  z-index: var(--lex-z-toast);
+}

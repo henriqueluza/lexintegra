@@ -1,4 +1,6 @@
 import { NestFactory } from '@nestjs/core';
+import { Timestamp } from 'firebase-admin/firestore';
+import { idDoPreCadastro } from './pre-cadastros/liberacao.js';
 import type { INestApplication } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
@@ -95,128 +97,203 @@ async function identityToolkit(
  * sandbox do AbacatePay e passo humano, no roteiro `docs/runbooks/checkout-sandbox.md`.
  */
 describe('compra completa (criterio de aceite da Etapa 8)', () => {
-  it('do carrinho com dois produtos a ficha inicial preenchida', async () => {
-    /* 1. Pre-cadastro: a vitrine abre. */
-    const { body: liberacao } = await http()
-      .post('/api/pre-cadastros')
-      .send(ANA)
-      .expect(201);
-    const produtos = new ProdutosService(firestoreDeTeste());
-    const parecer = await produtos.criar(PARECER, 'uid-admin');
-    const contrato = await produtos.criar(CONTRATO, 'uid-admin');
+  it.each([false, true])(
+    'compra completa com senha antecipada: %s',
+    async (senhaAntecipada) => {
+      /* 1. Pre-cadastro: a vitrine abre. */
+      const { body: liberacao } = await http()
+        .post('/api/pre-cadastros')
+        .send(ANA)
+        .expect(201);
+      const uidInicial = senhaAntecipada
+        ? await criarSenhaAntesDaCompra(liberacao as { token: string })
+        : null;
+      const produtos = new ProdutosService(firestoreDeTeste());
+      const parecer = await produtos.criar(PARECER, 'uid-admin');
+      const contrato = await produtos.criar(CONTRATO, 'uid-admin');
 
-    /* 2. Checkout com dois produtos: o QR do PIX pelo total congelado. */
-    const { body: checkout } = await http()
-      .post('/api/checkout')
-      .set('x-pre-cadastro', (liberacao as { token: string }).token)
-      .send({
-        itens: [{ produtoId: parecer.id }, { produtoId: contrato.id }],
-        metodo: 'pix',
-        comprador: { nome: ANA.nome, email: ANA.email },
-        termosVersao: VERSAO_TERMOS_CHECKOUT,
-        chaveDoCarrinho: '7d3c2f7e-1b1a-4c5e-9a3f-2b8d9c0e1f2a',
-      })
-      .expect(201);
-    expect(checkout).toMatchObject({ metodo: 'pix', totalCentavos: 370_000 });
+      /* 2. Checkout com dois produtos: o QR do PIX pelo total congelado. */
+      const { body: checkout } = await http()
+        .post('/api/checkout')
+        .set('x-pre-cadastro', (liberacao as { token: string }).token)
+        .send({
+          itens: [{ produtoId: parecer.id }, { produtoId: contrato.id }],
+          metodo: 'pix',
+          comprador: { nome: ANA.nome, email: ANA.email },
+          termosVersao: VERSAO_TERMOS_CHECKOUT,
+          chaveDoCarrinho: '7d3c2f7e-1b1a-4c5e-9a3f-2b8d9c0e1f2a',
+        })
+        .expect(201);
+      expect(checkout).toMatchObject({ metodo: 'pix', totalCentavos: 370_000 });
 
-    /* 3. O gateway confirma o pagamento pelo webhook assinado. */
-    const cobrancaId = (
-      (
-        await firestoreDeTeste()
-          .collection(COLECAO_CHECKOUTS)
-          .doc((checkout as { checkoutId: string }).checkoutId)
-          .get()
-      ).data() as { cobranca: { id: string } }
-    ).cobranca.id;
-    /* No formato do evento REAL do sandbox: sem `id` na raiz, cobranca em `data.transparent`. */
-    const evento = JSON.stringify(
-      eventoNoFormatoReal({
-        cobrancaId,
-        checkoutId: (checkout as { checkoutId: string }).checkoutId,
-        valorCentavos: 370_000,
-      }),
-    );
-    const { body: webhook } = await http()
-      .post(caminhoDoWebhook(SEGREDO_WEBHOOK_DESENVOLVIMENTO))
-      .set('Content-Type', 'application/json')
-      .set('X-Webhook-Signature', assinar(evento, CHAVE_HMAC_DESENVOLVIMENTO))
-      .send(evento)
-      .expect(200);
-    expect(webhook).toEqual({ recebido: true, resultado: 'confirmado' });
+      /* 3. O gateway confirma o pagamento pelo webhook assinado. */
+      const cobrancaId = (
+        (
+          await firestoreDeTeste()
+            .collection(COLECAO_CHECKOUTS)
+            .doc((checkout as { checkoutId: string }).checkoutId)
+            .get()
+        ).data() as { cobranca: { id: string } }
+      ).cobranca.id;
+      /* No formato do evento REAL do sandbox: sem `id` na raiz, cobranca em `data.transparent`. */
+      const evento = JSON.stringify(
+        eventoNoFormatoReal({
+          cobrancaId,
+          checkoutId: (checkout as { checkoutId: string }).checkoutId,
+          valorCentavos: 370_000,
+        }),
+      );
+      const { body: webhook } = await http()
+        .post(caminhoDoWebhook(SEGREDO_WEBHOOK_DESENVOLVIMENTO))
+        .set('Content-Type', 'application/json')
+        .set('X-Webhook-Signature', assinar(evento, CHAVE_HMAC_DESENVOLVIMENTO))
+        .send(evento)
+        .expect(200);
+      expect(webhook).toEqual({ recebido: true, resultado: 'confirmado' });
 
-    /* 4. Dois pedidos e uma conta de cliente, habilitada e sem senha. */
-    const conta = await authDeTeste().getUserByEmail(ANA.email);
-    expect(conta.customClaims).toEqual({ role: 'cliente' });
-    expect(conta.disabled).toBe(false);
-    const pedidos = await firestoreDeTeste()
-      .collection('pedidos')
-      .where('clienteId', '==', conta.uid)
-      .get();
-    expect(pedidos.size).toBe(2);
+      /* 4. Dois pedidos e uma conta de cliente, habilitada e sem senha. */
+      const conta = await authDeTeste().getUserByEmail(ANA.email);
+      expect(conta.customClaims).toEqual({ role: 'cliente' });
+      expect(conta.disabled).toBe(false);
+      if (uidInicial) expect(conta.uid).toBe(uidInicial);
+      const pedidos = await firestoreDeTeste()
+        .collection('pedidos')
+        .where('clienteId', '==', conta.uid)
+        .get();
+      expect(pedidos.size).toBe(2);
 
-    /* 5. O e-mail de acesso sai pelo outbox, com o link de definicao de senha. */
-    const despacho = await app
-      .get(DespachanteOutbox)
-      .despachar(`acesso-cliente_${conta.uid}`);
-    expect(despacho).toBe('entregue');
-    const transporte = app.get<EmailFalsoTransport>(EMAIL_TRANSPORT);
-    const mensagem = transporte.enviadas.find((m) =>
-      m.para.includes(ANA.email),
-    );
-    // Desde a B2 o link vai no corpo do texto versionado (decisoes.md 5.1).
-    const link = new URL(
-      /https?:\/\/\S+/u.exec(mensagem?.corpoTexto ?? '')?.[0] ?? '',
-    );
-    expect(link.pathname).toBe('/definir-senha');
-    const oobCode = link.searchParams.get('oobCode');
-    expect(oobCode).not.toBeNull();
+      /* 5. O e-mail de acesso sai pelo outbox, com o link de definicao de senha. */
+      const despacho = await app
+        .get(DespachanteOutbox)
+        .despachar(`acesso-cliente_${conta.uid}`);
+      expect(despacho).toBe('entregue');
+      const transporte = app.get<EmailFalsoTransport>(EMAIL_TRANSPORT);
+      const mensagem = transporte.enviadas.find(
+        (m) =>
+          m.para.includes(ANA.email) && m.assunto === 'Seu acesso à LexIntegra',
+      );
+      // Desde a B2 o link vai no corpo do texto versionado (decisoes.md 5.1).
+      const link = new URL(
+        /https?:\/\/\S+/u.exec(mensagem?.corpoTexto ?? '')?.[0] ?? '',
+      );
+      expect(link.pathname).toBe('/definir-senha');
+      const oobCode = link.searchParams.get('oobCode');
+      expect(oobCode).not.toBeNull();
 
-    /* 6. A senha e definida pelo link, e a conta entra com ela. */
-    const redefinida = await identityToolkit('resetPassword', {
-      oobCode,
-      newPassword: 'senha-definida-pelo-link-123',
-    });
-    expect(redefinida['email']).toBe(ANA.email);
-    const entrada = await identityToolkit('signInWithPassword', {
-      email: ANA.email,
-      password: 'senha-definida-pelo-link-123',
-      returnSecureToken: true,
-    });
-    const idToken = String(entrada['idToken']);
-    expect(idToken.length).toBeGreaterThan(20);
+      /* 6. A senha e definida pelo link, e a conta entra com ela. */
+      const redefinida = await identityToolkit('resetPassword', {
+        oobCode,
+        newPassword: 'senha-definida-pelo-link-123',
+      });
+      expect(redefinida['email']).toBe(ANA.email);
+      const entrada = await identityToolkit('signInWithPassword', {
+        email: ANA.email,
+        password: 'senha-definida-pelo-link-123',
+        returnSecureToken: true,
+      });
+      const idToken = String(entrada['idToken']);
+      expect(idToken.length).toBeGreaterThan(20);
 
-    /* 7. A ficha inicial e exigida, e depois de enviada, esta preenchida. */
-    const autenticado = (
-      metodo: 'get' | 'post',
-      caminho: string,
-    ): request.Test =>
-      http()[metodo](caminho).set('Authorization', `Bearer ${idToken}`);
+      /* 7. A ficha inicial e exigida, e depois de enviada, esta preenchida. */
+      const autenticado = (
+        metodo: 'get' | 'post',
+        caminho: string,
+      ): request.Test =>
+        http()[metodo](caminho).set('Authorization', `Bearer ${idToken}`);
 
-    expect(
-      (await autenticado('get', '/api/anamnese/situacao').expect(200)).body,
-    ).toMatchObject({
-      preenchida: false,
-      /* O telefone so existe no pre-cadastro: o checkout nao o pede. */
-      preenchimento: { telefone: '61990000000' },
-    });
-    await autenticado('post', '/api/anamnese')
-      .send({ respostas: { cnpj: '12345' } })
-      .expect(400);
-    await autenticado('post', '/api/anamnese')
-      .send({ respostas: respostasMinimasDaFicha() })
-      .expect(201);
-    expect(
-      (await autenticado('get', '/api/anamnese/situacao').expect(200)).body,
-    ).toMatchObject({ preenchida: true });
+      expect(
+        (await autenticado('get', '/api/anamnese/situacao').expect(200)).body,
+      ).toMatchObject({
+        preenchida: false,
+        /* O telefone so existe no pre-cadastro: o checkout nao o pede. */
+        preenchimento: { telefone: '61990000000' },
+      });
+      await autenticado('post', '/api/anamnese')
+        .send({ respostas: { cnpj: '12345' } })
+        .expect(400);
+      await autenticado('post', '/api/anamnese')
+        .send({ respostas: respostasMinimasDaFicha() })
+        .expect(201);
+      expect(
+        (await autenticado('get', '/api/anamnese/situacao').expect(200)).body,
+      ).toMatchObject({ preenchida: true });
 
-    /* 8. A area do cliente mostra os dois cartoes, ativos. */
-    const { body: cartoes } = await autenticado('get', '/api/pedidos').expect(
-      200,
-    );
-    expect(
-      (cartoes as { snapshot: { nome: string }; situacao: string }[])
-        .map((c) => `${c.snapshot.nome}:${c.situacao}`)
-        .sort(),
-    ).toEqual([`${PARECER.nome}:ativo`, `${CONTRATO.nome}:ativo`]);
-  });
+      /* 8. A area do cliente mostra os dois cartoes, ativos. */
+      const { body: cartoes } = await autenticado('get', '/api/pedidos').expect(
+        200,
+      );
+      expect(
+        (cartoes as { snapshot: { nome: string }; situacao: string }[])
+          .map((c) => `${c.snapshot.nome}:${c.situacao}`)
+          .sort(),
+      ).toEqual([`${PARECER.nome}:ativo`, `${CONTRATO.nome}:ativo`]);
+    },
+  );
 });
+
+/** Token vencido, link recebido, senha e renovacao antes da primeira compra. */
+async function criarSenhaAntesDaCompra(liberacao: {
+  token: string;
+}): Promise<string> {
+  await firestoreDeTeste()
+    .collection('pre-cadastros')
+    .doc(idDoPreCadastro(ANA.email))
+    .update({ liberacaoExpiraEm: Timestamp.fromMillis(0) });
+  await http()
+    .post('/api/catalogo/acesso')
+    .send({ email: ANA.email })
+    .expect(401);
+  await http()
+    .post('/api/auth/redefinicao-senha')
+    .send({ email: ANA.email })
+    .expect(202);
+  const conta = await authDeTeste().getUserByEmail(ANA.email);
+  expect(conta.customClaims?.['role']).toBe('cliente');
+  expect(
+    (await firestoreDeTeste().collection('clientes').doc(conta.uid).get())
+      .exists,
+  ).toBe(false);
+  const eventos = await firestoreDeTeste()
+    .collection('outbox')
+    .where('destinatarioUid', '==', conta.uid)
+    .get();
+  const evento = eventos.docs.find(
+    (d) => d.data()['tipo'] === 'redefinir-senha',
+  );
+  expect(evento).toBeDefined();
+  await app.get(DespachanteOutbox).despachar(evento!.id);
+  const transporte = app.get<EmailFalsoTransport>(EMAIL_TRANSPORT);
+  const mensagem = transporte.enviadas.find((m) => m.para.includes(ANA.email));
+  const link = new URL(
+    /https?:\/\/\S+/u.exec(mensagem?.corpoTexto ?? '')?.[0] ?? '',
+  );
+  const senha = 'senha-inicial-pelo-link-123';
+  const redefinida = await identityToolkit('resetPassword', {
+    oobCode: link.searchParams.get('oobCode'),
+    newPassword: senha,
+  });
+  expect(redefinida['email']).toBe(ANA.email);
+  const entrada = await identityToolkit('signInWithPassword', {
+    email: ANA.email,
+    password: senha,
+    returnSecureToken: true,
+  });
+  const bearer = `Bearer ${String(entrada['idToken'])}`;
+  const situacao = await http()
+    .get('/api/anamnese/situacao')
+    .set('Authorization', bearer)
+    .expect(200);
+  expect(situacao.body).toMatchObject({ exigida: false, preenchida: false });
+  const renovacao = await http()
+    .post('/api/catalogo/acesso')
+    .set('Authorization', bearer)
+    .send({ email: 'outra@empresa.test' })
+    .expect(201);
+  liberacao.token = (renovacao.body as { token: string }).token;
+  expect(liberacao.token.split('.')[0]).toBe(idDoPreCadastro(ANA.email));
+  await http()
+    .get('/api/vitrine')
+    .set('x-pre-cadastro', liberacao.token)
+    .expect(200);
+  return conta.uid;
+}

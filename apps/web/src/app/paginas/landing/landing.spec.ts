@@ -1,10 +1,18 @@
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Landing } from './landing';
+import { signal } from '@angular/core';
+import { CatalogoService } from '../../publico/catalogo.service';
 import { NEVOA } from './conteudo-nevoa';
 async function montar(): Promise<HTMLElement> {
   await TestBed.configureTestingModule({
     imports: [Landing],
+    providers: [
+      {
+        provide: CatalogoService,
+        useValue: { liberado: signal(false), conferir: async () => false },
+      },
+    ],
   }).compileComponents();
   const fixture = TestBed.createComponent(Landing);
   fixture.detectChanges();

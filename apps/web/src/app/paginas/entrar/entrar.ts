@@ -44,6 +44,7 @@ export class Entrar {
   private readonly sessao = inject(SessaoService);
   private readonly router = inject(Router);
 
+  protected readonly emailConferido = signal(false);
   protected readonly enviando = signal(false);
   protected readonly falha = signal<FalhaEntrada | null>(null);
 

@@ -4,7 +4,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { AppModule } from './app.module.js';
 import { configurar, OPCOES_DA_APLICACAO } from './configurar.js';
-import { limparEmuladores } from './emulador.js';
+import { authDeTeste, idTokenDe, limparEmuladores } from './emulador.js';
 import { escutarNoLoopback } from './arnes-http.js';
 
 const ANA = {
@@ -136,6 +136,52 @@ describe('a vitrine so abre com pre-cadastro', () => {
       .expect(200);
 
     expect(Array.isArray(resposta.body)).toBe(true);
+  });
+});
+
+/**
+ * Quem esta logado ve o catalogo sem o cadastro inicial (05/10/2026). Sobre HTTP
+ * e com ID token de verdade, porque o que importa e a CADEIA: a rota nao e
+ * publica, entao quem barra o anonimo e o guard global de autenticacao — e e ele
+ * que um `@Publico()` distraido desligaria.
+ */
+describe('o catalogo abre para quem esta logado', () => {
+  it('recusa o anonimo, mesmo com token de pre-cadastro', async () => {
+    const { body } = await http()
+      .post('/api/pre-cadastros')
+      .send(ANA)
+      .expect(201);
+
+    await http()
+      .get('/api/catalogo')
+      .set('x-pre-cadastro', body.token)
+      .expect(401);
+  });
+
+  it.each(['cliente', 'advogado', 'admin'])(
+    'abre para %s, sem pre-cadastro',
+    async (perfil) => {
+      const uid = `uid-${perfil}`;
+      await authDeTeste().createUser({ uid, email: `${uid}@exemplo.test` });
+      await authDeTeste().setCustomUserClaims(uid, { role: perfil });
+
+      const resposta = await http()
+        .get('/api/catalogo')
+        .set('Authorization', `Bearer ${await idTokenDe(uid)}`)
+        .expect(200);
+
+      expect(Array.isArray(resposta.body)).toBe(true);
+    },
+  );
+
+  /* Conta sem perfil e a janela entre `createUser` e a claim: 403, como no resto. */
+  it('recusa conta sem perfil', async () => {
+    await authDeTeste().createUser({ uid: 'uid-sem-perfil' });
+
+    await http()
+      .get('/api/catalogo')
+      .set('Authorization', `Bearer ${await idTokenDe('uid-sem-perfil')}`)
+      .expect(403);
   });
 });
 

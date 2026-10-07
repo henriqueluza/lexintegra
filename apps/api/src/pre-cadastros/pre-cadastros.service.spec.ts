@@ -302,3 +302,23 @@ describe('PreCadastrosService.listar', () => {
     ]);
   });
 });
+
+describe('Renovacao do acesso por identidade comprovada', () => {
+  it('renova o token vencido sem exigir nome ou telefone novamente', async () => {
+    const { servico, banco } = montar();
+    const anterior = await servico.registrar(ANA);
+    const dados = banco.documentos.get(caminhoDe(ANA.email))!;
+    dados['liberacaoExpiraEm'] = Timestamp.fromMillis(0);
+    expect(await servico.liberado(anterior.token)).toBe(false);
+    const novo = await servico.renovar(ANA.email);
+    expect(novo).not.toBeNull();
+    expect(await servico.liberado(novo!.token)).toBe(true);
+    expect(await servico.liberado(anterior.token)).toBe(false);
+    expect(banco.documentos.get(caminhoDe(ANA.email))).toMatchObject(ANA);
+  });
+  it('nao inventa um pre-cadastro para conta sem cadastro inicial', async () => {
+    const { servico, banco } = montar();
+    expect(await servico.renovar(ANA.email)).toBeNull();
+    expect(banco.documentos.size).toBe(0);
+  });
+});

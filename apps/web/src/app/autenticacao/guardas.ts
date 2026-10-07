@@ -110,8 +110,10 @@ export const exigirAnamnese: CanActivateFn = async (): Promise<
      */
     const { ApiClienteService } = await import('./api-cliente.service');
     const api = injetor.get(ApiClienteService);
-    const { preenchida } = await api.situacaoDaAnamnese();
-    return preenchida ? true : router.createUrlTree(['/painel/anamnese']);
+    const { preenchida, exigida } = await api.situacaoDaAnamnese();
+    return preenchida || exigida === false
+      ? true
+      : router.createUrlTree(['/painel/anamnese']);
   } catch {
     return true;
   }

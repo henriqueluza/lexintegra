@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { ComponentFixture } from '@angular/core/testing';
 import type { ProdutoVitrine } from 'shared';
-import { PreCadastroService } from '../../../publico/pre-cadastro.service';
+import { CatalogoService } from '../../../publico/catalogo.service';
 import { TEXTOS } from '../textos';
 import { Servicos } from './servicos';
 
@@ -29,10 +29,10 @@ function montar(): ComponentFixture<Servicos> {
     imports: [Servicos],
     providers: [
       {
-        provide: PreCadastroService,
+        provide: CatalogoService,
         useValue: {
           liberado,
-          listarVitrine: () => {
+          listar: () => {
             pedidos += 1;
             return resposta instanceof Error
               ? Promise.reject(resposta)
@@ -135,8 +135,8 @@ describe('Servicos', () => {
 
       await liberar(fixture);
 
-      expect(texto(fixture)).toContain(TEXTOS.servicos.reunioes);
-      expect(texto(fixture)).toContain(TEXTOS.servicos.revisoes);
+      expect(texto(fixture)).toContain('2 reuniões');
+      expect(texto(fixture)).toContain('Revisões por entregável');
     });
 
     it('some com o aviso de cadeado', async () => {
@@ -243,7 +243,7 @@ describe('Servicos', () => {
   });
 
   /**
-   * O carrinho (Etapa 8). Nao chama a API: o contador de `listarVitrine` e o unico
+   * O carrinho (Etapa 8). Nao chama a API: o contador de `listar` e o unico
    * caminho de rede deste componente, e ele continua em um.
    */
   describe('carrinho', () => {

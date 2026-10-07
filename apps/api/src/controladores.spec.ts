@@ -75,6 +75,7 @@ import { AssinaturaWebhookGuard } from './pagamentos/webhook/assinatura.guard.js
 import type { ProcessadorDeEventos } from './pagamentos/webhook/processador.service.js';
 import { WebhookController } from './pagamentos/webhook/webhook.controller.js';
 import { PreCadastroGuard } from './vitrine/pre-cadastro.guard.js';
+import { CatalogoController } from './vitrine/catalogo.controller.js';
 import { VitrineController } from './vitrine/vitrine.controller.js';
 import type { VitrineService } from './vitrine/vitrine.service.js';
 import { LgpdController } from './lgpd/lgpd.controller.js';
@@ -866,12 +867,65 @@ describe('CheckoutController', () => {
 describe('VitrineController', () => {
   it('delega a listagem ao servico', async () => {
     const chamadas: string[] = [];
-    const controlador = new VitrineController({
-      listar: () => {
-        chamadas.push('listar');
-        return Promise.resolve([]);
-      },
-    } as unknown as VitrineService);
+    const controlador = new VitrineController(
+      {
+        listar: () => {
+          chamadas.push('listar');
+          return Promise.resolve([]);
+        },
+      } as unknown as VitrineService,
+      {} as PreCadastrosService,
+    );
+
+    await expect(controlador.listar()).resolves.toEqual([]);
+    expect(chamadas).toEqual(['listar']);
+  });
+});
+
+/**
+ * O catalogo para quem esta logado (05/10/2026). E a vitrine sem o token de
+ * pre-cadastro, e por isso a rota NAO pode ser publica: um `@Publico()` aqui
+ * abriria o catalogo inteiro a qualquer um, sem cadastro nenhum. E tambem nao
+ * restringe perfil — cliente, advogado e administrador veem a mesma lista.
+ */
+describe('CatalogoController', () => {
+  it('nao e publico, na classe nem no metodo', () => {
+    expect(reflector.get(CHAVE_PUBLICO, CatalogoController)).toBeUndefined();
+    expect(
+      reflector.get(CHAVE_PUBLICO, CatalogoController.prototype.listar),
+    ).toBeUndefined();
+  });
+
+  it('aceita os tres perfis autenticados', () => {
+    expect(reflector.get(CHAVE_PERFIS, CatalogoController)).toBeUndefined();
+    expect(
+      reflector.get(CHAVE_PERFIS, CatalogoController.prototype.listar),
+    ).toBeUndefined();
+  });
+
+  it('nao exige o token de pre-cadastro', () => {
+    expect(
+      Reflect.getMetadata(GUARDS_METADATA, CatalogoController),
+    ).toBeUndefined();
+  });
+
+  it('declara o mesmo limite da vitrine publica', () => {
+    expect(
+      reflector.get(CHAVE_LIMITE, CatalogoController.prototype.listar),
+    ).toEqual(reflector.get(CHAVE_LIMITE, VitrineController.prototype.listar));
+  });
+
+  it('delega a listagem ao servico da vitrine', async () => {
+    const chamadas: string[] = [];
+    const controlador = new CatalogoController(
+      {
+        listar: () => {
+          chamadas.push('listar');
+          return Promise.resolve([]);
+        },
+      } as unknown as VitrineService,
+      {} as PreCadastrosService,
+    );
 
     await expect(controlador.listar()).resolves.toEqual([]);
     expect(chamadas).toEqual(['listar']);

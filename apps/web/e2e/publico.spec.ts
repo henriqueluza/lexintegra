@@ -109,8 +109,15 @@ test.describe('area publica', () => {
     const chamadas = espiarApi(page);
     await interceptar(page);
 
+    await page.addLocatorHandler(
+      page.getByRole('button', { name: 'Fechar convite' }),
+      async (convite) => {
+        await convite.click();
+      },
+    );
     await page.goto('/');
     await percorrerAPaginaInteira(page);
+
     // Abaixo de 720 px a hero nao tem o link (landing-celular.css).
     const comoFunciona = page.getByRole('link', {
       name: 'Como funciona',

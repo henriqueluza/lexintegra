@@ -25,7 +25,8 @@
   display: flex;
 }
 
-.cadastro__formulario p a {
+.cadastro__formulario p a,
+.cadastro__pronto p a {
   color: var(--acento);
   font-weight: var(--peso-forte);
   text-underline-offset: var(--s1);

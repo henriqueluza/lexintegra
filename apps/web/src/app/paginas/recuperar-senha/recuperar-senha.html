@@ -1,12 +1,13 @@
 <app-moldura-acesso
-  [titulo]="['Esqueceu a senha?', 'A gente ajuda.']"
+  [titulo]="['Seu acesso começa', 'pelo seu e-mail.']"
   texto="Você recebe no e-mail cadastrado um link para criar uma senha nova."
 >
   @if (enviado()) {
   <h1>Verifique seu e-mail</h1>
   <p class="apoio">
-    Se houver uma conta com esse endereço, o link de redefinição chega em
-    instantes. Ele vale por tempo limitado e só pode ser usado uma vez.
+    Se houver um pré-cadastro ou uma conta com esse endereço, o link para criar
+    ou redefinir sua senha chega em instantes. Ele vale por tempo limitado e só
+    pode ser usado uma vez.
   </p>
   <div class="pilha">
     <app-botao variante="secundario" (click)="voltarAoInicio()">
@@ -14,8 +15,11 @@
     </app-botao>
   </div>
   } @else {
-  <h1>Redefinir senha</h1>
-  <p class="apoio">Informe o e-mail cadastrado e enviaremos um link.</p>
+  <h1>Criar ou recuperar senha</h1>
+  <p class="apoio">
+    Informe o e-mail do seu pré-cadastro ou da sua conta. Você pode criar uma
+    senha mesmo sem ter comprado, ou escolher uma nova se esqueceu a anterior.
+  </p>
   <form
     [formGroup]="formulario"
     (ngSubmit)="enviar()"

@@ -51,6 +51,7 @@ export class AnamneseService {
       this.db.collection(COLECAO_CLIENTES).doc(clienteId).get(),
     ]);
     return {
+      ...(cliente.exists ? {} : { exigida: false }),
       preenchida: ficha.exists,
       preenchimento: await this.preenchimento(cliente.data()),
     };

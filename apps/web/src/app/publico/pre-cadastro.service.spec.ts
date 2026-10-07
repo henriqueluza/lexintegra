@@ -27,6 +27,7 @@ function montar(
 ): { servico: PreCadastroService; chamadas: Chamadas } {
   const chamadas: Chamadas = { criados: [], listados: [] };
   const api = {
+    renovarAcessoCatalogo: () => Promise.resolve(liberacao),
     criarPreCadastro: (dados: NovoPreCadastro) => {
       chamadas.criados.push(dados);
       return Promise.resolve(liberacao);
@@ -52,6 +53,15 @@ describe('PreCadastroService', () => {
 
   it('comeca travado', () => {
     expect(montar().servico.liberado()).toBe(false);
+  });
+
+  it('guarda a liberacao recuperada pela sessao sem reenviar os dados pessoais', async () => {
+    const { servico, chamadas } = montar();
+    await servico.renovar();
+    expect(servico.liberado()).toBe(true);
+    expect(servico.token()).toBe('id.segredo');
+    expect(chamadas.criados).toEqual([]);
+    expect(localStorage.getItem(CHAVE_LIBERACAO)).toContain('id.segredo');
   });
 
   it('libera depois do envio e guarda o token', async () => {

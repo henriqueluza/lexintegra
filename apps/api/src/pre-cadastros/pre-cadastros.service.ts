@@ -107,6 +107,21 @@ export class PreCadastrosService {
     };
   }
 
+  /** Renova apenas o cadastro do e-mail comprovado pela sessao autenticada. */
+  async renovar(email: string): Promise<PreCadastroLiberado | null> {
+    const documento = await this.db
+      .collection(COLECAO_PRE_CADASTROS)
+      .doc(idDoPreCadastro(email))
+      .get();
+    const dados = documento.data() as DocumentoPreCadastro | undefined;
+    if (!dados || dados.email !== email) return null;
+    return this.registrar({
+      nome: dados.nome,
+      email,
+      telefone: dados.telefone,
+    });
+  }
+
   /**
    * Confere o token que o navegador apresenta. Usado pelo guard da vitrine.
    *

@@ -5,21 +5,28 @@ import {
   effect,
   inject,
   signal,
+  afterNextRender,
+  afterRenderEffect,
+  DestroyRef,
+  ElementRef,
 } from '@angular/core';
 import type { ProdutoVitrine } from 'shared/esquemas/vitrine';
 import { paraReais } from '../../../comum/moeda';
 import { CarrinhoService } from '../../../publico/carrinho.service';
-import { PreCadastroService } from '../../../publico/pre-cadastro.service';
+import { CatalogoService } from '../../../publico/catalogo.service';
 import { Botao } from '../../../ui/botao/botao';
-import { Carregando } from '../../../ui/carregando/carregando';
 import { EstadoVazio } from '../../../ui/estado-vazio/estado-vazio';
 import { Icone } from '../../../ui/icone/icone';
 import { LinkAcao } from '../../../ui/link-acao/link-acao';
 import { MensagemErro } from '../../../ui/mensagem-erro/mensagem-erro';
+import { apresentar, normalizar } from './apresentacao';
+import { TransicaoBusca } from './transicao-busca';
+import { MovimentoCatalogo } from './movimento-catalogo';
 import { TEXTOS } from '../textos';
 
 /**
- * A vitrine de servicos, travada ate o pre-cadastro (item 2.1.3).
+ * A vitrine de servicos, travada ate o pre-cadastro (item 2.1.3) — ou ate a
+ * sessao de quem ja tem conta, em qualquer perfil (05/10/2026, `CatalogoService`).
  *
  * A BUSCA SO ACONTECE DEPOIS DA LIBERACAO. Enquanto `liberado()` for falso nao ha
  * requisicao nenhuma — nem para contar quantos servicos existem, nem para
@@ -37,17 +44,17 @@ import { TEXTOS } from '../textos';
  */
 @Component({
   selector: 'app-servicos',
-  imports: [Botao, Carregando, EstadoVazio, Icone, LinkAcao, MensagemErro],
+  imports: [Botao, EstadoVazio, Icone, LinkAcao, MensagemErro],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './servicos.html',
-  styleUrl: './servicos.css',
+  styleUrls: ['./servicos.css', './servicos-movimento.css'],
 })
 export class Servicos {
-  private readonly preCadastro = inject(PreCadastroService);
+  private readonly catalogo = inject(CatalogoService);
   protected readonly carrinho = inject(CarrinhoService);
 
   protected readonly textos = TEXTOS;
-  protected readonly liberado = this.preCadastro.liberado;
+  protected readonly liberado = this.catalogo.liberado;
   protected readonly carregando = signal(false);
   protected readonly falhou = signal(false);
   protected readonly produtos = signal<readonly ProdutoVitrine[] | null>(null);
@@ -62,18 +69,99 @@ export class Servicos {
    */
   /** Busca local, sobre o que ja veio: nenhuma chamada nova por tecla. */
   protected readonly busca = signal('');
+  private readonly termoAplicado = signal('');
+  private readonly transicaoBusca = new TransicaoBusca();
+  private readonly elemento = inject(ElementRef<HTMLElement>);
+  protected readonly fichas = computed(() =>
+    (this.produtos() ?? []).map(apresentar),
+  );
   protected readonly filtrados = computed(() => {
-    const termo = normalizar(this.busca().trim());
-    const todos = this.produtos() ?? [];
-    if (termo === '') return todos;
-    return todos.filter((produto) =>
-      normalizar(`${produto.nome} ${produto.descricao}`).includes(termo),
-    );
+    const termo = normalizar(this.termoAplicado().trim());
+    return this.fichas().filter((ficha) => ficha.busca.includes(termo));
   });
+  protected readonly abertos = signal<ReadonlySet<string>>(new Set());
+  protected readonly aviso = signal<{ nome: string; indice: number } | null>(
+    null,
+  );
+  protected readonly descricoesLongas = signal<ReadonlySet<string>>(new Set());
+  private movimento?: MovimentoCatalogo;
+
+  private medirDescricoes(raiz: HTMLElement): void {
+    const ids = new Set(this.descricoesLongas());
+    for (const ficha of this.filtrados()) {
+      if (this.abertos().has(ficha.produto.id)) continue;
+      const corpo = raiz.ownerDocument.getElementById(
+        'detalhes-' + ficha.produto.id,
+      );
+      const descricao = corpo?.querySelector<HTMLElement>(
+        '.produto__descricao',
+      );
+      if (descricao && descricao.scrollHeight > descricao.clientHeight + 1)
+        ids.add(ficha.produto.id);
+      else ids.delete(ficha.produto.id);
+    }
+    const atual = this.descricoesLongas();
+    if (ids.size !== atual.size || [...ids].some((id) => !atual.has(id)))
+      this.descricoesLongas.set(ids);
+  }
+
+  protected pesquisar(termo: string): void {
+    this.busca.set(termo);
+    const normalizado = normalizar(termo.trim());
+    const ids = new Set(
+      this.fichas()
+        .filter((ficha) => ficha.busca.includes(normalizado))
+        .map((ficha) => ficha.produto.id),
+    );
+    this.transicaoBusca.aplicar(this.elemento.nativeElement, ids, () => {
+      this.movimento?.capturar('.produto');
+      this.termoAplicado.set(termo);
+    });
+  }
+
+  protected alternar(id: string): void {
+    this.movimento?.capturar('.produto__rodape');
+    this.abertos.update((atual) => {
+      const proximo = new Set(atual);
+      if (proximo.has(id)) proximo.delete(id);
+      else proximo.add(id);
+      return proximo;
+    });
+  }
+
+  protected quantidade(id: string): number {
+    return this.carrinho.itens().filter((item) => item.produtoId === id).length;
+  }
+
+  protected desfazer(): void {
+    const aviso = this.aviso();
+    if (aviso) this.carrinho.remover(aviso.indice);
+    this.aviso.set(null);
+  }
 
   private readonly tentado = signal(false);
 
   constructor() {
+    const elemento = inject(ElementRef<HTMLElement>);
+    afterRenderEffect(() => {
+      this.filtrados();
+      this.medirDescricoes(elemento.nativeElement);
+    });
+    let medidas: ResizeObserver | undefined;
+    afterNextRender(() => {
+      if (typeof ResizeObserver !== 'undefined') {
+        medidas = new ResizeObserver(() =>
+          this.medirDescricoes(elemento.nativeElement),
+        );
+        medidas.observe(elemento.nativeElement);
+      }
+      this.movimento = new MovimentoCatalogo(elemento.nativeElement);
+    });
+    inject(DestroyRef).onDestroy(() => {
+      medidas?.disconnect();
+      this.movimento?.destruir();
+      this.transicaoBusca.cancelar();
+    });
     /*
      * Dispara uma vez, quando a liberacao chega — pelo envio do formulario ou
      * pela restauracao do armazenamento depois da hidratacao.
@@ -87,8 +175,14 @@ export class Servicos {
     return paraReais(centavos);
   }
 
-  protected adicionar(produto: ProdutoVitrine): void {
-    this.carrinho.adicionar(produto);
+  protected adicionar(produto: ProdutoVitrine, evento: Event): void {
+    if (this.carrinho.adicionar(produto)) {
+      this.aviso.set({
+        nome: produto.nome,
+        indice: this.carrinho.quantidade() - 1,
+      });
+      this.movimento?.adicionar(evento.currentTarget as HTMLElement);
+    }
   }
 
   protected async buscar(): Promise<void> {
@@ -97,7 +191,7 @@ export class Servicos {
     this.falhou.set(false);
 
     try {
-      this.produtos.set(await this.preCadastro.listarVitrine());
+      this.produtos.set(await this.catalogo.listar());
     } catch {
       /*
        * A causa nao vai para a tela. Um 401 aqui significa token vencido, e a
@@ -109,12 +203,4 @@ export class Servicos {
       this.carregando.set(false);
     }
   }
-}
-
-/** Minusculas e sem acento: "revisao" encontra "Revisão". */
-function normalizar(texto: string): string {
-  return texto
-    .toLocaleLowerCase('pt-BR')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
 }
