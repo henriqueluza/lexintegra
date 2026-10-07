@@ -29,6 +29,21 @@ const TETO_PRECO_CENTAVOS = 100_000_000;
  */
 const TETO_PRAZO_DIAS = 3650;
 
+/*
+ * Sessenta entregaveis por produto. Era vinte ate o catalogo inicial do
+ * escritorio (outubro de 2026), cujo Plano Prime de 12 meses tem 59: um por
+ * contrato, parecer, termo, relatorio e analise do ano.
+ *
+ * O teto nao e limite de transacao. A confirmacao do pagamento cria todos os
+ * pedidos do carrinho, com seus entregaveis e trilhas, num commit so, e o
+ * Firestore deixou de limitar o numero de escritas por commit em 29/03/2023 —
+ * o que sobra e o tamanho da requisicao, 10 MiB. O pior carrinho
+ * (`TETO_ITENS_CARRINHO` produtos com este teto e textos no tamanho maximo)
+ * fica abaixo de 1 MiB, e `compra-maxima.integration-spec.ts` o confirma contra
+ * o emulador.
+ */
+export const TETO_ENTREGAVEIS_POR_PRODUTO = 60;
+
 export const esquemaProduto = z.object({
   nome: z
     .string()
@@ -66,7 +81,10 @@ export const esquemaProduto = z.object({
         .max(160, 'Nome de entregavel muito longo.'),
     )
     .min(1, 'Liste ao menos um entregavel.')
-    .max(20, 'Sao no maximo 20 entregaveis por produto.'),
+    .max(
+      TETO_ENTREGAVEIS_POR_PRODUTO,
+      `Sao no maximo ${String(TETO_ENTREGAVEIS_POR_PRODUTO)} entregaveis por produto.`,
+    ),
 
   /** Texto de apoio exibido ao cliente. Pode ser vazio. */
   textosOrientativos: z

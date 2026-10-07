@@ -255,6 +255,20 @@ e passe a lista ao Claude como "ajustes finais".
   cadastrar e publicar os produtos pelo módulo administrativo, com escopo,
   entregáveis e preços definitivos. Validar a exibição para usuários com acesso
   e o fluxo de contratação. Os placeholders da landing não são produtos reais.
+- [x] Script de cadastro dos seis produtos iniciais, pela API, idempotente pelo
+  nome (`scripts/cadastrar-catalogo-inicial.mjs`, dados em
+  `scripts/catalogo-inicial/produtos.data.ts`). Teto de entregáveis subiu de 20
+  para 60 por causa do Plano Prime de 12 meses (59).
+- [x] Confirmações do catálogo inicial (06/10/2026): 4 análises contratuais no
+  Prime 3 meses, 3 reuniões no Pacote 2, nenhuma no Pacote 3 por enquanto.
+- [ ] 👤 Confirmar com o escritório o número de revisões permitidas
+  (`REVISOES_PADRAO`, zero por enquanto em todos os produtos). Levar também: o Pacote 1 lista "Anamnese inicial" como entregável, separado da
+  ficha de anamnese que a plataforma já tem; as descrições prometem "3x" no
+  cartão, que segue bloqueado pela homologação; e os limites mensais
+  (tira-dúvidas, contratos por mês) ficam só no texto, sem trava no sistema.
+- [ ] 👤 Depois das confirmações, ajustar o arquivo de dados e rodar
+  `node scripts/cadastrar-catalogo-inicial.mjs --prod` (pede e-mail e senha de
+  administrador no terminal e confirmação pelo domínio).
 
 
 **Alertas e ClamAV (achados de 29/09)**
