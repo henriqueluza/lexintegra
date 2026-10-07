@@ -1,10 +1,17 @@
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { CatalogoService } from '../../publico/catalogo.service';
 import { Landing } from './landing';
 import { NEVOA } from './conteudo-nevoa';
 async function montar(): Promise<HTMLElement> {
   await TestBed.configureTestingModule({
     imports: [Landing],
+    providers: [
+      provideRouter([]),
+      /* O convite do fim da pagina so pergunta se o catalogo ja esta liberado. */
+      { provide: CatalogoService, useValue: { liberado: () => false } },
+    ],
   }).compileComponents();
   const fixture = TestBed.createComponent(Landing);
   fixture.detectChanges();

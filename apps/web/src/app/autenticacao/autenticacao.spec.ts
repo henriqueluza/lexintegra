@@ -438,6 +438,16 @@ describe('ApiService', () => {
     await reativacao;
   });
 
+  it('lista o catalogo do usuario logado no caminho autenticado', async () => {
+    const promessa = api.listarCatalogo();
+    const chamada = http.expectOne('/api/catalogo');
+
+    expect(chamada.request.headers.has('X-Pre-Cadastro')).toBe(false);
+    expect(ehCaminhoPublico('/api/catalogo')).toBe(false);
+    chamada.flush([]);
+    await expect(promessa).resolves.toEqual([]);
+  });
+
   it('propaga a falha para a tela decidir a mensagem', async () => {
     const promessa = api.listarAdvogados();
     http

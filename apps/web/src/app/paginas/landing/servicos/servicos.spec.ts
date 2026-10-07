@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { ComponentFixture } from '@angular/core/testing';
 import type { ProdutoVitrine } from 'shared';
-import { PreCadastroService } from '../../../publico/pre-cadastro.service';
+import { CatalogoService } from '../../../publico/catalogo.service';
 import { TEXTOS } from '../textos';
 import { Servicos } from './servicos';
 
@@ -29,10 +29,10 @@ function montar(): ComponentFixture<Servicos> {
     imports: [Servicos],
     providers: [
       {
-        provide: PreCadastroService,
+        provide: CatalogoService,
         useValue: {
           liberado,
-          listarVitrine: () => {
+          listar: () => {
             pedidos += 1;
             return resposta instanceof Error
               ? Promise.reject(resposta)
@@ -128,6 +128,31 @@ describe('Servicos', () => {
       expect(texto(fixture)).toContain('Parecer de risco trabalhista');
       expect(texto(fixture)).toContain('Plano de ação');
       expect(texto(fixture).replace(/\s/g, ' ')).toContain('R$ 2.500,00');
+    });
+
+    it('mostra as unidades repetidas numa linha so, com a quantidade', async () => {
+      resposta = [
+        {
+          ...PARECER,
+          entregaveis: [
+            'Parecer em PDF',
+            'Contrato personalizado (1 de 3)',
+            'Contrato personalizado (2 de 3)',
+            'Contrato personalizado (3 de 3)',
+          ],
+        },
+      ];
+      const fixture = montar();
+
+      await liberar(fixture);
+
+      const itens = [
+        ...(fixture.nativeElement as HTMLElement).querySelectorAll(
+          '.produto__entregaveis li',
+        ),
+      ].map((item) => item.textContent?.trim());
+      expect(itens).toEqual(['Parecer em PDF', 'Contrato personalizado 3×']);
+      resposta = [PARECER];
     });
 
     it('mostra quantas reunioes e revisoes o servico inclui', async () => {
@@ -243,7 +268,7 @@ describe('Servicos', () => {
   });
 
   /**
-   * O carrinho (Etapa 8). Nao chama a API: o contador de `listarVitrine` e o unico
+   * O carrinho (Etapa 8). Nao chama a API: o contador de `listar` e o unico
    * caminho de rede deste componente, e ele continua em um.
    */
   describe('carrinho', () => {

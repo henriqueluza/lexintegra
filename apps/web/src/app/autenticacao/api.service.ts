@@ -87,6 +87,16 @@ export class ApiService {
     );
   }
 
+  /**
+   * O catalogo para quem esta logado, em qualquer perfil (05/10/2026). Sem token
+   * de pre-cadastro e sem App Check: quem autoriza e o ID token, que o
+   * interceptor anexa porque `/api/catalogo` nao esta na lista de caminhos
+   * publicos.
+   */
+  listarCatalogo(): Promise<ProdutoVitrine[]> {
+    return firstValueFrom(this.http.get<ProdutoVitrine[]>('/api/catalogo'));
+  }
+
   listarAdvogados(): Promise<AdvogadoResumo[]> {
     return firstValueFrom(
       this.http.get<AdvogadoResumo[]>('/api/admin/advogados'),

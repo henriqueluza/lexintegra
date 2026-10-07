@@ -75,7 +75,7 @@
       <p>{{ produto.descricao }}</p>
 
       <ul class="produto__entregaveis">
-        @for (entregavel of produto.entregaveis; track entregavel) {
+        @for (entregavel of entregaveis(produto); track entregavel) {
         <li><app-icone nome="confere" tamanho="p" />{{ entregavel }}</li>
         }
       </ul>
