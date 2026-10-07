@@ -42,6 +42,8 @@ interface Opcoes {
   resposta?: CheckoutIniciado | Error | HttpErrorResponse;
   /** B2, decisoes.md 3.4: o que `GET /api/checkout/metodos` responde. */
   cartao?: boolean | Error;
+  /** Sandbox do AbacatePay (07/10/2026). */
+  teste?: boolean;
 }
 
 async function montar(opcoes: Opcoes = {}): Promise<Cenario> {
@@ -91,7 +93,11 @@ async function montar(opcoes: Opcoes = {}): Promise<Cenario> {
             const cartao = opcoes.cartao ?? true;
             return cartao instanceof Error
               ? Promise.reject(cartao)
-              : Promise.resolve({ pix: true, cartao });
+              : Promise.resolve({
+                  pix: true,
+                  cartao,
+                  teste: opcoes.teste ?? false,
+                });
           },
           situacao: (id: string) => {
             consultas.push(id);
@@ -494,6 +500,23 @@ describe('Checkout', () => {
         'input[value="cartao"]',
       ) as HTMLInputElement;
     }
+
+    /* Sandbox (07/10/2026): ninguem pode achar que o PIX de teste e real. */
+    it('em sandbox, avisa que nenhum pagamento e real', async () => {
+      const { fixture } = await montar({ teste: true });
+
+      expect(
+        fixture.nativeElement.querySelector('.checkout__teste')?.textContent,
+      ).toContain('não são reais');
+    });
+
+    it('fora do sandbox, sem aviso de teste', async () => {
+      const { fixture } = await montar();
+
+      expect(
+        fixture.nativeElement.querySelector('.checkout__teste'),
+      ).toBeNull();
+    });
 
     it('mostra o cartao desabilitado, com "em breve"', async () => {
       const { fixture } = await montar({ cartao: false });

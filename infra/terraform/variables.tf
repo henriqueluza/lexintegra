@@ -88,13 +88,20 @@ variable "pagamentos_modo" {
     junto com `PRODUCAO_DESTRAVADA` no codigo — a variavel sozinha derruba o
     boot (regra inviolavel 20). Com `producao`, o Cloud Run passa a ler os tres
     secrets do AbacatePay, que precisam ter versao antes do merge.
+
+    `sandbox` (07/10/2026, TEMPORARIO): o checkout de producao cobra no ambiente
+    de TESTE do AbacatePay, para o escritorio testar compra e reuniao antes da
+    chave de producao. Le a chave `abacatepay-api-key-dev` (prefixo `abc_dev_`,
+    conferido no boot) e os dois secrets do webhook; a tela de checkout avisa
+    que nenhum pagamento e real. Desfazer: voltar o default para `desligado`.
+    Roteiro em docs/runbooks/teste-em-producao.md.
   EOT
   type        = string
-  default     = "desligado"
+  default     = "sandbox"
 
   validation {
-    condition     = contains(["desligado", "producao"], var.pagamentos_modo)
-    error_message = "pagamentos_modo aceita so \"desligado\" ou \"producao\"."
+    condition     = contains(["desligado", "sandbox", "producao"], var.pagamentos_modo)
+    error_message = "pagamentos_modo aceita so \"desligado\", \"sandbox\" ou \"producao\"."
   }
 }
 
@@ -106,13 +113,17 @@ variable "reunioes_modo" {
     recebe GRAPH_TENANT_ID e GRAPH_CLIENT_ID destas variaveis e
     GRAPH_CLIENT_SECRET do secret `graph-client-secret`. `falso` nunca: a sala
     falsa mandaria convite com link inexistente (ver cloud_run.tf).
+
+    `sem-sala` (07/10/2026): o cliente marca, a reuniao fica sem link ate o
+    Teams ser ligado, e nenhum link e inventado (regra inviolavel 13). Ver
+    `apps/api/src/reunioes/sala/modo.ts` e o runbook ligar-terceiros, 2.7.
   EOT
   type        = string
-  default     = "desligado"
+  default     = "sem-sala"
 
   validation {
-    condition     = contains(["desligado", "graph"], var.reunioes_modo)
-    error_message = "reunioes_modo aceita so \"desligado\" ou \"graph\"."
+    condition     = contains(["desligado", "sem-sala", "graph"], var.reunioes_modo)
+    error_message = "reunioes_modo aceita so \"desligado\", \"sem-sala\" ou \"graph\"."
   }
 }
 

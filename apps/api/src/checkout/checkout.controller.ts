@@ -19,6 +19,10 @@ import {
   type SituacaoCheckout,
 } from 'shared';
 import { CARTAO_HABILITADO } from '../pagamentos/gateway/cartao.js';
+import {
+  CONFIGURACAO_PAGAMENTOS,
+  type ConfiguracaoPagamentos,
+} from '../pagamentos/gateway/modo.js';
 import { Publico } from '../autenticacao/decoradores.js';
 import { Limite } from '../limite/decoradores.js';
 import { separarToken } from '../pre-cadastros/liberacao.js';
@@ -44,6 +48,8 @@ export class CheckoutController {
   constructor(
     private readonly checkout: CheckoutService,
     @Inject(CARTAO_HABILITADO) private readonly cartaoHabilitado: boolean,
+    @Inject(CONFIGURACAO_PAGAMENTOS)
+    private readonly pagamentos: ConfiguracaoPagamentos,
   ) {}
 
   /**
@@ -54,7 +60,11 @@ export class CheckoutController {
   @Publico()
   @Get('metodos')
   metodos(): MetodosDisponiveis {
-    return { pix: true, cartao: this.cartaoHabilitado };
+    return {
+      pix: true,
+      cartao: this.cartaoHabilitado,
+      teste: this.pagamentos.modo === 'sandbox',
+    };
   }
 
   /*

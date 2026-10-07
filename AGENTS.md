@@ -73,6 +73,16 @@ varredor, a sonda de idade e `reivindicar` ignoram; só o reenvio manual o acord
 e é assim que as salas nascem quando o Teams for ligado. Em `sem-sala`, a sonda não
 mede reunião sem sala nem advogado sem `usuarioTeams`.
 
+**Teste em produção sem terceiros (07/10/2026, TEMPORÁRIO, branch `chore/teste-em-producao`):**
+produção roda com **`PAGAMENTOS_MODO=sandbox`** (o checkout cobra no ambiente de
+teste do AbacatePay com `abacatepay-api-key-dev`; `GET /api/checkout/metodos`
+devolve `teste: true` e a tela avisa que nenhum pagamento é real) e
+**`REUNIOES_MODO=sem-sala`**. O Terraform passou a aceitar `sandbox` em
+`pagamentos_modo` e `sem-sala` em `reunioes_modo`; o sandbox lê os secrets do
+webhook dos mesmos contêineres da produção. Roteiro, pré-requisitos e como
+desfazer: `docs/runbooks/teste-em-producao.md`. **Desfazer o sandbox antes de
+destravar a produção** (e gravar `webhookSecret` novo).
+
 **Bloco B — resíduos do checkout (branch `fix/residuos-checkout`):** o
 `webhookSecret` saiu do log de requisição (exclusão no Cloud Logging pelo nome do
 parâmetro) e dos spans (redação em `observabilidade/instrumentacao-http.ts`). **A

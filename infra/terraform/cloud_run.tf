@@ -192,8 +192,14 @@ resource "google_cloud_run_v2_service" "api" {
       # Os tres secrets do AbacatePay de producao, so com `producao`. Antes
       # disso NAO sao referenciados: secret sem versao impede a revisao de
       # subir (ver `secrets.tf`).
+      # Com `sandbox` (TEMPORARIO), os mesmos tres nomes leem a chave de
+      # desenvolvimento e os secrets do webhook (`secrets.tf`).
       dynamic "env" {
-        for_each = var.pagamentos_modo == "producao" ? local.secrets_abacatepay : {}
+        for_each = (
+          var.pagamentos_modo == "producao" ? local.secrets_abacatepay :
+          var.pagamentos_modo == "sandbox" ? local.secrets_abacatepay_sandbox :
+          {}
+        )
         content {
           name = env.key
           value_source {

@@ -692,6 +692,14 @@ faz. Os comandos estão em
   publicação de doze meses e modo `REUNIOES_MODO=sem-sala` (07/10/2026, PR
   `feat/calendario-reunioes`): em produção dá para marcar reunião sem o Teams;
   o link fica pendente e o evento da sala, estacionado.
+- [ ] **Antes do merge de `chore/teste-em-producao` — Henrique:** gravar
+  `abacatepay-webhook-secret` e `abacatepay-webhook-chave-hmac` e conferir
+  `abacatepay-api-key-dev` (`docs/runbooks/teste-em-producao.md`, 1).
+- [ ] **Depois do deploy — Henrique:** webhook de desenvolvimento no painel do
+  AbacatePay e o teste de ponta a ponta (mesmo runbook, 3 e 4).
+- [ ] **Ao terminar o teste — Henrique e Claude:** voltar `pagamentos_modo` a
+  `desligado`, apagar os dados de teste (LGPD) e, antes da produção real,
+  gravar `webhookSecret` novo (mesmo runbook, 5).
 - [ ] **Depois de ligar o Teams — Henrique:** acordar as salas das reuniões
   marcadas no modo `sem-sala` (runbook 2.7: `/admin/reunioes`, "Tentar de
   novo").

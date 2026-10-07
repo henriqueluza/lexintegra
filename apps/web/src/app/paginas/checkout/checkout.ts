@@ -99,6 +99,8 @@ export class Checkout {
    * perguntar deixa como esta: o servidor recusa com 422 de todo jeito.
    */
   protected readonly cartaoDisponivel = signal(true);
+  /** Sandbox do AbacatePay: nenhum pagamento e real, e a tela diz em destaque. */
+  protected readonly ambienteDeTeste = signal(false);
   private readonly errosDoServidor = signal<
     Partial<Record<'nome' | 'email', string>>
   >({});
@@ -160,8 +162,9 @@ export class Checkout {
     const token = this.preCadastro.token();
     if (token === null) return;
     try {
-      const { cartao } = await this.api.metodos(token);
+      const { cartao, teste } = await this.api.metodos(token);
       this.cartaoDisponivel.set(cartao);
+      this.ambienteDeTeste.set(teste);
       if (!cartao) this.formulario.controls.metodo.setValue('pix');
     } catch {
       /* Fica como esta: a recusa de verdade e do servidor. */

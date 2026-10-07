@@ -2,6 +2,9 @@
   <a class="checkout__marca" routerLink="/carrinho">Voltar ao carrinho</a>
   <p class="checkout__auxiliar">Carrinho / Checkout / Confirmação</p>
   <h1 class="checkout__titulo">{{ textos.titulo }}</h1>
+  @if (ambienteDeTeste()) {
+  <p class="checkout__teste" role="note">{{ textos.ambienteDeTeste }}</p>
+  }
 
   <div class="checkout__caixa">
     @switch (etapa()) { @case ('preparando') {

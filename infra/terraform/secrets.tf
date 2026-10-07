@@ -122,6 +122,16 @@ locals {
     ABACATEPAY_WEBHOOK_SECRET     = "abacatepay-webhook-secret"
     ABACATEPAY_WEBHOOK_CHAVE_HMAC = "abacatepay-webhook-chave-hmac"
   }
+  # Sandbox em producao (07/10/2026, TEMPORARIO): a chave de desenvolvimento e
+  # os dois secrets do webhook. Os do webhook sao os MESMOS contêineres da
+  # producao: o `webhookSecret` e nosso (gerado no runbook) e a chave do HMAC e
+  # publica e igual nos dois ambientes. Ao destravar a producao, o
+  # `webhookSecret` ganha uma versao nova.
+  secrets_abacatepay_sandbox = {
+    ABACATEPAY_API_KEY            = "abacatepay-api-key-dev"
+    ABACATEPAY_WEBHOOK_SECRET     = "abacatepay-webhook-secret"
+    ABACATEPAY_WEBHOOK_CHAVE_HMAC = "abacatepay-webhook-chave-hmac"
+  }
   secrets_graph = {
     GRAPH_CLIENT_SECRET = "graph-client-secret"
   }

@@ -28,6 +28,12 @@ export type MetodoPagamento = (typeof METODOS_PAGAMENTO)[number];
 export type MetodosDisponiveis = {
   readonly pix: true;
   readonly cartao: boolean;
+  /**
+   * `PAGAMENTOS_MODO=sandbox` (07/10/2026): o checkout cobra no ambiente de
+   * TESTE do AbacatePay, e nenhum pagamento e real. A tela diz isso em
+   * destaque, para ninguem tentar pagar com o banco um PIX que nao existe.
+   */
+  readonly teste: boolean;
 };
 
 export const esquemaNovoCheckout = z.object({

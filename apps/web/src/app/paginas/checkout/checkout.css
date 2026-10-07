@@ -220,3 +220,14 @@
   font-size: var(--t-micro);
   font-weight: var(--peso-medio);
 }
+
+/* Sandbox do AbacatePay: aviso alto, na cor de alerta, sem parecer erro. */
+.checkout__teste {
+  margin: 0;
+  padding: var(--s3) var(--s4);
+  border: var(--borda-fina) solid var(--estado-alerta);
+  border-radius: var(--raio);
+  background: var(--estado-alerta-fundo);
+  color: var(--texto);
+  font-size: var(--t-menor);
+}

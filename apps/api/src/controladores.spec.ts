@@ -46,6 +46,7 @@ import { AlertaFalso } from './alertas/alerta.js';
 import { EstornosAdminController } from './estornos/estornos.admin.controller.js';
 import type { EstornosService } from './estornos/estornos.service.js';
 import { CheckoutController } from './checkout/checkout.controller.js';
+import type { ConfiguracaoPagamentos } from './pagamentos/gateway/modo.js';
 import type { CheckoutService } from './checkout/checkout.service.js';
 import { ClientesAdminController } from './clientes/clientes.admin.controller.js';
 import type { ClientesService } from './clientes/clientes.service.js';
@@ -794,7 +795,10 @@ describe('EstornosAdminController', () => {
 });
 
 describe('CheckoutController', () => {
-  function montar(cartao = true): {
+  function montar(
+    cartao = true,
+    modo: 'sandbox' | 'desligado' = 'desligado',
+  ): {
     controlador: CheckoutController;
     chamadas: string[];
   } {
@@ -811,6 +815,7 @@ describe('CheckoutController', () => {
         },
       } as unknown as CheckoutService,
       cartao,
+      { modo } as ConfiguracaoPagamentos,
     );
     return { controlador, chamadas };
   }
@@ -835,11 +840,18 @@ describe('CheckoutController', () => {
     expect(montar(false).controlador.metodos()).toEqual({
       pix: true,
       cartao: false,
+      teste: false,
     });
     expect(montar(true).controlador.metodos()).toEqual({
       pix: true,
       cartao: true,
+      teste: false,
     });
+  });
+
+  /* Sandbox (07/10/2026): a tela avisa que nenhum pagamento e real. */
+  it('em sandbox, avisa que o ambiente e de teste', () => {
+    expect(montar(false, 'sandbox').controlador.metodos().teste).toBe(true);
   });
 
   /** O id sai do token que o guard ja validou — o segredo nunca chega ao servico. */

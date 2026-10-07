@@ -14,6 +14,10 @@ import {
 export const TEXTOS_CHECKOUT = {
   titulo: 'Finalizar compra',
 
+  /* `PAGAMENTOS_MODO=sandbox` (07/10/2026): o checkout cobra no ambiente de teste. */
+  ambienteDeTeste:
+    'Ambiente de teste: os pagamentos desta página não são reais. Não pague o PIX pelo seu banco.',
+
   semLiberacao: {
     titulo: 'Conclua o cadastro para continuar',
     texto:
