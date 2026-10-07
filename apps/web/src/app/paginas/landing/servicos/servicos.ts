@@ -9,7 +9,7 @@ import {
 import type { ProdutoVitrine } from 'shared/esquemas/vitrine';
 import { paraReais } from '../../../comum/moeda';
 import { CarrinhoService } from '../../../publico/carrinho.service';
-import { PreCadastroService } from '../../../publico/pre-cadastro.service';
+import { CatalogoService } from '../../../publico/catalogo.service';
 import { Botao } from '../../../ui/botao/botao';
 import { Carregando } from '../../../ui/carregando/carregando';
 import { EstadoVazio } from '../../../ui/estado-vazio/estado-vazio';
@@ -19,7 +19,8 @@ import { MensagemErro } from '../../../ui/mensagem-erro/mensagem-erro';
 import { TEXTOS } from '../textos';
 
 /**
- * A vitrine de servicos, travada ate o pre-cadastro (item 2.1.3).
+ * A vitrine de servicos, travada ate o pre-cadastro (item 2.1.3) — ou ate a
+ * sessao de quem ja tem conta, em qualquer perfil (05/10/2026, `CatalogoService`).
  *
  * A BUSCA SO ACONTECE DEPOIS DA LIBERACAO. Enquanto `liberado()` for falso nao ha
  * requisicao nenhuma — nem para contar quantos servicos existem, nem para
@@ -43,11 +44,11 @@ import { TEXTOS } from '../textos';
   styleUrl: './servicos.css',
 })
 export class Servicos {
-  private readonly preCadastro = inject(PreCadastroService);
+  private readonly catalogo = inject(CatalogoService);
   protected readonly carrinho = inject(CarrinhoService);
 
   protected readonly textos = TEXTOS;
-  protected readonly liberado = this.preCadastro.liberado;
+  protected readonly liberado = this.catalogo.liberado;
   protected readonly carregando = signal(false);
   protected readonly falhou = signal(false);
   protected readonly produtos = signal<readonly ProdutoVitrine[] | null>(null);
@@ -97,7 +98,7 @@ export class Servicos {
     this.falhou.set(false);
 
     try {
-      this.produtos.set(await this.preCadastro.listarVitrine());
+      this.produtos.set(await this.catalogo.listar());
     } catch {
       /*
        * A causa nao vai para a tela. Um 401 aqui significa token vencido, e a
