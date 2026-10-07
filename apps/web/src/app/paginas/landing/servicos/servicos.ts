@@ -7,6 +7,10 @@ import {
   signal,
 } from '@angular/core';
 import type { ProdutoVitrine } from 'shared/esquemas/vitrine';
+import {
+  agruparEntregaveis,
+  rotuloDoEntregavel,
+} from '../../../comum/agrupar-entregaveis';
 import { paraReais } from '../../../comum/moeda';
 import { CarrinhoService } from '../../../publico/carrinho.service';
 import { CatalogoService } from '../../../publico/catalogo.service';
@@ -86,6 +90,11 @@ export class Servicos {
 
   protected preco(centavos: number): string {
     return paraReais(centavos);
+  }
+
+  /** "Contrato personalizado 24×" no lugar de vinte e quatro linhas iguais. */
+  protected entregaveis(produto: ProdutoVitrine): string[] {
+    return agruparEntregaveis(produto.entregaveis).map(rotuloDoEntregavel);
   }
 
   protected adicionar(produto: ProdutoVitrine): void {
