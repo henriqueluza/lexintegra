@@ -30,9 +30,23 @@
   </div>
 </div>
 } @else if (carregando()) {
-<app-carregando variante="bloco" [rotulo]="textos.servicos.carregando" />
+<div role="status" [attr.aria-label]="textos.servicos.carregando">
+  <label class="busca"
+    ><input
+      type="search"
+      disabled
+      [placeholder]="textos.servicos.busca"
+      [attr.aria-label]="textos.servicos.busca"
+  /></label>
+  <div class="vitrine esqueletos" aria-hidden="true">
+    @for (item of [1, 2, 3]; track item) {
+    <div class="esqueleto"><span></span><span></span><span></span><i></i></div>
+    }
+  </div>
+</div>
 } @else if (falhou()) {
 <div class="falha">
+  <p>Verifique sua conexão e tente de novo.</p>
   <app-mensagem-erro variante="bloco">
     {{ textos.servicos.falha }}
   </app-mensagem-erro>
@@ -44,6 +58,7 @@
 <div class="vazio" role="status">
   <app-estado-vazio [mensagem]="textos.servicos.vazio" icone="documento" />
   <p>{{ textos.servicos.vazioApoio }}</p>
+  <a href="mailto:suportelexintegra@gmail.com">Falar com o suporte</a>
 </div>
 } @else {
 <div class="ferramentas">
@@ -54,7 +69,8 @@
       type="search"
       [placeholder]="textos.servicos.busca"
       [value]="busca()"
-      (input)="busca.set($any($event.target).value)"
+      (input)="pesquisar($any($event.target).value)"
+      (keydown.escape)="pesquisar('')"
     />
   </label>
   <p class="ferramentas__contagem" aria-live="polite">
@@ -64,52 +80,108 @@
 </div>
 
 @if (filtrados().length === 0) {
-<p class="sem-resultado">{{ textos.servicos.semResultado }}</p>
+<div class="sem-resultado" role="status">
+  <h2>Nenhum serviço para “{{ busca() }}”.</h2>
+  <p>
+    {{ textos.servicos.semResultado }} Experimente outro nome ou tipo de
+    entrega.
+  </p>
+  <button type="button" class="expansor" (click)="pesquisar('')">
+    Limpar busca
+  </button>
+</div>
 }
 
 <div class="vitrine">
-  @for (produto of filtrados(); track produto.id) {
-  <article class="produto">
-    <div class="produto__corpo">
-      <h2>{{ produto.nome }}</h2>
-      <p>{{ produto.descricao }}</p>
-
-      <ul class="produto__entregaveis">
-        @for (entregavel of entregaveis(produto); track entregavel) {
-        <li><app-icone nome="confere" tamanho="p" />{{ entregavel }}</li>
+  @for (ficha of filtrados(); track ficha.produto.id) {
+  <article
+    class="produto"
+    [attr.data-produto-id]="ficha.produto.id"
+    [class.expandido]="abertos().has(ficha.produto.id)"
+  >
+    <div class="produto__superficie">
+      <span class="fio" aria-hidden="true"><i></i></span>
+      <span class="brilho" aria-hidden="true"><i></i></span>
+      <div class="produto__corpo" [id]="'detalhes-' + ficha.produto.id">
+        <h2>{{ ficha.produto.nome }}</h2>
+        @if (ficha.meta) {
+        <p class="produto__meta">{{ ficha.meta }}</p>
+        } @if (ficha.descricao) {
+        <p class="produto__descricao">{{ ficha.descricao }}</p>
+        } @if (ficha.linhas.length) {
+        <div class="produto__ficha">
+          <p class="produto__rotulo">O que inclui</p>
+          <ul class="produto__entregaveis" [id]="'itens-' + ficha.produto.id">
+            @for (linha of ficha.linhas; track $index; let i = $index) {
+            <li [hidden]="i >= 4 && !abertos().has(ficha.produto.id)">
+              <span class="quantidade" [attr.data-quantidade]="linha.quantidade"
+                >{{ linha.quantidade }}</span
+              >
+              <span>{{ linha.nome }}</span>
+            </li>
+            }
+          </ul>
+        </div>
+        } @if (ficha.linhas.length > 4 ||
+        descricoesLongas().has(ficha.produto.id)) {
+        <button
+          class="expansor"
+          type="button"
+          [attr.aria-expanded]="abertos().has(ficha.produto.id)"
+          [attr.aria-controls]="'detalhes-' + ficha.produto.id"
+          (click)="alternar(ficha.produto.id)"
+        >
+          {{ abertos().has(ficha.produto.id) ? 'Ver menos' : 'Ver tudo (' +
+          ficha.linhas.length + ')' }}
+          <app-icone nome="seta-direita" tamanho="p" />
+        </button>
         }
-      </ul>
-
-      <p class="produto__inclui">
-        <span
-          ><app-icone nome="video" tamanho="p" />{{ produto.quantidadeReunioes
-          }} {{ textos.servicos.reunioes }}</span
-        >
-        <span
-          ><app-icone nome="documento" tamanho="p" />{{
-          produto.numeroRevisoesPermitidas }} {{ textos.servicos.revisoes
-          }}</span
-        >
-      </p>
-
+      </div>
       <div class="produto__rodape">
-        <p class="produto__preco">
-          <small>{{ textos.servicos.valor }}</small>
-          {{ preco(produto.precoCentavos) }}
-        </p>
+        <p class="produto__preco">{{ ficha.preco }}</p>
+        @if (ficha.condicao) {
+        <p class="produto__condicao">{{ ficha.condicao }}</p>
+        }
         <div class="produto__acao">
-          <app-botao
-            variante="secundario"
-            tamanho="p"
-            [desabilitado]="carrinho.cheio()"
-            (click)="adicionar(produto)"
+          <button
+            type="button"
+            class="adicionar"
+            [class.no-carrinho]="quantidade(ficha.produto.id) > 0"
+            [disabled]="carrinho.cheio()"
+            [attr.aria-label]="'Adicionar ao carrinho: ' + ficha.produto.nome + (quantidade(ficha.produto.id) ? ' — ' + quantidade(ficha.produto.id) + ' no carrinho; adicionar mais um' : '')"
+            (click)="adicionar(ficha.produto, $event)"
           >
-            {{ textos.servicos.carrinho.adicionar }}
-          </app-botao>
+            {{ quantidade(ficha.produto.id) ? 'No carrinho (' +
+            quantidade(ficha.produto.id) + ') · Adicionar mais' : 'Adicionar' }}
+            <app-icone
+              [nome]="quantidade(ficha.produto.id) ? 'confere' : 'mais'"
+              tamanho="p"
+            />
+          </button>
         </div>
       </div>
     </div>
   </article>
+  }
+</div>
+
+<div class="notificacao" aria-live="polite">
+  @if (aviso(); as mensagem) {
+  <div class="toast">
+    <app-icone nome="confere" tamanho="p" />
+    <p>{{ mensagem.nome }} adicionado ao carrinho.</p>
+    <button type="button" class="expansor" (click)="desfazer()">
+      Desfazer
+    </button>
+    <button
+      type="button"
+      class="fechar-aviso"
+      aria-label="Fechar aviso"
+      (click)="aviso.set(null)"
+    >
+      <app-icone nome="fecha" tamanho="p" />
+    </button>
+  </div>
   }
 </div>
 
@@ -134,3 +206,5 @@
   >
 </aside>
 } }
+
+<span class="ponto-carrinho" aria-hidden="true"></span>

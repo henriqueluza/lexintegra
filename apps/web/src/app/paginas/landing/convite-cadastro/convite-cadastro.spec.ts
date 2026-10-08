@@ -188,4 +188,120 @@ describe('ConviteCadastro', () => {
 
     expect(dialogo.showModal).toHaveBeenCalled();
   });
+
+  it('anima entrada e fechamento, impede fechamento duplicado e guarda a escolha', async () => {
+    const dialogo = await montar();
+    const matchMedia = window.matchMedia;
+    window.matchMedia = () => ({ matches: false }) as MediaQueryList;
+    let terminar!: () => void;
+    const finished = new Promise<void>((resolve) => {
+      terminar = resolve;
+    });
+    const cancel = jest.fn();
+    dialogo.animate = jest.fn(() => ({
+      finished,
+      cancel,
+    })) as unknown as typeof dialogo.animate;
+    try {
+      disparar(true);
+      expect(dialogo.animate).toHaveBeenCalledTimes(1);
+      const escape = new Event('cancel', { cancelable: true });
+      dialogo.dispatchEvent(escape);
+      dialogo.dispatchEvent(new Event('cancel', { cancelable: true }));
+      expect(escape.defaultPrevented).toBe(true);
+      expect(dialogo.animate).toHaveBeenCalledTimes(2);
+      expect(dialogo.close).not.toHaveBeenCalled();
+      expect(localStorage.getItem(CHAVE_CONVITE)).not.toBeNull();
+      terminar();
+      await Promise.resolve();
+      expect(dialogo.close).toHaveBeenCalledTimes(1);
+      expect(cancel).toHaveBeenCalled();
+    } finally {
+      window.matchMedia = matchMedia;
+    }
+  });
+
+  it('mantém o dialogo utilizável se uma animação de fechamento for cancelada', async () => {
+    const dialogo = await montar();
+    const matchMedia = window.matchMedia;
+    window.matchMedia = () => ({ matches: false }) as MediaQueryList;
+    let rejeitar!: () => void;
+    const finished = new Promise<void>((_resolve, reject) => {
+      rejeitar = () => reject(new Error('cancelada'));
+    });
+    dialogo.animate = jest.fn(() => ({
+      finished,
+      cancel: jest.fn(),
+    })) as unknown as typeof dialogo.animate;
+    try {
+      disparar(true);
+      dialogo.querySelector('button')!.click();
+      rejeitar();
+      await Promise.resolve();
+      window.matchMedia = () => ({ matches: true }) as MediaQueryList;
+      dialogo.querySelector('button')!.click();
+      expect(dialogo.close).toHaveBeenCalledTimes(1);
+    } finally {
+      window.matchMedia = matchMedia;
+    }
+  });
+
+  it('não anima com movimento reduzido e não depende do armazenamento', async () => {
+    const dialogo = await montar();
+    const matchMedia = window.matchMedia;
+    window.matchMedia = () => ({ matches: true }) as MediaQueryList;
+    dialogo.animate = jest.fn();
+    const leitura = jest
+      .spyOn(Storage.prototype, 'getItem')
+      .mockImplementation(() => {
+        throw new Error('bloqueado');
+      });
+    const escrita = jest
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(() => {
+        throw new Error('bloqueado');
+      });
+    try {
+      disparar(true);
+      dialogo.querySelector('button')!.click();
+      expect(dialogo.animate).not.toHaveBeenCalled();
+      expect(dialogo.close).toHaveBeenCalled();
+    } finally {
+      leitura.mockRestore();
+      escrita.mockRestore();
+      window.matchMedia = matchMedia;
+    }
+  });
+
+  it('mantém Tab e Shift+Tab dentro do convite sem interceptar outras teclas', async () => {
+    const dialogo = await montar();
+    disparar(true);
+    const primeiro = dialogo.querySelector('button')!;
+    const ultimo =
+      dialogo.querySelector<HTMLButtonElement>('.convite__depois')!;
+    primeiro.focus();
+    const voltar = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    primeiro.dispatchEvent(voltar);
+    expect(voltar.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(ultimo);
+    const avancar = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      bubbles: true,
+      cancelable: true,
+    });
+    ultimo.dispatchEvent(avancar);
+    expect(document.activeElement).toBe(primeiro);
+    const outra = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true,
+    });
+    primeiro.dispatchEvent(outra);
+    expect(outra.defaultPrevented).toBe(false);
+  });
 });

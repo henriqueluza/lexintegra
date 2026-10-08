@@ -197,3 +197,16 @@ describe('Entrar', () => {
     expect(link).not.toBeNull();
   });
 });
+
+it('oferece criar senha ao sair de um email valido sem consultar existencia', () => {
+  const { fixture, sessao } = montar();
+  preencher(fixture, 'ana@exemplo.test', '');
+  const campo = fixture.nativeElement.querySelector('app-campo') as HTMLElement;
+  campo.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+  fixture.detectChanges();
+  const convite = fixture.nativeElement.querySelector(
+    '.retomar-acesso',
+  ) as HTMLElement;
+  expect(convite.textContent).toContain('Criar ou recuperar senha');
+  expect(sessao.tentativas).toEqual([]);
+});

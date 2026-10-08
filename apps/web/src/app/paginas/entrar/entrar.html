@@ -10,9 +10,25 @@
       rotulo="E-mail"
       tipo="email"
       formControlName="email"
+      (focusout)="emailConferido.set(true)"
       [obrigatorio]="true"
       [erro]="erroDoCampo('email')"
     />
+
+    @if (emailConferido() && formulario.controls.email.valid) {
+    <aside class="retomar-acesso" aria-live="polite">
+      <strong>Já fez o pré-cadastro e ainda não tem senha?</strong>
+      <p>
+        Você pode criar sua senha mesmo sem ter comprado. Se já tem uma, também
+        pode recuperá-la.
+      </p>
+      <a
+        routerLink="/recuperar-senha"
+        [state]="{ email: formulario.controls.email.value }"
+        >Criar ou recuperar senha</a
+      >
+    </aside>
+    }
 
     <app-campo
       rotulo="Senha"
@@ -22,7 +38,12 @@
       [erro]="erroDoCampo('senha')"
     />
 
-    <a class="link" routerLink="/recuperar-senha">Esqueci minha senha</a>
+    <a
+      class="link"
+      routerLink="/recuperar-senha"
+      [state]="{ email: formulario.controls.email.value }"
+      >Esqueci minha senha</a
+    >
 
     @if (falha(); as motivo) {
     <app-mensagem-erro variante="bloco"
@@ -39,9 +60,6 @@
     <p>
       Ainda não contratou? <a routerLink="/servicos">Conheça os serviços</a>
     </p>
-    <p>
-      Primeiro acesso depois da compra? Use o link enviado ao seu e-mail para
-      definir sua senha.
-    </p>
+    <p>Primeiro acesso? Crie sua senha pelo link enviado ao seu e-mail.</p>
   </div>
 </app-moldura-acesso>

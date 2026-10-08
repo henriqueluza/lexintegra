@@ -37,10 +37,10 @@ export class CatalogoService {
     () => this.logado() || this.preCadastro.liberado(),
   );
 
-  listar(): Promise<ProdutoVitrine[]> {
-    return this.logado()
-      ? this.api.listarCatalogo()
-      : this.preCadastro.listarVitrine();
+  async listar(): Promise<ProdutoVitrine[]> {
+    if (!this.logado()) return this.preCadastro.listarVitrine();
+    if (!this.preCadastro.conferir()) await this.preCadastro.renovar();
+    return this.api.listarCatalogo();
   }
 
   /**

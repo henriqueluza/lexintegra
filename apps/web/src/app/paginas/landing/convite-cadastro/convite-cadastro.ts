@@ -24,7 +24,7 @@ export const CHAVE_CONVITE = 'lexintegra:convite-cadastro';
 export const SILENCIO_DO_CONVITE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * O convite do fim da home (07/10/2026): quem rola a landing ate o fim e ainda
+ * O convite dos servicos (07/10/2026): quem chega a secao de servicos e ainda
  * nao liberou o catalogo recebe um popup que leva ao cadastro inicial.
  *
  * O FORMULARIO NAO MORA AQUI. O botao leva a `/cadastro`, que ja tem o
@@ -48,6 +48,8 @@ export const SILENCIO_DO_CONVITE_MS = 7 * 24 * 60 * 60 * 1000;
   styleUrl: './convite-cadastro.css',
 })
 export class ConviteCadastro {
+  private animacao?: Animation;
+  private fechando = false;
   private readonly catalogo = inject(CatalogoService);
   private readonly dialogo =
     viewChild.required<ElementRef<HTMLDialogElement>>('dialogo');
@@ -58,6 +60,7 @@ export class ConviteCadastro {
 
   constructor() {
     const destruir = inject(DestroyRef);
+    destruir.onDestroy(() => this.animacao?.cancel());
     afterNextRender(() => {
       /*
        * O clique no fundo escuro cai no proprio `<dialog>`, fora do conteudo.
@@ -80,7 +83,8 @@ export class ConviteCadastro {
         observador.disconnect();
         this.abrir();
       });
-      observador.observe(this.sentinela().nativeElement);
+      const alvo = this.sentinela().nativeElement;
+      observador.observe(alvo.closest('section') ?? alvo);
       destruir.onDestroy(() => observador.disconnect());
     });
   }
@@ -90,10 +94,66 @@ export class ConviteCadastro {
     const dialogo = this.dialogo().nativeElement;
     if (dialogo.open || typeof dialogo.showModal !== 'function') return;
     dialogo.showModal();
+    if (this.reduzido()) return;
+    this.animacao = dialogo.animate(
+      [
+        { opacity: 0, transform: 'translateY(24px) scale(.98)' },
+        { opacity: 1, transform: 'translateY(0) scale(1)' },
+      ],
+      { duration: 480, easing: 'cubic-bezier(.16,1,.3,1)' },
+    );
   }
 
-  protected fechar(): void {
-    this.dialogo().nativeElement.close();
+  protected conterFoco(evento: KeyboardEvent): void {
+    if (evento.key !== 'Tab') return;
+    const dialogo = this.dialogo().nativeElement;
+    const controles = dialogo.querySelectorAll<HTMLElement>('button, a[href]');
+    const primeiro = controles[0],
+      ultimo = controles[controles.length - 1];
+    const ativo = dialogo.ownerDocument.activeElement;
+    if (evento.shiftKey && ativo === primeiro) {
+      evento.preventDefault();
+      ultimo.focus();
+    } else if (!evento.shiftKey && ativo === ultimo) {
+      evento.preventDefault();
+      primeiro.focus();
+    }
+  }
+
+  protected fechar(evento?: Event): void {
+    evento?.preventDefault();
+    if (this.fechando) return;
+    const dialogo = this.dialogo().nativeElement;
+    this.lembrar();
+    this.animacao?.cancel();
+    if (this.reduzido()) {
+      dialogo.close();
+      return;
+    }
+    this.fechando = true;
+    this.animacao = dialogo.animate(
+      [
+        { opacity: 1, transform: 'translateY(0) scale(1)' },
+        { opacity: 0, transform: 'translateY(12px) scale(.99)' },
+      ],
+      { duration: 180, easing: 'ease-out' },
+    );
+    void this.animacao.finished.then(
+      () => {
+        dialogo.close();
+        this.fechando = false;
+      },
+      () => {
+        this.fechando = false;
+      },
+    );
+  }
+
+  private reduzido(): boolean {
+    return (
+      typeof this.dialogo().nativeElement.animate !== 'function' ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    );
   }
 
   protected lembrar(): void {

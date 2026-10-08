@@ -53,6 +53,14 @@ export class RecuperarSenha {
     email: ['', [Validators.required, Validators.email]],
   });
 
+  constructor() {
+    const email = this.router.currentNavigation()?.extras.state?.[
+      'email'
+    ] as unknown;
+    if (typeof email === 'string')
+      this.formulario.controls.email.setValue(email);
+  }
+
   protected erroDoEmail(): string | null {
     const controle = this.formulario.controls.email;
     if (!controle.touched || controle.valid) return null;

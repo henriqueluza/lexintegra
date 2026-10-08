@@ -47,6 +47,8 @@ export type FichaAnamnese = {
 
 /** O que a tela recebe para abrir a ficha: situacao e o que vem do cadastro. */
 export type SituacaoAnamnese = {
+  /** A ficha so e exigida depois da primeira compra. */
+  readonly exigida?: boolean;
   readonly preenchida: boolean;
   readonly preenchimento: {
     readonly nome: string;

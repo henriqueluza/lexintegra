@@ -63,6 +63,13 @@ export class PreCadastroService {
     return this.ler() !== null;
   }
 
+  async renovar(): Promise<void> {
+    const liberacao = await this.api.renovarAcessoCatalogo();
+    if (liberacao === null) return;
+    this.gravar(liberacao);
+    this.guardada.set(liberacao);
+  }
+
   async enviar(dados: NovoPreCadastro): Promise<void> {
     const liberacao = await this.api.criarPreCadastro(dados);
 

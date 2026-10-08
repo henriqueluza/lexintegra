@@ -55,7 +55,7 @@ desde já; se o escritório mudar um prazo, muda-se a constante em
 | O quê | Guarda | Fundamento |
 |---|---|---|
 | Cadastro, ficha de anamnese, pedidos, pagamentos, estornos, contestações, aceites e comunicações | **5 anos depois do último pedido** do cliente | CDC, art. 27; prazos fiscais |
-| Cadastro inicial (pré-cadastro) que nunca virou conta | **6 meses depois do último envio** | Minimização |
+| Cadastro inicial (pré-cadastro), inclusive conta opcional sem compra | **6 meses depois do último envio** | Minimização |
 | Registros de acesso à aplicação | **6 meses** (186 dias no bucket de logs `registros-de-acesso`) | Marco Civil, art. 15 (prazo mínimo) |
 | Anexos e entregáveis | **30 dias depois de entregue** (rotina própria, abaixo) | Decisões 2.2 e 2.3 |
 
@@ -104,7 +104,7 @@ O executor é `apps/api/src/lgpd/eliminacao.service.ts`. O mapa
 
 **Por prazo**, na rotina diária (`retencao-diaria`, sem job novo):
 
-- cadastro inicial de quem nunca virou cliente, 6 meses depois do último envio:
+- cadastro inicial sem compra, 6 meses depois do último envio (conta opcional segue o protocolo com aviso e exclusão do Auth):
   eliminado **sem aviso** (não há conta nem arquivo, e escrever para o lead só
   para dizer que ele vai sair seria tratar o dado mais uma vez);
 - cliente cujo último pedido tem 5 anos: abre a solicitação por prazo, com

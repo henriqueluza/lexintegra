@@ -2,6 +2,7 @@ import type { Auth } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
 import type { EnfileiradorDeEventos } from '../../outbox/enfileirador.service.js';
 import { OutboxService } from '../../outbox/outbox.service.js';
+import type { AcessoInicialService } from './acesso-inicial.service.js';
 import { RedefinicaoSenhaService } from './redefinicao.service.js';
 
 /*
@@ -40,7 +41,10 @@ interface UsuarioFalso {
   disabled?: boolean;
 }
 
-function montar(usuarios: UsuarioFalso[]): {
+function montar(
+  usuarios: UsuarioFalso[],
+  uidInicial: string | null = null,
+): {
   servico: RedefinicaoSenhaService;
   banco: BancoFalso;
   despachados: string[];
@@ -78,8 +82,15 @@ function montar(usuarios: UsuarioFalso[]): {
     servico: new RedefinicaoSenhaService(
       auth,
       banco as unknown as Firestore,
-      new OutboxService(banco as unknown as Firestore, { atrasoDoVarredorMs: 0, arrendamentoMs: 60_000, loteDoVarredor: 100 }),
+      new OutboxService(banco as unknown as Firestore, {
+        atrasoDoVarredorMs: 0,
+        arrendamentoMs: 60_000,
+        loteDoVarredor: 100,
+      }),
       enfileirador,
+      {
+        criarSePreCadastrado: async () => uidInicial,
+      } as unknown as AcessoInicialService,
     ),
     banco,
     despachados,
@@ -172,4 +183,11 @@ describe('RedefinicaoSenhaService', () => {
       /PERMISSION_DENIED/,
     );
   });
+});
+
+it('enfileira o link de senha tambem para um pre-cadastro sem compra', async () => {
+  const { servico, banco, despachados } = montar([], 'uid-inicial');
+  await servico.solicitar(ANA.email);
+  expect(banco.criados[0]).toMatch(/^outbox\/redefinir-senha_uid-inicial_/);
+  expect(despachados).toEqual([banco.criados[0].replace('outbox/', '')]);
 });

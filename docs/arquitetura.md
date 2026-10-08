@@ -215,6 +215,21 @@ Campos obrigatórios: `UID` estável por reunião, `DTSTART` e `DTEND` com fuso 
 
 ### ADR-07 — Redefinição de senha por token em vez de senha inicial
 
+**Emenda de 07/10/2026 — senha opcional antes da compra (pedido do titular do projeto).**
+Quem já fez o pré-cadastro pode solicitar a criação de senha mesmo com a
+liberação expirada. O endpoint existente de redefinição procura primeiro a conta;
+na ausência, cria exclusivamente o perfil cliente a partir do pré-cadastro
+existente e enfileira o link pelo outbox. Não cria documento de cliente nem pedido:
+isso continua acontecendo na compra. A resposta pública permanece genérica; não
+há consulta pública de existência ao digitar o e-mail. A posse do e-mail é
+comprovada pelo link para definir a senha.
+
+Ao consultar o catálogo autenticado, `POST /api/catalogo/acesso` renova o
+pré-cadastro do e-mail da sessão, sem aceitar um e-mail arbitrário no corpo.
+A home continua sem chamadas de API. A ficha inicial só é exigida depois da
+primeira compra. Contas opcionais sem compra seguem o prazo de seis meses do
+pré-cadastro e o protocolo existente de eliminação da conta, com aviso prévio.
+
 **Contexto.** Os itens 2.2.4 e 2.4.5 preveem envio de senha por e-mail. Isso foi substituído a pedido.
 
 **Decisão.** Usar os action links nativos do Firebase Auth. A API gera o link pelo Admin SDK e o envia pelo Resend com identidade visual própria, em vez de usar o e-mail padrão do Firebase, que tem remetente e template limitados.

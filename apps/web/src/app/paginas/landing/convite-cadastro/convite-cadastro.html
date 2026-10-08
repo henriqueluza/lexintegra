@@ -1,13 +1,16 @@
-<!-- O fim da landing: quando ele entra na tela, o convite abre. -->
+<!-- Referencia local; o observador acompanha a secao de servicos. -->
 <div class="sentinela" #sentinela aria-hidden="true"></div>
 
 <dialog
   #dialogo
+  tabindex="-1"
   class="convite"
   aria-labelledby="convite-titulo"
   aria-describedby="convite-texto"
   data-lenis-prevent
   (close)="lembrar()"
+  (cancel)="fechar($event)"
+  (keydown)="conterFoco($event)"
 >
   <div class="convite__conteudo">
     <button

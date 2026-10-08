@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 /**
- * O convite do fim da home (07/10/2026): quem rola a landing ate o fim, sem ter
+ * O convite dos servicos (07/10/2026): quem chega a secao de servicos, sem ter
  * liberado o catalogo, recebe um popup que leva ao cadastro inicial.
  *
  * O UNICO arquivo que comeca com o armazenamento vazio. Os outros recebem o
@@ -30,41 +30,32 @@ function espiarApi(page: Page): string[] {
  * fechar uma resposta, como em `telas-publicas.visual.spec.ts`.
  */
 async function esperarLanding(page: Page): Promise<void> {
-  const pergunta = page.locator('.pergunta button').first();
-  await expect(async () => {
-    await pergunta.click();
-    await expect(pergunta).toHaveAttribute('aria-expanded', 'true', {
-      timeout: 500,
-    });
-  }).toPass({ timeout: 15_000 });
-  await pergunta.click();
-  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.locator('#servicos').scrollIntoViewIfNeeded();
 }
 
 async function irAoFim(page: Page): Promise<void> {
   await page.goto('/');
   await esperarLanding(page);
   await page.evaluate(() =>
-    window.scrollTo(0, document.documentElement.scrollHeight),
+    document.querySelector('#servicos')?.scrollIntoView(),
   );
 }
 
 const convite = (page: Page): Locator =>
   page.getByRole('dialog', { name: 'Seu próximo passo começa aqui.' });
 
-test('aparece no fim da home e leva ao cadastro, sem chamar a API', async ({
+test('aparece na secao de servicos e leva ao cadastro, sem chamar a API', async ({
   page,
 }) => {
   const chamadas = espiarApi(page);
 
   await page.goto('/');
-  await esperarLanding(page);
   await expect(convite(page)).toBeHidden();
 
-  await page.evaluate(() =>
-    window.scrollTo(0, document.documentElement.scrollHeight),
-  );
-  await expect(convite(page)).toBeVisible();
+  await expect(async () => {
+    await page.locator('#servicos').scrollIntoViewIfNeeded();
+    await expect(convite(page)).toBeVisible({ timeout: 500 });
+  }).toPass({ timeout: 15_000 });
   expect(chamadas).toEqual([]);
 
   await convite(page)

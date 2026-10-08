@@ -4,6 +4,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { FIRESTORE, AUTH_FIREBASE } from '../../firebase/firebase.module.js';
 import { EnfileiradorDeEventos } from '../../outbox/enfileirador.service.js';
 import { ehDuplicata } from '../../outbox/evento.js';
+import { AcessoInicialService } from './acesso-inicial.service.js';
 import { OutboxService } from '../../outbox/outbox.service.js';
 
 /**
@@ -34,6 +35,7 @@ export class RedefinicaoSenhaService {
     @Inject(FIRESTORE) private readonly db: Firestore,
     private readonly outbox: OutboxService,
     private readonly enfileirador: EnfileiradorDeEventos,
+    private readonly acessoInicial: AcessoInicialService,
   ) {}
 
   async solicitar(email: string): Promise<void> {
@@ -68,9 +70,19 @@ export class RedefinicaoSenhaService {
        * mas produziria e-mail nosso a pedido de quem quer que tenha digitado o
        * endereco, e o suspenso e justamente quem tem motivo para insistir.
        */
-      return usuario.disabled ? null : usuario.uid;
-    } catch {
-      return null;
+      if (usuario.disabled) return null;
+      // Retoma uma criacao interrompida entre o Auth e a concessao do perfil.
+      if (!usuario.customClaims?.['role']) {
+        return (
+          (await this.acessoInicial.criarSePreCadastrado(email)) ?? usuario.uid
+        );
+      }
+      return usuario.uid;
+    } catch (erro) {
+      if ((erro as { code?: string } | null)?.code === 'auth/user-not-found') {
+        return this.acessoInicial.criarSePreCadastrado(email);
+      }
+      throw erro;
     }
   }
 

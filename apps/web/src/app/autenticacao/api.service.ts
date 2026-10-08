@@ -93,6 +93,12 @@ export class ApiService {
    * interceptor anexa porque `/api/catalogo` nao esta na lista de caminhos
    * publicos.
    */
+  renovarAcessoCatalogo(): Promise<PreCadastroLiberado | null> {
+    return firstValueFrom(
+      this.http.post<PreCadastroLiberado | null>('/api/catalogo/acesso', {}),
+    );
+  }
+
   listarCatalogo(): Promise<ProdutoVitrine[]> {
     return firstValueFrom(this.http.get<ProdutoVitrine[]>('/api/catalogo'));
   }

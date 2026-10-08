@@ -100,7 +100,7 @@ describe('RecuperarSenha', () => {
     expect(pedidos).toEqual(['ninguem@escritorio.test']);
     const texto = fixture.nativeElement.textContent as string;
     expect(texto).toContain('Verifique seu e-mail');
-    expect(texto).toContain('Se houver uma conta');
+    expect(texto).toContain('Se houver um pré-cadastro ou uma conta');
     expect(texto).not.toContain('nao encontrado');
   });
 

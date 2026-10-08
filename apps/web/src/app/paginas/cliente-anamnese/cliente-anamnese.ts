@@ -160,7 +160,11 @@ export class ClienteAnamnese implements OnInit {
    */
   async ngOnInit(): Promise<void> {
     try {
-      const { preenchimento } = await this.api.situacaoDaAnamnese();
+      const { preenchimento, exigida } = await this.api.situacaoDaAnamnese();
+      if (exigida === false) {
+        await this.router.navigateByUrl('/servicos');
+        return;
+      }
       for (const pergunta of PERGUNTAS_ANAMNESE) {
         if (pergunta.preenchimento === undefined) continue;
         const controle = this.respostas.controls[pergunta.chave];

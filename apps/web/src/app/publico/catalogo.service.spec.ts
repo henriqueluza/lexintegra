@@ -24,6 +24,9 @@ function montar(opcoes: {
         useValue: {
           liberado: signal(opcoes.cadastro),
           conferir: () => opcoes.cadastro,
+          renovar: async () => {
+            chamadas.push('renovar');
+          },
           listarVitrine: () => {
             chamadas.push('vitrine');
             return Promise.resolve([]);
@@ -78,7 +81,7 @@ describe('CatalogoService', () => {
       expect(servico.liberado()).toBe(true);
       await expect(servico.conferir()).resolves.toBe(true);
       await servico.listar();
-      expect(chamadas).toEqual(['catalogo']);
+      expect(chamadas).toEqual(['renovar', 'catalogo']);
     },
   );
 

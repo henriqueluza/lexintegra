@@ -171,7 +171,7 @@ export const NEVOA = {
     [
       'Área do cliente',
       'Acompanhe todos os serviços jurídicos contratados em um único ambiente.',
-      'Senha criada após a primeira compra; o cadastro inicial libera o catálogo.',
+      'O pré-cadastro libera o catálogo. Você pode criar uma senha por e-mail mesmo antes de comprar.',
     ],
   ],
   placeholders: [0, 1, 2, 3, 4, 5],

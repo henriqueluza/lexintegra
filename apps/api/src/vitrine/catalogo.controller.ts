@@ -1,5 +1,8 @@
-import { Controller, Get } from '@nestjs/common';
-import type { ProdutoVitrine } from 'shared';
+import { UsuarioAtual } from '../autenticacao/decoradores.js';
+import type { UsuarioAutenticado } from '../autenticacao/usuario.js';
+import { PreCadastrosService } from '../pre-cadastros/pre-cadastros.service.js';
+import { Controller, Get, Post } from '@nestjs/common';
+import type { PreCadastroLiberado, ProdutoVitrine } from 'shared';
 import { Limite } from '../limite/decoradores.js';
 import { VitrineService } from './vitrine.service.js';
 
@@ -23,7 +26,20 @@ import { VitrineService } from './vitrine.service.js';
  */
 @Controller('catalogo')
 export class CatalogoController {
-  constructor(private readonly vitrine: VitrineService) {}
+  constructor(
+    private readonly vitrine: VitrineService,
+    private readonly cadastros: PreCadastrosService,
+  ) {}
+
+  @Limite({ janelaMs: 60_000, maximo: 10 })
+  @Post('acesso')
+  renovar(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+  ): Promise<PreCadastroLiberado | null> {
+    return usuario.email
+      ? this.cadastros.renovar(usuario.email.trim().toLowerCase())
+      : Promise.resolve(null);
+  }
 
   /* O mesmo limite da vitrine publica: leitura repetida, defesa contra raspagem. */
   @Limite({ janelaMs: 60_000, maximo: 60 })

@@ -151,7 +151,12 @@ describe('Servicos', () => {
           '.produto__entregaveis li',
         ),
       ].map((item) => item.textContent?.trim());
-      expect(itens).toEqual(['Parecer em PDF', 'Contrato personalizado 3×']);
+      expect(itens).toEqual([
+        '1Parecer em PDF',
+        '3Contratos personalizados',
+        '2Reuniões',
+        '2Revisões por entregável',
+      ]);
       resposta = [PARECER];
     });
 
@@ -160,8 +165,8 @@ describe('Servicos', () => {
 
       await liberar(fixture);
 
-      expect(texto(fixture)).toContain(TEXTOS.servicos.reunioes);
-      expect(texto(fixture)).toContain(TEXTOS.servicos.revisoes);
+      expect(texto(fixture)).toContain('2 reuniões');
+      expect(texto(fixture)).toContain('Revisões por entregável');
     });
 
     it('some com o aviso de cadeado', async () => {

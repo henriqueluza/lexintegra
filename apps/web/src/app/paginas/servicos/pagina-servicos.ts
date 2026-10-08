@@ -8,7 +8,6 @@ import {
 import { Router } from '@angular/router';
 import { CarrinhoService } from '../../publico/carrinho.service';
 import { CatalogoService } from '../../publico/catalogo.service';
-import { Icone } from '../../ui/icone/icone';
 import { LinkAcao } from '../../ui/link-acao/link-acao';
 import { Servicos } from '../landing/servicos/servicos';
 
@@ -26,10 +25,10 @@ import { Servicos } from '../landing/servicos/servicos';
  */
 @Component({
   selector: 'app-pagina-servicos',
-  imports: [Servicos, Icone, LinkAcao],
+  imports: [Servicos, LinkAcao],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pagina-servicos.html',
-  styleUrl: '../publicas.css',
+  styleUrl: './pagina-servicos.css',
 })
 export class PaginaServicos {
   protected readonly carrinho = inject(CarrinhoService);
