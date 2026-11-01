@@ -345,6 +345,14 @@ export class GraphSalaDeReuniao implements SalaDeReuniao {
 
     if (!resposta.ok) {
       /*
+       * TOKEN RECUSADO NAO E GUARDADO. Um 401 do Graph com o token ainda no
+       * prazo e token revogado (segredo trocado, consentimento retirado): sem
+       * esquecer o guardado, toda nova tentativa ate ele expirar repetiria o
+       * mesmo 401, e trocar o segredo no Secret Manager nao resolveria nada
+       * durante uma hora.
+       */
+      if (resposta.status === 401) this.token = null;
+      /*
        * O TEXTO DO ERRO E PRESERVADO, e nao reduzido a "falhou". E ele que
        * distingue `No application access policy found` — que some sozinho quando
        * a propagacao terminar, e por isso precisa ser reentregue ate o orcamento
@@ -375,13 +383,35 @@ export class GraphSalaDeReuniao implements SalaDeReuniao {
   }
 }
 
-/** O Graph devolve `{ error: { code, message } }`. */
+/**
+ * O texto do erro, nos DOIS formatos que chegam aqui.
+ *
+ * - O Graph devolve `{ error: { code, message } }` — e o de
+ *   `No application access policy found`.
+ * - O endpoint de token do Entra devolve o formato OAuth,
+ *   `{ error: "invalid_client", error_description: "AADSTS7000222: ..." }` — e
+ *   o do client secret expirado. Lido como o do Graph, `error` e um texto e nao
+ *   tem `code`, e o motivo saia "HTTP 401: " e nada mais: o painel mostraria
+ *   uma falha sem dizer que o segredo venceu.
+ *
+ * Do OAuth fica so a primeira frase da descricao: o codigo AADSTS e o que
+ * aconteceu. O resto e link de ajuda e ids de correlacao, que ja estao no log
+ * do Entra.
+ */
 function mensagemDoErro(bruto: unknown): string {
-  const erro = (bruto as { error?: { code?: unknown; message?: unknown } })
-    ?.error;
-  if (erro === undefined) return 'sem corpo de erro';
+  const erro = (bruto as { error?: unknown })?.error;
+  if (erro === undefined || erro === null) return 'sem corpo de erro';
 
-  return [erro.code, erro.message]
+  if (typeof erro === 'string') {
+    const descricao = (bruto as { error_description?: unknown })
+      .error_description;
+    const frase =
+      typeof descricao === 'string' ? (descricao.split('. ')[0] ?? '') : '';
+    return [erro, frase].filter((parte) => parte !== '').join(': ');
+  }
+
+  const { code, message } = erro as { code?: unknown; message?: unknown };
+  return [code, message]
     .filter((parte) => typeof parte === 'string' && parte !== '')
     .join(': ');
 }

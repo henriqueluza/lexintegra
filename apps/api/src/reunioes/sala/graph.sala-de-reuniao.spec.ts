@@ -1,4 +1,5 @@
 import {
+  ERRO_SEGREDO_EXPIRADO,
   ERRO_SEM_POLICY,
   ID_DA_SALA_FICTICIA,
   LINK_DA_SALA_FICTICIA,
@@ -390,6 +391,63 @@ describe('GraphSalaDeReuniao', () => {
       sucesso: false,
       motivo: expect.stringContaining('No application access policy found'),
     });
+  });
+
+  /**
+   * O SEGREDO EXPIRADO, no formato OAuth do Entra. Falha com nova tentativa,
+   * como todas — so um humano resolve, mas o outbox nao sabe disso, e o que
+   * importa e o painel DIZER o que aconteceu: o codigo AADSTS esta no motivo.
+   */
+  it('o client secret expirado vira falha com o codigo AADSTS', async () => {
+    const { sala, requisicoes } = montar([
+      { status: 401, corpo: ERRO_SEGREDO_EXPIRADO },
+    ]);
+
+    const resultado = await sala.criar(PEDIDO);
+
+    expect(resultado).toEqual({
+      sucesso: false,
+      motivo:
+        "HTTP 401: invalid_client: AADSTS7000222: The provided client secret keys for app '11111111-2222-4333-8444-555555555555' are expired",
+    });
+    /* Nem chegou ao Graph: sem token, nenhuma sala. */
+    expect(requisicoes).toHaveLength(1);
+  });
+
+  /**
+   * 401 DO GRAPH ESQUECE O TOKEN. Sem isso, um token revogado continuaria sendo
+   * usado ate expirar, e cada nova tentativa da proxima hora repetiria o 401.
+   */
+  it('um 401 do Graph faz a proxima chamada pedir token novo', async () => {
+    const { sala, requisicoes } = montar([
+      TOKEN_OK,
+      {
+        status: 401,
+        corpo: {
+          error: {
+            code: 'InvalidAuthenticationToken',
+            message: 'Access token validation failure.',
+          },
+        },
+      },
+      TOKEN_OK,
+      REUNIAO_OK,
+      AJUSTE_OK,
+    ]);
+
+    await expect(sala.criar(PEDIDO)).resolves.toMatchObject({
+      sucesso: false,
+      motivo: expect.stringContaining('InvalidAuthenticationToken'),
+    });
+    await expect(sala.criar(PEDIDO)).resolves.toMatchObject({ sucesso: true });
+
+    expect(requisicoes.map((r) => r.url.split('/').at(-1))).toEqual([
+      'token',
+      'createOrGet',
+      'token',
+      'createOrGet',
+      encodeURIComponent(ID_DA_SALA_FICTICIA),
+    ]);
   });
 
   it('reporta falha de rede', async () => {

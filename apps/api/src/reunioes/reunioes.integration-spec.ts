@@ -22,6 +22,12 @@ import { ConvitesService } from './convites.service.js';
 import { HorariosService } from './horarios.service.js';
 import type { DocumentoReuniao } from './reuniao.js';
 import { ReunioesService } from './reunioes.service.js';
+import {
+  ERRO_SEGREDO_EXPIRADO,
+  ERRO_SEM_POLICY,
+  reuniaoNoFormatoReal,
+} from '../arnes-reuniao.js';
+import { GraphSalaDeReuniao } from './sala/graph.sala-de-reuniao.js';
 import { SalaDeReuniaoFalsa } from './sala/sala-de-reuniao-falsa.js';
 import type { ConfiguracaoReunioes } from './sala/modo.js';
 
@@ -634,6 +640,90 @@ describe('a sala e o convite', () => {
       outbox.docs.filter((d) => d.id.startsWith('convite-reuniao_')),
     ).toHaveLength(2);
   });
+
+  /**
+   * AS DUAS FALHAS QUE O TENANT PRODUZ, no ADAPTADOR REAL do Graph (so o
+   * `fetch` e dublado, com os corpos reais de cada erro): a application access
+   * policy que ainda nao chegou a conta organizadora, e o client secret
+   * vencido. As duas viram falha REENTREGAVEL, a reuniao fica sem link, o painel
+   * a mostra com o registro do outbox, e o motivo diz o que aconteceu — e
+   * quando o tenant se corrige, a mesma reuniao ganha a sala.
+   */
+  /*
+   * O roteiro da segunda tentativa muda de um caso para o outro, e de
+   * proposito: na policy o token foi emitido e fica guardado; no segredo
+   * vencido nao houve token, e a segunda tentativa pede um.
+   */
+  const TOKEN = { status: 200, corpo: { access_token: 't', expires_in: 3600 } };
+  const SALA_PRONTA = [
+    { status: 201, corpo: reuniaoNoFormatoReal() },
+    { status: 200, corpo: reuniaoNoFormatoReal() },
+  ];
+
+  it.each([
+    [
+      'sem application access policy',
+      [TOKEN, { status: 403, corpo: ERRO_SEM_POLICY }, ...SALA_PRONTA],
+      'No application access policy found',
+    ],
+    [
+      'com o client secret expirado',
+      [{ status: 401, corpo: ERRO_SEGREDO_EXPIRADO }, TOKEN, ...SALA_PRONTA],
+      'AADSTS7000222',
+    ],
+  ])(
+    'o Graph %s deixa a reuniao no painel, e a reentrega confirma',
+    async (_caso, roteiro, motivo) => {
+      await marcar();
+      const respostas = [...roteiro];
+      const graph = new GraphSalaDeReuniao(
+        {
+          tenantId: 'aaaaaaaa-1111-4222-8333-bbbbbbbbbbbb',
+          clientId: '11111111-2222-4333-8444-555555555555',
+          clientSecret: 'segredo-de-teste',
+        },
+        {
+          fetch: (() => {
+            const proxima = respostas.shift();
+            if (proxima === undefined)
+              throw new Error('resposta nao programada');
+            return Promise.resolve({
+              ok: proxima.status < 400,
+              status: proxima.status,
+              json: () => Promise.resolve(proxima.corpo),
+            } as Response);
+          }) as unknown as typeof fetch,
+        },
+      );
+      const comGraph = new ConvitesService(
+        banco,
+        graph,
+        new OutboxService(banco, CONFIG_OUTBOX),
+        LIGADO,
+      );
+
+      await expect(comGraph.criarSala(EVENTO)).resolves.toEqual({
+        sucesso: false,
+        motivo: expect.stringContaining(motivo),
+      });
+      expect(await lerReuniao('pedido-1', 'r001')).toMatchObject({
+        estado: 'reservada_sem_link',
+        link: null,
+        organizadorId: LIGADO.organizadorPadrao,
+      });
+      expect(await consulta.semSala()).toMatchObject([
+        { id: 'r001', eventoOutboxId: 'criar-sala-reuniao_pedido-1_r001' },
+      ]);
+
+      await expect(comGraph.criarSala(EVENTO)).resolves.toMatchObject({
+        sucesso: true,
+      });
+      expect(await lerReuniao('pedido-1', 'r001')).toMatchObject({
+        estado: 'confirmada',
+      });
+      expect(await consulta.semSala()).toEqual([]);
+    },
+  );
 
   /** Corrida 1: cancelada antes de a sala ser criada. */
   it('reuniao cancelada antes da sala nao chama o provedor', async () => {
