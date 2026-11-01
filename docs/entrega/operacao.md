@@ -92,7 +92,7 @@ servindo.
 | `APP_CHECK_ENFORCE` | sim | `true` | Fora de `"true"`/`"false"`, **recusa subir** em produção | `app-check/exigencia.ts` |
 | `PROXIES_CONFIAVEIS` | não | `2` | Inválido, usa 0. Com o número errado, o limitador conta todo mundo como um visitante só, **sem falhar** | `configurar.ts` |
 | `PAGAMENTOS_MODO` | sim | `producao` (desde 01/11/2026) | Ausente ou inválido, recusa subir. `producao` recusa enquanto `PRODUCAO_DESTRAVADA` for `false` (regra 20) e, destravado, exige `NODE_ENV=production`, chave `abc_prod_` e os dois segredos do webhook | `pagamentos/gateway/modo.ts` |
-| `PAGAMENTOS_CARTAO` | sim | `desabilitado` (B2, decisões 3.4) | Ausente ou inválido, recusa subir. `desabilitado`: o checkout recusa cartão com 422 e a tela mostra "em breve" | `pagamentos/gateway/cartao.ts` |
+| `PAGAMENTOS_CARTAO` | sim | `habilitado` (desde 01/11/2026; B2, decisões 3.4) | Ausente ou inválido, recusa subir. `desabilitado`: o checkout recusa cartão com 422 e a tela mostra "em breve" | `pagamentos/gateway/cartao.ts` |
 | `ABACATEPAY_API_KEY` | com `sandbox` ou `producao` | não definida (secret `abacatepay-api-key`, sem versão, só referenciado com `producao`) | Em `sandbox`, recusa subir sem ela e recusa chave sem o prefixo `abc_dev_`; em `producao`, sem o prefixo `abc_prod_` | `pagamentos/gateway/modo.ts` |
 | `ABACATEPAY_WEBHOOK_SECRET` | com a chave | não definida (secret `abacatepay-webhook-secret`) | Com a chave e sem ela, recusa subir | `pagamentos/gateway/modo.ts` |
 | `ABACATEPAY_WEBHOOK_CHAVE_HMAC` | com a chave | não definida (secret `abacatepay-webhook-chave-hmac`) | Com a chave e sem ela, recusa subir | `pagamentos/gateway/modo.ts` |
@@ -134,7 +134,7 @@ delas: commit, PR e deploy. Nunca um `apply` local.
 |---|---|---|
 | `email_remetente` | `LexIntegra <suporte@notificacoes.lexintegra.com.br>` | Vira `EMAIL_FROM` |
 | `email_resposta` | `suportelexintegra@gmail.com` | Vira `EMAIL_REPLY_TO`. Vazio desliga o reply-to |
-| `pagamentos_cartao` | `desabilitado` | Vira `PAGAMENTOS_CARTAO`. Trocar para `habilitado` quando a homologação do cartão sair (seção 4.2) |
+| `pagamentos_cartao` | `habilitado` | Vira `PAGAMENTOS_CARTAO`. Habilitado em 01/11/2026, com o cartão liberado na conta; `desabilitado` é o caminho de emergência (seção 4.2) |
 | `app_check_enforce` | `"true"` (padrão; o deploy não sobrescreve) | Vira `APP_CHECK_ENFORCE` |
 | `proxies_confiaveis` | `2` | Vira `PROXIES_CONFIAVEIS` |
 | `rastreio_amostragem` | `"0.1"` | Vira `RASTREIO_AMOSTRAGEM` |
@@ -325,11 +325,15 @@ Os seis eventos: `transparent.completed`, `checkout.completed`,
 `checkout.disputed`. **Quem tem acesso ao painel tem acesso ao segredo**
 (ADR-19).
 
-**Cartão, só depois da homologação.** Decidido (decisões 3.4): sem ela, lança
-só com PIX (`pagamentos_cartao = "desabilitado"`). Antes de habilitar, refaça a
-seção 4 de [`runbooks/checkout-sandbox.md`](../runbooks/checkout-sandbox.md): o
-nome do evento de conclusão do cartão **não foi confirmado**. Até lá, a
-proteção é o alerta `pagamento.webhook-evento-desconhecido`.
+**Cartão habilitado em 01/11/2026** (`pagamentos_cartao = "habilitado"`), com o
+cartão liberado no checkout da conta. A rodada de cartão da seção 4 de
+[`runbooks/checkout-sandbox.md`](../runbooks/checkout-sandbox.md) **não foi
+feita**: o formato do evento `checkout.completed` nunca foi capturado. A
+primeira compra por cartão em produção faz o papel dela, de valor baixo e
+seguida de estorno. Se o evento não casar, a proteção é o alerta
+`pagamento.webhook-evento-desconhecido` (ou `pagamento.webhook-ilegivel`), e o
+evento pode ser reenviado pelos *Webhook Logs* depois da correção. Para
+desligar só o cartão: `pagamentos_cartao = "desabilitado"` por PR.
 
 **Voltar atrás:** `PAGAMENTOS_MODO = "desligado"` por PR. O checkout e o
 webhook voltam a responder 503. Um QR já emitido e pago nesse intervalo depende

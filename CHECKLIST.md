@@ -744,7 +744,10 @@ faz. Os comandos estão em
 - [ ] **Teste — Henrique, no sandbox, depois da homologação:** rodada de cartão
   da seção 4 de `docs/runbooks/checkout-sandbox.md`; confirma o nome do evento
   de conclusão do cartão, **o maior risco em aberto**. Depois, PR com
-  `pagamentos_cartao = "habilitado"`.
+  `pagamentos_cartao = "habilitado"`. **O cartão foi habilitado em
+  01/11/2026 sem esta rodada** (branch `chore/ligar-pagamentos-producao`), por
+  decisão do Henrique: a primeira compra por cartão em produção, de valor
+  baixo e estornada, faz o papel dela.
 - [ ] **Teste — Henrique, no sandbox:** alerta artificial pelo caminho real
   (webhook com corpo ilegível, `pagamento.webhook-ilegivel`;
   `alerta-artificial.md`). O caminho alternativo já foi testado em 29/09.
