@@ -90,9 +90,41 @@ export type ResultadoDaSala =
     }
   | { readonly sucesso: false; readonly motivo: string };
 
+/**
+ * Uma sala que ja existe, para o PATCH da remarcacao. `organizadorId` e
+ * `idExterno` sao os PERSISTIDOS na reuniao, nunca os do cadastro atual.
+ */
+export interface SalaExistente {
+  readonly organizadorId: string;
+  readonly idExterno: string;
+  readonly inicio: string;
+  readonly fim: string;
+  readonly assunto: string;
+}
+
+/** O resultado da remarcacao e da remocao: nao ha link novo a devolver. */
+export type ResultadoDaAlteracao =
+  | { readonly sucesso: true }
+  | { readonly sucesso: false; readonly motivo: string };
+
 export interface SalaDeReuniao {
   /** NUNCA lanca: reporta. Quem decide reentregar e o outbox (ADR-03). */
   criar(sala: NovaSala): Promise<ResultadoDaSala>;
+
+  /**
+   * Leva a sala para o horario novo, com as mesmas opcoes da criacao. O link
+   * NAO muda: o convite da remarcacao reusa o que a reuniao ja tem. NUNCA lanca.
+   */
+  atualizar(sala: SalaExistente): Promise<ResultadoDaAlteracao>;
+
+  /**
+   * Apaga a sala de uma reuniao cancelada. Sala que ja nao existe e SUCESSO —
+   * e o que torna a nova tentativa segura. NUNCA lanca.
+   */
+  remover(
+    organizadorId: string,
+    idExterno: string,
+  ): Promise<ResultadoDaAlteracao>;
 }
 
 /**

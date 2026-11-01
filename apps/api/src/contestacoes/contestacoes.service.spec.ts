@@ -63,6 +63,8 @@ async function montar(): Promise<Arranjo> {
     inicio: FUTURO,
     sequence: 0,
     sequenceComunicada: 0,
+    link: 'https://teams.test/sala',
+    idExterno: 'sala_1',
     slotId: `uid-adv_${FUTURO}`,
     clienteId: 'uid-ana',
     advogadoId: 'uid-adv',
@@ -121,9 +123,13 @@ describe('ContestacoesService', () => {
     expect(doc(arranjo, `pagamentos/${COBRANCA}`)['contestacao']).toBe(
       'aberta',
     );
-    expect(arranjo.enfileirados).toHaveLength(3);
+    /* O aviso, os dois CANCEL e o DELETE da sala da reuniao futura. */
+    expect(arranjo.enfileirados).toHaveLength(4);
     expect(arranjo.enfileirados).toContain(
       `pausa-contestacao_${COBRANCA}_uid-ana`,
+    );
+    expect(arranjo.enfileirados).toContain(
+      'remover-sala-reuniao_pedido-1_r001',
     );
   });
 

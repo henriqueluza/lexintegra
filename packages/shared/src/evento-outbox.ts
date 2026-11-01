@@ -35,6 +35,8 @@ export const TIPOS_EVENTO = [
   'acesso-cliente',
   'estorno-integral',
   'criar-sala-reuniao',
+  'atualizar-sala-reuniao',
+  'remover-sala-reuniao',
   'convite-reuniao',
   'cancelamento-reuniao',
   'pausa-contestacao',
@@ -73,6 +75,16 @@ export type TipoEvento = (typeof TIPOS_EVENTO)[number];
  * recebe e o oposto: remover o evento em vez de atualiza-lo. Colapsa-los daria
  * um so montador com um `if` no meio, e o `if` erraria no dia em que a ordem dos
  * campos do iCalendar importasse.
+ */
+
+/*
+ * `atualizar-sala-reuniao` e `remover-sala-reuniao` (`feat/ligar-teams`) NAO
+ * SAO E-MAIL, como `criar-sala-reuniao`: sao o PATCH dos horarios da sala na
+ * remarcacao e o DELETE da sala no cancelamento, na conta organizadora do
+ * escritorio. Passam pelo outbox pelo motivo de toda chamada externa — nao podem
+ * sair de dentro da transacao que remarca ou cancela, e nao podem se perder: uma
+ * sala remarcada sem PATCH expira no horario antigo, e uma sala cancelada sem
+ * DELETE fica aberta, com um link que ainda funciona.
  */
 
 /*

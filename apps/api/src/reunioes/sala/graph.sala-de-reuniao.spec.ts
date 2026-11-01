@@ -282,6 +282,92 @@ describe('GraphSalaDeReuniao', () => {
   });
 
   /* ---------------------------------------------------------------------- */
+  /* Remarcacao e cancelamento (`feat/ligar-teams`)                          */
+  /* ---------------------------------------------------------------------- */
+
+  const EXISTENTE = {
+    organizadorId: ORGANIZADORA_FICTICIA,
+    idExterno: ID_DA_SALA_FICTICIA,
+    inicio: '2026-10-01T17:00:00.000Z',
+    fim: '2026-10-01T18:00:00.000Z',
+    assunto: 'Reunião LexIntegra — pedido fWCFnW-001',
+  };
+
+  it('remarca com o mesmo PATCH da criacao, no horario novo', async () => {
+    const { sala, requisicoes } = montar([TOKEN_OK, AJUSTE_OK]);
+
+    await expect(sala.atualizar(EXISTENTE)).resolves.toEqual({ sucesso: true });
+
+    expect(requisicoes[1].metodo).toBe('PATCH');
+    expect(requisicoes[1].url).toBe(
+      `${SALAS}/${encodeURIComponent(ID_DA_SALA_FICTICIA)}`,
+    );
+    expect(JSON.parse(requisicoes[1].corpo)).toEqual({
+      ...OPCOES_DA_SALA,
+      startDateTime: '2026-10-01T17:00:00.000Z',
+      endDateTime: '2026-10-01T18:00:00.000Z',
+      subject: 'Reunião LexIntegra — pedido fWCFnW-001',
+    });
+  });
+
+  it('a remarcacao recusada e falha, com o motivo', async () => {
+    const { sala } = montar([
+      TOKEN_OK,
+      { status: 403, corpo: ERRO_SEM_POLICY },
+    ]);
+
+    await expect(sala.atualizar(EXISTENTE)).resolves.toEqual({
+      sucesso: false,
+      motivo: expect.stringContaining('No application access policy found'),
+    });
+  });
+
+  it('remove com DELETE no organizador persistido; 204 e sucesso', async () => {
+    const { sala, requisicoes } = montar([
+      TOKEN_OK,
+      { status: 204, corpo: null, semJson: true },
+    ]);
+
+    await expect(
+      sala.remover(ORGANIZADORA_FICTICIA, ID_DA_SALA_FICTICIA),
+    ).resolves.toEqual({ sucesso: true });
+
+    expect(requisicoes[1].metodo).toBe('DELETE');
+    expect(requisicoes[1].url).toBe(
+      `${SALAS}/${encodeURIComponent(ID_DA_SALA_FICTICIA)}`,
+    );
+  });
+
+  /** A nova tentativa de um DELETE que ja deu certo recebe 404. */
+  it('sala que ja nao existe e sucesso na remocao', async () => {
+    const { sala } = montar([
+      TOKEN_OK,
+      {
+        status: 404,
+        corpo: { error: { code: 'NotFound', message: 'Meeting not found.' } },
+      },
+    ]);
+
+    await expect(
+      sala.remover(ORGANIZADORA_FICTICIA, ID_DA_SALA_FICTICIA),
+    ).resolves.toEqual({ sucesso: true });
+  });
+
+  it('a remocao recusada e falha, para o outbox reentregar', async () => {
+    const { sala } = montar([
+      TOKEN_OK,
+      { status: 403, corpo: ERRO_SEM_POLICY },
+    ]);
+
+    await expect(
+      sala.remover(ORGANIZADORA_FICTICIA, ID_DA_SALA_FICTICIA),
+    ).resolves.toEqual({
+      sucesso: false,
+      motivo: expect.stringContaining('No application access policy found'),
+    });
+  });
+
+  /* ---------------------------------------------------------------------- */
   /* Falhas — todas REPORTADAS, nenhuma lancada                              */
   /* ---------------------------------------------------------------------- */
 

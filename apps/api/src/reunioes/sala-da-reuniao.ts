@@ -1,5 +1,6 @@
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 import { codigoCurtoDoPedido, organizadorTeamsDe } from 'shared';
+import type { NovoEvento } from '../outbox/evento.js';
 import type { DocumentoReuniao } from './reuniao.js';
 
 /**
@@ -11,6 +12,24 @@ import type { DocumentoReuniao } from './reuniao.js';
  */
 
 const COLECAO_ADVOGADOS = 'advogados';
+
+/**
+ * O que sai do PATCH e do DELETE. `pulado` diz por que nao houve chamada — e
+ * sucesso do mesmo jeito: nao ha o que reentregar.
+ */
+export type AlteracaoDaSala =
+  | { readonly sucesso: true; readonly pulado?: string }
+  | { readonly sucesso: false; readonly motivo: string };
+
+/**
+ * A sala existe (`idExterno`) e a reuniao nao sabe quem a organiza: so um
+ * documento anterior a `feat/ligar-teams`, que nunca chega aqui em producao — o
+ * Graph nao estava ligado. Falha nomeada em vez de adivinhar o organizador.
+ */
+export const SEM_ORGANIZADOR_GRAVADO = {
+  sucesso: false,
+  motivo: 'reuniao com sala e sem organizadorId gravado',
+} as const;
 
 /**
  * O assunto da SALA no Teams, que NAO e o do calendario.
@@ -71,8 +90,45 @@ export async function fixarOrganizador(
   });
 }
 
+/**
+ * O id da sala no Graph, ou `null`. Ausente conta como nulo: o campo e sempre
+ * escrito pela criacao da reuniao, mas o dado escrito a mao nos testes, e
+ * qualquer documento anterior, pode nao te-lo.
+ */
+export function salaDa(
+  reuniao: Pick<DocumentoReuniao, 'idExterno'>,
+): string | null {
+  const valor = reuniao.idExterno as string | null | undefined;
+  return typeof valor === 'string' && valor !== '' ? valor : null;
+}
+
 /** O organizador persistido, ou `null`. Documento anterior nao tem o campo. */
 export function organizadorGravado(reuniao: DocumentoReuniao): string | null {
   const valor = reuniao.organizadorId;
   return typeof valor === 'string' && valor !== '' ? valor : null;
+}
+
+/**
+ * O `remover-sala-reuniao` de uma reuniao que esta sendo cancelada — ou nada,
+ * se ela nunca ganhou sala. Quem chama o junta aos outros eventos da transacao
+ * num lote so de `registrarSeAusenteEmLote` (leitura antes da escrita).
+ *
+ * O CRITERIO E `idExterno`, e nao `sequenceComunicada`: o `METHOD:CANCEL` so
+ * importa a quem recebeu convite; a sala importa a quem tem o link, e existe
+ * desde o `createOrGet`. Reuniao cancelada no meio da criacao da sala nao tem
+ * `idExterno` aqui — quem pede o DELETE dela e a gravacao do link
+ * (`ConvitesService.gravarSala`), que chega depois e encontra a reuniao cancelada.
+ */
+export function eventoDeRemocaoDaSala(
+  alvo: { readonly pedidoId: string; readonly reuniaoId: string },
+  reuniao: Pick<DocumentoReuniao, 'idExterno' | 'clienteId' | 'sequence'>,
+): NovoEvento[] {
+  if (salaDa(reuniao) === null) return [];
+  return [
+    {
+      tipo: 'remover-sala-reuniao',
+      destinatarioUid: reuniao.clienteId,
+      reuniao: { ...alvo, sequence: reuniao.sequence },
+    },
+  ];
 }

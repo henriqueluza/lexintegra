@@ -37,6 +37,7 @@ import {
 } from '../reunioes/convites.service.js';
 import { OutboxService } from './outbox.service.js';
 import { POLITICA } from './politica.js';
+import { despacharSala, ehDaSala } from './sala-no-despachante.js';
 
 /**
  * O tipo que nao tem montador. NAO ALCANCAVEL: o `never` faz o compilador
@@ -77,6 +78,8 @@ function ehTextoFixo(tipo: TipoEvento): tipo is keyof typeof TEXTOS_FIXOS {
 const NAO_SAO_EMAIL_DE_MODELO = [
   'estorno-integral',
   'criar-sala-reuniao',
+  'atualizar-sala-reuniao',
+  'remover-sala-reuniao',
   'convite-reuniao',
   'cancelamento-reuniao',
   'reuniao-desmarcada-escritorio',
@@ -236,8 +239,8 @@ export class DespachanteOutbox {
     if (registro.tipo === 'estorno-integral') {
       return this.estornarNoGateway(registro);
     }
-    if (registro.tipo === 'criar-sala-reuniao') {
-      return this.criarSalaDeReuniao(registro);
+    if (ehDaSala(registro.tipo)) {
+      return despacharSala(registro, this.convites, this.log);
     }
     if (
       registro.tipo === 'convite-reuniao' ||
@@ -264,33 +267,6 @@ export class DespachanteOutbox {
         resposta === undefined ? mensagem : { ...mensagem, replyTo: resposta },
       ),
     );
-  }
-
-  /**
-   * A SALA DO TEAMS (Etapa 10, arquitetura 7.2). Nao e e-mail, como o estorno.
-   *
-   * O convite NAO nasce aqui: ele nasce na transacao que grava o link, dentro do
-   * servico — junto com a releitura que decide se a reuniao ainda vale. Escrever
-   * os convites daqui os poria fora daquela transacao, e uma falha entre as duas
-   * escritas deixaria a reuniao confirmada sem convite nenhum.
-   */
-  private async criarSalaDeReuniao(
-    registro: RegistroOutbox,
-  ): Promise<EmailResultado> {
-    if (registro.reuniao === undefined) {
-      return { sucesso: false, motivo: 'registro de reuniao sem referencia' };
-    }
-
-    const criada = await this.convites.criarSala(registro.reuniao);
-    if (!criada.sucesso) return { sucesso: false, motivo: criada.motivo };
-
-    if (criada.jaExistia) {
-      this.log.warn(
-        `sala da reuniao ${registro.reuniao.reuniaoId} ja existia no provedor`,
-      );
-    }
-
-    return { sucesso: true, idProvedor: criada.idExterno };
   }
 
   /**

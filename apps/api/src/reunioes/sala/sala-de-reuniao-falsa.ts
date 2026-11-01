@@ -1,8 +1,10 @@
 import {
   ReunioesDesligadas,
   type NovaSala,
+  type ResultadoDaAlteracao,
   type ResultadoDaSala,
   type SalaDeReuniao,
+  type SalaExistente,
 } from './sala-de-reuniao.js';
 
 /**
@@ -52,6 +54,8 @@ export interface SalaRegistrada {
 export class SalaDeReuniaoFalsa implements SalaDeReuniao {
   readonly salas = new Map<string, SalaRegistrada>();
   readonly pedidos: NovaSala[] = [];
+  readonly atualizacoes: SalaExistente[] = [];
+  readonly remocoes: { organizadorId: string; idExterno: string }[] = [];
   private falhasPendentes = 0;
   private falha: FalhaPrevista = 'indisponivel';
 
@@ -98,12 +102,70 @@ export class SalaDeReuniaoFalsa implements SalaDeReuniao {
     });
   }
 
+  /** Como no Graph: a sala que nao existe neste organizador e 404, e falha. */
+  atualizar(sala: SalaExistente): Promise<ResultadoDaAlteracao> {
+    this.atualizacoes.push(sala);
+    const falha = this.consumirFalha();
+    if (falha !== null) return Promise.resolve(falha);
+
+    const chave = this.chaveDoId(sala.organizadorId, sala.idExterno);
+    const existente = chave === null ? undefined : this.salas.get(chave);
+    if (chave === null || existente === undefined) {
+      return Promise.resolve({
+        sucesso: false,
+        motivo: 'NotFound: sala inexistente neste organizador.',
+      });
+    }
+    this.salas.set(chave, { ...existente, inicio: sala.inicio, fim: sala.fim });
+    return Promise.resolve({ sucesso: true });
+  }
+
+  /** Remover o que nao existe e sucesso, como o 404 do DELETE no adaptador. */
+  remover(
+    organizadorId: string,
+    idExterno: string,
+  ): Promise<ResultadoDaAlteracao> {
+    this.remocoes.push({ organizadorId, idExterno });
+    const falha = this.consumirFalha();
+    if (falha !== null) return Promise.resolve(falha);
+
+    const chave = this.chaveDoId(organizadorId, idExterno);
+    if (chave !== null) this.salas.delete(chave);
+    return Promise.resolve({ sucesso: true });
+  }
+
   limpar(): void {
     this.salas.clear();
     this.pedidos.length = 0;
+    this.atualizacoes.length = 0;
+    this.remocoes.length = 0;
     this.falhasPendentes = 0;
   }
+
+  private consumirFalha(): { sucesso: false; motivo: string } | null {
+    if (this.falhasPendentes === 0) return null;
+    this.falhasPendentes -= 1;
+    return { sucesso: false, motivo: FALHAS_PREVISTAS[this.falha] };
+  }
+
+  private chaveDoId(organizadorId: string, idExterno: string): string | null {
+    for (const [chave, sala] of this.salas) {
+      if (
+        sala.organizadorId === organizadorId &&
+        sala.idExterno === idExterno
+      ) {
+        return chave;
+      }
+    }
+    return null;
+  }
 }
+
+const PENDENTE = {
+  sucesso: false,
+  motivo:
+    'A integracao com o Teams ainda nao esta ligada (REUNIOES_MODO=sem-sala).',
+} as const;
 
 /** A identidade de uma sala no `createOrGet`: organizador e `externalId`. */
 function chaveDa(organizadorId: string, externalId: string): string {
@@ -123,6 +185,14 @@ export class SalaDeReuniaoDesligada implements SalaDeReuniao {
   criar(): Promise<ResultadoDaSala> {
     return Promise.reject(new ReunioesDesligadas());
   }
+
+  atualizar(): Promise<ResultadoDaAlteracao> {
+    return Promise.reject(new ReunioesDesligadas());
+  }
+
+  remover(): Promise<ResultadoDaAlteracao> {
+    return Promise.reject(new ReunioesDesligadas());
+  }
 }
 
 /**
@@ -136,10 +206,15 @@ export class SalaDeReuniaoDesligada implements SalaDeReuniao {
  */
 export class SalaDeReuniaoPendente implements SalaDeReuniao {
   criar(): Promise<ResultadoDaSala> {
-    return Promise.resolve({
-      sucesso: false,
-      motivo:
-        'A integracao com o Teams ainda nao esta ligada (REUNIOES_MODO=sem-sala).',
-    });
+    return Promise.resolve(PENDENTE);
+  }
+
+  /* Sem sala criada, nao ha o que remarcar nem remover: nunca e chamado. */
+  atualizar(): Promise<ResultadoDaAlteracao> {
+    return Promise.resolve(PENDENTE);
+  }
+
+  remover(): Promise<ResultadoDaAlteracao> {
+    return Promise.resolve(PENDENTE);
   }
 }

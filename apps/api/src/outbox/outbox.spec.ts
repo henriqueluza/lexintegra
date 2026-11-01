@@ -129,6 +129,34 @@ describe('idDoEvento', () => {
     const reuniao = { pedidoId: 'pedido-1', reuniaoId: 'r001', sequence: 0 };
 
     /**
+     * O DELETE e um por reuniao, como a criacao; o PATCH e um por remarcacao.
+     * Sem o `sequence` no PATCH, a segunda remarcacao colidiria com a primeira
+     * como duplicata esperada, e a sala ficaria no horario do meio.
+     */
+    it('o DELETE e um por reuniao, e o PATCH um por sequence', () => {
+      const remover = (sequence: number): string =>
+        chaveDoEvento({
+          tipo: 'remover-sala-reuniao',
+          destinatarioUid: 'uid-clara',
+          reuniao: { ...reuniao, sequence },
+        });
+      const atualizar = (sequence: number): string =>
+        chaveDoEvento({
+          tipo: 'atualizar-sala-reuniao',
+          destinatarioUid: 'uid-clara',
+          reuniao: { ...reuniao, sequence },
+        });
+
+      expect(remover(1)).toBe('pedido-1_r001');
+      expect(remover(4)).toBe(remover(1));
+      expect(atualizar(1)).toBe('pedido-1_r001_s1');
+      expect(atualizar(2)).toBe('pedido-1_r001_s2');
+      expect(idDoEvento('atualizar-sala-reuniao', atualizar(1))).toBe(
+        'atualizar-sala-reuniao_pedido-1_r001_s1',
+      );
+    });
+
+    /**
      * UMA SALA POR REUNIAO, PARA SEMPRE. A chave nao leva `sequence` nem
      * destinatario: remarcar NAO cria sala nova (ADR-21, decisao 7), e o
      * `create` que estoura na segunda passagem e a prova disso.
@@ -390,6 +418,31 @@ interface Cenario {
   }>;
 }
 
+type MetodoDoDuble =
+  | 'criarSala'
+  | 'atualizarSala'
+  | 'removerSala'
+  | 'montarConvite'
+  | 'montarCancelamento';
+
+/** Os metodos que o cenario nao trocou respondem o caminho feliz. */
+function dubleDeConvites(
+  opcoes: Partial<Record<MetodoDoDuble, () => Promise<unknown>>>,
+): ConvitesService {
+  const trocados = Object.fromEntries(
+    Object.entries(opcoes).filter(([, valor]) => valor !== undefined),
+  );
+  return {
+    criarSala: () => Promise.resolve(SALA_CRIADA),
+    atualizarSala: () => Promise.resolve({ sucesso: true }),
+    removerSala: () => Promise.resolve({ sucesso: true }),
+    montarConvite: () => Promise.resolve(CONVITE),
+    montarCancelamento: () => Promise.resolve(CONVITE),
+    montarAvisoDoEscritorio: () => Promise.resolve(CONVITE),
+    ...trocados,
+  } as unknown as ConvitesService;
+}
+
 function montarCenario(opcoes: {
   registro?: RegistroOutbox | null;
   /** O que `reivindicar` devolve, quando nao e uma concessao. */
@@ -402,6 +455,8 @@ function montarCenario(opcoes: {
   /** Faz `concluir` responder `abandonado`, como se o orcamento tivesse acabado. */
   esgotado?: boolean;
   criarSala?: () => Promise<unknown>;
+  atualizarSala?: () => Promise<unknown>;
+  removerSala?: () => Promise<unknown>;
   montarConvite?: () => Promise<unknown>;
   montarCancelamento?: () => Promise<unknown>;
 }): Cenario {
@@ -456,13 +511,7 @@ function montarCenario(opcoes: {
    * arquivo e o DESPACHANTE — que ele desvia os tres tipos de reuniao de
    * `montar`, e que "nao enviar" conclui como sucesso.
    */
-  const convites = {
-    criarSala: opcoes.criarSala ?? (() => Promise.resolve(SALA_CRIADA)),
-    montarConvite: opcoes.montarConvite ?? (() => Promise.resolve(CONVITE)),
-    montarCancelamento:
-      opcoes.montarCancelamento ?? (() => Promise.resolve(CONVITE)),
-    montarAvisoDoEscritorio: () => Promise.resolve(CONVITE),
-  } as unknown as ConvitesService;
+  const convites = dubleDeConvites(opcoes);
 
   return {
     despachante: new DespachanteOutbox(
@@ -711,6 +760,67 @@ describe('DespachanteOutbox', () => {
       await despachante.despachar('estorno-integral_x');
 
       expect(concluidos[0]?.motivo).toBe('registro de estorno sem cobranca');
+    });
+  });
+
+  /**
+   * O PATCH E O DELETE DA SALA (`feat/ligar-teams`) nao sao e-mail: o
+   * despachante os desvia para o servico de convites, e "pulado" e sucesso.
+   */
+  describe('alteracao da sala do Teams', () => {
+    const REUNIAO = { pedidoId: 'pedido-1', reuniaoId: 'r001', sequence: 1 };
+
+    it.each([
+      ['remover-sala-reuniao', 'removerSala'],
+      ['atualizar-sala-reuniao', 'atualizarSala'],
+    ] as const)('%s chama %s e nao manda e-mail', async (tipo, metodo) => {
+      const chamados: string[] = [];
+      const { despachante, transporte, concluidos } = montarCenario({
+        registro: { ...REGISTRO, tipo, reuniao: REUNIAO },
+        [metodo]: () => {
+          chamados.push(metodo);
+          return Promise.resolve({ sucesso: true, pulado: 'reuniao sem sala' });
+        },
+      });
+
+      await expect(despachante.despachar(`${tipo}_x`)).resolves.toBe(
+        'entregue',
+      );
+
+      expect(chamados).toEqual([metodo]);
+      expect(transporte.enviadas).toEqual([]);
+      expect(concluidos[0]?.estado).toBe('enviado');
+    });
+
+    it('a falha do Graph vira falha do registro, para a fila reentregar', async () => {
+      const { despachante, concluidos } = montarCenario({
+        registro: {
+          ...REGISTRO,
+          tipo: 'remover-sala-reuniao',
+          reuniao: REUNIAO,
+        },
+        removerSala: () =>
+          Promise.resolve({
+            sucesso: false,
+            motivo:
+              'HTTP 403: General: No application access policy found for this app.',
+          }),
+      });
+
+      await expect(
+        despachante.despachar('remover-sala-reuniao_x'),
+      ).resolves.toBe('falhou');
+      expect(concluidos[0]?.motivo).toContain('No application access policy');
+    });
+
+    it('registro sem a reuniao falha com motivo', async () => {
+      const { despachante, concluidos } = montarCenario({
+        registro: { ...REGISTRO, tipo: 'atualizar-sala-reuniao' },
+      });
+
+      await despachante.despachar('atualizar-sala-reuniao_x');
+
+      expect(concluidos[0]?.motivo).toBe('registro de reuniao sem referencia');
     });
   });
 

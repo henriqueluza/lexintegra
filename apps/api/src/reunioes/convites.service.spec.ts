@@ -2,11 +2,8 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { FirestoreFalso } from '../firestore-falso.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import type { ConfiguracaoDoOutbox } from '../outbox/politica.js';
-import {
-  ConvitesService,
-  textoDaReuniaoDesmarcada,
-  type Destinatario,
-} from './convites.service.js';
+import { ConvitesService, type Destinatario } from './convites.service.js';
+import { textoDaReuniaoDesmarcada } from './textos-de-reuniao.js';
 import type { ConfiguracaoReunioes } from './sala/modo.js';
 import { assuntoDaSala } from './sala-da-reuniao.js';
 import { SalaDeReuniaoFalsa } from './sala/sala-de-reuniao-falsa.js';
@@ -285,6 +282,146 @@ describe('ConvitesService.criarSala', () => {
     await expect(
       servico.criarSala({ ...EVENTO, reuniaoId: 'r099' }),
     ).resolves.toMatchObject({ sucesso: false });
+  });
+
+  /**
+   * A CORRIDA COM O CANCELAMENTO. O cliente cancelou enquanto o Graph criava a
+   * sala: o cancelamento nao pediu DELETE (ainda nao havia `idExterno`), entao
+   * quem pede e a gravacao do link, que encontra a reuniao cancelada.
+   */
+  it('cancelada durante a criacao, grava o link e pede o DELETE', async () => {
+    const { servico, banco, sala } = montar();
+    const criar = sala.criar.bind(sala);
+    sala.criar = async (nova) => {
+      const criada = await criar(nova);
+      banco.documentos.set(`pedidos/${PEDIDO}/reunioes/r001`, {
+        ...banco.documentos.get(`pedidos/${PEDIDO}/reunioes/r001`),
+        estado: 'cancelada_com_devolucao',
+      });
+      return criada;
+    };
+
+    await servico.criarSala(EVENTO);
+
+    expect(
+      banco.documentos.get(`pedidos/${PEDIDO}/reunioes/r001`),
+    ).toMatchObject({
+      estado: 'cancelada_com_devolucao',
+      idExterno: `sala_falsa_${PEDIDO}-r001`,
+    });
+    expect(
+      banco.documentos.has(`outbox/remover-sala-reuniao_${PEDIDO}_r001`),
+    ).toBe(true);
+    expect(
+      [...banco.documentos.keys()].some((k) =>
+        k.startsWith('outbox/convite-reuniao'),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('ConvitesService.atualizarSala e removerSala', () => {
+  const COM_SALA: Partial<DocumentoReuniao> = {
+    estado: 'confirmada',
+    sequence: 1,
+    link: 'https://teams.test/sala',
+    idExterno: 'sala_1',
+    organizadorId: ORGANIZADORA,
+    inicio: '2026-10-01T17:00:00.000Z',
+    fim: '2026-10-01T18:00:00.000Z',
+  };
+  const REMARCADA = { ...EVENTO, sequence: 1 };
+
+  it('remarca no organizador e na sala persistidos, no horario atual', async () => {
+    const { servico, banco, sala } = montar(COM_SALA, {
+      organizadorDoAdvogado: DA_ANA,
+    });
+    banco.documentos.set(`pedidos/${PEDIDO}/reunioes/r001`, {
+      ...banco.documentos.get(`pedidos/${PEDIDO}/reunioes/r001`),
+      inicio: '2026-10-02T17:00:00.000Z',
+      fim: '2026-10-02T18:00:00.000Z',
+    });
+
+    await expect(servico.atualizarSala(REMARCADA)).resolves.toEqual({
+      sucesso: false,
+      motivo: 'NotFound: sala inexistente neste organizador.',
+    });
+    /* O falso recusa porque a sala nao foi criada por ele; o pedido e o que importa. */
+    expect(sala.atualizacoes).toEqual([
+      {
+        organizadorId: ORGANIZADORA,
+        idExterno: 'sala_1',
+        inicio: '2026-10-02T17:00:00.000Z',
+        fim: '2026-10-02T18:00:00.000Z',
+        assunto: 'Reunião LexIntegra — pedido pedido-1',
+      },
+    ]);
+  });
+
+  it('a sala criada pelo fluxo normal aceita a remarcacao', async () => {
+    const { servico, sala } = montar();
+    await servico.criarSala(EVENTO);
+
+    await expect(servico.atualizarSala(EVENTO)).resolves.toEqual({
+      sucesso: true,
+    });
+    expect(sala.atualizacoes).toHaveLength(1);
+  });
+
+  it.each([
+    [
+      'sem sala',
+      { ...COM_SALA, idExterno: null, link: null },
+      'reuniao ainda sem sala',
+    ],
+    [
+      'cancelada',
+      { ...COM_SALA, estado: 'cancelada_com_devolucao' as const },
+      'reuniao cancelada',
+    ],
+    ['superada', { ...COM_SALA, sequence: 2 }, 'superado por remarcacao'],
+  ])('pula a remarcacao %s, com sucesso', async (_caso, reuniao, pulado) => {
+    const { servico, sala } = montar(reuniao);
+
+    await expect(servico.atualizarSala(REMARCADA)).resolves.toEqual({
+      sucesso: true,
+      pulado,
+    });
+    expect(sala.atualizacoes).toHaveLength(0);
+  });
+
+  it('remove a sala no organizador persistido', async () => {
+    const { servico, sala } = montar(
+      { ...COM_SALA, estado: 'cancelada_com_devolucao' },
+      { organizadorDoAdvogado: DA_ANA },
+    );
+
+    await expect(servico.removerSala(REMARCADA)).resolves.toEqual({
+      sucesso: true,
+    });
+    expect(sala.remocoes).toEqual([
+      { organizadorId: ORGANIZADORA, idExterno: 'sala_1' },
+    ]);
+  });
+
+  it('pula a remocao da reuniao sem sala', async () => {
+    const { servico, sala } = montar({ estado: 'cancelada_com_devolucao' });
+
+    await expect(servico.removerSala(EVENTO)).resolves.toEqual({
+      sucesso: true,
+      pulado: 'reuniao sem sala',
+    });
+    expect(sala.remocoes).toHaveLength(0);
+  });
+
+  it('sala sem organizador gravado e falha nomeada, sem adivinhar', async () => {
+    const { servico, sala } = montar({ ...COM_SALA, organizadorId: null });
+
+    await expect(servico.removerSala(REMARCADA)).resolves.toEqual({
+      sucesso: false,
+      motivo: 'reuniao com sala e sem organizadorId gravado',
+    });
+    expect(sala.remocoes).toHaveLength(0);
   });
 });
 

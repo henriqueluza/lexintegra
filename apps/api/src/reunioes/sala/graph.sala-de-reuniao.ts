@@ -2,8 +2,10 @@ import { z } from 'zod';
 import type { CredenciaisGraph } from './modo.js';
 import type {
   NovaSala,
+  ResultadoDaAlteracao,
   ResultadoDaSala,
   SalaDeReuniao,
+  SalaExistente,
 } from './sala-de-reuniao.js';
 
 /**
@@ -96,7 +98,12 @@ export const OPCOES_DA_SALA = {
 
 type Chamada =
   | { readonly ok: true; readonly dados: unknown; readonly status: number }
-  | { readonly ok: false; readonly motivo: string };
+  | {
+      readonly ok: false;
+      readonly motivo: string;
+      /** `undefined` quando nao houve resposta (rede, timeout). */
+      readonly status?: number;
+    };
 
 export class GraphSalaDeReuniao implements SalaDeReuniao {
   private readonly base: string;
@@ -162,6 +169,50 @@ export class GraphSalaDeReuniao implements SalaDeReuniao {
       /* 201 criou; 200 reaproveitou pelo `externalId`. Os dois sao sucesso. */
       jaExistia: criada.status === 200,
     };
+  }
+
+  /**
+   * A remarcacao: o mesmo PATCH da criacao, com o horario novo. O link nao muda.
+   *
+   * POR QUE CHAMAR O GRAPH NA REMARCACAO, se o link continua valendo: a sala
+   * expira (`expiryDateTime`) a partir do horario que ela tem. Uma reuniao
+   * remarcada para meses depois, numa sala que ainda acha que e no horario
+   * antigo, teria o link morto no dia.
+   */
+  async atualizar(sala: SalaExistente): Promise<ResultadoDaAlteracao> {
+    const token = await this.obterToken();
+    if (!token.ok) return { sucesso: false, motivo: token.motivo };
+
+    const ajustada = await this.ajustar(
+      sala.organizadorId,
+      sala.idExterno,
+      token.dados as string,
+      sala,
+    );
+    return ajustada.ok
+      ? { sucesso: true }
+      : { sucesso: false, motivo: ajustada.motivo };
+  }
+
+  /**
+   * O cancelamento: `DELETE`. 204 apagou; 404 ja nao existia — os dois sao
+   * SUCESSO, porque a nova tentativa de um DELETE que deu certo e o processo
+   * morreu antes de concluir o registro do outbox recebe 404.
+   */
+  async remover(
+    organizadorId: string,
+    idExterno: string,
+  ): Promise<ResultadoDaAlteracao> {
+    const token = await this.obterToken();
+    if (!token.ok) return { sucesso: false, motivo: token.motivo };
+
+    const chamada = await this.chamar(
+      'DELETE',
+      `${this.caminhoDasSalas(organizadorId)}/${encodeURIComponent(idExterno)}`,
+      token.dados as string,
+    );
+    if (chamada.ok || chamada.status === 404) return { sucesso: true };
+    return { sucesso: false, motivo: chamada.motivo };
   }
 
   /**
@@ -278,12 +329,16 @@ export class GraphSalaDeReuniao implements SalaDeReuniao {
       };
     }
 
+    /* O DELETE responde 204 sem corpo: nao ha JSON a ler, e isso e sucesso. */
+    if (resposta.status === 204) return { ok: true, dados: null, status: 204 };
+
     let bruto: unknown;
     try {
       bruto = await resposta.json();
     } catch {
       return {
         ok: false,
+        status: resposta.status,
         motivo: `HTTP ${String(resposta.status)} sem JSON`,
       };
     }
@@ -298,6 +353,7 @@ export class GraphSalaDeReuniao implements SalaDeReuniao {
        */
       return {
         ok: false,
+        status: resposta.status,
         motivo: `HTTP ${String(resposta.status)}: ${this.limpar(mensagemDoErro(bruto))}`,
       };
     }
