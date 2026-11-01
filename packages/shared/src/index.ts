@@ -31,6 +31,7 @@ export * from './esquemas/senha.js';
 export * from './esquemas/upload.js';
 export * from './esquemas/vitrine.js';
 export * from './magic-bytes.js';
+export * from './parcelamento.js';
 export * from './perfil.js';
 export * from './politica-de-guarda.js';
 export * from './regras-reuniao.js';
