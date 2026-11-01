@@ -64,6 +64,21 @@ export interface DocumentoReuniao {
   /** O id da reuniao no Graph. `null` junto com `link`. */
   idExterno: string | null;
   /**
+   * O object ID, no Entra, de quem ORGANIZA a sala (`feat/ligar-teams`): a conta
+   * organizadora do escritorio, ou o `organizadorTeams` do advogado.
+   *
+   * FIXADO NA PRIMEIRA TENTATIVA DE CRIAR A SALA, antes de chamar o Graph, e
+   * nunca mais trocado. E o que faz a nova tentativa, a remarcacao (PATCH) e o
+   * cancelamento (DELETE) falarem com o mesmo organizador: a sala e do trio
+   * (tenant, organizador, `externalId`), e um administrador que mudasse o
+   * cadastro do advogado entre duas tentativas faria a segunda criar outra sala,
+   * noutra conta, e deixaria a primeira sem ninguem para apaga-la.
+   *
+   * `null` ate a primeira tentativa. Ausente nos documentos anteriores a
+   * `feat/ligar-teams`, o que e o mesmo que `null`.
+   */
+  organizadorId?: string | null;
+  /**
    * Congelado na reserva. E redundante com o prefixo do `slotId` e existe assim
    * mesmo: a agenda do advogado consulta por ele, e extrair um id de dentro de
    * outro para filtrar seria uma consulta que o Firestore nao sabe fazer.
@@ -136,7 +151,11 @@ export function paraResumo(
 export function paraAgenda(
   id: string,
   reuniao: DocumentoReuniao,
-  contexto: { readonly pedidoId: string; readonly produto: string; readonly cliente: string },
+  contexto: {
+    readonly pedidoId: string;
+    readonly produto: string;
+    readonly cliente: string;
+  },
 ): ReuniaoDaAgenda {
   return {
     id,

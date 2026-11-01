@@ -157,7 +157,11 @@ describe('EdicaoDeAdvogadoService', () => {
   });
 
   it('grava o organizadorTeams sem consultar o tenant', async () => {
-    await servico().editar(UID, { ...CADASTRO, organizadorTeams: TEAMS }, ADMIN);
+    await servico().editar(
+      UID,
+      { ...CADASTRO, organizadorTeams: TEAMS },
+      ADMIN,
+    );
 
     expect(documento()['organizadorTeams']).toBe(TEAMS);
     expect(chamadasAuth).toEqual([]);

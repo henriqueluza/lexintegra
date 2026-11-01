@@ -99,6 +99,7 @@ servindo.
 | `REUNIOES_MODO` | sim | `desligado` | Ausente ou inválido, recusa subir. `graph` recusa enquanto `INTEGRACAO_GRAPH_DESTRAVADA` for `false` e, destravado, exige `NODE_ENV=production` e as três `GRAPH_*`. `falso` recusa em produção | `reunioes/sala/modo.ts` |
 | `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID` | com `graph` | não definidas (variáveis `graph_tenant_id` e `graph_client_id`, com placeholder) | Com `graph`, ausentes ou fora do formato GUID, recusa subir | `reunioes/sala/modo.ts` |
 | `GRAPH_CLIENT_SECRET` | com `graph` | não definida (secret `graph-client-secret`, sem versão) | Com `graph` e sem ela, recusa subir | `reunioes/sala/modo.ts` |
+| `TEAMS_ORGANIZADOR_PADRAO` | com `graph` | não definida até o destravamento | Object ID, no Entra, da conta organizadora que cria as salas. Com `graph`, ausente recusa subir; em qualquer modo, fora do formato GUID recusa subir. No `falso`, ausente usa um organizador fictício | `reunioes/sala/modo.ts` |
 | `RELOGIO_FIXO` | **proibida** | não definida | Fora de emulador, **recusa subir** | `relogio.ts`, conferida em `reunioes/sala/sala.module.ts` |
 | `RASTREIO_AMOSTRAGEM` | não | `0.1` | Vazia ou `0` desliga o rastreio. Valor fora de 0–1 **recusa subir** | `observabilidade/amostragem.ts` |
 | `LOG_FORMATO` | não | `json` | Valor desconhecido recusa subir. Ausente, usa `json` em produção | `observabilidade/criar-logger.ts` |

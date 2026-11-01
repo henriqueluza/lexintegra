@@ -13,6 +13,7 @@ import {
 } from 'firebase-admin/firestore';
 import {
   NOME_CLAIM_PERFIL,
+  organizadorTeamsDe,
   type AdvogadoResumo,
   type NovoAdvogado,
   type StatusAdvogado,
@@ -44,21 +45,6 @@ interface DocumentoAdvogado {
    * advogado era o proprio organizador. So lido, nunca escrito: a edicao o apaga.
    */
   usuarioTeams?: string | null;
-}
-
-/**
- * O organizador gravado, pelo nome novo ou pelo antigo.
- *
- * O ANTIGO CONTA porque o painel deixava preencher `usuarioTeams` desde a Etapa
- * 10, e um valor ja gravado continua sendo a decisao de quem o preencheu: lido
- * so pelo nome novo, aquele advogado passaria em silencio para a conta
- * organizadora. Documento sem nenhum dos dois e o mesmo que nulo.
- */
-export function organizadorTeamsDe(dados: {
-  readonly organizadorTeams?: string | null;
-  readonly usuarioTeams?: string | null;
-}): string | null {
-  return dados.organizadorTeams ?? dados.usuarioTeams ?? null;
 }
 
 /**

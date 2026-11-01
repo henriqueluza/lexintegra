@@ -51,6 +51,8 @@ export default {
     '!arnes-http.ts',
     // `arnes-webhook.ts` e o payload real do sandbox, para testes e simulador.
     '!arnes-webhook.ts',
+    // `arnes-reuniao.ts` e a resposta real do Graph, anonimizada, para os testes.
+    '!arnes-reuniao.ts',
     // `arnes-anamnese.ts` monta a menor ficha valida a partir da declaracao.
     '!arnes-anamnese.ts',
     // `arnes-docx.ts` monta ZIPs de teste para a conferencia do DOCX.

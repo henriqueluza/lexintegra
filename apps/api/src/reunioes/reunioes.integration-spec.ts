@@ -40,7 +40,11 @@ const CONFIG_OUTBOX: ConfiguracaoDoOutbox = {
   loteDoVarredor: 100,
 };
 
-const LIGADO: ConfiguracaoReunioes = { modo: 'falso', graph: null };
+const LIGADO: ConfiguracaoReunioes = {
+  modo: 'falso',
+  graph: null,
+  organizadorPadrao: '00000000-0000-4000-8000-000000000000',
+};
 
 const ADMIN = 'uid-admin';
 const CLIENTE = 'uid-clara';
@@ -90,7 +94,7 @@ beforeEach(async () => {
   reunioes = new ReunioesService(banco, outbox, enfileirador, LIGADO);
   alteracoes = new AlteracoesDeReuniaoService(banco, outbox, enfileirador);
   cancelamento = new CancelamentoDeReuniaoService(banco, outbox, enfileirador);
-  convites = new ConvitesService(banco, sala, outbox);
+  convites = new ConvitesService(banco, sala, outbox, LIGADO);
   consulta = new ConsultaReunioesService(banco, new ClientesService(banco));
   horarios = new HorariosService(banco);
 });
@@ -397,13 +401,13 @@ describe('agendamento', () => {
       AGORA,
     );
 
-    expect(await horarios.listar('pedido-1', CLIENTE, null, null, NA_SEMANA)).toEqual(
-      [],
-    );
     expect(
-      (await horarios.listar('pedido-1', CLIENTE, reuniao.id, null, NA_SEMANA)).map(
-        (h) => h.slotId,
-      ),
+      await horarios.listar('pedido-1', CLIENTE, null, null, NA_SEMANA),
+    ).toEqual([]);
+    expect(
+      (
+        await horarios.listar('pedido-1', CLIENTE, reuniao.id, null, NA_SEMANA)
+      ).map((h) => h.slotId),
     ).toEqual([outro]);
   });
 });

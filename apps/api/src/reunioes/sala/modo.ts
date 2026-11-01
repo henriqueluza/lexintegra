@@ -23,6 +23,21 @@ const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 export interface ConfiguracaoReunioes {
   readonly modo: ModoReunioes;
   /**
+   * A CONTA ORGANIZADORA do escritorio (`TEAMS_ORGANIZADOR_PADRAO`): o object ID
+   * no Entra de quem cria as salas — o `{userId}` de
+   * `POST /users/{userId}/onlineMeetings/createOrGet`. Advogado e cliente entram
+   * pelo link como convidados. Um advogado com `organizadorTeams` proprio
+   * sobrepoe este valor.
+   *
+   * Nao e segredo: e um id de diretorio, e mora no `cloud_run.tf`.
+   *
+   * OBRIGATORIO no modo `graph`: sem ele, nenhum advogado sem licenca propria
+   * teria sala, e toda reuniao ficaria `reservada_sem_link`. No `falso`, ausente
+   * vira `ORGANIZADOR_DO_FALSO`, para desenvolvimento e teste nao precisarem de
+   * id do tenant. Nos outros modos nenhuma sala e criada, e ele pode faltar.
+   */
+  readonly organizadorPadrao: string | null;
+  /**
    * As credenciais do Graph, so no modo `graph`: `GRAPH_TENANT_ID` e
    * `GRAPH_CLIENT_ID` (variaveis comuns; identificam o tenant e o aplicativo)
    * e `GRAPH_CLIENT_SECRET` (Secret Manager, `graph-client-secret`).
@@ -36,7 +51,11 @@ export interface CredenciaisGraph {
   readonly clientSecret: string;
 }
 
-const DESLIGADO: ConfiguracaoReunioes = { modo: 'desligado', graph: null };
+/**
+ * O organizador do modo `falso`, quando `TEAMS_ORGANIZADOR_PADRAO` nao foi dado.
+ * Um GUID que nao existe em tenant nenhum: o falso nao chama a Microsoft.
+ */
+export const ORGANIZADOR_DO_FALSO = '00000000-0000-4000-8000-000000000000';
 
 /**
  * Le `REUNIOES_MODO` e o que ele exige.
@@ -104,11 +123,48 @@ export function configuracaoDeReunioes(
   const producao = ambiente['NODE_ENV'] === 'production';
   const modo = lerModo(texto(ambiente['REUNIOES_MODO']), producao, destravada);
 
-  if (modo === 'desligado') return DESLIGADO;
-  if (modo === 'sem-sala') return { modo: 'sem-sala', graph: null };
-  if (modo === 'graph') return { modo: 'graph', graph: credenciais(ambiente) };
+  const organizador = organizadorPadrao(ambiente);
 
-  return { modo: 'falso', graph: null };
+  if (modo === 'graph') {
+    if (organizador === null) {
+      throw new Error(
+        'REUNIOES_MODO=graph exige TEAMS_ORGANIZADOR_PADRAO: o object ID, no ' +
+          'Entra, da conta organizadora que cria as salas. Sem ele, toda ' +
+          'reuniao ficaria em "reservada_sem_link".',
+      );
+    }
+    return {
+      modo: 'graph',
+      graph: credenciais(ambiente),
+      organizadorPadrao: organizador,
+    };
+  }
+  if (modo === 'falso') {
+    return {
+      modo: 'falso',
+      graph: null,
+      organizadorPadrao: organizador ?? ORGANIZADOR_DO_FALSO,
+    };
+  }
+
+  return { modo, graph: null, organizadorPadrao: organizador };
+}
+
+/**
+ * Le `TEAMS_ORGANIZADOR_PADRAO`. Ausente e `null`; presente e nao GUID derruba
+ * o boot em qualquer modo, porque um valor colado errado so apareceria no dia
+ * em que o Teams fosse ligado.
+ */
+function organizadorPadrao(ambiente: NodeJS.ProcessEnv): string | null {
+  const valor = texto(ambiente['TEAMS_ORGANIZADOR_PADRAO']);
+  if (valor === null) return null;
+  if (!GUID.test(valor)) {
+    throw new Error(
+      'TEAMS_ORGANIZADOR_PADRAO e o object ID (GUID) da conta organizadora no ' +
+        'Entra, nao o e-mail nem o UPN.',
+    );
+  }
+  return valor.toLowerCase();
 }
 
 /** A mensagem nunca repete o client secret (regra 9). */
@@ -178,9 +234,9 @@ function lerGraph(producao: boolean, destravada: boolean): ModoReunioes {
       'REUNIOES_MODO=graph nao sobe com a trava fechada ' +
         '(INTEGRACAO_GRAPH_DESTRAVADA em reunioes/sala/modo.ts). Liberar ' +
         'exige o aplicativo registrado no Entra ID com consentimento para ' +
-        'OnlineMeetings.ReadWrite.All e User.Read.All, a application access ' +
-        'policy configurada por PowerShell (propagacao de ate 48h) e uma ' +
-        'chamada de teste manual — ver docs/runbooks/ligar-terceiros.md.',
+        'OnlineMeetings.ReadWrite.All, a application access policy aplicada ' +
+        'a conta organizadora (propagacao de ate 48h) e uma chamada de teste ' +
+        'manual — ver docs/runbooks/ligar-terceiros.md.',
     );
   }
   if (!producao) {

@@ -1,4 +1,11 @@
-import { configuracaoDeReunioes, INTEGRACAO_GRAPH_DESTRAVADA } from './modo.js';
+import {
+  configuracaoDeReunioes,
+  INTEGRACAO_GRAPH_DESTRAVADA,
+  ORGANIZADOR_DO_FALSO,
+} from './modo.js';
+
+/** Ficticio, no formato do object ID do Entra. */
+const ORGANIZADOR = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
 
 describe('configuracaoDeReunioes', () => {
   describe('a trava contra a integracao real (Etapa 10, ADR-21)', () => {
@@ -45,7 +52,7 @@ describe('configuracaoDeReunioes', () => {
           NODE_ENV: 'production',
           REUNIOES_MODO: 'sem-sala',
         }),
-      ).toEqual({ modo: 'sem-sala', graph: null });
+      ).toEqual({ modo: 'sem-sala', graph: null, organizadorPadrao: null });
     });
 
     it('aceita desligado', () => {
@@ -54,7 +61,7 @@ describe('configuracaoDeReunioes', () => {
           NODE_ENV: 'production',
           REUNIOES_MODO: 'desligado',
         }),
-      ).toEqual({ modo: 'desligado', graph: null });
+      ).toEqual({ modo: 'desligado', graph: null, organizadorPadrao: null });
     });
 
     /**
@@ -88,6 +95,18 @@ describe('configuracaoDeReunioes', () => {
     });
   });
 
+  it.each(['desligado', 'sem-sala', 'falso'])(
+    'recusa organizador que nao e GUID, mesmo em %s',
+    (modo) => {
+      expect(() =>
+        configuracaoDeReunioes({
+          REUNIOES_MODO: modo,
+          TEAMS_ORGANIZADOR_PADRAO: 'operacional@escritorio.test',
+        }),
+      ).toThrow(/object ID \(GUID\) da conta organizadora/);
+    },
+  );
+
   it('recusa valor desconhecido', () => {
     expect(() => configuracaoDeReunioes({ REUNIOES_MODO: 'ligado' })).toThrow(
       /invalido/,
@@ -99,7 +118,15 @@ describe('configuracaoDeReunioes', () => {
       expect(configuracaoDeReunioes({})).toEqual({
         modo: 'falso',
         graph: null,
+        organizadorPadrao: ORGANIZADOR_DO_FALSO,
       });
+    });
+
+    it('no falso, o organizador configurado vence o ficticio', () => {
+      expect(
+        configuracaoDeReunioes({ TEAMS_ORGANIZADOR_PADRAO: ORGANIZADOR })
+          .organizadorPadrao,
+      ).toBe(ORGANIZADOR);
     });
 
     it.each([
@@ -154,9 +181,10 @@ describe('configuracaoDeReunioes', () => {
       GRAPH_TENANT_ID: TENANT,
       GRAPH_CLIENT_ID: CLIENTE,
       GRAPH_CLIENT_SECRET: 'segredo-de-teste',
+      TEAMS_ORGANIZADOR_PADRAO: ORGANIZADOR,
     };
 
-    it('sobe com as tres credenciais', () => {
+    it('sobe com as tres credenciais e o organizador', () => {
       expect(configuracaoDeReunioes(COMPLETO, true)).toEqual({
         modo: 'graph',
         graph: {
@@ -164,7 +192,26 @@ describe('configuracaoDeReunioes', () => {
           clientId: CLIENTE,
           clientSecret: 'segredo-de-teste',
         },
+        organizadorPadrao: ORGANIZADOR,
       });
+    });
+
+    it('recusa sem TEAMS_ORGANIZADOR_PADRAO', () => {
+      expect(() =>
+        configuracaoDeReunioes(
+          { ...COMPLETO, TEAMS_ORGANIZADOR_PADRAO: ' ' },
+          true,
+        ),
+      ).toThrow(/exige TEAMS_ORGANIZADOR_PADRAO/);
+    });
+
+    it('normaliza o organizador para minusculas', () => {
+      expect(
+        configuracaoDeReunioes(
+          { ...COMPLETO, TEAMS_ORGANIZADOR_PADRAO: ORGANIZADOR.toUpperCase() },
+          true,
+        ).organizadorPadrao,
+      ).toBe(ORGANIZADOR);
     });
 
     it.each([

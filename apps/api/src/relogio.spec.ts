@@ -104,7 +104,7 @@ describe('configuracaoNaInicializacao', () => {
         ...SOB_EMULADOR,
         RELOGIO_FIXO: '2026-09-21T12:00:00.000Z',
       }),
-    ).toEqual({ modo: 'falso', graph: null });
+    ).toEqual({ modo: 'falso', graph: null, organizadorPadrao: '00000000-0000-4000-8000-000000000000' });
     expect(agora()).toBe(Date.parse('2026-09-21T12:00:00.000Z'));
   });
 

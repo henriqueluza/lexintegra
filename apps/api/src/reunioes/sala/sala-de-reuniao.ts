@@ -23,28 +23,47 @@ export const SALA_DE_REUNIAO = Symbol('SALA_DE_REUNIAO');
 
 export interface NovaSala {
   /**
-   * O id da reuniao, que vira o `externalId` no Graph.
+   * O `externalId` no Graph: `{pedidoId}-{reuniaoId}` (ver `externalIdDa`).
    *
    * E O QUE TORNA A CRIACAO IDEMPOTENTE: `createOrGet` devolve a sala existente
-   * quando o `externalId` ja foi usado. Por isso o id da reuniao e ESTAVEL e nao
-   * e o id do slot (ADR-21, decisao A) — um id que mudasse na remarcacao criaria
-   * uma segunda sala a cada vez.
+   * quando o trio (tenant, organizador, `externalId`) ja foi usado. Por isso ele
+   * e ESTAVEL e nao usa o id do slot (ADR-21, decisao A) — um id que mudasse na
+   * remarcacao criaria uma segunda sala a cada vez.
    */
-  readonly reuniaoId: string;
+  readonly externalId: string;
   /** O uid do Firebase. Viaja para o log e para a mensagem de erro, nao para o Graph. */
   readonly advogadoId: string;
   /**
-   * O object ID do advogado no Entra, de `advogados/{uid}.organizadorTeams`.
+   * O object ID, no Entra, de quem ORGANIZA a sala: o `{userId}` do caminho.
    *
-   * `null` quando o administrador ainda nao preencheu. O adaptador do Graph
-   * RECUSA com erro claro e reentregavel; nao inventa um identificador a partir
-   * do e-mail (ADR-21, decisao B).
+   * Ja resolvido e PERSISTIDO na reuniao (`organizadorId`) antes de chegar
+   * aqui: a conta organizadora do escritorio (`TEAMS_ORGANIZADOR_PADRAO`), ou o
+   * `organizadorTeams` do advogado quando ele tem licenca propria. A porta nao
+   * escolhe — escolher aqui faria uma nova tentativa, depois de o administrador
+   * mudar o cadastro, criar a sala noutro organizador.
    */
-  readonly organizadorTeams: string | null;
+  readonly organizadorId: string;
   /** ISO 8601 em UTC. */
   readonly inicio: string;
   readonly fim: string;
+  /** Sem nome, produto nem dado do cliente: ver `assuntoDaSala`. */
   readonly assunto: string;
+}
+
+/**
+ * O `externalId` da sala.
+ *
+ * LEVA O PEDIDO, e nao so o `rNNN`. A identidade de uma sala no `createOrGet`
+ * e o trio (tenant, organizador, `externalId`), e com uma conta organizadora so
+ * para o escritorio inteiro o `r001` de dois pedidos diferentes casaria: o
+ * segundo pedido receberia a sala do primeiro, com `jaExistia: true` e
+ * nenhum erro em lugar nenhum.
+ */
+export function externalIdDa(reuniao: {
+  readonly pedidoId: string;
+  readonly reuniaoId: string;
+}): string {
+  return `${reuniao.pedidoId}-${reuniao.reuniaoId}`;
 }
 
 /**
@@ -56,6 +75,11 @@ export interface NovaSala {
  * ser gravado, e a segunda chamada nao pode virar erro — nem, pior, uma segunda
  * sala. Espelha `ResultadoDoEstorno.jaEstornado`, e casa com o 201/200 que o
  * `createOrGet` do Graph devolve.
+ *
+ * SUCESSO SIGNIFICA SALA PRONTA: criada E com as opcoes de reuniao aplicadas
+ * (convidados sem lobby, todos apresentam, sem chat, sem gravacao). Uma sala
+ * criada cujas opcoes falharam e FALHA — o link nao pode chegar a ninguem antes
+ * de a sala estar como o escritorio decidiu.
  */
 export type ResultadoDaSala =
   | {

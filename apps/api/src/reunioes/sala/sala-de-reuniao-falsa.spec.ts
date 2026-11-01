@@ -8,9 +8,9 @@ import {
 import { ReunioesDesligadas, type NovaSala } from './sala-de-reuniao.js';
 
 const PEDIDO: NovaSala = {
-  reuniaoId: 'pedido-1_r001',
+  externalId: 'pedido-1-r001',
   advogadoId: 'uid-ana',
-  organizadorTeams: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
+  organizadorId: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
   inicio: '2026-09-24T17:00:00.000Z',
   fim: '2026-09-24T18:00:00.000Z',
   assunto: 'Reuniao: Revisao de contrato',
@@ -24,19 +24,19 @@ describe('SalaDeReuniaoFalsa', () => {
 
     expect(resultado).toEqual({
       sucesso: true,
-      link: expect.stringContaining('pedido-1_r001'),
-      idExterno: 'sala_falsa_pedido-1_r001',
+      link: expect.stringContaining('pedido-1-r001'),
+      idExterno: 'sala_falsa_pedido-1-r001',
       jaExistia: false,
     });
   });
 
   /**
-   * IDEMPOTENTE POR `reuniaoId`, como o `createOrGet` e por `externalId`. E o
+   * IDEMPOTENTE POR organizador e `externalId`, como o `createOrGet`. E o
    * que a reentrega do outbox espera: se o processo morrer depois de a sala ser
    * criada e antes de o link ser gravado, a segunda passagem nao pode criar uma
    * segunda sala — nem virar erro.
    */
-  it('o mesmo reuniaoId devolve a MESMA sala, com jaExistia', async () => {
+  it('o mesmo externalId devolve a MESMA sala, com jaExistia', async () => {
     const sala = new SalaDeReuniaoFalsa();
 
     const primeira = await sala.criar(PEDIDO);
@@ -56,9 +56,23 @@ describe('SalaDeReuniaoFalsa', () => {
     const sala = new SalaDeReuniaoFalsa();
 
     const uma = await sala.criar(PEDIDO);
-    const outra = await sala.criar({ ...PEDIDO, reuniaoId: 'pedido-1_r002' });
+    const outra = await sala.criar({ ...PEDIDO, externalId: 'pedido-1-r002' });
 
     expect(uma.sucesso && outra.sucesso && uma.link !== outra.link).toBe(true);
+  });
+
+  /** Como no Graph: a identidade e o trio, e o organizador faz parte dele. */
+  it('o mesmo externalId noutro organizador e outra sala', async () => {
+    const sala = new SalaDeReuniaoFalsa();
+
+    await sala.criar(PEDIDO);
+    const outra = await sala.criar({
+      ...PEDIDO,
+      organizadorId: '11111111-2222-4333-8444-555555555555',
+    });
+
+    expect(outra.sucesso && !outra.jaExistia).toBe(true);
+    expect(sala.salas.size).toBe(2);
   });
 
   /**
@@ -134,20 +148,32 @@ describe('SalaDeReuniaoDesligada', () => {
 describe('criarSalaDeReuniao', () => {
   it('desligado devolve a implementacao que recusa', () => {
     expect(
-      criarSalaDeReuniao({ modo: 'desligado', graph: null }),
+      criarSalaDeReuniao({
+        modo: 'desligado',
+        graph: null,
+        organizadorPadrao: null,
+      }),
     ).toBeInstanceOf(SalaDeReuniaoDesligada);
   });
 
   it('falso sem credencial devolve a em memoria', () => {
-    expect(criarSalaDeReuniao({ modo: 'falso', graph: null })).toBeInstanceOf(
-      SalaDeReuniaoFalsa,
-    );
+    expect(
+      criarSalaDeReuniao({
+        modo: 'falso',
+        graph: null,
+        organizadorPadrao: '00000000-0000-4000-8000-000000000000',
+      }),
+    ).toBeInstanceOf(SalaDeReuniaoFalsa);
   });
 
   /* `sem-sala` tambem tem `graph: null`: sem o ramo proprio, cairia no falso. */
   it('sem-sala vira a sala pendente, e nao a falsa', () => {
     expect(
-      criarSalaDeReuniao({ modo: 'sem-sala', graph: null }),
+      criarSalaDeReuniao({
+        modo: 'sem-sala',
+        graph: null,
+        organizadorPadrao: null,
+      }),
     ).toBeInstanceOf(SalaDeReuniaoPendente);
   });
 });

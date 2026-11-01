@@ -15,13 +15,17 @@ import {
   type Pessoa,
 } from './icalendar.js';
 import { SUBCOLECAO_REUNIOES, type DocumentoReuniao } from './reuniao.js';
+import { assuntoDaSala, fixarOrganizador } from './sala-da-reuniao.js';
 import {
+  CONFIGURACAO_REUNIOES,
+  type ConfiguracaoReunioes,
+} from './sala/modo.js';
+import {
+  externalIdDa,
   SALA_DE_REUNIAO,
   type ResultadoDaSala,
   type SalaDeReuniao,
 } from './sala/sala-de-reuniao.js';
-
-const COLECAO_ADVOGADOS = 'advogados';
 
 /** O que sai de uma montagem: um e-mail para enviar, ou a razao de nao enviar. */
 export type Convite =
@@ -55,6 +59,8 @@ export class ConvitesService {
     @Inject(FIRESTORE) private readonly db: Firestore,
     @Inject(SALA_DE_REUNIAO) private readonly sala: SalaDeReuniao,
     private readonly outbox: OutboxService,
+    @Inject(CONFIGURACAO_REUNIOES)
+    private readonly configuracao: ConfiguracaoReunioes,
   ) {}
 
   /**
@@ -80,13 +86,28 @@ export class ConvitesService {
       return { sucesso: true, link: '', idExterno: '', jaExistia: true };
     }
 
+    const organizadorId = await fixarOrganizador(
+      this.db,
+      this.referenciaDa(evento),
+      antes.reuniao,
+      this.configuracao.organizadorPadrao,
+    );
+    if (organizadorId === null) {
+      return {
+        sucesso: false,
+        motivo:
+          `sem organizador para a sala: advogado ${antes.reuniao.advogadoId} ` +
+          'sem organizadorTeams e TEAMS_ORGANIZADOR_PADRAO ausente.',
+      };
+    }
+
     const criada = await this.sala.criar({
-      reuniaoId: evento.reuniaoId,
+      externalId: externalIdDa(evento),
       advogadoId: antes.reuniao.advogadoId,
-      organizadorTeams: await this.organizadorTeams(antes.reuniao.advogadoId),
+      organizadorId,
       inicio: antes.reuniao.inicio,
       fim: antes.reuniao.fim,
-      assunto: assuntoDa(antes.pedido),
+      assunto: assuntoDaSala(evento.pedidoId),
     });
 
     if (!criada.sucesso) return criada;
@@ -331,16 +352,6 @@ export class ConvitesService {
       .doc(evento.pedidoId)
       .collection(SUBCOLECAO_REUNIOES)
       .doc(evento.reuniaoId);
-  }
-
-  private async organizadorTeams(advogadoId: string): Promise<string | null> {
-    const documento = await this.db
-      .collection(COLECAO_ADVOGADOS)
-      .doc(advogadoId)
-      .get();
-    const dados = documento.data() as { organizadorTeams?: string } | undefined;
-
-    return dados?.organizadorTeams ?? null;
   }
 }
 

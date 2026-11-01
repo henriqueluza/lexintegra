@@ -67,6 +67,21 @@ export const esquemaOrganizadorTeams = z
   .optional()
   .transform((valor) => valor ?? null);
 
+/**
+ * O organizador gravado, pelo nome novo ou pelo antigo.
+ *
+ * O ANTIGO CONTA porque o painel deixava preencher `usuarioTeams` desde a Etapa
+ * 10, e um valor ja gravado continua sendo a decisao de quem o preencheu: lido
+ * so pelo nome novo, aquele advogado passaria em silencio para a conta
+ * organizadora. Documento sem nenhum dos dois e o mesmo que nulo.
+ */
+export function organizadorTeamsDe(dados: {
+  readonly organizadorTeams?: string | null;
+  readonly usuarioTeams?: string | null;
+}): string | null {
+  return dados.organizadorTeams ?? dados.usuarioTeams ?? null;
+}
+
 export const esquemaNovoAdvogado = z.object({
   /*
    * `trim` antes do `min`: "   " tem tres caracteres e passaria por um `min(3)`

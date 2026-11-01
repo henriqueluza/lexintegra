@@ -11,12 +11,17 @@ import {
   Timestamp,
   type Firestore,
 } from 'firebase-admin/firestore';
-import type { AdvogadoResumo, EdicaoAdvogado, StatusAdvogado } from 'shared';
+import {
+  organizadorTeamsDe,
+  type AdvogadoResumo,
+  type EdicaoAdvogado,
+  type StatusAdvogado,
+} from 'shared';
 import { auditar } from '../auditoria/auditoria.js';
 import { AUTH_FIREBASE, FIRESTORE } from '../firebase/firebase.module.js';
 import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
-import { COLECAO_ADVOGADOS, organizadorTeamsDe } from './advogados.service.js';
+import { COLECAO_ADVOGADOS } from './advogados.service.js';
 
 interface Cadastro {
   readonly nome: string;

@@ -23,9 +23,9 @@ export const FALHAS_PREVISTAS = {
 export type FalhaPrevista = keyof typeof FALHAS_PREVISTAS;
 
 export interface SalaRegistrada {
-  readonly reuniaoId: string;
+  readonly externalId: string;
   readonly advogadoId: string;
-  readonly organizadorTeams: string | null;
+  readonly organizadorId: string;
   readonly inicio: string;
   readonly fim: string;
   readonly assunto: string;
@@ -41,9 +41,10 @@ export interface SalaRegistrada {
  * porque um falso mais generoso que o real esconde defeito — foi assim que o
  * travessao passou por toda a suite da Etapa 8 e so apareceu no sandbox:
  *
- * - `reuniaoId` repetido devolve a MESMA sala, com `jaExistia: true`, como o
- *   `createOrGet` faz com o `externalId`. E o que a reentrega do outbox espera.
- * - o link contem o `reuniaoId`, entao um teste que confunda duas reunioes ve
+ * - o mesmo par (organizador, `externalId`) devolve a MESMA sala, com
+ *   `jaExistia: true`, como o `createOrGet`. E o que a reentrega do outbox
+ *   espera. O mesmo `externalId` noutro organizador e OUTRA sala, como no Graph.
+ * - o link contem o `externalId`, entao um teste que confunda duas reunioes ve
  *   isso no link em vez de comparar dois textos iguais e opacos.
  *
  * Os campos publicos existem para o teste inspecionar o que foi pedido.
@@ -71,7 +72,8 @@ export class SalaDeReuniaoFalsa implements SalaDeReuniao {
       });
     }
 
-    const existente = this.salas.get(sala.reuniaoId);
+    const chave = chaveDa(sala.organizadorId, sala.externalId);
+    const existente = this.salas.get(chave);
     if (existente !== undefined) {
       return Promise.resolve({
         sucesso: true,
@@ -83,10 +85,10 @@ export class SalaDeReuniaoFalsa implements SalaDeReuniao {
 
     const registrada: SalaRegistrada = {
       ...sala,
-      link: `https://teams.microsoft.test/l/meetup-join/${sala.reuniaoId}`,
-      idExterno: `sala_falsa_${sala.reuniaoId}`,
+      link: `https://teams.microsoft.test/l/meetup-join/${sala.externalId}`,
+      idExterno: `sala_falsa_${sala.externalId}`,
     };
-    this.salas.set(sala.reuniaoId, registrada);
+    this.salas.set(chave, registrada);
 
     return Promise.resolve({
       sucesso: true,
@@ -101,6 +103,11 @@ export class SalaDeReuniaoFalsa implements SalaDeReuniao {
     this.pedidos.length = 0;
     this.falhasPendentes = 0;
   }
+}
+
+/** A identidade de uma sala no `createOrGet`: organizador e `externalId`. */
+function chaveDa(organizadorId: string, externalId: string): string {
+  return `${organizadorId}|${externalId}`;
 }
 
 /**

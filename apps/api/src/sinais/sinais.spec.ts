@@ -25,6 +25,7 @@ function montar(modo: ModoReunioes = 'desligado'): {
   const servico = new SinaisService(banco as unknown as Firestore, {
     modo,
     graph: null,
+    organizadorPadrao: null,
   });
   /*
    * As metricas do Monitoring leem o LOG, e nao o retorno: e a linha com
