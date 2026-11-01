@@ -471,7 +471,6 @@ continua recuperável por até 7 dias. A única coleção com TTL é `checkouts`
 | Arquivo parado em quarentena | Arquivo sem veredito há mais de 60 min | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
 | Base do ClamAV velha | O `daily` publicado tem mais de 48 h (só o `daily`: `main` e `bytecode` têm meses de idade por natureza) | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
 | Base do ClamAV sem publicacao | Nenhuma publicação do `daily` em 23 h | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
-| Disponibilidade publicada sem link de reuniao | Advogado ativo, com horário publicado e sem `usuarioTeams`. **Só com o Teams ligado**: com `REUNIOES_MODO=desligado`, a sonda não emite o sinal | [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
 | Reuniao marcada sem sala do Teams | Reunião em `reservada_sem_link` há mais de 60 min | [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
 | Webhook do gateway recusado | Mais de 5 recusas do webhook em 10 min, por segredo ou assinatura | [`webhook-recusado.md`](../runbooks/webhook-recusado.md) |
 | Retencao parada | Nenhuma passagem da retenção concluída em 23 h | [`retencao-parada.md`](../runbooks/retencao-parada.md) |

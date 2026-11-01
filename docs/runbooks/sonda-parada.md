@@ -8,12 +8,11 @@ minutos. Ela roda a cada 5.
 **Por que este alerta importa mais que parece.** O Monitoring não consulta o
 Firestore. Quem olha o banco e escreve os números num log é a sonda
 `sinais-operacionais` (`POST /api/interno/sinais`, em
-`apps/api/src/sinais/`). **Com ela parada, quatro alertas ficam cegos:**
+`apps/api/src/sinais/`). **Com ela parada, três alertas ficam cegos:**
 
 - *Outbox parado*;
 - *Arquivo parado em quarentena*;
-- *Reuniao marcada sem sala do Teams*;
-- *Disponibilidade publicada sem link de reuniao*.
+- *Reuniao marcada sem sala do Teams*.
 
 Nenhum deles dispara, porque não há dado para medir. Este alerta é de
 **ausência** sobre a métrica `outbox-atraso-segundos`, que recebe um ponto a

@@ -1,24 +1,18 @@
 import type { Firestore, Timestamp } from 'firebase-admin/firestore';
-import { semanasProximas } from 'shared';
-import { COLECAO_ADVOGADOS } from '../advogados/advogados.service.js';
-import { COLECAO_DISPONIBILIDADES } from '../disponibilidades/slot.js';
 
 /**
- * Os dois sinais de reuniao da sonda (achado 4.2 do Bloco E).
+ * O sinal de reuniao da sonda (achado 4.2 do Bloco E): ha reuniao em
+ * `reservada_sem_link` ha quanto tempo? Complementa o `outbox.abandonado`, que
+ * avisa uma vez so: este continua medindo enquanto a reuniao estiver sem sala. E
+ * o caso do runbook `reuniao-sem-link.md`.
  *
- * A metrica "disponibilidade publicada sem link" existia desde a Etapa 12 sem
- * nada que a emitisse. Com o Teams (ADR-05), "sem link" deixou de ser "link fixo
- * nao cadastrado" e virou duas perguntas diferentes, que viraram dois sinais:
+ * ERA UM DE DOIS. O outro, o preventivo `disponibilidade.sem-link` — advogado
+ * ativo, com horario publicado e sem identificador do Teams —, saiu em
+ * `feat/ligar-teams`: as salas passaram a ser da conta organizadora do
+ * escritorio, `TEAMS_ORGANIZADOR_PADRAO` e obrigatorio no modo `graph`, e todo
+ * advogado tem organizador. O sinal mediria algo que nao pode acontecer.
  *
- * - PREVENTIVO: ha advogado ativo, com horario publicado para a semana corrente
- *   ou a seguinte, e sem `organizadorTeams`? Um cliente pode marcar com ele, e a
- *   sala nunca nasceria (ADR-21, decisao B). E o que a arquitetura, secao 9,
- *   chamava de "advogados com disponibilidade publicada e sem link".
- * - O INCIDENTE: ha reuniao em `reservada_sem_link` ha quanto tempo? Complementa
- *   o `outbox.abandonado`, que avisa uma vez so: este continua medindo enquanto a
- *   reuniao estiver sem sala. E o caso do runbook `reuniao-sem-link.md`.
- *
- * SO LEEM, como o resto da sonda.
+ * SO LE, como o resto da sonda.
  */
 
 /** Teto da leitura das reunioes sem sala. Acima disso o alerta ja disparou. */
@@ -52,56 +46,4 @@ export async function idadeDaReuniaoSemSala(
     if (criadoEm !== undefined && criadoEm < maisAntiga) maisAntiga = criadoEm;
   }
   return Math.max(0, Math.round((agora - maisAntiga) / 1_000));
-}
-
-/**
- * Os advogados ATIVOS, sem `organizadorTeams`, com algum horario publicado na semana
- * corrente ou na seguinte — as que estao em uso agora (`semanasProximas`; a
- * janela de publicacao inteira e de doze meses, e nao e o que este sinal mede).
- *
- * `organizadorTeams` vazio ou ausente conta como sem: o campo e sempre escrito, mas
- * documento anterior a Etapa 10 nao o tem. Suspenso nao conta — ele nao recebe
- * reuniao (ADR-21, decisao G).
- */
-export async function advogadosSemLink(
-  db: Firestore,
-  agora: number,
-): Promise<string[]> {
-  const ativos = await db
-    .collection(COLECAO_ADVOGADOS)
-    .where('status', '==', 'ativo')
-    .get();
-
-  const semusuario = ativos.docs
-    .filter((documento) => {
-      const usuario = documento.data()['organizadorTeams'] as unknown;
-      return typeof usuario !== 'string' || usuario.trim() === '';
-    })
-    .map((documento) => documento.id);
-
-  const semanas = semanasProximas(new Date(agora));
-  const comHorario: string[] = [];
-  for (const advogadoId of semusuario) {
-    if (await temHorarioPublicado(db, advogadoId, semanas)) {
-      comHorario.push(advogadoId);
-    }
-  }
-  return comHorario;
-}
-
-async function temHorarioPublicado(
-  db: Firestore,
-  advogadoId: string,
-  semanas: readonly string[],
-): Promise<boolean> {
-  for (const semana of semanas) {
-    const pagina = await db
-      .collection(COLECAO_DISPONIBILIDADES)
-      .where('advogadoId', '==', advogadoId)
-      .where('semana', '==', semana)
-      .limit(1)
-      .get();
-    if (pagina.size > 0) return true;
-  }
-  return false;
 }

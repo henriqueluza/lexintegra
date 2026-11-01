@@ -6,28 +6,20 @@
   `reservada_sem_link` há mais de `limite_reuniao_sem_sala_minutos` (60). É o
   incidente: o cliente marcou e a sala não nasceu. Continua disparando enquanto
   a reunião estiver sem sala.
-- *Disponibilidade publicada sem link de reuniao* (`disponibilidade_sem_link`):
-  há advogado ativo, com horário publicado na semana corrente ou seguinte, e
-  **sem `usuarioTeams`**. É o preventivo: ainda não há reunião quebrada, mas um
-  cliente pode marcar com ele. O log da sonda traz o `advogadoId`
-  (`jsonPayload.sinal="disponibilidade.sem-link"`).
 - *Alerta critico da aplicacao* com `outbox.abandonado` de um registro
-  `criar-sala-reuniao`. Avisa uma vez, depois de 10 tentativas.
+  `criar-sala-reuniao`, `atualizar-sala-reuniao` ou `remover-sala-reuniao`.
+  Avisa uma vez, depois de 10 tentativas.
 
-Os dois primeiros vêm da sonda `sinais-operacionais`, a cada 5 minutos
+O primeiro vem da sonda `sinais-operacionais`, a cada 5 minutos
 (`apps/api/src/sinais/reunioes.ts`).
 
-> **Com o Teams desligado, nenhum dos três dispara, e isso é o correto.**
+> **Com o Teams desligado, nenhum dos dois dispara, e isso é o correto.**
 > Com `REUNIOES_MODO=desligado` (`infra/terraform/cloud_run.tf`), ninguém marca
-> reunião, e a sonda **não emite** o sinal de disponibilidade: todo advogado
-> estaria "sem link" por uma integração desligada de propósito.
+> reunião.
 >
-> **Com o Teams ligado, espere o alerta de disponibilidade para os advogados
-> criados antes de o `usuarioTeams` existir.** A API não edita advogado já
-> criado (achado 4.3, aguarda decisão de escopo), então eles não têm como
-> receber o campo pela aplicação. **É comportamento esperado, não falha.** O
-> alerta some quando o campo for preenchido ou quando o advogado deixar de ter
-> horário publicado.
+> O alerta preventivo *Disponibilidade publicada sem link de reuniao* (advogado
+> sem `usuarioTeams`) **saiu** em `feat/ligar-teams`: as salas passaram a ser
+> da conta organizadora do escritório, e todo advogado tem organizador.
 
 **Como funciona** (ADR-21, regra 13):
 

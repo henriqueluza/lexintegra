@@ -6,7 +6,7 @@ import {
   CONFIGURACAO_REUNIOES,
   type ConfiguracaoReunioes,
 } from '../reunioes/sala/modo.js';
-import { advogadosSemLink, idadeDaReuniaoSemSala } from './reunioes.js';
+import { idadeDaReuniaoSemSala } from './reunioes.js';
 
 /**
  * O que a sonda mede, em segundos. Zero quando nao ha nada esperando.
@@ -20,15 +20,6 @@ export interface Sinais {
   readonly quarentenaSegundos: number;
   /** Reuniao em `reservada_sem_link` ha mais tempo (`sinais/reunioes.ts`). */
   readonly reuniaoSemSalaSegundos: number;
-}
-
-/**
- * O que a sonda devolve: os sinais da linha `sinais` e quantos advogados sairam
- * como `disponibilidade.sem-link` — `null` com o Teams desligado, porque ai nada
- * e medido (ver `medirDisponibilidadeSemLink`).
- */
-export interface Medicao extends Sinais {
-  readonly advogadosSemLink: number | null;
 }
 
 /**
@@ -58,7 +49,7 @@ export class SinaisService {
     private readonly reunioes: ConfiguracaoReunioes,
   ) {}
 
-  async medir(agora: number = Date.now()): Promise<Medicao> {
+  async medir(agora: number = Date.now()): Promise<Sinais> {
     const sinais: Sinais = {
       outboxSegundos: await this.idadeDoOutbox(agora),
       quarentenaSegundos: await this.idadeDaQuarentena(agora),
@@ -73,40 +64,7 @@ export class SinaisService {
     };
 
     this.log.log('sinais operacionais', { sinal: 'sinais', ...sinais });
-
-    return {
-      ...sinais,
-      advogadosSemLink: await this.medirDisponibilidadeSemLink(agora),
-    };
-  }
-
-  /**
-   * Uma linha `disponibilidade.sem-link` POR ADVOGADO: a metrica e um contador de
-   * linhas, e a politica dispara com qualquer ocorrencia na janela.
-   *
-   * COM O TEAMS DESLIGADO, NAO EMITE NADA, e a escolha e esta — e nao "emitir e a
-   * politica ignorar". Com `REUNIOES_MODO=desligado` ninguem marca reuniao, e todo
-   * advogado estaria "sem link" por uma integracao desligada de proposito: a
-   * politica precisaria saber do modo para nao disparar para sempre, e o modo e
-   * configuracao da API, nao do Monitoring. Sem linha, a metrica fica sem ponto,
-   * `> 0` nunca e verdadeiro, e o silencio e o correto. Quem cobre "a sonda
-   * parou" e o alerta de sonda parada, que nao depende deste sinal.
-   */
-  private async medirDisponibilidadeSemLink(
-    agora: number,
-  ): Promise<number | null> {
-    /* Sem Teams ligado, usuario do Teams faltando nao impede nada. */
-    if (this.reunioes.modo === 'desligado' || this.reunioes.modo === 'sem-sala')
-      return null;
-
-    const advogados = await advogadosSemLink(this.db, agora);
-    for (const advogadoId of advogados) {
-      this.log.log(
-        `advogado ${advogadoId} com horario publicado e sem organizadorTeams`,
-        { sinal: 'disponibilidade.sem-link', advogadoId },
-      );
-    }
-    return advogados.length;
+    return sinais;
   }
 
   /**

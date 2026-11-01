@@ -211,26 +211,6 @@ resource "google_logging_metric" "clamav_base_idade" {
   }
 }
 
-# Advogado ATIVO, com horario publicado na semana corrente ou na seguinte, e sem
-# `usuarioTeams` — o preventivo: um cliente pode marcar com ele e a sala nunca
-# nasceria (ADR-21, decisao B). A sonda emite UMA LINHA POR ADVOGADO
-# (`sinais/reunioes.ts`), e a metrica conta linhas.
-#
-# SO E EMITIDO COM O TEAMS LIGADO. Com `REUNIOES_MODO=desligado` a sonda nao
-# emite, e a metrica fica sem ponto: todo advogado estaria "sem link" por uma
-# integracao desligada de proposito (achado 4.2 do Bloco E). Ate o Bloco E
-# nada emitia este sinal, e a politica nunca disparava.
-resource "google_logging_metric" "disponibilidade_sem_link" {
-  project = var.project_id
-  name    = "disponibilidade-sem-link"
-  filter  = "resource.type=\"cloud_run_revision\" AND jsonPayload.sinal=\"disponibilidade.sem-link\""
-
-  metric_descriptor {
-    metric_kind = "DELTA"
-    value_type  = "INT64"
-  }
-}
-
 # Idade da reuniao em `reservada_sem_link` criada ha mais tempo, na MESMA linha
 # `sinais` da sonda — como as idades do outbox e da quarentena. Sai sempre,
 # inclusive zerada; com o Teams desligado nenhuma reuniao nasce, e o valor e 0.
@@ -686,44 +666,6 @@ resource "google_monitoring_alert_policy" "clamav_scanner_sem_base" {
   }
 }
 
-resource "google_monitoring_alert_policy" "disponibilidade_sem_link" {
-  project               = var.project_id
-  display_name          = "Disponibilidade publicada sem link de reuniao"
-  combiner              = "OR"
-  notification_channels = local.canais_por_alerta["disponibilidade-sem-link"]
-
-  documentation {
-    content = <<-EOT
-      Ha advogado ativo, com horario publicado na semana corrente ou na seguinte, e
-      sem `usuarioTeams` (o object ID do Entra). Um cliente pode marcar com ele, e a
-      sala do Teams nunca seria criada: a reuniao ficaria em "reservada_sem_link"
-      (regra inviolavel 13). O log da sonda traz o `advogadoId` de cada um.
-
-      So dispara com o Teams ligado: com REUNIOES_MODO=desligado a sonda nao emite
-      este sinal. Enquanto a edicao de advogado nao existir, advogados criados antes
-      de o campo existir disparam este alerta — comportamento esperado.
-
-      Runbook: docs/runbooks/reuniao-sem-link.md
-    EOT
-  }
-
-  conditions {
-    display_name = "qualquer ocorrencia"
-
-    condition_threshold {
-      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.disponibilidade_sem_link.name}\" AND resource.type=\"cloud_run_revision\""
-      comparison      = "COMPARISON_GT"
-      threshold_value = 0
-      duration        = "0s"
-
-      aggregations {
-        alignment_period   = "600s"
-        per_series_aligner = "ALIGN_SUM"
-      }
-    }
-  }
-}
-
 resource "google_monitoring_alert_policy" "reuniao_sem_sala" {
   project               = var.project_id
   display_name          = "Reuniao marcada sem sala do Teams"
@@ -840,8 +782,8 @@ resource "google_monitoring_alert_policy" "retencao_parada" {
   }
 }
 
-# A SONDA PARADA DEIXA OUTROS ALERTAS CEGOS: outbox parado, quarentena parada,
-# reuniao sem sala e disponibilidade sem link vem todos dela. Nao precisa de
+# A SONDA PARADA DEIXA OUTROS ALERTAS CEGOS: outbox parado, quarentena parada e
+# reuniao sem sala vem todos dela. Nao precisa de
 # metrica nova: `outbox-atraso-segundos` recebe um ponto a cada execucao da
 # sonda, inclusive zerado, justamente para "sem dado" significar "sonda parada".
 resource "google_monitoring_alert_policy" "sonda_parada" {
@@ -854,8 +796,7 @@ resource "google_monitoring_alert_policy" "sonda_parada" {
     content = <<-EOT
       A sonda `sinais-operacionais` nao registra medicao ha 15 minutos (roda a cada 5).
       Enquanto ela estiver parada, os alertas de outbox parado, arquivo em
-      quarentena, reuniao sem sala e disponibilidade sem link NAO disparam — nao ha
-      dado para medir.
+      quarentena e reuniao sem sala NAO disparam — nao ha dado para medir.
 
       Runbook: docs/runbooks/sonda-parada.md
     EOT
