@@ -49,12 +49,33 @@ export function remetenteDoConvite(
  * Os textos dos e-mails de reunião (B2, decisoes.md 1.2). Sem obrigação
  * jurídica no corpo de um convite: o que importa é dizer o que o anexo faz. O
  * rodapé de todo e-mail é acrescentado pelo despachante.
+ *
+ * PROVISÓRIOS: redigidos pelo desenvolvimento e sujeitos à revisão do
+ * escritório, como os demais textos da plataforma (CHECKLIST.md).
  */
 export const TEXTO_CONVITE =
   'Sua reunião foi marcada. Abra o convite em anexo para adicioná-la ao seu ' +
   'calendário; o link da sala está na descrição do evento. Para remarcar ou ' +
   'cancelar, use a sua área: com pelo menos 24 horas de antecedência, a ' +
   'reunião volta ao saldo do pedido.';
+
+/**
+ * O convite do ADVOGADO (`feat/ligar-teams`). Ele nao organiza a sala — quem
+ * organiza e a conta do escritorio — e entra pelo link como convidado anonimo:
+ * no navegador, digitando o proprio nome. Sem isso, o advogado tentaria entrar
+ * pelo aplicativo do Teams com a conta dele e cairia noutra identidade.
+ */
+export const TEXTO_CONVITE_ADVOGADO =
+  'Uma reunião foi marcada em um pedido distribuído a você. Abra o convite ' +
+  'em anexo para adicioná-la ao seu calendário; o link da sala está na ' +
+  'descrição do evento. Na hora da reunião, abra o link no navegador e digite ' +
+  'o seu nome: você entra como convidado, sem precisar de conta do Teams, e ' +
+  'pode compartilhar a tela.';
+
+/** O convite certo para cada lado: o cliente marca e remarca; o advogado entra. */
+export function textoDoConvite(paraOCliente: boolean): string {
+  return paraOCliente ? TEXTO_CONVITE : TEXTO_CONVITE_ADVOGADO;
+}
 
 export const TEXTO_CANCELAMENTO =
   'Sua reunião foi cancelada. O anexo remove o compromisso do seu calendário.';

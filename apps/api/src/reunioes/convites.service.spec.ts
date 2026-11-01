@@ -445,6 +445,34 @@ describe('ConvitesService.montarConvite', () => {
     );
   });
 
+  /**
+   * O ADVOGADO ENTRA COMO CONVIDADO (`feat/ligar-teams`): quem organiza a sala
+   * e a conta do escritorio. O texto dele diz como entrar; o do cliente fala do
+   * saldo e da remarcacao, que so o cliente faz.
+   */
+  it('o advogado recebe o texto de quem entra como convidado', async () => {
+    const { servico } = montar(COM_SALA);
+    const ana: Destinatario = {
+      uid: ADVOGADO,
+      nome: 'Ana Souza',
+      email: 'ana@escritorio.test',
+    };
+
+    const doAdvogado = await servico.montarConvite(EVENTO, ana);
+    const doCliente = await servico.montarConvite(EVENTO, CLARA);
+
+    if (!doAdvogado.enviar || !doCliente.enviar) {
+      throw new Error('os dois convites deveriam sair');
+    }
+    expect(doAdvogado.mensagem.corpoTexto).toContain(
+      'abra o link no navegador e digite o seu nome',
+    );
+    expect(doAdvogado.mensagem.corpoTexto).toContain('sem precisar de conta');
+    expect(doAdvogado.mensagem.corpoTexto).not.toContain('saldo');
+    expect(doCliente.mensagem.corpoTexto).toContain('volta ao saldo');
+    expect(doCliente.mensagem.corpoTexto).not.toContain('convidado');
+  });
+
   it('o .ics leva o UID da reuniao e o link da sala', async () => {
     const { servico } = montar(COM_SALA);
 

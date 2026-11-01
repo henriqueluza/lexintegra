@@ -20,9 +20,9 @@ import {
   assuntoDa,
   remetenteDoConvite,
   TEXTO_CANCELAMENTO,
-  TEXTO_CONVITE,
   TEXTO_DESCRICAO,
   textoDaReuniaoDesmarcada,
+  textoDoConvite,
 } from './textos-de-reuniao.js';
 import {
   assuntoDaSala,
@@ -296,7 +296,7 @@ export class ConvitesService {
       mensagem: {
         para: [destinatario.email],
         assunto: `Reunião marcada: ${pedido.snapshot.nome}`,
-        corpoTexto: TEXTO_CONVITE,
+        corpoTexto: textoDoConvite(destinatario.uid === pedido.clienteId),
         acao: {
           rotulo: 'Ver pedido',
           url: `${urlDaAplicacao()}/${destinatario.uid === pedido.clienteId ? 'painel' : 'advogado/demandas'}`,
