@@ -23,6 +23,7 @@ import { VERSAO_TERMOS_CHECKOUT } from 'shared/termos-checkout';
 import { ApiCheckoutService } from '../../autenticacao/api-checkout.service';
 import { AppCheckService } from '../../autenticacao/app-check';
 import { paraReais } from '../../comum/moeda';
+import { descreverPreco } from '../../comum/parcela';
 import { CarrinhoService } from '../../publico/carrinho.service';
 import { PreCadastroService } from '../../publico/pre-cadastro.service';
 import { AvisoPrivacidade } from '../../ui/aviso-privacidade/aviso-privacidade';
@@ -102,6 +103,25 @@ export class Checkout {
   private readonly errosDoServidor = signal<
     Partial<Record<'nome' | 'email', string>>
   >({});
+
+  /**
+   * "ou em ate 3x de R$ 230,00 no cartao", do menor parcelamento do carrinho e
+   * da mesma conta do catalogo (`shared/parcelamento`). Vazio quando o cartao
+   * esta desligado ou nenhum item e parcelavel: nao se anuncia o que o
+   * checkout recusa.
+   */
+  protected readonly condicaoNoCartao = computed(() => {
+    if (!this.cartaoDisponivel()) return '';
+    const preco = descreverPreco(
+      this.carrinho.totalIndicativoCentavos(),
+      this.carrinho.parcelasNoCartao(),
+    );
+    if (preco.total === '') return '';
+    const primeira = preco.total.split(' · ')[1];
+    return primeira === undefined
+      ? `ou em até ${preco.destaque} no cartão`
+      : `ou em até ${preco.destaque} no cartão (${primeira})`;
+  });
 
   /** O codigo copia-e-cola, num campo somente leitura para selecionar a mao. */
   protected readonly codigoPix = new FormControl('', { nonNullable: true });

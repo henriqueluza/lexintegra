@@ -46,7 +46,7 @@ export const TEXTOS_CHECKOUT = {
     dicaCartaoIndisponivel:
       'O pagamento com cartão estará disponível em breve. Por enquanto, pague com PIX.',
     dicaCartao:
-      'O cartão é processado na página segura do gateway de pagamento. Você volta para cá ao terminar.',
+      'O cartão é processado na página segura do gateway de pagamento, onde você escolhe em quantas vezes pagar. Você volta para cá ao terminar.',
     aceite: 'Li e aceito os termos de contratação',
     aceiteObrigatorio: 'Aceite os termos para continuar.',
     acao: 'Pagar',

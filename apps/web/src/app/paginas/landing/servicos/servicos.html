@@ -139,8 +139,8 @@
       </div>
       <div class="produto__rodape">
         <p class="produto__preco">{{ ficha.preco }}</p>
-        @if (ficha.condicao) {
-        <p class="produto__condicao">{{ ficha.condicao }}</p>
+        @if (ficha.total) {
+        <p class="produto__total">{{ ficha.total }}</p>
         }
         <div class="produto__acao">
           <button

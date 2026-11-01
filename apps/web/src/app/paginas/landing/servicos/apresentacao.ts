@@ -1,5 +1,5 @@
 import type { ProdutoVitrine } from 'shared/esquemas/vitrine';
-import { paraReais } from '../../../comum/moeda';
+import { descreverPreco } from '../../../comum/parcela';
 
 export interface LinhaFicha {
   quantidade: number;
@@ -112,9 +112,11 @@ export interface FichaProduto {
   produto: ProdutoVitrine;
   linhas: LinhaFicha[];
   meta: string;
-  condicao: string;
   descricao: string;
+  /** Em destaque: a parcela ("12x de R$ 590,00") ou, sem parcelamento, o total. */
   preco: string;
+  /** Menor, embaixo: "Total R$ 7.080,00"; vazio quando `preco` ja e o total. */
+  total: string;
   busca: string;
 }
 
@@ -144,40 +146,25 @@ export function apresentar(produto: ProdutoVitrine): FichaProduto {
           : 'Revisões por entregável',
     });
   const descricao = produto.descricao ?? '';
-  const pagamento = apresentarPagamento(descricao);
+  /*
+   * A parcela vem do campo `parcelas` do produto e da conta de `shared`, nao do
+   * texto da descricao. Ate 01/11/2026 o "3x de R$ 245,00" era lido da
+   * descricao por expressao regular — valor digitado a mao, que ninguem
+   * conferia contra o preco.
+   */
+  const { destaque, total } =
+    produto.precoCentavos > 0
+      ? descreverPreco(produto.precoCentavos, produto.parcelas)
+      : { destaque: 'Sob consulta', total: '' };
   return {
     produto,
     linhas,
     meta: meta.join(' · '),
-    ...pagamento,
-    preco:
-      produto.precoCentavos > 0
-        ? paraReais(produto.precoCentavos)
-        : 'Sob consulta',
+    descricao: descricao.trim(),
+    preco: destaque,
+    total,
     busca: normalizar(
       [produto.nome, descricao, ...linhas.map((item) => item.nome)].join(' '),
     ),
-  };
-}
-
-function apresentarPagamento(descricao: string): {
-  condicao: string;
-  descricao: string;
-} {
-  const parcela =
-    /(?:pode ser parcelad[oa] em\s*)?(\d{1,2})\s*x\s*de\s*R\$\s*([\d.]+,\d{2})\.?/i;
-  const mensal = /\(?\s*R\$\s*([\d.]+,\d{2})\s*\/\s*m[eê]s\s*\)?/i;
-  const parcelas = parcela.exec(descricao);
-  const mensalidade = mensal.exec(descricao);
-  const condicoes: string[] = [];
-  if (parcelas) condicoes.push(`ou ${parcelas[1]}x de R$ ${parcelas[2]}`);
-  if (mensalidade) condicoes.push(`R$ ${mensalidade[1]}/mês`);
-  return {
-    condicao: condicoes.join(' · '),
-    descricao: descricao
-      .replace(parcela, '')
-      .replace(mensal, '')
-      .replace(/\s+([.,;])/g, '$1')
-      .trim(),
   };
 }

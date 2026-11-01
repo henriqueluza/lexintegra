@@ -37,6 +37,9 @@
         {{ textos.resumo.total }}:
         <strong>{{ preco(carrinho.totalIndicativoCentavos()) }}</strong>
       </p>
+      @if (condicaoNoCartao()) {
+      <p class="checkout__parcelas">{{ condicaoNoCartao() }}</p>
+      }
       <p class="checkout__auxiliar">{{ textos.resumo.aviso }}</p>
     </section>
 
