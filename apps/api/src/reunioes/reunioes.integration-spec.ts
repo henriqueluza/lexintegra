@@ -112,6 +112,7 @@ beforeEach(async () => {
 interface Compra {
   readonly pedidoId?: string;
   readonly clienteId?: string;
+  readonly advogadoId?: string;
   readonly quantidadeReunioes?: number;
   readonly intervaloMinimoReunioesDias?: number;
   readonly prazoValidadeReunioesDias?: number;
@@ -119,6 +120,7 @@ interface Compra {
 
 async function comprar(opcoes: Compra = {}): Promise<string> {
   const pedidoId = opcoes.pedidoId ?? 'pedido-1';
+  const advogadoId = opcoes.advogadoId ?? ADVOGADO;
   const produtos = new ProdutosService(banco);
   const pedidos = new PedidosService(banco);
 
@@ -158,13 +160,13 @@ async function comprar(opcoes: Compra = {}): Promise<string> {
     .collection('pedidos')
     .doc(pedidoId)
     .update({
-      advogadoId: ADVOGADO,
+      advogadoId,
       distribuido: true,
       criadoEm: new Date(COMPRA),
     });
   await banco
     .collection('advogados')
-    .doc(ADVOGADO)
+    .doc(advogadoId)
     .set({ nome: 'Ana Souza', status: 'ativo', organizadorTeams: null });
 
   return pedidoId;
@@ -818,6 +820,62 @@ describe('concorrencia', () => {
       expect((recusada as PromiseRejectedResult).reason).toBeInstanceOf(
         ConflictException,
       );
+    },
+    PRAZO_DE_CONCORRENCIA_NO_EMULADOR,
+  );
+
+  /**
+   * A TRAVA E POR ADVOGADO, NAO POR ORGANIZADOR (`feat/ligar-teams`). A conta
+   * organizadora do escritorio e uma so, e vai organizar reunioes SIMULTANEAS de
+   * advogados diferentes: o slot continua sendo `{advogadoId}_{inicio}`, e nada
+   * no agendamento passa a olhar o organizador. As duas salas nascem na mesma
+   * conta, cada uma com o seu `externalId`; e o advogado ocupado continua
+   * recusando um terceiro cliente no mesmo horario.
+   */
+  it(
+    'dois advogados, mesmo horario, mesma conta organizadora: as duas marcam',
+    async () => {
+      await comprar({ pedidoId: 'pedido-1', clienteId: CLIENTE });
+      await comprar({
+        pedidoId: 'pedido-2',
+        clienteId: OUTRO_CLIENTE,
+        advogadoId: OUTRO_ADVOGADO,
+      });
+      const daAna = await publicarSlot(INICIO, FIM);
+      const doCarlos = await publicarSlot(INICIO, FIM, OUTRO_ADVOGADO);
+
+      const resultados = await Promise.allSettled([
+        reunioes.agendar('pedido-1', CLIENTE, daAna, AGORA),
+        reunioes.agendar('pedido-2', OUTRO_CLIENTE, doCarlos, AGORA),
+      ]);
+      expect(resultados.map((r) => r.status)).toEqual([
+        'fulfilled',
+        'fulfilled',
+      ]);
+
+      const evento = { reuniaoId: 'r001', sequence: 0 };
+      await expect(
+        convites.criarSala({ pedidoId: 'pedido-1', ...evento }),
+      ).resolves.toMatchObject({ sucesso: true });
+      await expect(
+        convites.criarSala({ pedidoId: 'pedido-2', ...evento }),
+      ).resolves.toMatchObject({ sucesso: true });
+
+      expect(sala.pedidos.map((p) => [p.organizadorId, p.externalId])).toEqual([
+        [LIGADO.organizadorPadrao, 'pedido-1-r001'],
+        [LIGADO.organizadorPadrao, 'pedido-2-r001'],
+      ]);
+      const [uma, outra] = await Promise.all([
+        lerReuniao('pedido-1', 'r001'),
+        lerReuniao('pedido-2', 'r001'),
+      ]);
+      expect([uma.estado, outra.estado]).toEqual(['confirmada', 'confirmada']);
+      expect(uma.link).not.toBe(outra.link);
+
+      await comprar({ pedidoId: 'pedido-3', clienteId: 'uid-dora' });
+      await expect(
+        reunioes.agendar('pedido-3', 'uid-dora', daAna, AGORA),
+      ).rejects.toBeInstanceOf(ConflictException);
     },
     PRAZO_DE_CONCORRENCIA_NO_EMULADOR,
   );
