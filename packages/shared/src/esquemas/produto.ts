@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PARCELAS_MAXIMAS_NO_CARTAO } from '../formas-de-pagamento.js';
 
 /**
  * Contrato do produto do catalogo (itens 2.5.1 a 2.5.4), compartilhado entre a
@@ -122,6 +123,28 @@ export const esquemaProduto = z.object({
     .int('Informe um numero inteiro de revisoes.')
     .min(0, 'O numero de revisoes nao pode ser negativo.')
     .max(20, 'Numero de revisoes acima do teto permitido.'),
+
+  /*
+   * Em quantas vezes o site anuncia o produto no cartao (01/11/2026). O teto e
+   * o do painel do AbacatePay (`formas-de-pagamento.ts`): anunciar mais do que a
+   * conta aceita seria propaganda enganosa. Um (o padrao) e "so a vista".
+   *
+   * O site so ANUNCIA: o pedido do checkout hospedado nao leva campo de
+   * parcelas, e a pagina do gateway oferece o que o painel configura.
+   *
+   * O PADRAO EXISTE PELOS DOCUMENTOS ANTIGOS. Produto gravado antes deste campo,
+   * e snapshot de checkout aberto antes dele, chegam sem `parcelas`; com o
+   * padrao, a revalidacao em `PedidosService.preparar` continua aceitando os
+   * dois.
+   */
+  parcelas: z
+    .int('Informe um numero inteiro de parcelas.')
+    .min(1, 'Use 1 para pagamento so a vista.')
+    .max(
+      PARCELAS_MAXIMAS_NO_CARTAO,
+      `O cartao parcela em ate ${String(PARCELAS_MAXIMAS_NO_CARTAO)} vezes.`,
+    )
+    .default(1),
 });
 
 /**
@@ -148,7 +171,7 @@ export const esquemaSituacao = z
  * O que o pedido congela do produto no momento do checkout (arquitetura 5.3,
  * item 2.5.9, regra inviolavel 5).
  *
- * Sao os nove campos do produto MENOS `ativo`: desativar um produto tira ele da
+ * Sao os dez campos do produto MENOS `ativo`: desativar um produto tira ele da
  * vitrine, nao cancela pedido de quem ja comprou. Os nomes sao identicos aos do
  * produto de proposito — a copia em `congelarProduto` fica mecanica, e um campo
  * novo que alguem esqueca de congelar vira erro de compilacao la, nao surpresa
@@ -164,6 +187,19 @@ export type SnapshotProduto = {
   readonly prazoValidadeReunioesDias: number;
   readonly intervaloMinimoReunioesDias: number;
   readonly numeroRevisoesPermitidas: number;
+  /**
+   * Pedidos criados antes de 01/11/2026 nao tem este campo no Firestore.
+   * Nenhum leitor de pedido o usa: ele serve ao catalogo e ao checkout.
+   */
+  readonly parcelas: number;
+};
+
+/**
+ * O produto como pode estar gravado: documentos anteriores a `parcelas` nao o
+ * tem. E o que `congelarProduto` aceita, para normalizar na leitura.
+ */
+export type ProdutoGravado = Omit<SnapshotProduto, 'parcelas'> & {
+  readonly parcelas?: number;
 };
 
 /**
@@ -173,8 +209,11 @@ export type SnapshotProduto = {
  * tambem `ativo`, `criadoEm` e qualquer campo interno que o documento venha a
  * ganhar, e o pedido passaria a carregar estado administrativo congelado que
  * ninguem pediu.
+ *
+ * `parcelas` ausente vira 1 aqui, e nao no chamador: o Firestore recusa
+ * `undefined`, e um produto antigo levado ao carrinho derrubaria o checkout.
  */
-export function congelarProduto(produto: SnapshotProduto): SnapshotProduto {
+export function congelarProduto(produto: ProdutoGravado): SnapshotProduto {
   return {
     nome: produto.nome,
     descricao: produto.descricao,
@@ -185,6 +224,7 @@ export function congelarProduto(produto: SnapshotProduto): SnapshotProduto {
     prazoValidadeReunioesDias: produto.prazoValidadeReunioesDias,
     intervaloMinimoReunioesDias: produto.intervaloMinimoReunioesDias,
     numeroRevisoesPermitidas: produto.numeroRevisoesPermitidas,
+    parcelas: produto.parcelas ?? 1,
   };
 }
 
@@ -207,6 +247,7 @@ export type ProdutoResumo = {
   readonly prazoValidadeReunioesDias: number;
   readonly intervaloMinimoReunioesDias: number;
   readonly numeroRevisoesPermitidas: number;
+  readonly parcelas: number;
   readonly ativo: boolean;
   /** ISO 8601, ou `null` enquanto o carimbo do servidor nao materializou. */
   readonly criadoEm: string | null;

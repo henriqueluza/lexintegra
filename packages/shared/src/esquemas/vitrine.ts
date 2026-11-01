@@ -22,6 +22,8 @@ export type ProdutoVitrine = {
   readonly entregaveis: readonly string[];
   readonly quantidadeReunioes: number;
   readonly numeroRevisoesPermitidas: number;
+  /** Publico por decisao de 01/11/2026: o catalogo anuncia a parcela. */
+  readonly parcelas: number;
 };
 
 /**
@@ -43,5 +45,6 @@ export function paraVitrine(produto: ProdutoResumo): ProdutoVitrine {
     entregaveis: [...produto.entregaveis],
     quantidadeReunioes: produto.quantidadeReunioes,
     numeroRevisoesPermitidas: produto.numeroRevisoesPermitidas,
+    parcelas: produto.parcelas,
   };
 }

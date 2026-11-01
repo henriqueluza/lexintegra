@@ -123,6 +123,7 @@ async function montar(opcoes: Opcoes = {}): Promise<Cenario> {
       entregaveis: ['x'],
       quantidadeReunioes: 1,
       numeroRevisoesPermitidas: 1,
+      parcelas: 1,
     });
   }
 

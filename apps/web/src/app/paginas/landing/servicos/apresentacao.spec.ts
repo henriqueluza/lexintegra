@@ -9,6 +9,7 @@ const produto: ProdutoVitrine = {
   entregaveis: [],
   quantidadeReunioes: 0,
   numeroRevisoesPermitidas: 0,
+  parcelas: 1,
 };
 
 describe('Apresentação do catálogo, sem alterar os dados de compra', () => {

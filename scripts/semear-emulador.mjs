@@ -34,7 +34,6 @@
  */
 
 import './fonte-ts.mjs';
-import { congelarProduto } from '../packages/shared/src/esquemas/produto.ts';
 import {
   dataLocal,
   semanaDe,
@@ -396,6 +395,10 @@ async function semearClientesEPedidos(idsDeProduto, uidPorEmail) {
     ana: uidPorEmail.get('advogado@exemplo.test'),
     carlos: uidPorEmail.get('carlos.advogado@exemplo.test'),
   };
+
+  // Por `import()` pela mesma razao: o produto importa `formas-de-pagamento.js`.
+  const { congelarProduto } =
+    await import('../packages/shared/src/esquemas/produto.ts');
 
   for (const pedido of PEDIDOS_FICTICIOS) {
     const produto = CATALOGO_FICTICIO[pedido.produtoIndice];

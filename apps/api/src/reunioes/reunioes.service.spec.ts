@@ -58,6 +58,7 @@ function montar(ajustes: Ajustes = {}): {
       prazoValidadeReunioesDias: 365,
       intervaloMinimoReunioesDias: 7,
       numeroRevisoesPermitidas: 2,
+      parcelas: 1,
     },
     ...ajustes.pedido,
   });
@@ -464,6 +465,7 @@ describe('HorariosService.listar', () => {
           prazoValidadeReunioesDias: 365,
           intervaloMinimoReunioesDias: 7,
           numeroRevisoesPermitidas: 2,
+          parcelas: 1,
         },
       },
     });

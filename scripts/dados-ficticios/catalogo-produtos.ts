@@ -33,6 +33,7 @@ export const CATALOGO_FICTICIO: readonly NovoProduto[] = [
     prazoValidadeReunioesDias: 365,
     intervaloMinimoReunioesDias: 7,
     numeroRevisoesPermitidas: 2,
+    parcelas: 6,
   },
   {
     nome: 'Parecer Jurídico Trabalhista',
@@ -48,6 +49,7 @@ export const CATALOGO_FICTICIO: readonly NovoProduto[] = [
     prazoValidadeReunioesDias: 180,
     intervaloMinimoReunioesDias: 0,
     numeroRevisoesPermitidas: 1,
+    parcelas: 1,
   },
   {
     nome: 'Due Diligence Simplificada',
@@ -67,6 +69,7 @@ export const CATALOGO_FICTICIO: readonly NovoProduto[] = [
     prazoValidadeReunioesDias: 365,
     intervaloMinimoReunioesDias: 15,
     numeroRevisoesPermitidas: 3,
+    parcelas: 12,
   },
   {
     nome: 'Revisão de Contrato Comercial',
@@ -84,6 +87,7 @@ export const CATALOGO_FICTICIO: readonly NovoProduto[] = [
     prazoValidadeReunioesDias: 90,
     intervaloMinimoReunioesDias: 0,
     numeroRevisoesPermitidas: 2,
+    parcelas: 7,
   },
   {
     nome: 'Adequação à LGPD',
@@ -104,5 +108,6 @@ export const CATALOGO_FICTICIO: readonly NovoProduto[] = [
     prazoValidadeReunioesDias: 365,
     intervaloMinimoReunioesDias: 10,
     numeroRevisoesPermitidas: 2,
+    parcelas: 10,
   },
 ];

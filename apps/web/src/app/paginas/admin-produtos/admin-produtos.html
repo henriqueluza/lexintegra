@@ -36,7 +36,7 @@
         [obrigatorio]="true"
       />
 
-      <div class="produtos__campos produtos__campos--quatro">
+      <div class="produtos__campos produtos__campos--numeros">
         <app-campo
           rotulo="Reuniões incluídas"
           formControlName="quantidadeReunioes"
@@ -55,6 +55,11 @@
           rotulo="Revisões permitidas"
           formControlName="numeroRevisoesPermitidas"
           dica="Número de revisões incluídas para cada entregável."
+        />
+        <app-campo
+          rotulo="Parcelas no cartão"
+          formControlName="parcelas"
+          dica="De 1 a 12. Use 1 para só à vista."
         />
       </div>
 

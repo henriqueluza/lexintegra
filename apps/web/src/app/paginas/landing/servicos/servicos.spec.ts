@@ -14,6 +14,7 @@ const PARECER: ProdutoVitrine = {
   entregaveis: ['Parecer em PDF', 'Plano de ação'],
   quantidadeReunioes: 2,
   numeroRevisoesPermitidas: 2,
+  parcelas: 1,
 };
 
 const liberado = signal(false);

@@ -898,7 +898,7 @@ O webhook precisa criar o pagamento e todos os pedidos numa única transação. 
 
 ### 5.3 Snapshot imutável
 
-O item 2.5.9 exige que alterações de produto não retroajam. No momento da compra, o pedido copia para dentro de si os nove campos do produto — todos menos `ativo`, porque tirar um produto da vitrine não cancela a compra de quem já pagou:
+O item 2.5.9 exige que alterações de produto não retroajam. No momento da compra, o pedido copia para dentro de si os dez campos do produto — todos menos `ativo`, porque tirar um produto da vitrine não cancela a compra de quem já pagou:
 
 | Campo | Tipo |
 |---|---|
@@ -911,6 +911,7 @@ O item 2.5.9 exige que alterações de produto não retroajam. No momento da com
 | `prazoValidadeReunioesDias` | inteiro > 0, dias a partir da compra |
 | `intervaloMinimoReunioesDias` | inteiro ≥ 0 |
 | `numeroRevisoesPermitidas` | inteiro ≥ 0 (ver 5.6) |
+| `parcelas` | inteiro de 1 a 12, em quantas vezes o site anuncia no cartão (01/11/2026); ausente nos pedidos anteriores, vale 1 |
 
 **A unidade está no nome do campo, não só no comentário.** `precoCentavos` e não `preco`; `prazoValidadeReunioesDias` e não `prazoValidadeReunioes`. Trocar reais por centavos não falha em lugar nenhum — só cobra cem vezes menos, e o snapshot congela o engano para sempre.
 

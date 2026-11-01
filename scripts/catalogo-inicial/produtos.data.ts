@@ -10,7 +10,10 @@
 //   1. Precos em CENTAVOS. R$ 4.200,00 e `420_000`, nao `4200`.
 //   2. `pnpm --filter api test -- catalogo-inicial` valida os seis contra
 //      `esquemaNovoProduto` e confere a contagem de entregaveis.
-//   3. Mudar o NOME de um produto ja cadastrado faz o script cria-lo de novo.
+//   3. `parcelas` e em quantas vezes o site anuncia no cartao (01/11/2026):
+//      pacotes e Prime de 3 meses em 3x, planos de 12 meses em 12x, como o
+//      site mostrava. O teto e o do painel do AbacatePay (12).
+//   4. Mudar o NOME de um produto ja cadastrado faz o script cria-lo de novo.
 //      Renomeie pelo painel, e depois aqui.
 
 import type { ProdutoInicial } from './expandir.js';
@@ -36,6 +39,7 @@ export const CATALOGO_INICIAL: readonly ProdutoInicial[] = [
     prazoValidadeReunioesDias: 365,
     intervaloMinimoReunioesDias: 0,
     numeroRevisoesPermitidas: REVISOES_PADRAO,
+    parcelas: 12,
     entregaveis: [
       {
         nome: 'Diagnóstico da operação (trabalhista OU regulatório da categoria)',
@@ -63,6 +67,7 @@ export const CATALOGO_INICIAL: readonly ProdutoInicial[] = [
     prazoValidadeReunioesDias: 365,
     intervaloMinimoReunioesDias: 30,
     numeroRevisoesPermitidas: REVISOES_PADRAO,
+    parcelas: 12,
     entregaveis: [
       { nome: 'Diagnóstico jurídico da operação (completo)', quantidade: 1 },
       { nome: 'Contrato personalizado', quantidade: 24 },
@@ -91,6 +96,7 @@ export const CATALOGO_INICIAL: readonly ProdutoInicial[] = [
     prazoValidadeReunioesDias: 90,
     intervaloMinimoReunioesDias: 45,
     numeroRevisoesPermitidas: REVISOES_PADRAO,
+    parcelas: 3,
     entregaveis: [
       { nome: 'Diagnóstico jurídico da operação (completo)', quantidade: 1 },
       { nome: 'Contrato personalizado', quantidade: 3 },
@@ -115,11 +121,12 @@ export const CATALOGO_INICIAL: readonly ProdutoInicial[] = [
     nome: 'Pacote 1 – Diagnóstico de Operação',
     precoCentavos: 69_000, // R$ 690,00
     descricao:
-      'Pacote avulso de entrada, com anamnese inicial, reunião virtual, tira-dúvida e modelos padrão. Pode ser parcelado em 3x de R$ 245,00.',
+      'Pacote avulso de entrada, com anamnese inicial, reunião virtual, tira-dúvida e modelos padrão.',
     quantidadeReunioes: 1,
     prazoValidadeReunioesDias: 180,
     intervaloMinimoReunioesDias: 0,
     numeroRevisoesPermitidas: REVISOES_PADRAO,
+    parcelas: 3,
     entregaveis: [
       { nome: 'Anamnese inicial', quantidade: 1 },
       { nome: 'Modelo de contrato/termo padrão', quantidade: 2 },
@@ -136,12 +143,13 @@ export const CATALOGO_INICIAL: readonly ProdutoInicial[] = [
     nome: 'Pacote 2 – Diagnóstico Completo',
     precoCentavos: 129_000, // R$ 1.290,00
     descricao:
-      'Diagnóstico trabalhista ou regulatório da categoria, com reuniões virtuais, tira-dúvidas e termos/contratos personalizados. Pode ser parcelado em 3x de R$ 458,00.',
+      'Diagnóstico trabalhista ou regulatório da categoria, com reuniões virtuais, tira-dúvidas e termos/contratos personalizados.',
     // Três reuniões, confirmado pelo escritório em 06/10/2026.
     quantidadeReunioes: 3,
     prazoValidadeReunioesDias: 180,
     intervaloMinimoReunioesDias: 0,
     numeroRevisoesPermitidas: REVISOES_PADRAO,
+    parcelas: 3,
     entregaveis: [
       {
         nome: 'Diagnóstico trabalhista OU regulatório da categoria',
@@ -160,12 +168,13 @@ export const CATALOGO_INICIAL: readonly ProdutoInicial[] = [
     nome: 'Pacote 3 – Diagnóstico Estratégico',
     precoCentavos: 199_000, // R$ 1.990,00
     descricao:
-      'Diagnóstico jurídico completo da operação, com tira-dúvidas, termos/contratos personalizados e desconto no primeiro serviço extra. Pode ser parcelado em 3x de R$ 707,00.',
+      'Diagnóstico jurídico completo da operação, com tira-dúvidas, termos/contratos personalizados e desconto no primeiro serviço extra.',
     // Sem reuniões por enquanto, confirmado pelo escritório em 06/10/2026.
     quantidadeReunioes: 0,
     prazoValidadeReunioesDias: 180,
     intervaloMinimoReunioesDias: 0,
     numeroRevisoesPermitidas: REVISOES_PADRAO,
+    parcelas: 3,
     entregaveis: [
       { nome: 'Diagnóstico jurídico da operação (completo)', quantidade: 1 },
       { nome: 'Termo/contrato personalizado', quantidade: 6 },

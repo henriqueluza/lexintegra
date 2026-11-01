@@ -27,10 +27,14 @@
 
 import { createInterface } from 'node:readline/promises';
 import './fonte-ts.mjs';
-import { esquemaNovoProduto } from '../packages/shared/src/esquemas/produto.ts';
 import { paraCorpo } from './catalogo-inicial/expandir.ts';
 import { lerOculto } from './catalogo-inicial/terminal.mjs';
 import { CATALOGO_INICIAL } from './catalogo-inicial/produtos.data.ts';
+
+// Por `import()`, e nao estatico: o produto importa `formas-de-pagamento.js`, e
+// so o gancho de `fonte-ts.mjs` acha a fonte — para o que vier depois dele.
+const { esquemaNovoProduto } =
+  await import('../packages/shared/src/esquemas/produto.ts');
 
 const DOMINIO_PRODUCAO = 'lexintegra.com.br';
 
@@ -94,7 +98,7 @@ function imprimirResumo(produtos) {
     console.log(`  ${slug}`);
     console.log(`    ${corpo.nome} — ${reais(corpo.precoCentavos)}`);
     console.log(
-      `    reunioes ${corpo.quantidadeReunioes} | prazo ${corpo.prazoValidadeReunioesDias} dias | intervalo ${corpo.intervaloMinimoReunioesDias} dias | revisoes ${corpo.numeroRevisoesPermitidas}`,
+      `    reunioes ${corpo.quantidadeReunioes} | prazo ${corpo.prazoValidadeReunioesDias} dias | intervalo ${corpo.intervaloMinimoReunioesDias} dias | revisoes ${corpo.numeroRevisoesPermitidas} | parcelas ${corpo.parcelas}`,
     );
     console.log(
       `    ${corpo.entregaveis.length} entregaveis, ${corpo.textosOrientativos.length} textos orientativos`,

@@ -25,6 +25,7 @@ const PARECER: NovoProduto = {
   prazoValidadeReunioesDias: 365,
   intervaloMinimoReunioesDias: 0,
   numeroRevisoesPermitidas: 1,
+  parcelas: 1,
 };
 
 interface Arranjo {

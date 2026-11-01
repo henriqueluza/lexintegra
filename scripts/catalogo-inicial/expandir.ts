@@ -28,6 +28,8 @@ export interface ProdutoInicial {
   readonly prazoValidadeReunioesDias: number;
   readonly intervaloMinimoReunioesDias: number;
   readonly numeroRevisoesPermitidas: number;
+  /** Em quantas vezes o site anuncia no cartao; 1 e so a vista. */
+  readonly parcelas: number;
 }
 
 /** O corpo de `POST /api/admin/produtos` (`NovoProduto`, de `shared`). */
@@ -41,6 +43,8 @@ export interface CorpoDoProduto {
   readonly prazoValidadeReunioesDias: number;
   readonly intervaloMinimoReunioesDias: number;
   readonly numeroRevisoesPermitidas: number;
+  /** Em quantas vezes o site anuncia no cartao; 1 e so a vista. */
+  readonly parcelas: number;
 }
 
 /**
@@ -79,5 +83,6 @@ export function paraCorpo(produto: ProdutoInicial): CorpoDoProduto {
     prazoValidadeReunioesDias: produto.prazoValidadeReunioesDias,
     intervaloMinimoReunioesDias: produto.intervaloMinimoReunioesDias,
     numeroRevisoesPermitidas: produto.numeroRevisoesPermitidas,
+    parcelas: produto.parcelas,
   };
 }

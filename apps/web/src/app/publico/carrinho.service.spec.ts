@@ -11,6 +11,7 @@ const PARECER: ProdutoVitrine = {
   entregaveis: ['Parecer em PDF'],
   quantidadeReunioes: 2,
   numeroRevisoesPermitidas: 2,
+  parcelas: 1,
 };
 
 const CONTRATO: ProdutoVitrine = {

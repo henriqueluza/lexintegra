@@ -43,6 +43,7 @@ function pedido(ajustes: Partial<CartaoPedido> = {}): CartaoPedido {
       prazoValidadeReunioesDias: 365,
       intervaloMinimoReunioesDias: 7,
       numeroRevisoesPermitidas: 2,
+      parcelas: 1,
     },
     ...ajustes,
   };

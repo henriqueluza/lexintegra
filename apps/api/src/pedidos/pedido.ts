@@ -263,7 +263,7 @@ export function paraDemanda(
 
 /**
  * A linha da caixa de entrada. Leva o NOME do produto e nao o snapshot inteiro:
- * a tela de distribuicao e uma tabela, e mandar nove campos congelados por linha
+ * a tela de distribuicao e uma tabela, e mandar dez campos congelados por linha
  * seria transferir o catalogo para escolher um advogado.
  */
 export function paraDistribuir(

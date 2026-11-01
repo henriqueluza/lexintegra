@@ -123,6 +123,7 @@ async function comprar(opcoes: Compra = {}): Promise<string> {
       prazoValidadeReunioesDias: opcoes.prazoValidadeReunioesDias ?? 365,
       intervaloMinimoReunioesDias: opcoes.intervaloMinimoReunioesDias ?? 7,
       numeroRevisoesPermitidas: 2,
+      parcelas: 1,
     },
     ADMIN,
   );

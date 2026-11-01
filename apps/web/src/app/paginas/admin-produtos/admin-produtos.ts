@@ -105,6 +105,7 @@ export class AdminProdutos implements OnInit {
     prazoValidadeReunioesDias: ['365', [Validators.required]],
     intervaloMinimoReunioesDias: ['0', [Validators.required]],
     numeroRevisoesPermitidas: ['0', [Validators.required]],
+    parcelas: ['1', [Validators.required]],
     entregaveis: this.fb.nonNullable.array<FormControl<string>>([]),
     textosOrientativos: this.fb.nonNullable.array<FormControl<string>>([]),
   });
@@ -151,7 +152,9 @@ export class AdminProdutos implements OnInit {
     const itens = `${produto.entregaveis.length} entregável(eis)`;
     const reunioes = `${produto.quantidadeReunioes} reunião(ões)`;
     const revisoes = `${produto.numeroRevisoesPermitidas} revisão(ões)`;
-    return `${itens} · ${reunioes} · ${revisoes}`;
+    const parcelas =
+      produto.parcelas > 1 ? `até ${produto.parcelas}x` : 'só à vista';
+    return `${itens} · ${reunioes} · ${revisoes} · ${parcelas}`;
   }
 
   protected editar(produto: ProdutoResumo): void {
@@ -168,6 +171,7 @@ export class AdminProdutos implements OnInit {
       prazoValidadeReunioesDias: String(produto.prazoValidadeReunioesDias),
       intervaloMinimoReunioesDias: String(produto.intervaloMinimoReunioesDias),
       numeroRevisoesPermitidas: String(produto.numeroRevisoesPermitidas),
+      parcelas: String(produto.parcelas),
     });
   }
 
@@ -237,6 +241,7 @@ export class AdminProdutos implements OnInit {
         bruto.intervaloMinimoReunioesDias,
       ),
       numeroRevisoesPermitidas: paraInteiro(bruto.numeroRevisoesPermitidas),
+      parcelas: paraInteiro(bruto.parcelas),
     };
 
     if (precoCentavos === null || Object.values(inteiros).includes(null)) {
