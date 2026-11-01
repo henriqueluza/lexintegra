@@ -91,7 +91,7 @@ servindo.
 | `VARREDOR_LOTE` | não | não definida | Inválido ou ausente, usa 100 | `outbox/politica.ts` |
 | `APP_CHECK_ENFORCE` | sim | `true` | Fora de `"true"`/`"false"`, **recusa subir** em produção | `app-check/exigencia.ts` |
 | `PROXIES_CONFIAVEIS` | não | `2` | Inválido, usa 0. Com o número errado, o limitador conta todo mundo como um visitante só, **sem falhar** | `configurar.ts` |
-| `PAGAMENTOS_MODO` | sim | `desligado` | Ausente ou inválido, recusa subir. `producao` recusa enquanto `PRODUCAO_DESTRAVADA` for `false` (regra 20) e, destravado, exige `NODE_ENV=production`, chave `abc_prod_` e os dois segredos do webhook | `pagamentos/gateway/modo.ts` |
+| `PAGAMENTOS_MODO` | sim | `producao` (desde 01/11/2026) | Ausente ou inválido, recusa subir. `producao` recusa enquanto `PRODUCAO_DESTRAVADA` for `false` (regra 20) e, destravado, exige `NODE_ENV=production`, chave `abc_prod_` e os dois segredos do webhook | `pagamentos/gateway/modo.ts` |
 | `PAGAMENTOS_CARTAO` | sim | `desabilitado` (B2, decisões 3.4) | Ausente ou inválido, recusa subir. `desabilitado`: o checkout recusa cartão com 422 e a tela mostra "em breve" | `pagamentos/gateway/cartao.ts` |
 | `ABACATEPAY_API_KEY` | com `sandbox` ou `producao` | não definida (secret `abacatepay-api-key`, sem versão, só referenciado com `producao`) | Em `sandbox`, recusa subir sem ela e recusa chave sem o prefixo `abc_dev_`; em `producao`, sem o prefixo `abc_prod_` | `pagamentos/gateway/modo.ts` |
 | `ABACATEPAY_WEBHOOK_SECRET` | com a chave | não definida (secret `abacatepay-webhook-secret`) | Com a chave e sem ela, recusa subir | `pagamentos/gateway/modo.ts` |
@@ -138,7 +138,7 @@ delas: commit, PR e deploy. Nunca um `apply` local.
 | `app_check_enforce` | `"true"` (padrão; o deploy não sobrescreve) | Vira `APP_CHECK_ENFORCE` |
 | `proxies_confiaveis` | `2` | Vira `PROXIES_CONFIAVEIS` |
 | `rastreio_amostragem` | `"0.1"` | Vira `RASTREIO_AMOSTRAGEM` |
-| `pagamentos_modo` | `desligado` | Vira `PAGAMENTOS_MODO`; com `producao`, liga os três secrets do AbacatePay. Só junto com `PRODUCAO_DESTRAVADA` ([`ligar-terceiros.md`](../runbooks/ligar-terceiros.md)) |
+| `pagamentos_modo` | `producao` | Vira `PAGAMENTOS_MODO`; com `producao`, liga os três secrets do AbacatePay. Destravado em 01/11/2026 junto com `PRODUCAO_DESTRAVADA` ([`ligar-terceiros.md`](../runbooks/ligar-terceiros.md)). `desligado` é o caminho de emergência |
 | `reunioes_modo` | `desligado` | Vira `REUNIOES_MODO`; com `graph`, liga `GRAPH_*`. Só junto com `INTEGRACAO_GRAPH_DESTRAVADA` |
 | `graph_tenant_id`, `graph_client_id` | `PREENCHER-NO-DESTRAVAMENTO` | GUIDs do Entra ID; o Terraform recusa o placeholder com `graph` |
 | `alertas_email_suporte` | `suportelexintegra@gmail.com` | Canal de e-mail que recebe **todos** os alertas (decisões 5.2) |
@@ -156,7 +156,7 @@ em vez de assumir um valor padrão.
 
 | Modo | Estado hoje | O que ele faz agora | O que o destrava |
 |---|---|---|---|
-| `PAGAMENTOS_MODO` | `desligado` | Checkout e webhook respondem 503 | Chave de produção nos secrets, primeira transação real feita por uma pessoa e o **commit de destravamento** (`PRODUCAO_DESTRAVADA = true` e `pagamentos_modo = "producao"`). Ver a seção 4.2 |
+| `PAGAMENTOS_MODO` | `producao` (destravado em 01/11/2026) | Checkout cobra de verdade e o webhook cria pedidos | Já destravado: chave de produção nos secrets, cobrança PIX manual de R$ 1,00 (01/11/2026) e o **commit de destravamento** (`PRODUCAO_DESTRAVADA = true` e `pagamentos_modo = "producao"`). Para desligar numa emergência: `pagamentos_modo = "desligado"` por PR. Ver a seção 4.2 |
 | `REUNIOES_MODO` | `desligado` | O cartão do pedido diz que o agendamento está indisponível | Entra ID configurado, policy propagada, chamada manual de teste, `usuarioTeams` preenchido e o **commit de destravamento** (`INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"` e os GUIDs). Ver a seção 4.3 |
 | `APP_CHECK_ENFORCE` | `true` | Rotas `@Publico()`, fora health e webhook e relato de erro, exigem token de App Check | Já está ligado (commit `67be0ca`). O provedor usa a site key de `vars.APP_CHECK_SITE_KEY` e, sem `vars.APP_CHECK_PROVEDOR`, o provedor `recaptcha-enterprise`. Para desligar numa emergência: `app_check_enforce = "false"` por PR |
 | `RELOGIO_FIXO` | ausente | — | **Nunca em produção.** Só jornadas e regressão visual, sob emulador |

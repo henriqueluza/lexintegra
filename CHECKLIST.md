@@ -731,11 +731,13 @@ faz. Os comandos estão em
   produção em `https://lexintegra.com.br/api/pagamentos/webhook`, com os seis
   eventos (`transparent.*` e `checkout.*` de `completed`, `refunded` e
   `disputed`), e conferir que nenhum webhook antigo aponta para `/api/webhook`.
-- [ ] **Teste — Caique e escritório:** primeira transação real de valor baixo
+- [x] **Teste — Caique e escritório:** primeira transação real de valor baixo
   feita à mão pelo painel; o evento chega à URL (503 com o modo desligado) e o
-  dinheiro cai (runbook 1.4, regra 20).
-- [ ] **Commit de destravamento — Henrique (ou agente, a pedido):**
+  dinheiro cai (runbook 1.4, regra 20). Feito em 01/11/2026: PIX de R$ 1,00
+  pago, `503` nos Webhook Logs e o valor visível no painel.
+- [x] **Commit de destravamento — Henrique (ou agente, a pedido):**
   `PRODUCAO_DESTRAVADA = true` e `pagamentos_modo = "producao"` (runbook 1.5).
+  Branch `chore/ligar-pagamentos-producao`, 01/11/2026.
 - [ ] **Teste — Henrique:** compra PIX real pela plataforma e estorno; confere
   a permissão dos estornos (runbook 1.6). Também conferir a URL assinada do
   primeiro arquivo real (`limpeza-infra.md` §3).
