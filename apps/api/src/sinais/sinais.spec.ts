@@ -220,22 +220,22 @@ describe('SinaisService', () => {
       banco.documentos.set('advogados/uid-sem', {
         nome: 'Sem Teams',
         status: 'ativo',
-        usuarioTeams: null,
+        organizadorTeams: null,
       });
       banco.documentos.set('advogados/uid-com', {
         nome: 'Com Teams',
         status: 'ativo',
-        usuarioTeams: '11111111-2222-3333-4444-555555555555',
+        organizadorTeams: '11111111-2222-3333-4444-555555555555',
       });
       banco.documentos.set('advogados/uid-suspenso', {
         nome: 'Suspenso',
         status: 'suspenso',
-        usuarioTeams: null,
+        organizadorTeams: null,
       });
       banco.documentos.set('advogados/uid-sem-grade', {
         nome: 'Sem grade',
         status: 'ativo',
-        usuarioTeams: null,
+        organizadorTeams: null,
       });
       for (const advogadoId of ['uid-sem', 'uid-com', 'uid-suspenso']) {
         banco.documentos.set(`disponibilidades/${advogadoId}_x`, {
@@ -249,7 +249,7 @@ describe('SinaisService', () => {
       return arranjo;
     }
 
-    it('emite uma linha por advogado ativo com horario publicado e sem usuarioTeams', async () => {
+    it('emite uma linha por advogado ativo com horario publicado e sem organizadorTeams', async () => {
       const { servico, linhas } = comAdvogados('falso');
 
       const { advogadosSemLink } = await servico.medir(AGORA);

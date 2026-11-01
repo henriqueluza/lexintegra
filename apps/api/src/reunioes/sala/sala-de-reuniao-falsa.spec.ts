@@ -10,7 +10,7 @@ import { ReunioesDesligadas, type NovaSala } from './sala-de-reuniao.js';
 const PEDIDO: NovaSala = {
   reuniaoId: 'pedido-1_r001',
   advogadoId: 'uid-ana',
-  usuarioTeams: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
+  organizadorTeams: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
   inicio: '2026-09-24T17:00:00.000Z',
   fim: '2026-09-24T18:00:00.000Z',
   assunto: 'Reuniao: Revisao de contrato',

@@ -63,7 +63,7 @@ function montar(reuniao: Partial<DocumentoReuniao> = {}): {
   });
   banco.documentos.set(`advogados/${ADVOGADO}`, {
     nome: 'Ana Souza',
-    usuarioTeams: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
+    organizadorTeams: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
   });
 
   const sala = new SalaDeReuniaoFalsa();
@@ -113,14 +113,14 @@ describe('ConvitesService.criarSala', () => {
     ).toBe(true);
   });
 
-  it('passa o usuarioTeams do advogado a porta', async () => {
+  it('passa o organizadorTeams do advogado a porta', async () => {
     const { servico, sala } = montar();
 
     await servico.criarSala(EVENTO);
 
     expect(sala.pedidos[0]).toMatchObject({
       reuniaoId: 'r001',
-      usuarioTeams: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
+      organizadorTeams: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
       assunto: 'Reunião: Revisao de contrato',
     });
   });

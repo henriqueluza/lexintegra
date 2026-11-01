@@ -102,7 +102,7 @@ export class SinaisService {
     const advogados = await advogadosSemLink(this.db, agora);
     for (const advogadoId of advogados) {
       this.log.log(
-        `advogado ${advogadoId} com horario publicado e sem usuarioTeams`,
+        `advogado ${advogadoId} com horario publicado e sem organizadorTeams`,
         { sinal: 'disponibilidade.sem-link', advogadoId },
       );
     }

@@ -155,7 +155,7 @@ async function comprar(opcoes: Compra = {}): Promise<string> {
   await banco
     .collection('advogados')
     .doc(ADVOGADO)
-    .set({ nome: 'Ana Souza', status: 'ativo', usuarioTeams: null });
+    .set({ nome: 'Ana Souza', status: 'ativo', organizadorTeams: null });
 
   return pedidoId;
 }

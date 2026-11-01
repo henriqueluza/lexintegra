@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import type { CredenciaisGraph } from './modo.js';
 import type {
-  ConferenciaDoUsuario,
   NovaSala,
   ResultadoDaSala,
   SalaDeReuniao,
@@ -100,16 +99,16 @@ export class GraphSalaDeReuniao implements SalaDeReuniao {
      * escritorio (ADR-21, decisao B). Quando nao for, a sala falharia com
      * "usuario nao encontrado" e nada apontaria para o cadastro.
      */
-    if (sala.usuarioTeams === null || sala.usuarioTeams === '') {
+    if (sala.organizadorTeams === null || sala.organizadorTeams === '') {
       return {
         sucesso: false,
         motivo:
-          `advogado ${sala.advogadoId} sem "usuarioTeams" cadastrado: ` +
+          `advogado ${sala.advogadoId} sem "organizadorTeams" cadastrado: ` +
           'o ID de objeto do Entra precisa ser preenchido no cadastro do advogado.',
       };
     }
 
-    const chamada = await this.chamarComToken(sala, sala.usuarioTeams);
+    const chamada = await this.chamarComToken(sala, sala.organizadorTeams);
     if (!chamada.ok) return { sucesso: false, motivo: chamada.motivo };
 
     const lido = respostaReuniao.safeParse(chamada.dados);
@@ -129,39 +128,15 @@ export class GraphSalaDeReuniao implements SalaDeReuniao {
     };
   }
 
-  /**
-   * `GET /users/{id}`: 200 existe, 404 nao existe, o resto e indisponivel.
-   * Exige a permissao de aplicacao `User.Read.All` no Entra — a mais, alem de
-   * `OnlineMeetings.ReadWrite.All` (CHECKLIST, C > Microsoft).
-   */
-  async conferirUsuario(usuarioTeams: string): Promise<ConferenciaDoUsuario> {
-    const token = await this.obterToken();
-    if (!token.ok) return 'indisponivel';
-    try {
-      const resposta = await this.executar(
-        `${this.base}/users/${encodeURIComponent(usuarioTeams)}?$select=id`,
-        {
-          method: 'GET',
-          headers: { Authorization: `Bearer ${token.dados as string}` },
-          signal: AbortSignal.timeout(this.timeoutMs),
-        },
-      );
-      if (resposta.ok) return 'encontrado';
-      return resposta.status === 404 ? 'nao_encontrado' : 'indisponivel';
-    } catch {
-      return 'indisponivel';
-    }
-  }
-
   private async chamarComToken(
     sala: NovaSala,
-    usuarioTeams: string,
+    organizadorTeams: string,
   ): Promise<Chamada> {
     const token = await this.obterToken();
     if (!token.ok) return token;
 
     return this.chamar(
-      `/users/${encodeURIComponent(usuarioTeams)}/onlineMeetings/createOrGet`,
+      `/users/${encodeURIComponent(organizadorTeams)}/onlineMeetings/createOrGet`,
       token.dados as string,
       {
         externalId: sala.reuniaoId,

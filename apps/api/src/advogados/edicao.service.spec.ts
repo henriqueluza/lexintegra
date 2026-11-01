@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import type { Auth } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
 import { COLECAO_AUDITORIA } from '../auditoria/auditoria.js';
@@ -10,11 +6,6 @@ import { FirestoreFalso } from '../firestore-falso.js';
 import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import type { TarefaDeEvento } from '../outbox/fila.js';
 import { OutboxService } from '../outbox/outbox.service.js';
-import {
-  SalaDeReuniaoFalsa,
-  USUARIO_TEAMS_INEXISTENTE,
-} from '../reunioes/sala/sala-de-reuniao-falsa.js';
-import type { SalaDeReuniao } from '../reunioes/sala/sala-de-reuniao.js';
 import { FilaFalsa } from '../tarefas/fila.js';
 import { EdicaoDeAdvogadoService } from './edicao.service.js';
 
@@ -25,14 +16,13 @@ const TEAMS = '11111111-2222-3333-4444-555555555555';
 const CADASTRO = {
   nome: 'Ana Souza',
   email: 'ana@escritorio.test',
-  usuarioTeams: null,
+  organizadorTeams: null,
 };
 
 let banco: FirestoreFalso;
 let fila: FilaFalsa<TarefaDeEvento>;
 let chamadasAuth: unknown[];
 let erroDoAuth: unknown;
-let sala: SalaDeReuniao;
 
 function servico(): EdicaoDeAdvogadoService {
   const auth = {
@@ -50,7 +40,6 @@ function servico(): EdicaoDeAdvogadoService {
   return new EdicaoDeAdvogadoService(
     auth,
     banco as unknown as Firestore,
-    sala,
     outbox,
     new EnfileiradorDeEventos(outbox, fila),
   );
@@ -71,7 +60,6 @@ beforeEach(() => {
   fila = new FilaFalsa<TarefaDeEvento>();
   chamadasAuth = [];
   erroDoAuth = undefined;
-  sala = new SalaDeReuniaoFalsa();
   banco.documentos.set(`advogados/${UID}`, {
     ...CADASTRO,
     status: 'ativo',
@@ -168,46 +156,35 @@ describe('EdicaoDeAdvogadoService', () => {
     ).rejects.toThrow('rede');
   });
 
-  it('usuarioTeams inexistente no Microsoft 365 vira 422, antes do Auth', async () => {
-    await expect(
-      servico().editar(
-        UID,
-        {
-          ...CADASTRO,
-          email: 'nova@x.test',
-          usuarioTeams: USUARIO_TEAMS_INEXISTENTE,
-        },
-        ADMIN,
-      ),
-    ).rejects.toBeInstanceOf(UnprocessableEntityException);
-    expect(chamadasAuth).toEqual([]);
-    expect(documento()['usuarioTeams']).toBeNull();
-  });
+  it('grava o organizadorTeams sem consultar o tenant', async () => {
+    await servico().editar(UID, { ...CADASTRO, organizadorTeams: TEAMS }, ADMIN);
 
-  it('Graph indisponivel nao impede salvar o usuarioTeams', async () => {
-    sala = {
-      conferirUsuario: () => Promise.resolve('indisponivel'),
-    } as unknown as SalaDeReuniao;
-
-    await servico().editar(UID, { ...CADASTRO, usuarioTeams: TEAMS }, ADMIN);
-
-    expect(documento()['usuarioTeams']).toBe(TEAMS);
+    expect(documento()['organizadorTeams']).toBe(TEAMS);
     expect(chamadasAuth).toEqual([]);
   });
 
-  it('nao confere o usuarioTeams que nao mudou', async () => {
+  it('le o nome antigo do campo e o apaga ao gravar', async () => {
     banco.documentos.set(`advogados/${UID}`, {
-      ...CADASTRO,
-      usuarioTeams: USUARIO_TEAMS_INEXISTENTE,
+      nome: CADASTRO.nome,
+      email: CADASTRO.email,
+      usuarioTeams: TEAMS,
       status: 'ativo',
     });
 
-    await servico().editar(
+    const resumo = await servico().editar(
       UID,
-      { ...CADASTRO, nome: 'Ana S.', usuarioTeams: USUARIO_TEAMS_INEXISTENTE },
+      { ...CADASTRO, nome: 'Ana S.', organizadorTeams: TEAMS },
       ADMIN,
     );
-    expect(documento()['nome']).toBe('Ana S.');
+
+    expect(resumo.organizadorTeams).toBe(TEAMS);
+    expect(documento()['organizadorTeams']).toBe(TEAMS);
+    expect(documento()).not.toHaveProperty('usuarioTeams');
+    /* So o nome mudou: o valor antigo e o novo sao o mesmo organizador. */
+    expect(auditoria()[0]).toMatchObject({
+      antes: { nome: CADASTRO.nome },
+      depois: { nome: 'Ana S.' },
+    });
   });
 
   it('nao toca em status, claim nem pedidos', async () => {

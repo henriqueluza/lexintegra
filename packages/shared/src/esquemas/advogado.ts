@@ -23,23 +23,26 @@ export const STATUS_ADVOGADO = ['ativo', 'suspenso'] as const;
 export type StatusAdvogado = (typeof STATUS_ADVOGADO)[number];
 
 /**
- * O object ID do advogado no Microsoft Entra ID (Etapa 10, ADR-21 decisao B).
+ * O organizador das reunioes deste advogado no Microsoft Entra ID, quando ele
+ * tiver licenca propria do Teams (`feat/ligar-teams`, errata do ADR-21 decisao B).
  *
- * E o `{userId}` de `POST /users/{userId}/onlineMeetings/createOrGet`, e NAO o
- * uid do Firebase. Sao identificadores de sistemas diferentes: o do Firebase
- * autentica na plataforma, este autoriza a criacao da sala no tenant da B&C.
+ * As reunioes sao criadas por uma CONTA ORGANIZADORA do escritorio
+ * (`TEAMS_ORGANIZADOR_PADRAO`), e advogado e cliente entram pelo link como
+ * convidados. Este campo SOBREPOE a conta organizadora para um advogado: e o
+ * `{userId}` de `POST /users/{userId}/onlineMeetings/createOrGet`, e NAO o uid
+ * do Firebase. Preenche-lo exige aplicar a application access policy
+ * `LexIntegra-Reunioes` a esse usuario no tenant — sem ela, a sala falha com
+ * "No application access policy found".
  *
  * SO GUID, NUNCA UPN. O Graph tambem aceita o UPN no lugar do object ID, e seria
  * mais comodo reaproveitar o e-mail que ja esta no cadastro — mas isso faria a
  * integracao depender de o e-mail da plataforma ser o mesmo do Microsoft 365 do
- * escritorio. No dia em que um advogado se cadastrar com outro endereco, a
- * criacao da sala falha com "usuario nao encontrado" e nada no cadastro explica
- * por que. O formato exigido aqui torna o campo obviamente OUTRA coisa.
+ * escritorio. O formato exigido aqui torna o campo obviamente OUTRA coisa.
  *
- * OPCIONAL, e vazio vira `null`. O campo so tem uso quando a integracao real
- * estiver ligada (`REUNIOES_MODO=graph`), e ate la o adaptador falso ignora. O
- * adaptador do Graph recusa com erro claro e reentregavel quando esta nulo — e
- * nao inventa um identificador a partir do e-mail.
+ * OPCIONAL, e vazio vira `null`: `null` significa "usa a conta organizadora".
+ * So o formato e conferido; a existencia no tenant nao, porque o aplicativo
+ * tem so `OnlineMeetings.ReadWrite.All` (sem `User.Read.All`). Um GUID errado
+ * aparece na primeira sala, como falha reentregavel no painel de reunioes.
  */
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
@@ -51,7 +54,7 @@ const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
  * e um campo deixado com espacos no formulario viraria erro de validacao em vez
  * de ausencia.
  */
-export const esquemaUsuarioTeams = z
+export const esquemaOrganizadorTeams = z
   .string()
   .trim()
   .toLowerCase()
@@ -81,8 +84,8 @@ export const esquemaNovoAdvogado = z.object({
    * 254 e o limite de endereco do RFC 5321.
    */
   email: z.email('Informe um e-mail valido.').max(254).toLowerCase(),
-  /* Etapa 10. Fica FORA do que a suspensao ou a edicao tocam, como `status`. */
-  usuarioTeams: esquemaUsuarioTeams,
+  /* Fica FORA do que a suspensao toca, como `status`. */
+  organizadorTeams: esquemaOrganizadorTeams,
 });
 
 export type NovoAdvogado = z.infer<typeof esquemaNovoAdvogado>;
@@ -105,19 +108,19 @@ export type AdvogadoResumo = {
   /** ISO 8601, ou `null` enquanto o carimbo do servidor nao materializou. */
   readonly criadoEm: string | null;
   /**
-   * Etapa 10. `null` enquanto o administrador nao preencher.
+   * `null` quando o advogado usa a conta organizadora do escritorio.
    *
    * Sai na resposta porque a tela do administrador precisa mostrar QUAIS
-   * advogados ainda nao tem o identificador do Teams — sem isso, a unica forma de
-   * descobrir seria uma reuniao que nao ganha sala. Nao e segredo: e um id de
-   * diretorio, do mesmo tipo que o uid que ja viaja aqui.
+   * advogados tem organizador proprio — cada um deles precisa da application
+   * access policy no tenant. Nao e segredo: e um id de diretorio, do mesmo tipo
+   * que o uid que ja viaja aqui.
    */
-  readonly usuarioTeams: string | null;
+  readonly organizadorTeams: string | null;
 };
 
 /**
  * A edicao do advogado (B2, decisoes.md 4.1): o administrador edita TODOS os
- * campos do cadastro — nome, e-mail e `usuarioTeams` — e por isso o contrato e
+ * campos do cadastro — nome, e-mail e `organizadorTeams` — e por isso o contrato e
  * o mesmo da criacao. `status` continua fora: suspender e reativar sao operacoes
  * proprias, com tres efeitos cada, e nao um campo que se digita.
  */

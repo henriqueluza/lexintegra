@@ -34,13 +34,13 @@ export interface NovaSala {
   /** O uid do Firebase. Viaja para o log e para a mensagem de erro, nao para o Graph. */
   readonly advogadoId: string;
   /**
-   * O object ID do advogado no Entra, de `advogados/{uid}.usuarioTeams`.
+   * O object ID do advogado no Entra, de `advogados/{uid}.organizadorTeams`.
    *
    * `null` quando o administrador ainda nao preencheu. O adaptador do Graph
    * RECUSA com erro claro e reentregavel; nao inventa um identificador a partir
    * do e-mail (ADR-21, decisao B).
    */
-  readonly usuarioTeams: string | null;
+  readonly organizadorTeams: string | null;
   /** ISO 8601 em UTC. */
   readonly inicio: string;
   readonly fim: string;
@@ -66,23 +66,9 @@ export type ResultadoDaSala =
     }
   | { readonly sucesso: false; readonly motivo: string };
 
-/**
- * O resultado de conferir um `usuarioTeams` no Microsoft 365 (decisoes.md,
- * 4.1). `indisponivel` NAO e `nao_encontrado`: o Graph fora do ar nao pode
- * travar a edicao do cadastro, nem fazer um ID certo parecer errado.
- */
-export type ConferenciaDoUsuario =
-  'encontrado' | 'nao_encontrado' | 'indisponivel';
-
 export interface SalaDeReuniao {
   /** NUNCA lanca: reporta. Quem decide reentregar e o outbox (ADR-03). */
   criar(sala: NovaSala): Promise<ResultadoDaSala>;
-
-  /**
-   * O object ID do Entra existe no tenant? Usado ao editar o advogado, antes de
-   * gravar. NUNCA lanca.
-   */
-  conferirUsuario(usuarioTeams: string): Promise<ConferenciaDoUsuario>;
 }
 
 /**

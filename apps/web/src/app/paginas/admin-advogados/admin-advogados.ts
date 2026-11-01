@@ -27,12 +27,12 @@ const CONFLITO_DE_EMAIL = { 409: 'Já existe um advogado com este e-mail.' };
 
 /**
  * Na edicao (B2, decisoes.md 4.1) o 409 e e-mail de OUTRA conta — cliente,
- * advogado ou administrador —, e o 422 e um `usuarioTeams` que o Microsoft 365
- * do escritorio nao conhece.
+ * advogado ou administrador. O `organizadorTeams` nao e conferido no tenant
+ * (`feat/ligar-teams`: o aplicativo so tem `OnlineMeetings.ReadWrite.All`), so o
+ * formato, pelo schema.
  */
 const ERROS_DA_EDICAO = {
   409: 'Este e-mail já é usado por outra conta.',
-  422: 'Este ID de objeto não existe no Microsoft 365 do escritório.',
 };
 
 /**
@@ -69,7 +69,7 @@ export class AdminAdvogados implements OnInit {
     { chave: 'nome', rotulo: 'Nome' },
     { chave: 'email', rotulo: 'E-mail' },
     { chave: 'status', rotulo: 'Situação' },
-    { chave: 'usuarioTeams', rotulo: 'Teams' },
+    { chave: 'organizadorTeams', rotulo: 'Organizador no Teams' },
     { chave: 'acoes', rotulo: 'Ações', alinhamento: 'fim' },
   ];
 
@@ -87,15 +87,16 @@ export class AdminAdvogados implements OnInit {
   protected readonly emCurso = signal<string | null>(null);
 
   /*
-   * `usuarioTeams` e OPCIONAL, e sem `Validators.required` de proposito (Etapa
-   * 10, ADR-21 decisao B): a integracao com o Graph nao esta ligada, e exigir o
-   * identificador agora impediria de cadastrar advogado ate alguem ir buscar um
-   * GUID no Entra ID. O formato e conferido pelo mesmo schema que o servidor usa.
+   * `organizadorTeams` e OPCIONAL, e sem `Validators.required` de proposito: as
+   * reunioes sao criadas pela conta organizadora do escritorio
+   * (`TEAMS_ORGANIZADOR_PADRAO`), e o campo so existe para o advogado que tiver
+   * licenca propria do Teams. O formato e conferido pelo mesmo schema que o
+   * servidor usa.
    */
   protected readonly formulario = inject(FormBuilder).nonNullable.group({
     nome: ['', [Validators.required, Validators.minLength(3)]],
     email: ['', [Validators.required, Validators.email]],
-    usuarioTeams: [''],
+    organizadorTeams: [''],
   });
 
   ngOnInit(): void {
@@ -113,7 +114,7 @@ export class AdminAdvogados implements OnInit {
 
   /** O que a tabela mostra na coluna do Teams. Ver a nota em `AdvogadoResumo`. */
   protected teamsDe(linha: Record<string, unknown>): string {
-    return (linha as unknown as AdvogadoResumo).usuarioTeams ?? '—';
+    return (linha as unknown as AdvogadoResumo).organizadorTeams ?? '—';
   }
 
   private async recarregar(): Promise<void> {
@@ -134,7 +135,7 @@ export class AdminAdvogados implements OnInit {
     this.formulario.reset({
       nome: advogado.nome,
       email: advogado.email,
-      usuarioTeams: advogado.usuarioTeams ?? '',
+      organizadorTeams: advogado.organizadorTeams ?? '',
     });
   }
 

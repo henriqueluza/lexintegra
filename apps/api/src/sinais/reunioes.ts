@@ -11,7 +11,7 @@ import { COLECAO_DISPONIBILIDADES } from '../disponibilidades/slot.js';
  * nao cadastrado" e virou duas perguntas diferentes, que viraram dois sinais:
  *
  * - PREVENTIVO: ha advogado ativo, com horario publicado para a semana corrente
- *   ou a seguinte, e sem `usuarioTeams`? Um cliente pode marcar com ele, e a
+ *   ou a seguinte, e sem `organizadorTeams`? Um cliente pode marcar com ele, e a
  *   sala nunca nasceria (ADR-21, decisao B). E o que a arquitetura, secao 9,
  *   chamava de "advogados com disponibilidade publicada e sem link".
  * - O INCIDENTE: ha reuniao em `reservada_sem_link` ha quanto tempo? Complementa
@@ -55,11 +55,11 @@ export async function idadeDaReuniaoSemSala(
 }
 
 /**
- * Os advogados ATIVOS, sem `usuarioTeams`, com algum horario publicado na semana
+ * Os advogados ATIVOS, sem `organizadorTeams`, com algum horario publicado na semana
  * corrente ou na seguinte — as que estao em uso agora (`semanasProximas`; a
  * janela de publicacao inteira e de doze meses, e nao e o que este sinal mede).
  *
- * `usuarioTeams` vazio ou ausente conta como sem: o campo e sempre escrito, mas
+ * `organizadorTeams` vazio ou ausente conta como sem: o campo e sempre escrito, mas
  * documento anterior a Etapa 10 nao o tem. Suspenso nao conta — ele nao recebe
  * reuniao (ADR-21, decisao G).
  */
@@ -74,7 +74,7 @@ export async function advogadosSemLink(
 
   const semusuario = ativos.docs
     .filter((documento) => {
-      const usuario = documento.data()['usuarioTeams'] as unknown;
+      const usuario = documento.data()['organizadorTeams'] as unknown;
       return typeof usuario !== 'string' || usuario.trim() === '';
     })
     .map((documento) => documento.id);

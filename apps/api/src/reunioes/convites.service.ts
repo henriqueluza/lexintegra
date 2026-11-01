@@ -83,7 +83,7 @@ export class ConvitesService {
     const criada = await this.sala.criar({
       reuniaoId: evento.reuniaoId,
       advogadoId: antes.reuniao.advogadoId,
-      usuarioTeams: await this.usuarioTeams(antes.reuniao.advogadoId),
+      organizadorTeams: await this.organizadorTeams(antes.reuniao.advogadoId),
       inicio: antes.reuniao.inicio,
       fim: antes.reuniao.fim,
       assunto: assuntoDa(antes.pedido),
@@ -333,14 +333,14 @@ export class ConvitesService {
       .doc(evento.reuniaoId);
   }
 
-  private async usuarioTeams(advogadoId: string): Promise<string | null> {
+  private async organizadorTeams(advogadoId: string): Promise<string | null> {
     const documento = await this.db
       .collection(COLECAO_ADVOGADOS)
       .doc(advogadoId)
       .get();
-    const dados = documento.data() as { usuarioTeams?: string } | undefined;
+    const dados = documento.data() as { organizadorTeams?: string } | undefined;
 
-    return dados?.usuarioTeams ?? null;
+    return dados?.organizadorTeams ?? null;
   }
 }
 

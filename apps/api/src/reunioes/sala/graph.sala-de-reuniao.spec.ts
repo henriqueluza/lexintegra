@@ -17,7 +17,7 @@ const CREDENCIAIS: CredenciaisGraph = {
 const PEDIDO: NovaSala = {
   reuniaoId: 'pedido-1_r001',
   advogadoId: 'uid-ana',
-  usuarioTeams: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
+  organizadorTeams: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
   inicio: '2026-09-24T17:00:00.000Z',
   fim: '2026-09-24T18:00:00.000Z',
   assunto: 'Reuniao: Revisao de contrato',
@@ -226,7 +226,7 @@ describe('GraphSalaDeReuniao', () => {
   });
 
   /**
-   * `usuarioTeams` ausente e falha NOMEADA, e nao uma tentativa de adivinhar. O
+   * `organizadorTeams` ausente e falha NOMEADA, e nao uma tentativa de adivinhar. O
    * Graph aceitaria o UPN, e cair para o e-mail do advogado faria a integracao
    * depender de ele ser o mesmo do Microsoft 365 do escritorio (ADR-21, decisao
    * B). Nem chega a pedir token.
@@ -234,14 +234,14 @@ describe('GraphSalaDeReuniao', () => {
   it.each([
     ['nulo', null],
     ['vazio', ''],
-  ])('recusa usuarioTeams %s, nomeando o campo', async (_caso, valor) => {
+  ])('recusa organizadorTeams %s, nomeando o campo', async (_caso, valor) => {
     const { sala, requisicoes } = montar([]);
 
-    const resultado = await sala.criar({ ...PEDIDO, usuarioTeams: valor });
+    const resultado = await sala.criar({ ...PEDIDO, organizadorTeams: valor });
 
     expect(resultado).toEqual({
       sucesso: false,
-      motivo: expect.stringContaining('usuarioTeams'),
+      motivo: expect.stringContaining('organizadorTeams'),
     });
     expect(requisicoes).toHaveLength(0);
   });
