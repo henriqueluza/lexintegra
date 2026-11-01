@@ -71,7 +71,23 @@ pontos facultativos federais vêm de `shared/feriados` e só são marcados. O mo
 `criar-sala-reuniao` nasce **`estacionado`** — estado novo do outbox que a fila, o
 varredor, a sonda de idade e `reivindicar` ignoram; só o reenvio manual o acorda,
 e é assim que as salas nascem quando o Teams for ligado. Em `sem-sala`, a sonda não
-mede reunião sem sala nem advogado sem `usuarioTeams`.
+mede reunião sem sala.
+
+**Teams pela conta organizadora (01/11/2026, branch `feat/ligar-teams`):** as salas
+são criadas por uma **conta organizadora** do tenant (`operacional@`, Business Basic,
+object ID em `TEAMS_ORGANIZADOR_PADRAO`, obrigatório no modo `graph`), e advogado e
+cliente entram como **convidados anônimos**. O campo do advogado virou
+`organizadorTeams` (opcional, GUID, sobrepõe a conta; a leitura aceita o nome antigo
+`usuarioTeams`), e a conferência no tenant (`User.Read.All`) saiu. O organizador é
+**gravado na reunião** (`organizadorId`) antes da primeira chamada ao Graph. A sala nasce
+com `createOrGet` (`externalId = {pedidoId}-{rNNN}`: com um organizador só, o `r001` de
+dois pedidos casaria) e um `PATCH` com as opções (todos apresentam, sem chat, sem
+gravação, ninguém no lobby); **o link só sai depois do PATCH**. Remarcar grava
+`atualizar-sala-reuniao` (PATCH) e cancelar grava `remover-sala-reuniao` (DELETE),
+errata da decisão 7 do ADR-21. O assunto da sala não leva dado do cliente
+(`codigoCurtoDoPedido`). A trava de agendamento continua **por advogado**. O sinal
+`disponibilidade.sem-link` e o alerta dele saíram. O que está no tenant e a data de
+vencimento do client secret: `docs/runbooks/ligar-terceiros.md`, seção 2.
 
 **Bloco B — resíduos do checkout (branch `fix/residuos-checkout`):** o
 `webhookSecret` saiu do log de requisição (exclusão no Cloud Logging pelo nome do

@@ -602,7 +602,8 @@ constroem**. As decisões vão para um `decisoes.md`.
   Decidido (decisoes.md, 4.1) e construído no Bloco F1: `PUT
   /api/admin/advogados/{uid}`, tela, log de auditoria (`auditoria/`), novo
   link de acesso quando o e-mail muda e conferência do `usuarioTeams` no Graph
-  (que pede `User.Read.All`, em C › Microsoft).
+  (que pede `User.Read.All`, em C › Microsoft). **Desde `feat/ligar-teams`
+  (01/11/2026):** o campo é `organizadorTeams` e a conferência no Graph saiu.
 - [x] Construir a tela do admin para pagamentos `orfao`, `divergente` e
   `conflito_de_conta`. Decidido (decisoes.md, 4.2) e construído no Bloco F2:
   `/admin/pagamentos`, filtro por tipo e situação, "marcar como resolvido"
@@ -675,36 +676,52 @@ faz. Os comandos estão em
   valor; tenant e client id como variáveis com placeholder. Permissões
   conferidas contra o código: `OnlineMeetings.ReadWrite.All` e `User.Read.All`,
   de aplicação (`operacao.md` 4.3).
-- [ ] **Configuração manual — administrador do Microsoft 365 da B&C:** licença
-  com Teams para cada advogado.
-- [ ] **Configuração manual — administrador do Entra ID da B&C:** registrar o
-  aplicativo, conceder `OnlineMeetings.ReadWrite.All` e `User.Read.All`
-  (aplicação) com consentimento de administrador, e criar o client secret
-  (runbook 2.1).
-- [ ] **Configuração manual — administrador do Teams da B&C:** application
-  access policy por PowerShell para cada advogado (propagação de até 48 h).
-- [ ] **Credencial — Henrique:** gravar o client secret em
-  `graph-client-secret` (runbook 2.2) e receber os dois GUIDs (tenant e
-  aplicativo) e o object ID de cada advogado.
-- [ ] **Teste — Henrique:** chamada manual do Graph fora da aplicação
-  (`GET /users/{id}` e `createOrGet`, runbook 2.3).
+- [x] **Decisão do escritório (01/11/2026):** as salas são da **conta
+  organizadora** `operacional@` (Business Basic); advogado e cliente entram
+  como convidados anônimos. Código em `feat/ligar-teams`: organizador padrão,
+  `organizadorTeams` opcional por advogado, `createOrGet` + `PATCH`, remarcação
+  e cancelamento no Graph (`operacao.md` 4.3).
+- [x] ~~Licença com Teams para cada advogado~~ **Desnecessária desde
+  01/11/2026**: o advogado entra como convidado.
+- [x] **Configuração manual — tenant da B&C (01/11/2026):** aplicativo
+  registrado com `OnlineMeetings.ReadWrite.All` (só ela) e consentimento;
+  client secret no `graph-client-secret`; application access policy
+  `LexIntegra-Reunioes` e política de reunião `LexIntegra-Organizadora` na
+  conta organizadora; teste manual com duas pessoas anônimas (runbook 2.1).
+- [ ] **Credencial — Henrique:** informar no PR de `feat/ligar-teams` a data
+  de expiração do client secret, que substitui
+  `{{DATA-EXPIRACAO-SECRET-GRAPH}}` em `operacao.md` 4.3, `ligar-terceiros.md`
+  2.1 e 2.5 e `reuniao-sem-link.md`.
+- [ ] **Teste — Henrique, antes do merge de `feat/ligar-teams`:** os comandos
+  de PowerShell do runbook 2.3 (`createOrGet`, `PATCH`, segundo `createOrGet`
+  com o mesmo `externalId`, `DELETE`), trazendo as respostas para o agente
+  regravar o `arnes-reuniao.ts` anonimizado.
+- [ ] **Operação — Henrique, antes do vencimento:** trocar o client secret
+  (runbook 2.5).
 - [x] Calendário do mês para cliente e advogado, feriados nacionais, janela de
   publicação de doze meses e modo `REUNIOES_MODO=sem-sala` (07/10/2026, PR
   `feat/calendario-reunioes`): em produção dá para marcar reunião sem o Teams;
   o link fica pendente e o evento da sala, estacionado.
 - [ ] **Depois de ligar o Teams — Henrique:** acordar as salas das reuniões
-  marcadas no modo `sem-sala` (runbook 2.7: `/admin/reunioes`, "Tentar de
+  marcadas no modo `sem-sala` (runbook 2.8: `/admin/reunioes`, "Tentar de
   novo").
 - [ ] **Revisão — Henrique:** regravar e aprovar as imagens de referência dos
   painéis do cliente e do advogado, que mudaram com o calendário
   (`scripts/visual.sh paineis --update-snapshots`; não roda no CI).
-- [ ] **Configuração manual — admin da plataforma:** preencher o `usuarioTeams`
-  de cada advogado em `/admin/advogados`.
-- [ ] **Commit de destravamento — Henrique (ou agente, a pedido):**
-  `INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"` e os GUIDs
-  (runbook 2.5).
+- [x] ~~Preencher o `usuarioTeams` de cada advogado~~ **Desnecessário desde
+  01/11/2026**: o organizador é a conta do escritório. `organizadorTeams` só
+  para advogado licenciado (runbook 2.6).
+- [ ] **Revisão — Henrique:** regravar e aprovar as imagens de referência de
+  `/admin/advogados` (o campo e a coluna viraram "Organizador no Teams";
+  `scripts/visual.sh paineis --update-snapshots`).
+- [ ] **Commit de destravamento — agente, em `feat/ligar-teams`:**
+  `INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"`, os GUIDs e
+  `TEAMS_ORGANIZADOR_PADRAO` (runbook 2.4). Falta o Application (client) ID.
+- [ ] **Deploy — Henrique:** depois do merge, o `apply` pelo pipeline; ele
+  também remove a métrica e a política `disponibilidade_sem_link`.
 - [ ] **Teste — Henrique:** marcar, remarcar e cancelar uma reunião de teste;
-  link do Teams e convite em Gmail, Outlook e Apple Mail (runbook 2.6; é
+  link do Teams e convite em Gmail, Outlook e Apple Mail, entrada como
+  convidado, sala que muda de horário e some no cancelamento (runbook 2.7; é
   também item de A3).
 
 ### AbacatePay

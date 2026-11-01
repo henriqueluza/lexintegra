@@ -158,7 +158,7 @@ em vez de assumir um valor padrão.
 | Modo | Estado hoje | O que ele faz agora | O que o destrava |
 |---|---|---|---|
 | `PAGAMENTOS_MODO` | `desligado` | Checkout e webhook respondem 503 | Chave de produção nos secrets, primeira transação real feita por uma pessoa e o **commit de destravamento** (`PRODUCAO_DESTRAVADA = true` e `pagamentos_modo = "producao"`). Ver a seção 4.2 |
-| `REUNIOES_MODO` | `desligado` | O cartão do pedido diz que o agendamento está indisponível | Entra ID configurado, policy propagada, chamada manual de teste, `usuarioTeams` preenchido e o **commit de destravamento** (`INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"` e os GUIDs). Ver a seção 4.3 |
+| `REUNIOES_MODO` | `desligado` | O cartão do pedido diz que o agendamento está indisponível | Entra ID e Teams configurados na conta organizadora (feito em 01/11/2026), teste no tenant e o **commit de destravamento** (`INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"`, os GUIDs e `TEAMS_ORGANIZADOR_PADRAO`). Ver a seção 4.3 |
 | `APP_CHECK_ENFORCE` | `true` | Rotas `@Publico()`, fora health e webhook e relato de erro, exigem token de App Check | Já está ligado (commit `67be0ca`). O provedor usa a site key de `vars.APP_CHECK_SITE_KEY` e, sem `vars.APP_CHECK_PROVEDOR`, o provedor `recaptcha-enterprise`. Para desligar numa emergência: `app_check_enforce = "false"` por PR |
 | `RELOGIO_FIXO` | ausente | — | **Nunca em produção.** Só jornadas e regressão visual, sob emulador |
 
@@ -347,34 +347,69 @@ Confira nos *Webhook Logs* do painel antes de desligar com cobrança em aberto.
 
 ### 4.3 Microsoft Teams
 
-**O passo a passo, com os comandos e a chamada manual de teste do Graph, está
-em [`runbooks/ligar-terceiros.md`](../runbooks/ligar-terceiros.md), seção 2.**
-Desde 05/10/2026 o modo `graph` lê as credenciais e instancia o adaptador
-(`reunioes/sala/graph.sala-de-reuniao.ts`), atrás da trava
-`INTEGRACAO_GRAPH_DESTRAVADA`; o secret `graph-client-secret` existe vazio, e
-tenant e client id são variáveis do Terraform com placeholder.
+**O passo a passo, com os comandos de PowerShell do teste no tenant, está em
+[`runbooks/ligar-terceiros.md`](../runbooks/ligar-terceiros.md), seção 2.**
 
-**Permissões de aplicação no Entra ID, conferidas contra o código
-(05/10/2026)**, ambas com consentimento do administrador:
+**O modelo (decisão do escritório, 01/11/2026).** As salas são criadas por uma
+**conta organizadora** do tenant (`operacional@`, licença Microsoft 365
+Business Basic). Advogado e cliente entram pelo link como **convidados
+anônimos**, no navegador, digitando o próprio nome; o anônimo não tem chat. O
+object ID da conta organizadora é `TEAMS_ORGANIZADOR_PADRAO`
+(`infra/terraform/cloud_run.tf`), e não é segredo. Um advogado pode ter
+`organizadorTeams` no cadastro (`/admin/advogados`), que sobrepõe a conta —
+só para o dia em que o escritório licenciar os advogados (abaixo).
 
-| Permissão (Application) | Chamada | Onde |
-|---|---|---|
-| `OnlineMeetings.ReadWrite.All` | `POST /users/{usuarioTeams}/onlineMeetings/createOrGet` | `GraphSalaDeReuniao.criar` |
-| `User.Read.All` | `GET /users/{usuarioTeams}?$select=id` | `GraphSalaDeReuniao.conferirUsuario`, na edição do advogado |
+**O que já está configurado no tenant (01/11/2026):**
 
-O token é de aplicação (client credentials, escopo
-`https://graph.microsoft.com/.default`). Nenhuma permissão delegada, e nada de
-`Calendars.ReadWrite` (ADR-05). Além das permissões, a **application access
-policy** do Teams (PowerShell, propagação de até 48 h) precisa conceder o
-aplicativo a cada advogado. O `usuarioTeams` é o **object ID** do Entra, não o
-e-mail (ADR-21, decisão B).
+| Item | Como ficou |
+|---|---|
+| Aplicativo no Entra ID | Permissão de aplicativo `OnlineMeetings.ReadWrite.All`, com consentimento do administrador. Nenhuma outra |
+| Client secret | `graph-client-secret` no Secret Manager. **Expira em `{{DATA-EXPIRACAO-SECRET-GRAPH}}`** |
+| Application access policy | `LexIntegra-Reunioes`, concedida à conta organizadora |
+| Política de reunião | `LexIntegra-Organizadora`, na conta organizadora: entrada anônima, início sem organizador, lobby liberado, todos podem apresentar, sem gravação nem transcrição |
+| Teste manual | Reunião criada pela API; duas pessoas anônimas entraram sem lobby, se viram e compartilharam a tela |
+
+**Chamadas, todas com `OnlineMeetings.ReadWrite.All`**, em
+`/users/{organizador}/onlineMeetings` (`GraphSalaDeReuniao`):
+
+| Chamada | Quando |
+|---|---|
+| `POST …/createOrGet` | Criação da sala, com `externalId = {pedidoId}-{rNNN}`. Idempotente |
+| `PATCH …/{id}` | Logo depois, com as opções da sala e os horários; e em cada remarcação. O link só chega a alguém depois deste PATCH |
+| `DELETE …/{id}` | Cancelamento da reunião |
+
+O organizador é **gravado na reunião** (`organizadorId`) antes da primeira
+chamada, e a nova tentativa, a remarcação e o cancelamento usam o gravado,
+nunca o cadastro atual. O token é de aplicação (client credentials, escopo
+`https://graph.microsoft.com/.default`); nada de permissão delegada nem de
+`Calendars.ReadWrite` (ADR-05). A conferência do object ID do advogado no
+tenant (`GET /users`, que pedia `User.Read.All`) **saiu**: o cadastro confere
+só o formato GUID.
+
+**A trava de agendamento continua por advogado**, e não por organizador: a
+mesma conta organizadora tem reuniões simultâneas de advogados diferentes, e o
+slot continua sendo `{advogadoId}_{inicio}`.
+
+**Renovar o client secret** antes de `{{DATA-EXPIRACAO-SECRET-GRAPH}}`:
+[`ligar-terceiros.md`](../runbooks/ligar-terceiros.md), 2.5. Vencido, as salas
+novas falham com `AADSTS7000222` e as reuniões aparecem em `/admin/reunioes`.
+
+**Se o escritório licenciar os advogados:** para cada um, conceder a
+application access policy `LexIntegra-Reunioes` (`Grant-CsApplicationAccessPolicy`,
+até 48 horas de propagação), aplicar a política de reunião
+`LexIntegra-Organizadora` e, depois da propagação, preencher o
+`organizadorTeams` dele em `/admin/advogados`. Comandos e ordem em
+[`ligar-terceiros.md`](../runbooks/ligar-terceiros.md), 2.6. As reuniões já
+marcadas continuam na conta organizadora.
 
 **Voltar atrás:** `REUNIOES_MODO = "desligado"`. As reuniões já marcadas
 continuam, e as sem sala aparecem em `/admin/reunioes`.
 
 As regras do agendamento estão confirmadas (ADR-21, confirmado em
 29/09/2026: as oito decisões, a antecedência mínima de 24 horas e a devolução
-quando o escritório cancela). Não há pendência de produto para ligar.
+quando o escritório cancela). A decisão 7 (sala não apagada no cancelamento,
+link reaproveitado sem Graph na remarcação) tem errata de 01/11/2026: a sala
+é apagada no cancelamento e muda de horário na remarcação.
 
 ---
 
@@ -388,7 +423,7 @@ Conferidas em 24/09/2026 com `gcloud scheduler jobs list` e
 | `varredor-outbox` | Scheduler, em [`outbox.tf`](../../infra/terraform/outbox.tf) | a cada minuto | `POST /api/interno/outbox/varredura`: reenfileira o que ficou sem tarefa | Registro perdido entre gravar e enfileirar não é mais entregue. Alerta *Outbox parado* |
 | `clamav-base-diaria` | Scheduler, em [`varredura.tf`](../../infra/terraform/varredura.tf) | 4h e 16h | Executa o job `clamav-atualizar-base`, que publica a base no bucket | A base envelhece e o scanner continua dizendo "limpo". Alertas *Base do ClamAV velha* e *sem publicação* |
 | `retencao-diaria` | Scheduler, em `varredura.tf` | 5h e 17h | `POST /api/interno/retencao`: aviso 7 dias antes (um por pedido) e, 30 dias depois de o último entregável chegar a `entregue` — nunca antes de 7 dias depois do aviso —, exclusão de todas as versões dos entregáveis e dos anexos do cliente. Pula pedido com contestação aberta. Duas vezes por dia por causa do alerta de ausência. **Desde 05/10/2026 roda também a rotina da política de guarda** (`lgpd/eliminacao.service.ts`): elimina o cadastro inicial sem conta 6 meses depois do último envio, abre a eliminação do cliente 5 anos depois do último pedido e executa as eliminações cujo aviso já deu 7 dias | Arquivos ficam além dos 30 dias; dados além da guarda. Alerta *Retencao parada*; falha da eliminação emite `lgpd.eliminacao-falhou` |
-| `sinais-operacionais` | Scheduler, em [`sinais.tf`](../../infra/terraform/sinais.tf) | a cada 5 minutos | `POST /api/interno/sinais`: mede e grava em log a idade do outbox, da quarentena e da reunião sem sala, e os advogados sem `usuarioTeams` | As métricas ficam sem dado, e os alertas que dependem delas **não disparam**. Alerta *Sonda de sinais parada* |
+| `sinais-operacionais` | Scheduler, em [`sinais.tf`](../../infra/terraform/sinais.tf) | a cada 5 minutos | `POST /api/interno/sinais`: mede e grava em log a idade do outbox, da quarentena e da reunião sem sala | As métricas ficam sem dado, e os alertas que dependem delas **não disparam**. Alerta *Sonda de sinais parada* |
 | fila `eventos` | Cloud Tasks, em `outbox.tf` | sob demanda | Entrega o outbox em `POST /api/interno/outbox`. Até 12 tentativas em 1 hora, backoff de 10 a 300 s | E-mail, sala e estorno param. Alerta *Outbox parado* |
 | fila `varredura` | Cloud Tasks, em `varredura.tf` | sob demanda | Chama `POST /api/interno/varredura`, que chama o scanner. Até 10 tentativas em 1 hora | Arquivo parado em quarentena. Alerta *Arquivo parado em quarentena* |
 | `clamav-atualizar-base` | Job do Cloud Run, em `varredura.tf` | pelo Scheduler | `freshclam` e publicação em `gs://lexintegra-clamav-db-36bda` | Mesmo que `clamav-base-diaria` |
