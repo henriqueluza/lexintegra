@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TETO_ITENS_CARRINHO } from '../carrinho.js';
+import { METODOS_PAGAMENTO } from '../formas-de-pagamento.js';
 import { esquemaNovoPreCadastro } from './pre-cadastro.js';
 
 /**
@@ -16,8 +17,11 @@ import { esquemaNovoPreCadastro } from './pre-cadastro.js';
  * nao e coletado (arquitetura, secao 13).
  */
 
-export const METODOS_PAGAMENTO = ['pix', 'cartao'] as const;
-export type MetodoPagamento = (typeof METODOS_PAGAMENTO)[number];
+/* A lista mora em `formas-de-pagamento.ts`, fonte unica do rodape e do checkout. */
+export {
+  METODOS_PAGAMENTO,
+  type MetodoPagamento,
+} from '../formas-de-pagamento.js';
 
 /**
  * Os metodos que o checkout aceita AGORA (B2, decisoes.md 3.4). O PIX esta
