@@ -2,7 +2,8 @@ import { parcelar } from 'shared/parcelamento';
 import { paraReais } from './moeda';
 
 /**
- * O texto do preco no cartao: a parcela em destaque e o total, menor, embaixo.
+ * O texto do preco no cartao: a parcela em destaque e o total a vista, menor,
+ * embaixo.
  *
  * A CONTA NAO E FEITA AQUI. Quem divide e `parcelar`, em `shared`, a mesma
  * funcao para o catalogo e o checkout; isto so escreve o resultado.
@@ -17,7 +18,7 @@ import { paraReais } from './moeda';
 export type PrecoExibido = {
   /** "12x de R$ 590,00", ou o total quando nao ha parcelamento. */
   readonly destaque: string;
-  /** "Total R$ 7.080,00"; vazio quando o destaque ja e o total. */
+  /** "ou R$ 7.080,00 à vista"; vazio quando o destaque ja e o total. */
   readonly total: string;
 };
 
@@ -31,7 +32,7 @@ export function descreverPreco(
   }
 
   const destaque = `${conta.parcelas}x de ${paraReais(conta.parcelaCentavos)}`;
-  const total = `Total ${paraReais(conta.totalCentavos)}`;
+  const total = `ou ${paraReais(conta.totalCentavos)} à vista`;
   if (conta.primeiraParcelaCentavos === conta.parcelaCentavos) {
     return { destaque, total };
   }

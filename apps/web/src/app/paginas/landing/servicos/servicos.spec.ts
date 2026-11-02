@@ -143,7 +143,7 @@ describe('Servicos', () => {
       const preco = rodape?.querySelector('.produto__preco')?.textContent ?? '';
       const total = rodape?.querySelector('.produto__total')?.textContent ?? '';
       expect(preco.replace(/\s/g, ' ').trim()).toBe('12x de R$ 590,00');
-      expect(total.replace(/\s/g, ' ').trim()).toBe('Total R$ 7.080,00');
+      expect(total.replace(/\s/g, ' ').trim()).toBe('ou R$ 7.080,00 à vista');
     });
 
     it('sem parcelamento, mostra so o total, sem "1x de"', async () => {
