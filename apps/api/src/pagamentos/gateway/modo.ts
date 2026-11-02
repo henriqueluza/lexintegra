@@ -22,8 +22,12 @@ export type ModoPagamentos = 'desligado' | 'sandbox' | 'producao';
  * cadastrado no painel e a primeira transacao real feita a mao pelo painel do
  * AbacatePay. Revisado por humano, como todo commit — e nunca uma troca de
  * variavel no Terraform, que sozinha continua derrubando o boot.
+ *
+ * Destravada em 01/11/2026, depois da cobranca PIX manual de R$ 1,00 do runbook
+ * (1.4). Voltar a `false` derruba o boot com `PAGAMENTOS_MODO=producao`: para
+ * desligar, troque antes o modo para `desligado`.
  */
-export const PRODUCAO_DESTRAVADA = false;
+export const PRODUCAO_DESTRAVADA = true;
 
 /** Prefixo da chave de producao do AbacatePay. */
 const PREFIXO_CHAVE_PRODUCAO = 'abc_prod_';

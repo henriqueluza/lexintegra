@@ -18,6 +18,7 @@ const VALIDO: NovoProduto = {
   prazoValidadeReunioesDias: 365,
   intervaloMinimoReunioesDias: 7,
   numeroRevisoesPermitidas: 2,
+  parcelas: 3,
 };
 
 describe('esquemaNovoProduto', () => {
@@ -52,6 +53,26 @@ describe('esquemaNovoProduto', () => {
 
     expect(analisado.quantidadeReunioes).toBe(0);
     expect(analisado.numeroRevisoesPermitidas).toBe(0);
+  });
+
+  /**
+   * Produto gravado antes de `parcelas`, e snapshot de checkout aberto antes
+   * dele, chegam sem o campo. `PedidosService.preparar` revalida o snapshot com
+   * este schema: sem o padrao, um pagamento confirmado depois do deploy viraria
+   * erro em vez de pedido.
+   */
+  it('assume parcela unica quando o campo nao vem', () => {
+    const { parcelas: _parcelas, ...semParcelas } = VALIDO;
+    expect(esquemaNovoProduto.parse(semParcelas).parcelas).toBe(1);
+  });
+
+  it('aceita de 1 a 12 parcelas', () => {
+    expect(esquemaNovoProduto.parse({ ...VALIDO, parcelas: 1 }).parcelas).toBe(
+      1,
+    );
+    expect(
+      esquemaNovoProduto.parse({ ...VALIDO, parcelas: 12 }).parcelas,
+    ).toBe(12);
   });
 
   it('aceita produto sem texto orientativo', () => {
@@ -96,6 +117,9 @@ describe('esquemaNovoProduto', () => {
     ['intervalo negativo', { intervaloMinimoReunioesDias: -1 }],
     ['revisoes negativas', { numeroRevisoesPermitidas: -1 }],
     ['revisoes fracionadas', { numeroRevisoesPermitidas: 0.5 }],
+    ['zero parcelas', { parcelas: 0 }],
+    ['parcelas fracionadas', { parcelas: 2.5 }],
+    ['parcelas acima do painel do AbacatePay', { parcelas: 13 }],
   ])('recusa %s', (_caso, alteracao) => {
     expect(
       esquemaNovoProduto.safeParse({ ...VALIDO, ...alteracao }).success,
@@ -175,7 +199,7 @@ describe('congelarProduto', () => {
     ...VALIDO,
   };
 
-  it('copia os nove campos do produto', () => {
+  it('copia os dez campos do produto', () => {
     expect(congelarProduto(RESUMO)).toEqual(VALIDO);
   });
 
@@ -184,6 +208,16 @@ describe('congelarProduto', () => {
    * spread levaria `id`, `ativo` e os carimbos para dentro do pedido, e o pedido
    * passaria a carregar estado administrativo congelado que ninguem pediu.
    */
+  /**
+   * Documento gravado antes de `parcelas` nao tem o campo, e o Firestore recusa
+   * `undefined`: sem normalizar aqui, levar um produto antigo ao carrinho
+   * derrubaria a gravacao do checkout.
+   */
+  it('normaliza parcelas ausentes para 1', () => {
+    const { parcelas: _parcelas, ...antigo } = RESUMO;
+    expect(congelarProduto(antigo).parcelas).toBe(1);
+  });
+
   it('nao leva id, ativo nem carimbos para o snapshot', () => {
     const snapshot = congelarProduto(RESUMO) as Record<string, unknown>;
 

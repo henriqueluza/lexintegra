@@ -9,6 +9,7 @@ const produto: ProdutoVitrine = {
   entregaveis: [],
   quantidadeReunioes: 0,
   numeroRevisoesPermitidas: 0,
+  parcelas: 1,
 };
 
 describe('Apresentação do catálogo, sem alterar os dados de compra', () => {
@@ -72,35 +73,52 @@ describe('Apresentação do catálogo, sem alterar os dados de compra', () => {
       linhas: [],
       meta: '',
       descricao: '',
-      condicao: '',
+      total: '',
       preco: 'Sob consulta',
     });
   });
-  it.each([
-    [
-      'Assessoria. Pode ser parcelado em 3x de R$ 245,00.',
-      'ou 3x de R$ 245,00',
-    ],
-    ['Assessoria. 3x de R$ 245,00', 'ou 3x de R$ 245,00'],
-    ['Assessoria. (R$ 350,00/mês)', 'R$ 350,00/mês'],
-    ['Assessoria. R$ 350,00/mês', 'R$ 350,00/mês'],
-  ])('extrai condição sem repeti-la: %s', (descricao, condicao) => {
-    const original = { ...produto, descricao };
-    expect(apresentar(original)).toMatchObject({
-      descricao: 'Assessoria.',
-      condicao,
-      produto: original,
+
+  /**
+   * Decisao de 01/11/2026: a parcela vem do campo `parcelas` e da conta de
+   * `shared`, nao mais de "3x de R$ 245,00" escrito na descricao. O teste que
+   * existia aqui ("nao calcula mensalidade a partir do nome ou preco") defendia
+   * a regra antiga, e foi invertido de proposito.
+   */
+  it('poe a parcela em destaque e o total embaixo, calculados do preço', () => {
+    const ficha = apresentar({
+      ...produto,
+      precoCentavos: 708_000,
+      parcelas: 12,
     });
-    expect(original.descricao).toBe(descricao);
+    expect(ficha.preco.replace(/\s/g, ' ')).toBe('12x de R$ 590,00');
+    expect(ficha.total.replace(/\s/g, ' ')).toBe('Total R$ 7.080,00');
   });
-  it('não calcula mensalidade a partir do nome ou preço e indexa os itens', () => {
+
+  it('mostra só o total, sem "1x de", quando o produto não é parcelável', () => {
+    const ficha = apresentar({ ...produto, precoCentavos: 69_000, parcelas: 1 });
+    expect(ficha.preco.replace(/\s/g, ' ')).toBe('R$ 690,00');
+    expect(ficha.total).toBe('');
+  });
+
+  it('não lê parcela do texto da descrição, e não o corta', () => {
+    const descricao = 'Assessoria. Pode ser parcelado em 3x de R$ 245,00.';
+    const ficha = apresentar({
+      ...produto,
+      descricao,
+      precoCentavos: 69_000,
+      parcelas: 3,
+    });
+    expect(ficha.preco.replace(/\s/g, ' ')).toBe('3x de R$ 230,00');
+    expect(ficha.descricao).toBe(descricao);
+  });
+
+  it('indexa os itens para a busca', () => {
     const ficha = apresentar({
       ...produto,
       nome: 'Plano 12 meses',
       precoCentavos: 120000,
       entregaveis: ['Análise contratual ×2'],
     });
-    expect(ficha.condicao).toBe('');
     expect(ficha.busca).toContain('analises contratuais');
     expect(ficha.preco.replace(/\s/g, ' ')).toBe('R$ 1.200,00');
   });

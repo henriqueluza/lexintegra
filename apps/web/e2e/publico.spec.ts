@@ -35,6 +35,7 @@ const SERVICOS = [
     entregaveis: ['Minuta revisada'],
     quantidadeReunioes: 1,
     numeroRevisoesPermitidas: 2,
+    parcelas: 1,
   },
 ];
 

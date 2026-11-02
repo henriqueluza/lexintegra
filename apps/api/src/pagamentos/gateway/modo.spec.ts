@@ -33,7 +33,10 @@ describe('configuracaoDePagamentos', () => {
       ],
     ])('recusa PAGAMENTOS_MODO=producao %s', (_caso, ambiente) => {
       expect(() =>
-        configuracaoDePagamentos({ ...ambiente, PAGAMENTOS_MODO: 'producao' }),
+        configuracaoDePagamentos(
+          { ...ambiente, PAGAMENTOS_MODO: 'producao' },
+          false,
+        ),
       ).toThrow(/regra inviolavel 20/);
     });
 
@@ -53,9 +56,13 @@ describe('configuracaoDePagamentos', () => {
       expect(mensagem).not.toContain(CHAVE_SEM_PREFIXO);
     });
 
-    /** O boot le a constante: so o commit de destravamento a troca. */
-    it('a trava esta fechada no codigo', () => {
-      expect(PRODUCAO_DESTRAVADA).toBe(false);
+    /**
+     * O boot le a constante, e o commit de destravamento a abriu
+     * (docs/runbooks/ligar-terceiros.md, 1.5). Fechar de novo e outro commit
+     * revisado, junto com `pagamentos_modo = "desligado"`.
+     */
+    it('a trava esta aberta no codigo', () => {
+      expect(PRODUCAO_DESTRAVADA).toBe(true);
     });
   });
 

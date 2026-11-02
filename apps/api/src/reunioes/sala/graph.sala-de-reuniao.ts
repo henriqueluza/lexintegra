@@ -1,38 +1,49 @@
 import { z } from 'zod';
 import type { CredenciaisGraph } from './modo.js';
 import type {
-  ConferenciaDoUsuario,
   NovaSala,
+  ResultadoDaAlteracao,
   ResultadoDaSala,
   SalaDeReuniao,
+  SalaExistente,
 } from './sala-de-reuniao.js';
 
 /**
- * Adaptador da Microsoft Graph API (ADR-05, ADR-21).
+ * Adaptador da Microsoft Graph API (ADR-05, ADR-21, `feat/ligar-teams`).
  *
- * ⚠️ ESCRITO E NAO VALIDADO CONTRA TENANT REAL. Nenhuma chamada a Microsoft foi
- * feita em momento nenhum desta etapa: `REUNIOES_MODO` nao aceita `graph`, a
- * fabrica nunca chega aqui, e os testes usam `fetch` dublado. O formato veio da
- * documentacao oficial — que ja desmentiu a suposicao de que o `{userId}` fosse
- * o uid do Firebase, e pode desmentir outras.
+ * A SALA E DA CONTA ORGANIZADORA do escritorio, e advogado e cliente entram
+ * pelo link como convidados anonimos. Uma chamada de teste manual, em
+ * 01/11/2026, criou a sala com a application access policy `LexIntegra-Reunioes`
+ * e a politica de reuniao `LexIntegra-Organizadora` aplicadas a essa conta: duas
+ * pessoas anonimas entraram sem lobby, se viram e compartilharam a tela. A
+ * resposta daquela chamada, anonimizada, esta em `arnes-reuniao.ts`.
  *
- * O QUE A DOCUMENTACAO CONFIRMA, e foi conferido e nao suposto:
+ * A CRIACAO SAO DUAS CHAMADAS, e a ordem importa:
  *
- * - `createOrGet` aceita PERMISSAO DE APLICACAO (`OnlineMeetings.ReadWrite.All`),
- *   com a application access policy concedida ao usuario do caminho.
- * - O caminho com token de aplicacao e `POST /users/{userId}/onlineMeetings/createOrGet`.
- * - `externalId` e OBRIGATORIO, e e ele que torna a chamada idempotente: a
- *   identidade da reuniao e o trio (tenantId, userId, externalId).
- * - Devolve 201 ao criar e 200 ao reaproveitar — que e exatamente o `jaExistia`
- *   da porta.
- * - "The meeting doesn't show on the user's calendar", o que confirma a decisao
- *   do ADR-05 de nao pedir `Calendars.ReadWrite`: o app cria salas, nao mexe na
- *   agenda de ninguem.
+ * 1. `POST /users/{organizador}/onlineMeetings/createOrGet`. E IDEMPOTENTE: a
+ *    identidade da sala e o trio (tenant, organizador, `externalId`), e uma
+ *    segunda chamada devolve a mesma sala (200 em vez de 201). Sem isso, o
+ *    processo que morresse entre a resposta do Graph e a gravacao do link
+ *    deixaria a reentrega do outbox criar uma segunda sala.
+ * 2. `PATCH /users/{organizador}/onlineMeetings/{id}` com as opcoes da reuniao.
+ *    O `createOrGet` so aceita `externalId`, horarios, `subject` e
+ *    `participants`; quem entra sem lobby, quem apresenta, chat e gravacao so
+ *    vao por PATCH. Os horarios vao junto porque o `createOrGet` de uma sala que
+ *    ja existia NAO os atualiza.
+ *
+ * SO O PATCH BEM-SUCEDIDO E SUCESSO. Uma sala criada com as opcoes do tenant, e
+ * nao as do escritorio, nao pode ter o link entregue a ninguem: a falha no PATCH
+ * e falha reentregavel, e a nova tentativa repete as duas chamadas, que sao as
+ * duas idempotentes.
+ *
+ * "The meeting doesn't show on the user's calendar" (documentacao do
+ * `createOrGet`), o que confirma a decisao do ADR-05 de nao pedir
+ * `Calendars.ReadWrite`: o app cria salas, nao mexe na agenda de ninguem.
  *
  * `fetch` E NAO SDK, pela mesma razao do adaptador do AbacatePay: o SDK oficial
- * do Graph seria mais uma dependencia de producao para duas chamadas HTTP, e
+ * do Graph seria mais uma dependencia de producao para quatro chamadas HTTP, e
  * esconderia o que este arquivo precisa deixar visivel — o corpo exato do erro,
- * que e o que distingue "policy ainda propagando" de "licenca ausente".
+ * que e o que distingue "policy ainda propagando" de "segredo expirado".
  *
  * SO A FABRICA IMPORTA ESTE ARQUIVO — regra `so-a-fabrica-conhece-o-graph`.
  */
@@ -64,9 +75,41 @@ const respostaReuniao = z.object({
   joinWebUrl: z.string().min(1),
 });
 
+/**
+ * As opcoes que o escritorio decidiu para toda sala (01/11/2026), aplicadas por
+ * PATCH. A politica de reuniao da conta organizadora ja impoe as mesmas coisas;
+ * repeti-las na sala e o que faz a sala sair certa mesmo que alguem mexa na
+ * politica do tenant.
+ *
+ * - `allowedPresenters: everyone`: o advogado entra como convidado anonimo, e
+ *   precisa poder compartilhar a tela.
+ * - `allowMeetingChat: disabled`: convidado anonimo nao tem chat de todo jeito,
+ *   e um chat que so a conta organizadora visse seria registro sem dono.
+ * - `recordAutomatically: false`, `allowRecording: false` e
+ *   `allowTranscription: false`: sem gravacao nem transcricao (LGPD; ver
+ *   `docs/entrega/lgpd.md`). A sala nasce do Graph com as duas ultimas
+ *   VERDADEIRAS (`arnes-reuniao.ts`), e ate aqui quem as impedia era so a
+ *   politica do tenant: mexer nela reabriria as duas sem nada no codigo saber.
+ * - `lobbyBypassSettings.scope: everyone`: ninguem espera no lobby, porque nao ha
+ *   quem admitir — o organizador e uma conta de servico que nunca entra.
+ */
+export const OPCOES_DA_SALA = {
+  allowedPresenters: 'everyone',
+  allowMeetingChat: 'disabled',
+  recordAutomatically: false,
+  allowRecording: false,
+  allowTranscription: false,
+  lobbyBypassSettings: { scope: 'everyone', isDialInBypassEnabled: true },
+} as const;
+
 type Chamada =
   | { readonly ok: true; readonly dados: unknown; readonly status: number }
-  | { readonly ok: false; readonly motivo: string };
+  | {
+      readonly ok: false;
+      readonly motivo: string;
+      /** `undefined` quando nao houve resposta (rede, timeout). */
+      readonly status?: number;
+    };
 
 export class GraphSalaDeReuniao implements SalaDeReuniao {
   private readonly base: string;
@@ -93,83 +136,122 @@ export class GraphSalaDeReuniao implements SalaDeReuniao {
    * policy, que some sozinha quando a propagacao terminar.
    */
   async criar(sala: NovaSala): Promise<ResultadoDaSala> {
-    /*
-     * O CAMPO AUSENTE E FALHA NOMEADA, e nao uma tentativa de adivinhar. O Graph
-     * aceitaria o UPN no lugar do object ID, e cair para o e-mail do advogado
-     * aqui faria a integracao depender de ele ser o mesmo do Microsoft 365 do
-     * escritorio (ADR-21, decisao B). Quando nao for, a sala falharia com
-     * "usuario nao encontrado" e nada apontaria para o cadastro.
-     */
-    if (sala.usuarioTeams === null || sala.usuarioTeams === '') {
-      return {
-        sucesso: false,
-        motivo:
-          `advogado ${sala.advogadoId} sem "usuarioTeams" cadastrado: ` +
-          'o ID de objeto do Entra precisa ser preenchido no cadastro do advogado.',
-      };
-    }
-
-    const chamada = await this.chamarComToken(sala, sala.usuarioTeams);
-    if (!chamada.ok) return { sucesso: false, motivo: chamada.motivo };
-
-    const lido = respostaReuniao.safeParse(chamada.dados);
-    if (!lido.success) {
-      return {
-        sucesso: false,
-        motivo: `resposta do Graph fora do formato: ${campos(lido.error)}`,
-      };
-    }
-
-    return {
-      sucesso: true,
-      link: lido.data.joinWebUrl,
-      idExterno: lido.data.id,
-      /* 201 criou; 200 reaproveitou pelo `externalId`. Os dois sao sucesso. */
-      jaExistia: chamada.status === 200,
-    };
-  }
-
-  /**
-   * `GET /users/{id}`: 200 existe, 404 nao existe, o resto e indisponivel.
-   * Exige a permissao de aplicacao `User.Read.All` no Entra — a mais, alem de
-   * `OnlineMeetings.ReadWrite.All` (CHECKLIST, C > Microsoft).
-   */
-  async conferirUsuario(usuarioTeams: string): Promise<ConferenciaDoUsuario> {
     const token = await this.obterToken();
-    if (!token.ok) return 'indisponivel';
-    try {
-      const resposta = await this.executar(
-        `${this.base}/users/${encodeURIComponent(usuarioTeams)}?$select=id`,
-        {
-          method: 'GET',
-          headers: { Authorization: `Bearer ${token.dados as string}` },
-          signal: AbortSignal.timeout(this.timeoutMs),
-        },
-      );
-      if (resposta.ok) return 'encontrado';
-      return resposta.status === 404 ? 'nao_encontrado' : 'indisponivel';
-    } catch {
-      return 'indisponivel';
-    }
-  }
+    if (!token.ok) return { sucesso: false, motivo: token.motivo };
 
-  private async chamarComToken(
-    sala: NovaSala,
-    usuarioTeams: string,
-  ): Promise<Chamada> {
-    const token = await this.obterToken();
-    if (!token.ok) return token;
-
-    return this.chamar(
-      `/users/${encodeURIComponent(usuarioTeams)}/onlineMeetings/createOrGet`,
+    const criada = await this.chamar(
+      'POST',
+      `${this.caminhoDasSalas(sala.organizadorId)}/createOrGet`,
       token.dados as string,
       {
-        externalId: sala.reuniaoId,
+        externalId: sala.externalId,
         startDateTime: sala.inicio,
         endDateTime: sala.fim,
         subject: sala.assunto,
       },
     );
+    if (!criada.ok) return { sucesso: false, motivo: criada.motivo };
+    const lida = lerReuniao(criada.dados);
+    if (!lida.ok) return { sucesso: false, motivo: lida.motivo };
+
+    const ajustada = await this.ajustar(
+      sala.organizadorId,
+      lida.reuniao.id,
+      token.dados as string,
+      sala,
+    );
+    if (!ajustada.ok) {
+      return {
+        sucesso: false,
+        motivo: `sala criada, opcoes nao aplicadas: ${ajustada.motivo}`,
+      };
+    }
+
+    return {
+      sucesso: true,
+      /* O link da resposta do PATCH: e a sala como ficou. */
+      link: ajustada.reuniao.joinWebUrl,
+      idExterno: ajustada.reuniao.id,
+      /* 201 criou; 200 reaproveitou pelo `externalId`. Os dois sao sucesso. */
+      jaExistia: criada.status === 200,
+    };
+  }
+
+  /**
+   * A remarcacao: o mesmo PATCH da criacao, com o horario novo. O link nao muda.
+   *
+   * POR QUE CHAMAR O GRAPH NA REMARCACAO, se o link continua valendo: a sala
+   * expira (`expiryDateTime`) a partir do horario que ela tem. Uma reuniao
+   * remarcada para meses depois, numa sala que ainda acha que e no horario
+   * antigo, teria o link morto no dia.
+   */
+  async atualizar(sala: SalaExistente): Promise<ResultadoDaAlteracao> {
+    const token = await this.obterToken();
+    if (!token.ok) return { sucesso: false, motivo: token.motivo };
+
+    const ajustada = await this.ajustar(
+      sala.organizadorId,
+      sala.idExterno,
+      token.dados as string,
+      sala,
+    );
+    return ajustada.ok
+      ? { sucesso: true }
+      : { sucesso: false, motivo: ajustada.motivo };
+  }
+
+  /**
+   * O cancelamento: `DELETE`. 204 apagou; 404 ja nao existia — os dois sao
+   * SUCESSO, porque a nova tentativa de um DELETE que deu certo e o processo
+   * morreu antes de concluir o registro do outbox recebe 404.
+   */
+  async remover(
+    organizadorId: string,
+    idExterno: string,
+  ): Promise<ResultadoDaAlteracao> {
+    const token = await this.obterToken();
+    if (!token.ok) return { sucesso: false, motivo: token.motivo };
+
+    const chamada = await this.chamar(
+      'DELETE',
+      `${this.caminhoDasSalas(organizadorId)}/${encodeURIComponent(idExterno)}`,
+      token.dados as string,
+    );
+    if (chamada.ok || chamada.status === 404) return { sucesso: true };
+    return { sucesso: false, motivo: chamada.motivo };
+  }
+
+  /**
+   * O PATCH das opcoes e dos horarios. Um corpo so para a criacao e para a
+   * remarcacao: as duas deixam a sala no mesmo estado, e um corpo de cada lado
+   * divergiria no dia em que o escritorio mudasse uma opcao.
+   */
+  private async ajustar(
+    organizadorId: string,
+    idExterno: string,
+    token: string,
+    sala: Pick<NovaSala, 'inicio' | 'fim' | 'assunto'>,
+  ): Promise<
+    | { readonly ok: true; readonly reuniao: z.infer<typeof respostaReuniao> }
+    | { readonly ok: false; readonly motivo: string }
+  > {
+    const chamada = await this.chamar(
+      'PATCH',
+      `${this.caminhoDasSalas(organizadorId)}/${encodeURIComponent(idExterno)}`,
+      token,
+      {
+        ...OPCOES_DA_SALA,
+        startDateTime: sala.inicio,
+        endDateTime: sala.fim,
+        subject: sala.assunto,
+      },
+    );
+    if (!chamada.ok) return chamada;
+    return lerReuniao(chamada.dados);
+  }
+
+  private caminhoDasSalas(organizadorId: string): string {
+    return `/users/${encodeURIComponent(organizadorId)}/onlineMeetings`;
   }
 
   /**
@@ -194,7 +276,8 @@ export class GraphSalaDeReuniao implements SalaDeReuniao {
       grant_type: 'client_credentials',
     });
 
-    const chamada = await this.postar(
+    const chamada = await this.requisitar(
+      'POST',
       `${this.baseLogin}/${encodeURIComponent(this.credenciais.tenantId)}/oauth2/v2.0/token`,
       { 'Content-Type': 'application/x-www-form-urlencoded' },
       corpo.toString(),
@@ -215,31 +298,34 @@ export class GraphSalaDeReuniao implements SalaDeReuniao {
   }
 
   private chamar(
+    metodo: 'POST' | 'PATCH' | 'DELETE',
     caminho: string,
     token: string,
-    corpo: unknown,
+    corpo?: unknown,
   ): Promise<Chamada> {
-    return this.postar(
+    return this.requisitar(
+      metodo,
       `${this.base}${caminho}`,
       {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      JSON.stringify(corpo),
+      corpo === undefined ? undefined : JSON.stringify(corpo),
     );
   }
 
-  private async postar(
+  private async requisitar(
+    metodo: 'POST' | 'PATCH' | 'DELETE',
     url: string,
     cabecalhos: Record<string, string>,
-    corpo: string,
+    corpo: string | undefined,
   ): Promise<Chamada> {
     let resposta: Response;
     try {
       resposta = await this.executar(url, {
-        method: 'POST',
+        method: metodo,
         headers: cabecalhos,
-        body: corpo,
+        ...(corpo === undefined ? {} : { body: corpo }),
         signal: AbortSignal.timeout(this.timeoutMs),
       });
     } catch (erro) {
@@ -249,26 +335,39 @@ export class GraphSalaDeReuniao implements SalaDeReuniao {
       };
     }
 
+    /* O DELETE responde 204 sem corpo: nao ha JSON a ler, e isso e sucesso. */
+    if (resposta.status === 204) return { ok: true, dados: null, status: 204 };
+
     let bruto: unknown;
     try {
       bruto = await resposta.json();
     } catch {
       return {
         ok: false,
+        status: resposta.status,
         motivo: `HTTP ${String(resposta.status)} sem JSON`,
       };
     }
 
     if (!resposta.ok) {
       /*
+       * TOKEN RECUSADO NAO E GUARDADO. Um 401 do Graph com o token ainda no
+       * prazo e token revogado (segredo trocado, consentimento retirado): sem
+       * esquecer o guardado, toda nova tentativa ate ele expirar repetiria o
+       * mesmo 401, e trocar o segredo no Secret Manager nao resolveria nada
+       * durante uma hora.
+       */
+      if (resposta.status === 401) this.token = null;
+      /*
        * O TEXTO DO ERRO E PRESERVADO, e nao reduzido a "falhou". E ele que
        * distingue `No application access policy found` — que some sozinho quando
        * a propagacao terminar, e por isso precisa ser reentregue ate o orcamento
-       * acabar — de uma licenca ausente, que so um humano resolve. Os dois viram
-       * falha com orcamento; o que muda e o que o alerta diz ao administrador.
+       * acabar — de um segredo expirado, que so um humano resolve. Os dois viram
+       * falha com orcamento; o que muda e o que o painel diz ao administrador.
        */
       return {
         ok: false,
+        status: resposta.status,
         motivo: `HTTP ${String(resposta.status)}: ${this.limpar(mensagemDoErro(bruto))}`,
       };
     }
@@ -290,15 +389,51 @@ export class GraphSalaDeReuniao implements SalaDeReuniao {
   }
 }
 
-/** O Graph devolve `{ error: { code, message } }`. */
+/**
+ * O texto do erro, nos DOIS formatos que chegam aqui.
+ *
+ * - O Graph devolve `{ error: { code, message } }` — e o de
+ *   `No application access policy found`.
+ * - O endpoint de token do Entra devolve o formato OAuth,
+ *   `{ error: "invalid_client", error_description: "AADSTS7000222: ..." }` — e
+ *   o do client secret expirado. Lido como o do Graph, `error` e um texto e nao
+ *   tem `code`, e o motivo saia "HTTP 401: " e nada mais: o painel mostraria
+ *   uma falha sem dizer que o segredo venceu.
+ *
+ * Do OAuth fica so a primeira frase da descricao: o codigo AADSTS e o que
+ * aconteceu. O resto e link de ajuda e ids de correlacao, que ja estao no log
+ * do Entra.
+ */
 function mensagemDoErro(bruto: unknown): string {
-  const erro = (bruto as { error?: { code?: unknown; message?: unknown } })
-    ?.error;
-  if (erro === undefined) return 'sem corpo de erro';
+  const erro = (bruto as { error?: unknown })?.error;
+  if (erro === undefined || erro === null) return 'sem corpo de erro';
 
-  return [erro.code, erro.message]
+  if (typeof erro === 'string') {
+    const descricao = (bruto as { error_description?: unknown })
+      .error_description;
+    const frase =
+      typeof descricao === 'string' ? (descricao.split('. ')[0] ?? '') : '';
+    return [erro, frase].filter((parte) => parte !== '').join(': ');
+  }
+
+  const { code, message } = erro as { code?: unknown; message?: unknown };
+  return [code, message]
     .filter((parte) => typeof parte === 'string' && parte !== '')
     .join(': ');
+}
+
+function lerReuniao(
+  dados: unknown,
+):
+  | { readonly ok: true; readonly reuniao: z.infer<typeof respostaReuniao> }
+  | { readonly ok: false; readonly motivo: string } {
+  const lido = respostaReuniao.safeParse(dados);
+  return lido.success
+    ? { ok: true, reuniao: lido.data }
+    : {
+        ok: false,
+        motivo: `resposta do Graph fora do formato: ${campos(lido.error)}`,
+      };
 }
 
 function campos(erro: z.ZodError): string {

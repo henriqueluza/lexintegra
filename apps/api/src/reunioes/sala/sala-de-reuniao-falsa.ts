@@ -1,9 +1,10 @@
 import {
   ReunioesDesligadas,
-  type ConferenciaDoUsuario,
   type NovaSala,
+  type ResultadoDaAlteracao,
   type ResultadoDaSala,
   type SalaDeReuniao,
+  type SalaExistente,
 } from './sala-de-reuniao.js';
 
 /**
@@ -24,9 +25,9 @@ export const FALHAS_PREVISTAS = {
 export type FalhaPrevista = keyof typeof FALHAS_PREVISTAS;
 
 export interface SalaRegistrada {
-  readonly reuniaoId: string;
+  readonly externalId: string;
   readonly advogadoId: string;
-  readonly usuarioTeams: string | null;
+  readonly organizadorId: string;
   readonly inicio: string;
   readonly fim: string;
   readonly assunto: string;
@@ -42,9 +43,10 @@ export interface SalaRegistrada {
  * porque um falso mais generoso que o real esconde defeito — foi assim que o
  * travessao passou por toda a suite da Etapa 8 e so apareceu no sandbox:
  *
- * - `reuniaoId` repetido devolve a MESMA sala, com `jaExistia: true`, como o
- *   `createOrGet` faz com o `externalId`. E o que a reentrega do outbox espera.
- * - o link contem o `reuniaoId`, entao um teste que confunda duas reunioes ve
+ * - o mesmo par (organizador, `externalId`) devolve a MESMA sala, com
+ *   `jaExistia: true`, como o `createOrGet`. E o que a reentrega do outbox
+ *   espera. O mesmo `externalId` noutro organizador e OUTRA sala, como no Graph.
+ * - o link contem o `externalId`, entao um teste que confunda duas reunioes ve
  *   isso no link em vez de comparar dois textos iguais e opacos.
  *
  * Os campos publicos existem para o teste inspecionar o que foi pedido.
@@ -52,12 +54,10 @@ export interface SalaRegistrada {
 export class SalaDeReuniaoFalsa implements SalaDeReuniao {
   readonly salas = new Map<string, SalaRegistrada>();
   readonly pedidos: NovaSala[] = [];
+  readonly atualizacoes: SalaExistente[] = [];
+  readonly remocoes: { organizadorId: string; idExterno: string }[] = [];
   private falhasPendentes = 0;
   private falha: FalhaPrevista = 'indisponivel';
-
-  conferirUsuario(usuarioTeams: string): Promise<ConferenciaDoUsuario> {
-    return Promise.resolve(conferirComoFalso(usuarioTeams));
-  }
 
   /** As proximas `n` criacoes falham com o texto da falha escolhida. */
   falharProximas(n: number, falha: FalhaPrevista = 'indisponivel'): void {
@@ -76,7 +76,8 @@ export class SalaDeReuniaoFalsa implements SalaDeReuniao {
       });
     }
 
-    const existente = this.salas.get(sala.reuniaoId);
+    const chave = chaveDa(sala.organizadorId, sala.externalId);
+    const existente = this.salas.get(chave);
     if (existente !== undefined) {
       return Promise.resolve({
         sucesso: true,
@@ -88,10 +89,10 @@ export class SalaDeReuniaoFalsa implements SalaDeReuniao {
 
     const registrada: SalaRegistrada = {
       ...sala,
-      link: `https://teams.microsoft.test/l/meetup-join/${sala.reuniaoId}`,
-      idExterno: `sala_falsa_${sala.reuniaoId}`,
+      link: `https://teams.microsoft.test/l/meetup-join/${sala.externalId}`,
+      idExterno: `sala_falsa_${sala.externalId}`,
     };
-    this.salas.set(sala.reuniaoId, registrada);
+    this.salas.set(chave, registrada);
 
     return Promise.resolve({
       sucesso: true,
@@ -101,11 +102,74 @@ export class SalaDeReuniaoFalsa implements SalaDeReuniao {
     });
   }
 
+  /** Como no Graph: a sala que nao existe neste organizador e 404, e falha. */
+  atualizar(sala: SalaExistente): Promise<ResultadoDaAlteracao> {
+    this.atualizacoes.push(sala);
+    const falha = this.consumirFalha();
+    if (falha !== null) return Promise.resolve(falha);
+
+    const chave = this.chaveDoId(sala.organizadorId, sala.idExterno);
+    const existente = chave === null ? undefined : this.salas.get(chave);
+    if (chave === null || existente === undefined) {
+      return Promise.resolve({
+        sucesso: false,
+        motivo: 'NotFound: sala inexistente neste organizador.',
+      });
+    }
+    this.salas.set(chave, { ...existente, inicio: sala.inicio, fim: sala.fim });
+    return Promise.resolve({ sucesso: true });
+  }
+
+  /** Remover o que nao existe e sucesso, como o 404 do DELETE no adaptador. */
+  remover(
+    organizadorId: string,
+    idExterno: string,
+  ): Promise<ResultadoDaAlteracao> {
+    this.remocoes.push({ organizadorId, idExterno });
+    const falha = this.consumirFalha();
+    if (falha !== null) return Promise.resolve(falha);
+
+    const chave = this.chaveDoId(organizadorId, idExterno);
+    if (chave !== null) this.salas.delete(chave);
+    return Promise.resolve({ sucesso: true });
+  }
+
   limpar(): void {
     this.salas.clear();
     this.pedidos.length = 0;
+    this.atualizacoes.length = 0;
+    this.remocoes.length = 0;
     this.falhasPendentes = 0;
   }
+
+  private consumirFalha(): { sucesso: false; motivo: string } | null {
+    if (this.falhasPendentes === 0) return null;
+    this.falhasPendentes -= 1;
+    return { sucesso: false, motivo: FALHAS_PREVISTAS[this.falha] };
+  }
+
+  private chaveDoId(organizadorId: string, idExterno: string): string | null {
+    for (const [chave, sala] of this.salas) {
+      if (
+        sala.organizadorId === organizadorId &&
+        sala.idExterno === idExterno
+      ) {
+        return chave;
+      }
+    }
+    return null;
+  }
+}
+
+const PENDENTE = {
+  sucesso: false,
+  motivo:
+    'A integracao com o Teams ainda nao esta ligada (REUNIOES_MODO=sem-sala).',
+} as const;
+
+/** A identidade de uma sala no `createOrGet`: organizador e `externalId`. */
+function chaveDa(organizadorId: string, externalId: string): string {
+  return `${organizadorId}|${externalId}`;
 }
 
 /**
@@ -122,13 +186,12 @@ export class SalaDeReuniaoDesligada implements SalaDeReuniao {
     return Promise.reject(new ReunioesDesligadas());
   }
 
-  /**
-   * Com as reunioes desligadas, a conferencia do `usuarioTeams` passa pelo
-   * comportamento do FALSO (decisoes.md, 4.1, e o prompt da B2): ligar o Graph so
-   * para validar um cadastro seria ligar a integracao pela porta dos fundos.
-   */
-  conferirUsuario(usuarioTeams: string): Promise<ConferenciaDoUsuario> {
-    return Promise.resolve(conferirComoFalso(usuarioTeams));
+  atualizar(): Promise<ResultadoDaAlteracao> {
+    return Promise.reject(new ReunioesDesligadas());
+  }
+
+  remover(): Promise<ResultadoDaAlteracao> {
+    return Promise.reject(new ReunioesDesligadas());
   }
 }
 
@@ -143,28 +206,15 @@ export class SalaDeReuniaoDesligada implements SalaDeReuniao {
  */
 export class SalaDeReuniaoPendente implements SalaDeReuniao {
   criar(): Promise<ResultadoDaSala> {
-    return Promise.resolve({
-      sucesso: false,
-      motivo:
-        'A integracao com o Teams ainda nao esta ligada (REUNIOES_MODO=sem-sala).',
-    });
+    return Promise.resolve(PENDENTE);
   }
 
-  /** Mesmo comportamento do desligado: o falso, sem chamar o Graph. */
-  conferirUsuario(usuarioTeams: string): Promise<ConferenciaDoUsuario> {
-    return Promise.resolve(conferirComoFalso(usuarioTeams));
+  /* Sem sala criada, nao ha o que remarcar nem remover: nunca e chamado. */
+  atualizar(): Promise<ResultadoDaAlteracao> {
+    return Promise.resolve(PENDENTE);
   }
-}
 
-/**
- * O object ID que o falso trata como INEXISTENTE no tenant. Tudo o mais
- * existe — o que o falso imita e o caminho do "nao encontrado", nao um
- * diretorio inteiro.
- */
-export const USUARIO_TEAMS_INEXISTENTE = '00000000-0000-0000-0000-000000000000';
-
-function conferirComoFalso(usuarioTeams: string): ConferenciaDoUsuario {
-  return usuarioTeams === USUARIO_TEAMS_INEXISTENTE
-    ? 'nao_encontrado'
-    : 'encontrado';
+  remover(): Promise<ResultadoDaAlteracao> {
+    return Promise.resolve(PENDENTE);
+  }
 }

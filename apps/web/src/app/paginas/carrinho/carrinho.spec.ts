@@ -24,6 +24,7 @@ describe('carrinho separado', () => {
       entregaveis: [],
       quantidadeReunioes: 1,
       numeroRevisoesPermitidas: 1,
+      parcelas: 1,
     });
     f.detectChanges();
     expect(f.nativeElement.querySelector('a[href="/checkout"]')).not.toBeNull();

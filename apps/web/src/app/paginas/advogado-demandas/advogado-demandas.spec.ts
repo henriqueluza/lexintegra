@@ -39,6 +39,7 @@ function demanda(
       prazoValidadeReunioesDias: 180,
       intervaloMinimoReunioesDias: 0,
       numeroRevisoesPermitidas: 1,
+      parcelas: 1,
     },
   };
 }

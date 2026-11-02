@@ -91,14 +91,15 @@ servindo.
 | `VARREDOR_LOTE` | não | não definida | Inválido ou ausente, usa 100 | `outbox/politica.ts` |
 | `APP_CHECK_ENFORCE` | sim | `true` | Fora de `"true"`/`"false"`, **recusa subir** em produção | `app-check/exigencia.ts` |
 | `PROXIES_CONFIAVEIS` | não | `2` | Inválido, usa 0. Com o número errado, o limitador conta todo mundo como um visitante só, **sem falhar** | `configurar.ts` |
-| `PAGAMENTOS_MODO` | sim | `desligado` | Ausente ou inválido, recusa subir. `producao` recusa enquanto `PRODUCAO_DESTRAVADA` for `false` (regra 20) e, destravado, exige `NODE_ENV=production`, chave `abc_prod_` e os dois segredos do webhook | `pagamentos/gateway/modo.ts` |
-| `PAGAMENTOS_CARTAO` | sim | `desabilitado` (B2, decisões 3.4) | Ausente ou inválido, recusa subir. `desabilitado`: o checkout recusa cartão com 422 e a tela mostra "em breve" | `pagamentos/gateway/cartao.ts` |
+| `PAGAMENTOS_MODO` | sim | `producao` (desde 01/11/2026) | Ausente ou inválido, recusa subir. `producao` recusa enquanto `PRODUCAO_DESTRAVADA` for `false` (regra 20) e, destravado, exige `NODE_ENV=production`, chave `abc_prod_` e os dois segredos do webhook | `pagamentos/gateway/modo.ts` |
+| `PAGAMENTOS_CARTAO` | sim | `habilitado` (desde 01/11/2026; B2, decisões 3.4) | Ausente ou inválido, recusa subir. `desabilitado`: o checkout recusa cartão com 422 e a tela mostra "em breve" | `pagamentos/gateway/cartao.ts` |
 | `ABACATEPAY_API_KEY` | com `sandbox` ou `producao` | não definida (secret `abacatepay-api-key`, sem versão, só referenciado com `producao`) | Em `sandbox`, recusa subir sem ela e recusa chave sem o prefixo `abc_dev_`; em `producao`, sem o prefixo `abc_prod_` | `pagamentos/gateway/modo.ts` |
 | `ABACATEPAY_WEBHOOK_SECRET` | com a chave | não definida (secret `abacatepay-webhook-secret`) | Com a chave e sem ela, recusa subir | `pagamentos/gateway/modo.ts` |
 | `ABACATEPAY_WEBHOOK_CHAVE_HMAC` | com a chave | não definida (secret `abacatepay-webhook-chave-hmac`) | Com a chave e sem ela, recusa subir | `pagamentos/gateway/modo.ts` |
-| `REUNIOES_MODO` | sim | `desligado` | Ausente ou inválido, recusa subir. `graph` recusa enquanto `INTEGRACAO_GRAPH_DESTRAVADA` for `false` e, destravado, exige `NODE_ENV=production` e as três `GRAPH_*`. `falso` recusa em produção | `reunioes/sala/modo.ts` |
-| `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID` | com `graph` | não definidas (variáveis `graph_tenant_id` e `graph_client_id`, com placeholder) | Com `graph`, ausentes ou fora do formato GUID, recusa subir | `reunioes/sala/modo.ts` |
-| `GRAPH_CLIENT_SECRET` | com `graph` | não definida (secret `graph-client-secret`, sem versão) | Com `graph` e sem ela, recusa subir | `reunioes/sala/modo.ts` |
+| `REUNIOES_MODO` | sim | `graph` (desde o destravamento de `feat/ligar-teams`) | Ausente ou inválido, recusa subir. `graph` recusa enquanto `INTEGRACAO_GRAPH_DESTRAVADA` for `false` e, destravado, exige `NODE_ENV=production` e as três `GRAPH_*`. `falso` recusa em produção | `reunioes/sala/modo.ts` |
+| `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID` | com `graph` | os GUIDs do tenant e do aplicativo (variáveis `graph_tenant_id` e `graph_client_id`) | Com `graph`, ausentes ou fora do formato GUID, recusa subir | `reunioes/sala/modo.ts` |
+| `GRAPH_CLIENT_SECRET` | com `graph` | secret `graph-client-secret`, versão `latest`; vence em 01/11/2027 | Com `graph` e sem ela, recusa subir | `reunioes/sala/modo.ts` |
+| `TEAMS_ORGANIZADOR_PADRAO` | com `graph` | o object ID da conta organizadora, literal no `cloud_run.tf` | Object ID, no Entra, da conta organizadora que cria as salas. Com `graph`, ausente recusa subir; em qualquer modo, fora do formato GUID recusa subir. No `falso`, ausente usa um organizador fictício | `reunioes/sala/modo.ts` |
 | `RELOGIO_FIXO` | **proibida** | não definida | Fora de emulador, **recusa subir** | `relogio.ts`, conferida em `reunioes/sala/sala.module.ts` |
 | `RASTREIO_AMOSTRAGEM` | não | `0.1` | Vazia ou `0` desliga o rastreio. Valor fora de 0–1 **recusa subir** | `observabilidade/amostragem.ts` |
 | `LOG_FORMATO` | não | `json` | Valor desconhecido recusa subir. Ausente, usa `json` em produção | `observabilidade/criar-logger.ts` |
@@ -134,13 +135,13 @@ delas: commit, PR e deploy. Nunca um `apply` local.
 |---|---|---|
 | `email_remetente` | `LexIntegra <suporte@notificacoes.lexintegra.com.br>` | Vira `EMAIL_FROM` |
 | `email_resposta` | `suportelexintegra@gmail.com` | Vira `EMAIL_REPLY_TO`. Vazio desliga o reply-to |
-| `pagamentos_cartao` | `desabilitado` | Vira `PAGAMENTOS_CARTAO`. Trocar para `habilitado` quando a homologação do cartão sair (seção 4.2) |
+| `pagamentos_cartao` | `habilitado` | Vira `PAGAMENTOS_CARTAO`. Habilitado em 01/11/2026, com o cartão liberado na conta; `desabilitado` é o caminho de emergência (seção 4.2) |
 | `app_check_enforce` | `"true"` (padrão; o deploy não sobrescreve) | Vira `APP_CHECK_ENFORCE` |
 | `proxies_confiaveis` | `2` | Vira `PROXIES_CONFIAVEIS` |
 | `rastreio_amostragem` | `"0.1"` | Vira `RASTREIO_AMOSTRAGEM` |
-| `pagamentos_modo` | `desligado` | Vira `PAGAMENTOS_MODO`; com `producao`, liga os três secrets do AbacatePay. Só junto com `PRODUCAO_DESTRAVADA` ([`ligar-terceiros.md`](../runbooks/ligar-terceiros.md)) |
-| `reunioes_modo` | `desligado` | Vira `REUNIOES_MODO`; com `graph`, liga `GRAPH_*`. Só junto com `INTEGRACAO_GRAPH_DESTRAVADA` |
-| `graph_tenant_id`, `graph_client_id` | `PREENCHER-NO-DESTRAVAMENTO` | GUIDs do Entra ID; o Terraform recusa o placeholder com `graph` |
+| `pagamentos_modo` | `producao` | Vira `PAGAMENTOS_MODO`; com `producao`, liga os três secrets do AbacatePay. Destravado em 01/11/2026 junto com `PRODUCAO_DESTRAVADA` ([`ligar-terceiros.md`](../runbooks/ligar-terceiros.md)). `desligado` é o caminho de emergência |
+| `reunioes_modo` | `graph` | Vira `REUNIOES_MODO`; com `graph`, liga `GRAPH_*` e `TEAMS_ORGANIZADOR_PADRAO`. Voltar atrás é `desligado` |
+| `graph_tenant_id`, `graph_client_id` | os GUIDs reais | GUIDs do Entra ID; o Terraform recusa valor fora do formato com `graph` |
 | `alertas_email_suporte` | `suportelexintegra@gmail.com` | Canal de e-mail que recebe **todos** os alertas (decisões 5.2) |
 | `alertas_email_desenvolvimento` | vem do GitHub (`ALERTAS_EMAIL_DESENVOLVIMENTO`) | Canal provisório, sem alerta roteado desde 05/10/2026; sai na transferência |
 | `limite_outbox_minutos`, `limite_falhas_de_entrega`, `limite_quarentena_minutos`, `limite_base_clamav_horas` | 30, 5, 60, 48 | Limiares das políticas de alerta |
@@ -156,8 +157,8 @@ em vez de assumir um valor padrão.
 
 | Modo | Estado hoje | O que ele faz agora | O que o destrava |
 |---|---|---|---|
-| `PAGAMENTOS_MODO` | `desligado` | Checkout e webhook respondem 503 | Chave de produção nos secrets, primeira transação real feita por uma pessoa e o **commit de destravamento** (`PRODUCAO_DESTRAVADA = true` e `pagamentos_modo = "producao"`). Ver a seção 4.2 |
-| `REUNIOES_MODO` | `desligado` | O cartão do pedido diz que o agendamento está indisponível | Entra ID configurado, policy propagada, chamada manual de teste, `usuarioTeams` preenchido e o **commit de destravamento** (`INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"` e os GUIDs). Ver a seção 4.3 |
+| `PAGAMENTOS_MODO` | `producao` (destravado em 01/11/2026) | Checkout cobra de verdade e o webhook cria pedidos | Já destravado: chave de produção nos secrets, cobrança PIX manual de R$ 1,00 (01/11/2026) e o **commit de destravamento** (`PRODUCAO_DESTRAVADA = true` e `pagamentos_modo = "producao"`). Para desligar numa emergência: `pagamentos_modo = "desligado"` por PR. Ver a seção 4.2 |
+| `REUNIOES_MODO` | `graph` (destravado em `feat/ligar-teams`) | Cria as salas na conta organizadora, remarca e apaga pelo Graph | Já destravado: `INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"`, os GUIDs e `TEAMS_ORGANIZADOR_PADRAO`. A trava que sobra: `graph` só sobe com `NODE_ENV=production`. Ver a seção 4.3 |
 | `APP_CHECK_ENFORCE` | `true` | Rotas `@Publico()`, fora health e webhook e relato de erro, exigem token de App Check | Já está ligado (commit `67be0ca`). O provedor usa a site key de `vars.APP_CHECK_SITE_KEY` e, sem `vars.APP_CHECK_PROVEDOR`, o provedor `recaptcha-enterprise`. Para desligar numa emergência: `app_check_enforce = "false"` por PR |
 | `RELOGIO_FIXO` | ausente | — | **Nunca em produção.** Só jornadas e regressão visual, sob emulador |
 
@@ -325,11 +326,15 @@ Os seis eventos: `transparent.completed`, `checkout.completed`,
 `checkout.disputed`. **Quem tem acesso ao painel tem acesso ao segredo**
 (ADR-19).
 
-**Cartão, só depois da homologação.** Decidido (decisões 3.4): sem ela, lança
-só com PIX (`pagamentos_cartao = "desabilitado"`). Antes de habilitar, refaça a
-seção 4 de [`runbooks/checkout-sandbox.md`](../runbooks/checkout-sandbox.md): o
-nome do evento de conclusão do cartão **não foi confirmado**. Até lá, a
-proteção é o alerta `pagamento.webhook-evento-desconhecido`.
+**Cartão habilitado em 01/11/2026** (`pagamentos_cartao = "habilitado"`), com o
+cartão liberado no checkout da conta. A rodada de cartão da seção 4 de
+[`runbooks/checkout-sandbox.md`](../runbooks/checkout-sandbox.md) **não foi
+feita**: o formato do evento `checkout.completed` nunca foi capturado. A
+primeira compra por cartão em produção faz o papel dela, de valor baixo e
+seguida de estorno. Se o evento não casar, a proteção é o alerta
+`pagamento.webhook-evento-desconhecido` (ou `pagamento.webhook-ilegivel`), e o
+evento pode ser reenviado pelos *Webhook Logs* depois da correção. Para
+desligar só o cartão: `pagamentos_cartao = "desabilitado"` por PR.
 
 **Voltar atrás:** `PAGAMENTOS_MODO = "desligado"` por PR. O checkout e o
 webhook voltam a responder 503. Um QR já emitido e pago nesse intervalo depende
@@ -346,34 +351,69 @@ Confira nos *Webhook Logs* do painel antes de desligar com cobrança em aberto.
 
 ### 4.3 Microsoft Teams
 
-**O passo a passo, com os comandos e a chamada manual de teste do Graph, está
-em [`runbooks/ligar-terceiros.md`](../runbooks/ligar-terceiros.md), seção 2.**
-Desde 05/10/2026 o modo `graph` lê as credenciais e instancia o adaptador
-(`reunioes/sala/graph.sala-de-reuniao.ts`), atrás da trava
-`INTEGRACAO_GRAPH_DESTRAVADA`; o secret `graph-client-secret` existe vazio, e
-tenant e client id são variáveis do Terraform com placeholder.
+**O passo a passo, com os comandos de PowerShell do teste no tenant, está em
+[`runbooks/ligar-terceiros.md`](../runbooks/ligar-terceiros.md), seção 2.**
 
-**Permissões de aplicação no Entra ID, conferidas contra o código
-(05/10/2026)**, ambas com consentimento do administrador:
+**O modelo (decisão do escritório, 01/11/2026).** As salas são criadas por uma
+**conta organizadora** do tenant (`operacional@`, licença Microsoft 365
+Business Basic). Advogado e cliente entram pelo link como **convidados
+anônimos**, no navegador, digitando o próprio nome; o anônimo não tem chat. O
+object ID da conta organizadora é `TEAMS_ORGANIZADOR_PADRAO`
+(`infra/terraform/cloud_run.tf`), e não é segredo. Um advogado pode ter
+`organizadorTeams` no cadastro (`/admin/advogados`), que sobrepõe a conta —
+só para o dia em que o escritório licenciar os advogados (abaixo).
 
-| Permissão (Application) | Chamada | Onde |
-|---|---|---|
-| `OnlineMeetings.ReadWrite.All` | `POST /users/{usuarioTeams}/onlineMeetings/createOrGet` | `GraphSalaDeReuniao.criar` |
-| `User.Read.All` | `GET /users/{usuarioTeams}?$select=id` | `GraphSalaDeReuniao.conferirUsuario`, na edição do advogado |
+**O que já está configurado no tenant (01/11/2026):**
 
-O token é de aplicação (client credentials, escopo
-`https://graph.microsoft.com/.default`). Nenhuma permissão delegada, e nada de
-`Calendars.ReadWrite` (ADR-05). Além das permissões, a **application access
-policy** do Teams (PowerShell, propagação de até 48 h) precisa conceder o
-aplicativo a cada advogado. O `usuarioTeams` é o **object ID** do Entra, não o
-e-mail (ADR-21, decisão B).
+| Item | Como ficou |
+|---|---|
+| Aplicativo no Entra ID | Permissão de aplicativo `OnlineMeetings.ReadWrite.All`, com consentimento do administrador. Nenhuma outra |
+| Client secret | `graph-client-secret` no Secret Manager. **Expira em 01/11/2027** |
+| Application access policy | `LexIntegra-Reunioes`, concedida à conta organizadora |
+| Política de reunião | `LexIntegra-Organizadora`, na conta organizadora: entrada anônima, início sem organizador, lobby liberado, todos podem apresentar, sem gravação nem transcrição |
+| Teste manual | Reunião criada pela API; duas pessoas anônimas entraram sem lobby, se viram e compartilharam a tela |
+
+**Chamadas, todas com `OnlineMeetings.ReadWrite.All`**, em
+`/users/{organizador}/onlineMeetings` (`GraphSalaDeReuniao`):
+
+| Chamada | Quando |
+|---|---|
+| `POST …/createOrGet` | Criação da sala, com `externalId = {pedidoId}-{rNNN}`. Idempotente |
+| `PATCH …/{id}` | Logo depois, com as opções da sala e os horários; e em cada remarcação. O link só chega a alguém depois deste PATCH |
+| `DELETE …/{id}` | Cancelamento da reunião |
+
+O organizador é **gravado na reunião** (`organizadorId`) antes da primeira
+chamada, e a nova tentativa, a remarcação e o cancelamento usam o gravado,
+nunca o cadastro atual. O token é de aplicação (client credentials, escopo
+`https://graph.microsoft.com/.default`); nada de permissão delegada nem de
+`Calendars.ReadWrite` (ADR-05). A conferência do object ID do advogado no
+tenant (`GET /users`, que pedia `User.Read.All`) **saiu**: o cadastro confere
+só o formato GUID.
+
+**A trava de agendamento continua por advogado**, e não por organizador: a
+mesma conta organizadora tem reuniões simultâneas de advogados diferentes, e o
+slot continua sendo `{advogadoId}_{inicio}`.
+
+**Renovar o client secret** antes de 01/11/2027:
+[`ligar-terceiros.md`](../runbooks/ligar-terceiros.md), 2.5. Vencido, as salas
+novas falham com `AADSTS7000222` e as reuniões aparecem em `/admin/reunioes`.
+
+**Se o escritório licenciar os advogados:** para cada um, conceder a
+application access policy `LexIntegra-Reunioes` (`Grant-CsApplicationAccessPolicy`,
+até 48 horas de propagação), aplicar a política de reunião
+`LexIntegra-Organizadora` e, depois da propagação, preencher o
+`organizadorTeams` dele em `/admin/advogados`. Comandos e ordem em
+[`ligar-terceiros.md`](../runbooks/ligar-terceiros.md), 2.6. As reuniões já
+marcadas continuam na conta organizadora.
 
 **Voltar atrás:** `REUNIOES_MODO = "desligado"`. As reuniões já marcadas
 continuam, e as sem sala aparecem em `/admin/reunioes`.
 
 As regras do agendamento estão confirmadas (ADR-21, confirmado em
 29/09/2026: as oito decisões, a antecedência mínima de 24 horas e a devolução
-quando o escritório cancela). Não há pendência de produto para ligar.
+quando o escritório cancela). A decisão 7 (sala não apagada no cancelamento,
+link reaproveitado sem Graph na remarcação) tem errata de 01/11/2026: a sala
+é apagada no cancelamento e muda de horário na remarcação.
 
 ---
 
@@ -387,7 +427,7 @@ Conferidas em 24/09/2026 com `gcloud scheduler jobs list` e
 | `varredor-outbox` | Scheduler, em [`outbox.tf`](../../infra/terraform/outbox.tf) | a cada minuto | `POST /api/interno/outbox/varredura`: reenfileira o que ficou sem tarefa | Registro perdido entre gravar e enfileirar não é mais entregue. Alerta *Outbox parado* |
 | `clamav-base-diaria` | Scheduler, em [`varredura.tf`](../../infra/terraform/varredura.tf) | 4h e 16h | Executa o job `clamav-atualizar-base`, que publica a base no bucket | A base envelhece e o scanner continua dizendo "limpo". Alertas *Base do ClamAV velha* e *sem publicação* |
 | `retencao-diaria` | Scheduler, em `varredura.tf` | 5h e 17h | `POST /api/interno/retencao`: aviso 7 dias antes (um por pedido) e, 30 dias depois de o último entregável chegar a `entregue` — nunca antes de 7 dias depois do aviso —, exclusão de todas as versões dos entregáveis e dos anexos do cliente. Pula pedido com contestação aberta. Duas vezes por dia por causa do alerta de ausência. **Desde 05/10/2026 roda também a rotina da política de guarda** (`lgpd/eliminacao.service.ts`): elimina o cadastro inicial sem conta 6 meses depois do último envio, abre a eliminação do cliente 5 anos depois do último pedido e executa as eliminações cujo aviso já deu 7 dias | Arquivos ficam além dos 30 dias; dados além da guarda. Alerta *Retencao parada*; falha da eliminação emite `lgpd.eliminacao-falhou` |
-| `sinais-operacionais` | Scheduler, em [`sinais.tf`](../../infra/terraform/sinais.tf) | a cada 5 minutos | `POST /api/interno/sinais`: mede e grava em log a idade do outbox, da quarentena e da reunião sem sala, e os advogados sem `usuarioTeams` | As métricas ficam sem dado, e os alertas que dependem delas **não disparam**. Alerta *Sonda de sinais parada* |
+| `sinais-operacionais` | Scheduler, em [`sinais.tf`](../../infra/terraform/sinais.tf) | a cada 5 minutos | `POST /api/interno/sinais`: mede e grava em log a idade do outbox, da quarentena e da reunião sem sala | As métricas ficam sem dado, e os alertas que dependem delas **não disparam**. Alerta *Sonda de sinais parada* |
 | fila `eventos` | Cloud Tasks, em `outbox.tf` | sob demanda | Entrega o outbox em `POST /api/interno/outbox`. Até 12 tentativas em 1 hora, backoff de 10 a 300 s | E-mail, sala e estorno param. Alerta *Outbox parado* |
 | fila `varredura` | Cloud Tasks, em `varredura.tf` | sob demanda | Chama `POST /api/interno/varredura`, que chama o scanner. Até 10 tentativas em 1 hora | Arquivo parado em quarentena. Alerta *Arquivo parado em quarentena* |
 | `clamav-atualizar-base` | Job do Cloud Run, em `varredura.tf` | pelo Scheduler | `freshclam` e publicação em `gs://lexintegra-clamav-db-36bda` | Mesmo que `clamav-base-diaria` |
@@ -470,7 +510,6 @@ continua recuperável por até 7 dias. A única coleção com TTL é `checkouts`
 | Arquivo parado em quarentena | Arquivo sem veredito há mais de 60 min | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
 | Base do ClamAV velha | O `daily` publicado tem mais de 48 h (só o `daily`: `main` e `bytecode` têm meses de idade por natureza) | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
 | Base do ClamAV sem publicacao | Nenhuma publicação do `daily` em 23 h | [`scanner-indisponivel.md`](../runbooks/scanner-indisponivel.md) |
-| Disponibilidade publicada sem link de reuniao | Advogado ativo, com horário publicado e sem `usuarioTeams`. **Só com o Teams ligado**: com `REUNIOES_MODO=desligado`, a sonda não emite o sinal | [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
 | Reuniao marcada sem sala do Teams | Reunião em `reservada_sem_link` há mais de 60 min | [`reuniao-sem-link.md`](../runbooks/reuniao-sem-link.md) |
 | Webhook do gateway recusado | Mais de 5 recusas do webhook em 10 min, por segredo ou assinatura | [`webhook-recusado.md`](../runbooks/webhook-recusado.md) |
 | Retencao parada | Nenhuma passagem da retenção concluída em 23 h | [`retencao-parada.md`](../runbooks/retencao-parada.md) |

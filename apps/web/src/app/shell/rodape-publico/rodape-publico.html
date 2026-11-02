@@ -1,8 +1,11 @@
 <!--
   Os quatro itens são exigência da análise do AbacatePay e precisam estar no
   HTML pré-renderizado da home (há teste no e2e): nome, CNPJ, e-mail de contato
-  e os links para termos e privacidade. Nada mais entra aqui — em especial,
-  nenhum link para âncora da landing, que no celular não tem as seções.
+  e os links para termos e privacidade. Desde 01/11/2026 entram também as
+  formas de pagamento aceitas, da fonte única `shared/formas-de-pagamento`:
+  anunciar o que o checkout aceita, e só isso. Nada mais entra aqui — em
+  especial, nenhum link para âncora da landing, que no celular não tem as
+  seções.
 -->
 <footer class="rodape">
   <div class="rodape__grade">
@@ -21,6 +24,10 @@
       ><a href="/privacidade">Política de privacidade</a>
     </nav>
   </div>
+  <section class="rodape__pagamento" aria-labelledby="rodape-pagamento">
+    <h2 id="rodape-pagamento">Formas de pagamento</h2>
+    <app-marcas-pagamento rotulo="Formas de pagamento aceitas" />
+  </section>
   <p class="rodape__base">
     © 2026 LexIntegra. Serviços jurídicos, conectados a você.
   </p>

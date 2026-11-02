@@ -67,6 +67,14 @@ export const POLITICA: Readonly<Record<TipoEvento, PoliticaDeEvento>> = {
    */
   'criar-sala-reuniao': { criticidade: 'critico', maxTentativas: 10 },
   /*
+   * O PATCH da remarcacao e o DELETE do cancelamento (`feat/ligar-teams`).
+   * Criticos e com o mesmo orcamento da criacao, porque as falhas provaveis sao
+   * as mesmas (policy, segredo expirado) e o estrago de desistir tambem: a sala
+   * remarcada expira no horario antigo, e a cancelada continua aberta.
+   */
+  'atualizar-sala-reuniao': { criticidade: 'critico', maxTentativas: 10 },
+  'remover-sala-reuniao': { criticidade: 'critico', maxTentativas: 10 },
+  /*
    * O convite. Critico porque o cliente marcou uma reuniao e precisa saber
    * quando ela e — e porque o advogado precisa dela na agenda para comparecer.
    */

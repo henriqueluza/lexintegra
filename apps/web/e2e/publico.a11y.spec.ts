@@ -51,6 +51,8 @@ test.describe('acessibilidade da area publica', () => {
             entregaveis: ['Minuta revisada'],
             quantidadeReunioes: 1,
             numeroRevisoesPermitidas: 2,
+            /* Divisao que nao fecha: o axe ve a parcela e a linha do total. */
+            parcelas: 6,
           },
         ]),
       }),

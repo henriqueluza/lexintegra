@@ -10,7 +10,7 @@ const ANA: AdvogadoResumo = {
   email: 'ana@escritorio.test',
   status: 'ativo',
   criadoEm: '2026-09-01T12:00:00.000Z',
-  usuarioTeams: null,
+  organizadorTeams: null,
 };
 
 const BRUNO: AdvogadoResumo = {
@@ -19,7 +19,7 @@ const BRUNO: AdvogadoResumo = {
   email: 'bruno@escritorio.test',
   status: 'suspenso',
   criadoEm: null,
-  usuarioTeams: null,
+  organizadorTeams: null,
 };
 
 interface ApiDeTeste {
@@ -87,7 +87,7 @@ async function montar(opcoes: Partial<ApiDeTeste> = {}): Promise<{
 }
 
 /**
- * `usuarioTeams` entra aqui com o valor vazio (Etapa 10): `setValue` exige o
+ * `organizadorTeams` entra aqui com o valor vazio (Etapa 10): `setValue` exige o
  * grupo INTEIRO, e um campo novo no formulario derruba todo teste que use este
  * ajudante — que e o ponto. `patchValue` aceitaria o objeto parcial e esconderia
  * a adicao do campo.
@@ -96,7 +96,7 @@ function preencher(
   fixture: ComponentFixture<AdminAdvogados>,
   nome: string,
   email: string,
-  usuarioTeams = '',
+  organizadorTeams = '',
 ): void {
   (
     fixture.componentInstance as unknown as {
@@ -104,11 +104,11 @@ function preencher(
         setValue: (v: {
           nome: string;
           email: string;
-          usuarioTeams: string;
+          organizadorTeams: string;
         }) => void;
       };
     }
-  ).formulario.setValue({ nome, email, usuarioTeams });
+  ).formulario.setValue({ nome, email, organizadorTeams });
   fixture.detectChanges();
 }
 
@@ -339,20 +339,12 @@ describe('AdminAdvogados', () => {
       expect(fixture.nativeElement.textContent).toContain('Cadastrar advogado');
     });
 
-    it('traduz o e-mail de outra conta e o Teams inexistente', async () => {
+    it('traduz o e-mail de outra conta', async () => {
       const conflito = await abrirEdicao(erroHttp(409));
       preencher(conflito.fixture, 'Ana Souza', 'ocupado@escritorio.test');
       await enviar(conflito.fixture);
       expect(conflito.fixture.nativeElement.textContent).toContain(
         'Este e-mail já é usado por outra conta.',
-      );
-
-      TestBed.resetTestingModule();
-      const teams = await abrirEdicao(erroHttp(422));
-      preencher(teams.fixture, 'Ana Souza', 'ana@escritorio.test');
-      await enviar(teams.fixture);
-      expect(teams.fixture.nativeElement.textContent).toContain(
-        'não existe no Microsoft 365',
       );
     });
 

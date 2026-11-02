@@ -71,7 +71,23 @@ pontos facultativos federais vêm de `shared/feriados` e só são marcados. O mo
 `criar-sala-reuniao` nasce **`estacionado`** — estado novo do outbox que a fila, o
 varredor, a sonda de idade e `reivindicar` ignoram; só o reenvio manual o acorda,
 e é assim que as salas nascem quando o Teams for ligado. Em `sem-sala`, a sonda não
-mede reunião sem sala nem advogado sem `usuarioTeams`.
+mede reunião sem sala.
+
+**Teams pela conta organizadora (01/11/2026, branch `feat/ligar-teams`):** as salas
+são criadas por uma **conta organizadora** do tenant (`operacional@`, Business Basic,
+object ID em `TEAMS_ORGANIZADOR_PADRAO`, obrigatório no modo `graph`), e advogado e
+cliente entram como **convidados anônimos**. O campo do advogado virou
+`organizadorTeams` (opcional, GUID, sobrepõe a conta; a leitura aceita o nome antigo
+`usuarioTeams`), e a conferência no tenant (`User.Read.All`) saiu. O organizador é
+**gravado na reunião** (`organizadorId`) antes da primeira chamada ao Graph. A sala nasce
+com `createOrGet` (`externalId = {pedidoId}-{rNNN}`: com um organizador só, o `r001` de
+dois pedidos casaria) e um `PATCH` com as opções (todos apresentam, sem chat, sem
+gravação, ninguém no lobby); **o link só sai depois do PATCH**. Remarcar grava
+`atualizar-sala-reuniao` (PATCH) e cancelar grava `remover-sala-reuniao` (DELETE),
+errata da decisão 7 do ADR-21. O assunto da sala não leva dado do cliente
+(`codigoCurtoDoPedido`). A trava de agendamento continua **por advogado**. O sinal
+`disponibilidade.sem-link` e o alerta dele saíram. O que está no tenant e a data de
+vencimento do client secret: `docs/runbooks/ligar-terceiros.md`, seção 2.
 
 **Bloco B — resíduos do checkout (branch `fix/residuos-checkout`):** o
 `webhookSecret` saiu do log de requisição (exclusão no Cloud Logging pelo nome do
@@ -516,7 +532,7 @@ Estas vêm de decisões registradas nos ADRs. Violá-las é bug, não preferênc
 
 19. **A API é acessada via `/api/**` no mesmo domínio do frontend, não por subdomínio.** Rewrite do Firebase Hosting para o Cloud Run (ver ADR-15). Não criar mapeamento de domínio próprio (`api.lexintegra.com.br`) sem antes verificar se a região do serviço já suporta essa funcionalidade do Cloud Run — na região `southamerica-east1`, não suporta.
 
-20. **Pagamento real está travado no código, e o estorno real só sai pelo outbox** (Etapa 8, ADR-19). `PAGAMENTOS_MODO=producao` **recusa subir** enquanto a constante `PRODUCAO_DESTRAVADA` (`pagamentos/gateway/modo.ts`) for `false`, independentemente do que estiver no Secret Manager — destravar é ato humano e explícito, o commit de destravamento de `docs/runbooks/ligar-terceiros.md`, com a chave de produção aprovada e a primeira transação real feita à mão, nunca uma troca de variável. Destravado, `producao` exige `NODE_ENV=production`, chave `abc_prod_` e espera `devMode: false`. Em `sandbox`, a chave precisa ter o prefixo `abc_dev_` e todo evento e toda resposta do gateway precisam trazer `devMode: true`. E **nenhum endpoint síncrono chama `GatewayPagamento.estornar`**: o estorno integral nasce como evento `estorno-integral` no outbox, na transação que decide o estorno, e quem chama o gateway é o despachante. Só `pagamentos/gateway/criar-gateway.ts` importa o adaptador real — regra de dependency-cruiser.
+20. **Pagamento real está travado no código, e o estorno real só sai pelo outbox** (Etapa 8, ADR-19). `PAGAMENTOS_MODO=producao` **recusa subir** enquanto a constante `PRODUCAO_DESTRAVADA` (`pagamentos/gateway/modo.ts`) for `false`, independentemente do que estiver no Secret Manager — destravar é ato humano e explícito, o commit de destravamento de `docs/runbooks/ligar-terceiros.md`, com a chave de produção aprovada e a primeira transação real feita à mão, nunca uma troca de variável. **Destravado em 01/11/2026** (branch `chore/ligar-pagamentos-producao`): a constante é `true` e o modo em produção é `producao`. Fechar a trava de novo exige trocar antes o modo para `desligado`, senão o boot cai. Destravado, `producao` exige `NODE_ENV=production`, chave `abc_prod_` e espera `devMode: false`. Em `sandbox`, a chave precisa ter o prefixo `abc_dev_` e todo evento e toda resposta do gateway precisam trazer `devMode: true`. E **nenhum endpoint síncrono chama `GatewayPagamento.estornar`**: o estorno integral nasce como evento `estorno-integral` no outbox, na transação que decide o estorno, e quem chama o gateway é o despachante. Só `pagamentos/gateway/criar-gateway.ts` importa o adaptador real — regra de dependency-cruiser.
 
 ## Fronteiras de autorização
 

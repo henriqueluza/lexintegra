@@ -16,6 +16,7 @@ const PARECER: NovoProduto = {
   prazoValidadeReunioesDias: 365,
   intervaloMinimoReunioesDias: 7,
   numeroRevisoesPermitidas: 2,
+  parcelas: 1,
 };
 
 function montar(): { servico: ProdutosService; banco: FirestoreFalso } {
@@ -38,6 +39,7 @@ describe('ProdutosService', () => {
         nome: PARECER.nome,
         precoCentavos: 250_000,
         numeroRevisoesPermitidas: 2,
+        parcelas: 1,
         ativo: true,
         criadoPor: ADMIN,
         atualizadoPor: ADMIN,

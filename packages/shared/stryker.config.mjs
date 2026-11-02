@@ -60,6 +60,12 @@ export default {
      */
     'src/regras-reuniao.ts',
     'src/estado-reuniao.ts',
+    /*
+     * A conta de parcela que o catalogo e o checkout exibem. O resto na primeira
+     * parcela e a soma batendo com o total sao regra de dinheiro: um `-` virado
+     * em `+` mostraria ao cliente uma parcela que ninguem cobra.
+     */
+    'src/parcelamento.ts',
   ],
 
   /*

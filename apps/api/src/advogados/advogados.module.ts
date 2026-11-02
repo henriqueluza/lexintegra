@@ -13,7 +13,7 @@ import { EdicaoDeAdvogadoService } from './edicao.service.js';
  * suspensao revoga os tokens na hora (arquitetura 7.4) e recusa com 409 enquanto
  * houver reuniao futura do advogado (ADR-21, decisao D).
  *
- * EDITA o cadastro (B2, decisoes.md 4.1): nome, e-mail e `usuarioTeams`, com
+ * EDITA o cadastro (B2, decisoes.md 4.1): nome, e-mail e `organizadorTeams`, com
  * auditoria e novo e-mail de acesso quando o endereco muda — ver
  * `edicao.service.ts`.
  *

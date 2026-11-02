@@ -46,6 +46,7 @@ const PARECER: NovoProduto = {
   prazoValidadeReunioesDias: 365,
   intervaloMinimoReunioesDias: 0,
   numeroRevisoesPermitidas: 2,
+  parcelas: 1,
 };
 
 const COBRANCA = 'bill_contestada';
@@ -128,7 +129,7 @@ async function criarPedidos(): Promise<void> {
     nome: 'Adv',
     email: 'adv@escritorio.test',
     status: 'ativo',
-    usuarioTeams: null,
+    organizadorTeams: null,
   });
 }
 

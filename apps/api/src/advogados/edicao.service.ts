@@ -4,7 +4,6 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  UnprocessableEntityException,
 } from '@nestjs/common';
 import type { Auth } from 'firebase-admin/auth';
 import {
@@ -12,24 +11,27 @@ import {
   Timestamp,
   type Firestore,
 } from 'firebase-admin/firestore';
-import type { AdvogadoResumo, EdicaoAdvogado, StatusAdvogado } from 'shared';
+import {
+  organizadorTeamsDe,
+  type AdvogadoResumo,
+  type EdicaoAdvogado,
+  type StatusAdvogado,
+} from 'shared';
 import { auditar } from '../auditoria/auditoria.js';
 import { AUTH_FIREBASE, FIRESTORE } from '../firebase/firebase.module.js';
 import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
-import {
-  SALA_DE_REUNIAO,
-  type SalaDeReuniao,
-} from '../reunioes/sala/sala-de-reuniao.js';
 import { COLECAO_ADVOGADOS } from './advogados.service.js';
 
 interface Cadastro {
   readonly nome: string;
   readonly email: string;
-  readonly usuarioTeams: string | null;
+  readonly organizadorTeams: string | null;
 }
 
 interface DocumentoEditavel extends Cadastro {
+  /** O nome anterior do campo; ver `organizadorTeamsDe`. */
+  readonly usuarioTeams?: string | null;
   readonly status: StatusAdvogado;
   readonly criadoEm?: unknown;
   /** Sobe a cada troca de e-mail; ausente nos documentos anteriores a B2. */
@@ -40,7 +42,7 @@ function cadastroDe(dados: DocumentoEditavel): Cadastro {
   return {
     nome: dados.nome,
     email: dados.email,
-    usuarioTeams: dados.usuarioTeams ?? null,
+    organizadorTeams: organizadorTeamsDe(dados),
   };
 }
 
@@ -49,7 +51,7 @@ function diferenca(
   antes: Cadastro,
   depois: Cadastro,
 ): { antes: Partial<Cadastro>; depois: Partial<Cadastro> } | null {
-  const campos = (['nome', 'email', 'usuarioTeams'] as const).filter(
+  const campos = (['nome', 'email', 'organizadorTeams'] as const).filter(
     (campo) => antes[campo] !== depois[campo],
   );
   if (campos.length === 0) return null;
@@ -73,15 +75,10 @@ function codigoDoAuth(erro: unknown): string | null {
  * (suspender e outra operacao, com tres efeitos) e NAO REDISTRIBUI PEDIDOS: a
  * atribuicao mora no pedido (`pedidos.advogadoId`, pelo uid), e o uid nao muda.
  *
- * TRES CONFERENCIAS ANTES DE QUALQUER ESCRITA:
+ * DUAS CONFERENCIAS ANTES DE QUALQUER ESCRITA:
  *
  * - o documento de advogado existe — e o que impede esta rota de alcancar a
  *   conta de um cliente ou de um administrador (mesmo raciocinio da suspensao);
- * - o `usuarioTeams` novo existe no Microsoft 365 do escritorio. `nao_encontrado`
- *   e 422; `indisponivel` (Graph fora do ar, ou integracao desligada sem falso)
- *   NAO bloqueia: o adaptador da sala ja recusa com erro reentregavel na hora de
- *   criar a reuniao, e travar o cadastro por uma falha transitoria do Graph
- *   impediria corrigir justamente o campo que se quer corrigir;
  * - o e-mail novo nao e de outra conta — o Auth responde
  *   `email-already-exists`, que vira 409.
  *
@@ -92,6 +89,12 @@ function codigoDoAuth(erro: unknown): string | null {
  * transacao do documento nascem a linha de auditoria e o novo e-mail de acesso
  * (regra inviolavel 3), com a chave na versao do acesso — cada troca, o seu
  * registro.
+ *
+ * O `organizadorTeams` NAO e conferido no tenant (`feat/ligar-teams`). A
+ * conferencia por `GET /users` exigia `User.Read.All`, e o aplicativo do
+ * escritorio fica so com `OnlineMeetings.ReadWrite.All`. O schema confere o
+ * formato; um GUID que nao existe aparece na primeira sala, como falha
+ * reentregavel em `/admin/reunioes`.
  */
 @Injectable()
 export class EdicaoDeAdvogadoService {
@@ -100,7 +103,6 @@ export class EdicaoDeAdvogadoService {
   constructor(
     @Inject(AUTH_FIREBASE) private readonly auth: Auth,
     @Inject(FIRESTORE) private readonly db: Firestore,
-    @Inject(SALA_DE_REUNIAO) private readonly sala: SalaDeReuniao,
     private readonly outbox: OutboxService,
     private readonly enfileirador: EnfileiradorDeEventos,
   ) {}
@@ -118,15 +120,9 @@ export class EdicaoDeAdvogadoService {
     const depois: Cadastro = {
       nome: dados.nome,
       email: dados.email,
-      usuarioTeams: dados.usuarioTeams ?? null,
+      organizadorTeams: dados.organizadorTeams ?? null,
     };
 
-    if (
-      depois.usuarioTeams !== null &&
-      depois.usuarioTeams !== antes.usuarioTeams
-    ) {
-      await this.conferirTeams(depois.usuarioTeams);
-    }
     const trocouEmail = antes.email !== depois.email;
     if (trocouEmail || antes.nome !== depois.nome) {
       await this.atualizarAuth(uid, depois, trocouEmail);
@@ -145,20 +141,6 @@ export class EdicaoDeAdvogadoService {
           ? dadosAtuais.criadoEm.toDate().toISOString()
           : null,
     };
-  }
-
-  private async conferirTeams(usuarioTeams: string): Promise<void> {
-    const conferencia = await this.sala.conferirUsuario(usuarioTeams);
-    if (conferencia === 'nao_encontrado') {
-      throw new UnprocessableEntityException(
-        'Este ID de objeto nao existe no Microsoft 365 do escritorio.',
-      );
-    }
-    if (conferencia === 'indisponivel') {
-      this.log.warn(
-        'nao foi possivel conferir o usuarioTeams; salvando assim mesmo',
-      );
-    }
   }
 
   private async atualizarAuth(
@@ -211,6 +193,8 @@ export class EdicaoDeAdvogadoService {
 
       transacao.update(referencia, {
         ...depois,
+        /* O nome anterior sai na primeira edicao; ver `organizadorTeamsDe`. */
+        usuarioTeams: FieldValue.delete(),
         versaoDeAcesso: versao,
         alteradoEm: FieldValue.serverTimestamp(),
         alteradoPor: admin,

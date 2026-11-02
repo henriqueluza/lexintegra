@@ -25,6 +25,7 @@ import {
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import { agora as agora_ } from '../relogio.js';
 import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
+import type { NovoEvento } from '../outbox/evento.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import { contestacaoAberta, exigirSemContestacao } from '../pedidos/pausa.js';
 import {
@@ -253,6 +254,37 @@ export class AlteracoesDeReuniaoService {
     this.log.debug?.(`reuniao ${alvo.reuniaoId} pode ir para o slot novo`);
   }
 
+  /**
+   * O CONVITE SO SAI SE JA HOUVER SALA — quem chama confere. Em
+   * `reservada_sem_link` nao ha link para convidar ninguem, e o evento
+   * `criar-sala-reuniao` que ainda esta na fila vai escrever os convites com o
+   * `sequence` ja incrementado quando a sala chegar. Escrever aqui produziria
+   * convite sem link, que a regra inviolavel 13 proibe.
+   *
+   * E O PATCH DA SALA, no mesmo lote (`feat/ligar-teams`): o link nao muda, mas
+   * a sala expira a partir do horario que tem. O despachante rele o horario na
+   * hora de chamar o Graph.
+   */
+  private avisarDaRemarcacao(
+    transacao: Transaction,
+    alvo: Alvo,
+    reuniao: DocumentoReuniao,
+    sequence: number,
+  ): Promise<string[]> {
+    const patch: NovoEvento = {
+      tipo: 'atualizar-sala-reuniao',
+      destinatarioUid: reuniao.clienteId,
+      reuniao: { ...alvo, sequence },
+    };
+    return registrarConvitesDaReuniao(
+      this.outbox,
+      transacao,
+      alvo,
+      { ...reuniao, sequence },
+      [patch],
+    );
+  }
+
   private async gravar(
     transacao: Transaction,
     contexto: Contexto,
@@ -263,24 +295,10 @@ export class AlteracoesDeReuniaoService {
   ): Promise<{ resumo: ReuniaoResumo; eventos: string[] }> {
     const { reuniao } = contexto;
     const sequence = reuniao.sequence + 1;
-    const eventos: string[] = [];
-
-    /*
-     * O CONVITE SO SAI SE JA HOUVER SALA. Em `reservada_sem_link` nao ha link
-     * para convidar ninguem, e o evento `criar-sala-reuniao` que ainda esta na
-     * fila vai escrever os convites com o `sequence` ja incrementado quando a
-     * sala chegar. Escrever aqui produziria convite sem link, que a regra
-     * inviolavel 13 proibe.
-     */
     const comSala = reuniao.link !== null && reuniao.link !== '';
-    if (comSala) {
-      eventos.push(
-        ...(await registrarConvitesDaReuniao(this.outbox, transacao, alvo, {
-          ...reuniao,
-          sequence,
-        })),
-      );
-    }
+    const eventos = comSala
+      ? await this.avisarDaRemarcacao(transacao, alvo, reuniao, sequence)
+      : [];
 
     const atualizado: DocumentoReuniao = {
       ...reuniao,

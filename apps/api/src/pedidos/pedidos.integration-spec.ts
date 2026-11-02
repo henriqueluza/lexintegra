@@ -75,6 +75,7 @@ describe('snapshot imutavel contra o Firestore', () => {
         nome: 'Outro nome',
         precoCentavos: 1,
         numeroRevisoesPermitidas: 99,
+        parcelas: 1,
         entregaveis: ['Um so'],
         textosOrientativos: [],
       },
@@ -92,6 +93,7 @@ describe('snapshot imutavel contra o Firestore', () => {
       prazoValidadeReunioesDias: DUE_DILIGENCE.prazoValidadeReunioesDias,
       intervaloMinimoReunioesDias: DUE_DILIGENCE.intervaloMinimoReunioesDias,
       numeroRevisoesPermitidas: DUE_DILIGENCE.numeroRevisoesPermitidas,
+      parcelas: DUE_DILIGENCE.parcelas,
     });
   });
 

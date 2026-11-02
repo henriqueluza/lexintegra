@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { TETO_ITENS_CARRINHO } from 'shared/carrinho';
+import { PARCELAS_MAXIMAS_NO_CARTAO } from 'shared/formas-de-pagamento';
 import type { ProdutoVitrine } from 'shared/esquemas/vitrine';
 
 /** Mesmo prefixo da liberacao do pre-cadastro. */
@@ -25,6 +26,11 @@ export type ItemGuardado = {
   readonly produtoId: string;
   readonly nome: string;
   readonly precoCentavos: number;
+  /**
+   * Em quantas vezes o produto e anunciado no cartao. Ausente em carrinho
+   * guardado antes de 01/11/2026; vale 1.
+   */
+  readonly parcelas?: number;
 };
 
 interface CarrinhoGuardado {
@@ -63,6 +69,17 @@ export class CarrinhoService {
   readonly totalIndicativoCentavos = computed(() =>
     this.itens().reduce((soma, item) => soma + item.precoCentavos, 0),
   );
+  /**
+   * O parcelamento que o resumo anuncia para o carrinho inteiro: o MENOR entre
+   * os itens. Anunciar o maior prometeria a um item mais parcelas do que o
+   * escritorio oferece para ele. Com o carrinho vazio, 1.
+   */
+  readonly parcelasNoCartao = computed(() =>
+    this.itens().reduce(
+      (menor, item) => Math.min(menor, item.parcelas ?? 1),
+      this.itens().length === 0 ? 1 : PARCELAS_MAXIMAS_NO_CARTAO,
+    ),
+  );
 
   constructor() {
     afterNextRender(() => this.estado.set(this.ler()));
@@ -89,6 +106,7 @@ export class CarrinhoService {
           produtoId: produto.id,
           nome: produto.nome,
           precoCentavos: produto.precoCentavos,
+          parcelas: produto.parcelas,
         },
       ],
     });
@@ -172,7 +190,17 @@ function ehItem(valor: unknown): valor is ItemGuardado {
     item['produtoId'] !== '' &&
     typeof item['nome'] === 'string' &&
     typeof item['precoCentavos'] === 'number' &&
-    Number.isInteger(item['precoCentavos'])
+    Number.isInteger(item['precoCentavos']) &&
+    (item['parcelas'] === undefined || ehParcela(item['parcelas']))
+  );
+}
+
+function ehParcela(valor: unknown): boolean {
+  return (
+    typeof valor === 'number' &&
+    Number.isInteger(valor) &&
+    valor >= 1 &&
+    valor <= PARCELAS_MAXIMAS_NO_CARTAO
   );
 }
 

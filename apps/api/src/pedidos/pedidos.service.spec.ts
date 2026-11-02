@@ -27,6 +27,7 @@ const DUE_DILIGENCE: NovoProduto = {
   prazoValidadeReunioesDias: 365,
   intervaloMinimoReunioesDias: 15,
   numeroRevisoesPermitidas: 2,
+  parcelas: 1,
 };
 
 interface Arranjo {
@@ -80,7 +81,7 @@ async function comprarCom(
 
 describe('PedidosService', () => {
   describe('criacao', () => {
-    it('congela os nove campos do produto dentro do pedido', async () => {
+    it('congela os dez campos do produto dentro do pedido', async () => {
       const arranjo = montar();
       await comPedido(arranjo);
 
@@ -333,6 +334,7 @@ describe('PedidosService', () => {
           nome: 'Due Diligence Completa',
           precoCentavos: 990_000,
           numeroRevisoesPermitidas: 9,
+          parcelas: 1,
           entregaveis: ['Outro entregavel'],
         },
         ADMIN,

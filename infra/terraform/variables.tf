@@ -83,14 +83,14 @@ variable "email_resposta" {
 
 variable "pagamentos_modo" {
   description = <<-EOT
-    Valor de PAGAMENTOS_MODO no Cloud Run. `desligado` ate o commit de
-    destravamento (docs/runbooks/ligar-terceiros.md), que troca para `producao`
-    junto com `PRODUCAO_DESTRAVADA` no codigo — a variavel sozinha derruba o
-    boot (regra inviolavel 20). Com `producao`, o Cloud Run passa a ler os tres
-    secrets do AbacatePay, que precisam ter versao antes do merge.
+    Valor de PAGAMENTOS_MODO no Cloud Run. `producao` desde o commit de
+    destravamento de 01/11/2026 (docs/runbooks/ligar-terceiros.md, 1.5), junto
+    com `PRODUCAO_DESTRAVADA` no codigo (regra inviolavel 20). Com `producao`, o
+    Cloud Run le os tres secrets do AbacatePay, que precisam ter versao. Voltar
+    para `desligado` e o caminho de emergencia: checkout e webhook respondem 503.
   EOT
   type        = string
-  default     = "desligado"
+  default     = "producao"
 
   validation {
     condition     = contains(["desligado", "producao"], var.pagamentos_modo)
@@ -100,15 +100,16 @@ variable "pagamentos_modo" {
 
 variable "reunioes_modo" {
   description = <<-EOT
-    Valor de REUNIOES_MODO no Cloud Run. `desligado` ate o commit de
-    destravamento (docs/runbooks/ligar-terceiros.md), que troca para `graph`
-    junto com `INTEGRACAO_GRAPH_DESTRAVADA` no codigo. Com `graph`, o Cloud Run
-    recebe GRAPH_TENANT_ID e GRAPH_CLIENT_ID destas variaveis e
-    GRAPH_CLIENT_SECRET do secret `graph-client-secret`. `falso` nunca: a sala
-    falsa mandaria convite com link inexistente (ver cloud_run.tf).
+    Valor de REUNIOES_MODO no Cloud Run. `graph` desde o commit de
+    destravamento (docs/runbooks/ligar-terceiros.md, 2.4, 01/11/2026), junto com
+    `INTEGRACAO_GRAPH_DESTRAVADA` no codigo. Com `graph`, o Cloud Run recebe
+    GRAPH_TENANT_ID e GRAPH_CLIENT_ID destas variaveis, TEAMS_ORGANIZADOR_PADRAO
+    do cloud_run.tf e GRAPH_CLIENT_SECRET do secret `graph-client-secret`.
+    Voltar atras e `desligado`. `falso` nunca: a sala falsa mandaria convite com
+    link inexistente (ver cloud_run.tf).
   EOT
   type        = string
-  default     = "desligado"
+  default     = "graph"
 
   validation {
     condition     = contains(["desligado", "graph"], var.reunioes_modo)
@@ -118,11 +119,11 @@ variable "reunioes_modo" {
 
 variable "graph_tenant_id" {
   description = <<-EOT
-    Directory (tenant) ID do Entra ID da B&C. Nao e segredo. PLACEHOLDER ate o
-    commit de destravamento; com `reunioes_modo = "graph"`, precisa ser o GUID.
+    Directory (tenant) ID do Entra ID da B&C. Nao e segredo. Conferido em
+    01/11/2026 contra a resposta da chamada de teste do Graph.
   EOT
   type        = string
-  default     = "PREENCHER-NO-DESTRAVAMENTO"
+  default     = "203d874f-9229-4fea-9476-83d25f687b9a"
 
   validation {
     condition     = var.reunioes_modo != "graph" || can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", var.graph_tenant_id))
@@ -133,11 +134,11 @@ variable "graph_tenant_id" {
 variable "graph_client_id" {
   description = <<-EOT
     Application (client) ID do aplicativo registrado no Entra ID. Nao e segredo.
-    PLACEHOLDER ate o commit de destravamento; com `reunioes_modo = "graph"`,
-    precisa ser o GUID.
+    O client secret desse aplicativo vence em 01/11/2027
+    (docs/runbooks/ligar-terceiros.md, 2.5).
   EOT
   type        = string
-  default     = "PREENCHER-NO-DESTRAVAMENTO"
+  default     = "d34456fa-578e-4631-afe5-349a9796b8c7"
 
   validation {
     condition     = var.reunioes_modo != "graph" || can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", var.graph_client_id))
@@ -148,13 +149,13 @@ variable "graph_client_id" {
 variable "pagamentos_cartao" {
   description = <<-EOT
     Valor de PAGAMENTOS_CARTAO no Cloud Run (B2, decisoes.md 3.4):
-    `habilitado` ou `desabilitado`. Enquanto a homologacao do cartao no
-    AbacatePay nao sair, `desabilitado`: o checkout recusa cartao com 422 e a
-    tela mostra a opcao desabilitada com "em breve". Ligar e trocar o padrao
-    aqui, em PR proprio — sem mudar codigo.
+    `habilitado` ou `desabilitado`. `habilitado` desde 01/11/2026, com o cartao
+    liberado no checkout da conta do AbacatePay: o checkout oferece PIX e
+    cartao. `desabilitado` e o caminho de emergencia, sem mudar codigo: o
+    checkout recusa cartao com 422 e a tela mostra a opcao com "em breve".
   EOT
   type        = string
-  default     = "desabilitado"
+  default     = "habilitado"
 
   validation {
     condition     = contains(["habilitado", "desabilitado"], var.pagamentos_cartao)

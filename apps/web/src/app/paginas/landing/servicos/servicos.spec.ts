@@ -14,6 +14,7 @@ const PARECER: ProdutoVitrine = {
   entregaveis: ['Parecer em PDF', 'Plano de ação'],
   quantidadeReunioes: 2,
   numeroRevisoesPermitidas: 2,
+  parcelas: 1,
 };
 
 const liberado = signal(false);
@@ -128,6 +129,32 @@ describe('Servicos', () => {
       expect(texto(fixture)).toContain('Parecer de risco trabalhista');
       expect(texto(fixture)).toContain('Plano de ação');
       expect(texto(fixture).replace(/\s/g, ' ')).toContain('R$ 2.500,00');
+    });
+
+    it('poe a parcela em destaque e o total menor, embaixo', async () => {
+      resposta = [{ ...PARECER, precoCentavos: 708_000, parcelas: 12 }];
+      const fixture = montar();
+
+      await liberar(fixture);
+
+      const rodape = (fixture.nativeElement as HTMLElement).querySelector(
+        '.produto__rodape',
+      );
+      const preco = rodape?.querySelector('.produto__preco')?.textContent ?? '';
+      const total = rodape?.querySelector('.produto__total')?.textContent ?? '';
+      expect(preco.replace(/\s/g, ' ').trim()).toBe('12x de R$ 590,00');
+      expect(total.replace(/\s/g, ' ').trim()).toBe('Total R$ 7.080,00');
+    });
+
+    it('sem parcelamento, mostra so o total, sem "1x de"', async () => {
+      const fixture = montar();
+
+      await liberar(fixture);
+
+      expect(texto(fixture)).not.toContain('1x de');
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('.produto__total'),
+      ).toBeNull();
     });
 
     it('mostra as unidades repetidas numa linha so, com a quantidade', async () => {

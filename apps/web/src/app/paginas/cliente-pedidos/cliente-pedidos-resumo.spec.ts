@@ -53,6 +53,7 @@ function pedido(
       prazoValidadeReunioesDias: 365,
       intervaloMinimoReunioesDias: 7,
       numeroRevisoesPermitidas: 2,
+      parcelas: 1,
     },
     reunioes: [],
     saldoDeReunioes: 2,

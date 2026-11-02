@@ -26,6 +26,8 @@ export interface DocumentoProduto {
   prazoValidadeReunioesDias: number;
   intervaloMinimoReunioesDias: number;
   numeroRevisoesPermitidas: number;
+  /** Ausente nos documentos gravados antes de 01/11/2026; vale 1. */
+  parcelas?: number;
   ativo: boolean;
   criadoEm: Timestamp | FieldValue;
   criadoPor: string;
@@ -102,7 +104,7 @@ export class ProdutosService {
   }
 
   /**
-   * Edicao substitui os nove campos do produto e mais nada.
+   * Edicao substitui os dez campos do produto e mais nada.
    *
    * Os campos vem de `congelarProduto`, que e o unico lugar que sabe quais sao —
    * a mesma funcao que o pedido usa para tirar o snapshot. Um campo novo no
@@ -186,6 +188,7 @@ function paraResumo(documento: DocumentSnapshot): ProdutoResumo {
     prazoValidadeReunioesDias: dados.prazoValidadeReunioesDias,
     intervaloMinimoReunioesDias: dados.intervaloMinimoReunioesDias,
     numeroRevisoesPermitidas: dados.numeroRevisoesPermitidas,
+    parcelas: dados.parcelas ?? 1,
     ativo: dados.ativo,
     criadoEm: emIso(dados.criadoEm),
     atualizadoEm: emIso(dados.atualizadoEm),

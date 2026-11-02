@@ -11,6 +11,7 @@ const PARECER: ProdutoVitrine = {
   entregaveis: ['Parecer em PDF'],
   quantidadeReunioes: 2,
   numeroRevisoesPermitidas: 2,
+  parcelas: 1,
 };
 
 const CONTRATO: ProdutoVitrine = {
@@ -160,9 +161,41 @@ describe('CarrinhoService', () => {
           produtoId: 'produto-parecer',
           nome: 'Parecer de risco trabalhista',
           precoCentavos: 250_000,
+          parcelas: 1,
         },
       ],
     });
+  });
+
+  /**
+   * O resumo do checkout anuncia o MENOR parcelamento do carrinho: o maior
+   * prometeria a um item mais parcelas do que o escritorio oferece para ele.
+   */
+  it('anuncia o menor parcelamento entre os itens', () => {
+    const carrinho = montar();
+    expect(carrinho.parcelasNoCartao()).toBe(1);
+
+    carrinho.adicionar({ ...PARECER, parcelas: 12 });
+    expect(carrinho.parcelasNoCartao()).toBe(12);
+
+    carrinho.adicionar({ ...CONTRATO, parcelas: 3 });
+    expect(carrinho.parcelasNoCartao()).toBe(3);
+  });
+
+  it('trata carrinho guardado antes das parcelas como pagamento a vista', () => {
+    localStorage.setItem(
+      CHAVE_CARRINHO,
+      JSON.stringify({
+        chave: 'chave-1',
+        itens: [{ produtoId: 'p', nome: 'P', precoCentavos: 100 }],
+      }),
+    );
+    const carrinho = montar();
+
+    hidratar();
+
+    expect(carrinho.quantidade()).toBe(1);
+    expect(carrinho.parcelasNoCartao()).toBe(1);
   });
 
   it('restaura depois da hidratacao', () => {
@@ -216,6 +249,20 @@ describe('CarrinhoService', () => {
       }),
     ],
     ['item nulo', JSON.stringify({ chave: 'c', itens: [null] })],
+    [
+      'parcelas acima do painel',
+      JSON.stringify({
+        chave: 'c',
+        itens: [{ produtoId: 'p', nome: 'P', precoCentavos: 100, parcelas: 13 }],
+      }),
+    ],
+    [
+      'parcelas fracionadas',
+      JSON.stringify({
+        chave: 'c',
+        itens: [{ produtoId: 'p', nome: 'P', precoCentavos: 100, parcelas: 1.5 }],
+      }),
+    ],
   ])('descarta o guardado com %s', (_caso, bruto) => {
     localStorage.setItem(CHAVE_CARRINHO, bruto);
     const carrinho = montar();

@@ -522,7 +522,7 @@ describe('AdvogadosController', () => {
     const { controlador, chamadas } = montar();
     await controlador.editar(
       'uid-advogado',
-      { nome: 'Ana Souza', email: 'nova@escritorio.test', usuarioTeams: null },
+      { nome: 'Ana Souza', email: 'nova@escritorio.test', organizadorTeams: null },
       ADMIN,
     );
     expect(chamadas).toEqual([

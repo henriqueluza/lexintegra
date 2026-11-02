@@ -85,6 +85,7 @@ const VITRINE = [
     entregaveis: ['Minuta revisada'],
     quantidadeReunioes: 1,
     numeroRevisoesPermitidas: 2,
+    parcelas: 1,
   },
 ];
 
@@ -248,3 +249,147 @@ for (const [nome, caminho] of [
     });
   });
 }
+
+/**
+ * Formas de pagamento e parcelas (01/11/2026). Os estados entram direto pelo
+ * armazenamento do navegador — liberacao do catalogo e carrinho —, como a
+ * pagina os le depois da hidratacao: o caminho pelo formulario ja e coberto
+ * por "catalogo liberado".
+ */
+const VITRINE_PARCELADA = [
+  {
+    id: 'parcelado-exato',
+    nome: 'Plano anual de assessoria',
+    descricao: 'Assessoria jurídica contínua por doze meses.',
+    precoCentavos: 708_000,
+    entregaveis: ['Contrato personalizado'],
+    quantidadeReunioes: 2,
+    numeroRevisoesPermitidas: 0,
+    parcelas: 12,
+  },
+  {
+    id: 'parcelado-com-resto',
+    nome: 'Parecer avulso',
+    descricao: 'Parecer técnico sobre uma questão concreta.',
+    precoCentavos: 180_000,
+    entregaveis: ['Parecer'],
+    quantidadeReunioes: 0,
+    numeroRevisoesPermitidas: 1,
+    parcelas: 7,
+  },
+  {
+    id: 'a-vista',
+    nome: 'Consulta única',
+    descricao: 'Uma reunião para tirar dúvidas.',
+    precoCentavos: 50_000,
+    entregaveis: ['Ata da reunião'],
+    quantidadeReunioes: 1,
+    numeroRevisoesPermitidas: 0,
+    parcelas: 1,
+  },
+];
+
+async function liberadoComCarrinho(
+  page: Page,
+  itens: readonly (typeof VITRINE_PARCELADA)[number][] = [],
+): Promise<void> {
+  await page.addInitScript(
+    ({ carrinho }) => {
+      localStorage.setItem(
+        'lexintegra:pre-cadastro',
+        JSON.stringify({
+          token: 'id.segredo',
+          expiraEm: '2027-01-01T00:00:00.000Z',
+        }),
+      );
+      if (carrinho.length > 0)
+        localStorage.setItem(
+          'lexintegra:carrinho',
+          JSON.stringify({
+            chave: '7d3c2f7e-1b1a-4c5e-9a3f-2b8d9c0e1f2a',
+            itens: carrinho,
+          }),
+        );
+    },
+    {
+      carrinho: itens.map((produto) => ({
+        produtoId: produto.id,
+        nome: produto.nome,
+        precoCentavos: produto.precoCentavos,
+        parcelas: produto.parcelas,
+      })),
+    },
+  );
+}
+
+test.describe('regressao visual das formas de pagamento e parcelas', () => {
+  test.beforeEach(async ({ page }) => {
+    await interceptar(page);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+  });
+
+  /** Parcela exata, parcela com resto na primeira e produto so a vista. */
+  test('catalogo com parcelas', async ({ page }) => {
+    await page.route('**/api/vitrine', (rota) =>
+      rota.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(VITRINE_PARCELADA),
+      }),
+    );
+    await liberadoComCarrinho(page);
+    await page.goto('/servicos');
+    await expect(page.getByText('Consulta única')).toBeVisible();
+    await assentar(page);
+
+    await expect(page).toHaveScreenshot('catalogo-com-parcelas.png', {
+      fullPage: true,
+    });
+  });
+
+  test('rodape com formas de pagamento', async ({ page }) => {
+    await page.goto('/termos');
+    await assentar(page);
+
+    await expect(page.locator('app-rodape-publico')).toHaveScreenshot(
+      'rodape.png',
+    );
+  });
+
+  test('checkout com cartao no ar', async ({ page }) => {
+    await page.route('**/api/checkout/metodos', (rota) =>
+      rota.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ pix: true, cartao: true }),
+      }),
+    );
+    await liberadoComCarrinho(page, VITRINE_PARCELADA.slice(0, 2));
+    await page.goto('/checkout');
+    await expect(page.locator('.checkout__parcelas')).toBeVisible();
+    await assentar(page);
+
+    await expect(page).toHaveScreenshot('checkout-cartao-no-ar.png', {
+      fullPage: true,
+    });
+  });
+
+  /** Sem cartao: so o Pix entre as marcas, e nenhuma parcela anunciada. */
+  test('checkout com cartao fora do ar', async ({ page }) => {
+    await page.route('**/api/checkout/metodos', (rota) =>
+      rota.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ pix: true, cartao: false }),
+      }),
+    );
+    await liberadoComCarrinho(page, VITRINE_PARCELADA.slice(0, 2));
+    await page.goto('/checkout');
+    await expect(page.locator('.checkout__selo')).toHaveText('Em breve');
+    await assentar(page);
+
+    await expect(page).toHaveScreenshot('checkout-cartao-fora-do-ar.png', {
+      fullPage: true,
+    });
+  });
+});

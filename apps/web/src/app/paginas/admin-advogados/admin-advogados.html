@@ -33,10 +33,10 @@
           [erro]="erroDoCampo('email')"
         />
         <app-campo
-          rotulo="ID do Teams (Entra)"
-          formControlName="usuarioTeams"
+          rotulo="Organizador no Teams (opcional)"
+          formControlName="organizadorTeams"
           marcador="00000000-0000-0000-0000-000000000000"
-          dica="Opcional. ID de objeto do Entra, não o e-mail. Só é usado quando a criação da sala do Teams for ligada."
+          dica="Vazio usa a conta organizadora do escritório. Preencha só se o advogado tiver licença do Teams: ID de objeto do Entra, não o e-mail."
         />
       </div>
 
@@ -44,7 +44,7 @@
         @if (editando() === null) { Nenhuma senha é definida aqui. O advogado
         recebe por e-mail um link de uso único para escolher a própria senha. }
         @else { Se o e-mail mudar, o advogado recebe no endereço novo um link de
-        acesso. O ID do Teams é conferido no Microsoft 365 antes de salvar. }
+        acesso. }
       </p>
 
       @if (falhaDoCadastro(); as mensagem) {
@@ -104,7 +104,7 @@
           {{ linha.status === 'suspenso' ? 'Reativar' : 'Suspender' }}
         </app-botao>
       </span>
-      } @case ('usuarioTeams') {
+      } @case ('organizadorTeams') {
       <span class="advogados__teams">{{ teamsDe(linha) }}</span>
       } @default { {{ linha[coluna.chave] }} } }
     </ng-template>

@@ -46,6 +46,7 @@ const PARECER: NovoProduto = {
   prazoValidadeReunioesDias: 365,
   intervaloMinimoReunioesDias: 15,
   numeroRevisoesPermitidas: 1,
+  parcelas: 1,
 };
 
 const ADVOGADO = 'uid-advogado';

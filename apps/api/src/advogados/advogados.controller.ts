@@ -61,10 +61,10 @@ export class AdvogadosController {
   }
 
   /**
-   * A edicao do cadastro (B2, decisoes.md 4.1): nome, e-mail e `usuarioTeams`.
+   * A edicao do cadastro (B2, decisoes.md 4.1): nome, e-mail e `organizadorTeams`.
    * `PUT`, e nao `PATCH`, porque o corpo e o cadastro inteiro — o mesmo
    * contrato da criacao. 404 para uid que nao e advogado, 409 para e-mail de
-   * outra conta, 422 para `usuarioTeams` que nao existe no Microsoft 365.
+   * outra conta.
    */
   @Put(':uid')
   @HttpCode(200)

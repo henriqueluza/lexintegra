@@ -241,6 +241,8 @@ export function idDoEvento(
 
 const COM_CHAVE_COMPOSTA = [
   'criar-sala-reuniao',
+  'atualizar-sala-reuniao',
+  'remover-sala-reuniao',
   'convite-reuniao',
   'cancelamento-reuniao',
   'pausa-contestacao',
@@ -321,6 +323,16 @@ export function chaveDoEvento(evento: NovoEvento): string {
 
   const alvo = `${reuniao.pedidoId}_${reuniao.reuniaoId}`;
   if (evento.tipo === 'criar-sala-reuniao') return alvo;
+  /*
+   * A REMOCAO E UMA POR REUNIAO, como a criacao: reuniao cancelada nao volta. A
+   * ATUALIZACAO e uma por `sequence`, sem destinatario — e uma sala so, e cada
+   * remarcacao e um PATCH novo. Sem o `sequence`, a segunda remarcacao colidiria
+   * com a primeira e a sala ficaria no horario do meio.
+   */
+  if (evento.tipo === 'remover-sala-reuniao') return alvo;
+  if (evento.tipo === 'atualizar-sala-reuniao') {
+    return `${alvo}_s${String(reuniao.sequence)}`;
+  }
 
   return `${alvo}_s${String(reuniao.sequence)}_${evento.destinatarioUid}`;
 }

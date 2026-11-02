@@ -141,8 +141,8 @@ describe('CancelamentoDeReuniaoService.cancelar', () => {
         `outbox/reuniao-desmarcada-escritorio_${PEDIDO}_r001_s1_${CLIENTE}`,
       ),
     ).toMatchObject({ destinatarioUid: CLIENTE });
-    /* Os dois CANCEL e o aviso. */
-    expect(fila.tarefas).toHaveLength(3);
+    /* Os dois CANCEL, o DELETE da sala e o aviso. */
+    expect(fila.tarefas).toHaveLength(4);
   });
 
   /** O cliente dentro das 24h consome o credito, e nao recebe aviso de desmarcacao. */
@@ -164,6 +164,7 @@ describe('CancelamentoDeReuniaoService.cancelar', () => {
     const { servico, fila } = montar({
       estado: 'reservada_sem_link',
       link: null,
+      idExterno: null,
       sequenceComunicada: null,
     });
 
@@ -211,7 +212,28 @@ describe('CancelamentoDeReuniaoService.cancelar', () => {
         `outbox/cancelamento-reuniao_${PEDIDO}_r001_s1_${ADVOGADO}`,
       ),
     ).toBe(true);
-    expect(fila.tarefas).toHaveLength(2);
+    /* E o DELETE da sala, no lote dos dois CANCEL. */
+    expect(fila.tarefas.map((t) => t.id)).toEqual([
+      `cancelamento-reuniao_${PEDIDO}_r001_s1_${CLIENTE}`,
+      `cancelamento-reuniao_${PEDIDO}_r001_s1_${ADVOGADO}`,
+      `remover-sala-reuniao_${PEDIDO}_r001`,
+    ]);
+  });
+
+  /**
+   * A SALA EXISTE SEM CONVITE: o `createOrGet` deu certo e o PATCH ainda nao
+   * (`idExterno` gravado so com a sala pronta, entao isto e o documento que a
+   * gravacao do link deixou e o cancelamento encontrou antes do convite). O
+   * criterio do DELETE e a sala, nao o convite.
+   */
+  it('o DELETE segue a sala, nao o convite', async () => {
+    const { servico, fila } = montar({ sequenceComunicada: null });
+
+    await servico.cancelar(ALVO, COMO_CLIENTE, COM_FOLGA);
+
+    expect(fila.tarefas.map((t) => t.id)).toEqual([
+      `remover-sala-reuniao_${PEDIDO}_r001`,
+    ]);
   });
 
   it('toca o documento do pedido, para serializar', async () => {
@@ -234,6 +256,7 @@ describe('CancelamentoDeReuniaoService.cancelar', () => {
     const { servico, banco, fila } = montar({
       estado: 'reservada_sem_link',
       link: null,
+      idExterno: null,
       sequenceComunicada: null,
     });
 
