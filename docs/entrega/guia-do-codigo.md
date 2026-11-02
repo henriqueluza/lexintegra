@@ -60,7 +60,7 @@ ou o ADR de `docs/arquitetura.md` e as regras invioláveis do `AGENTS.md`.
 
 | Pasta | Responsabilidade | Rege |
 |---|---|---|
-| `advogados/` | Criar advogado (com link de definição de senha), suspender e reativar acesso, gravar `usuarioTeams` | 7.4, ADR-07, ADR-21 (B, D, G), regra 17 |
+| `advogados/` | Criar advogado (com link de definição de senha), suspender e reativar acesso, gravar `organizadorTeams` (opcional; sobrepõe a conta organizadora do Teams) | 7.4, ADR-07, ADR-21 (B, D, G), regra 17 |
 | `alertas/` | Porta de alerta: um alerta é uma linha de log estruturado que o Monitoring consome | ADR-03, seção 9 |
 | `anamnese/` | Ficha inicial do cliente, modelo `definitiva-v1` (`shared/anamnese`). Uma por cliente, sem reescrita | 5.1, Bloco A da B2 |
 | `anexos/` | Arquivos de apoio do cliente (até 3, jpg/pdf, 5 MB cada), por URL assinada | 7.3, regra 16 |

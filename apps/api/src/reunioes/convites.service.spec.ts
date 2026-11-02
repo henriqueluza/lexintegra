@@ -2,11 +2,10 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { FirestoreFalso } from '../firestore-falso.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import type { ConfiguracaoDoOutbox } from '../outbox/politica.js';
-import {
-  ConvitesService,
-  textoDaReuniaoDesmarcada,
-  type Destinatario,
-} from './convites.service.js';
+import { ConvitesService, type Destinatario } from './convites.service.js';
+import { textoDaReuniaoDesmarcada } from './textos-de-reuniao.js';
+import type { ConfiguracaoReunioes } from './sala/modo.js';
+import { assuntoDaSala } from './sala-da-reuniao.js';
 import { SalaDeReuniaoFalsa } from './sala/sala-de-reuniao-falsa.js';
 import type { DocumentoReuniao } from './reuniao.js';
 import { comRodape } from '../email/rodape.js';
@@ -38,13 +37,28 @@ const REUNIAO: DocumentoReuniao = {
   estado: 'reservada_sem_link',
   link: null,
   idExterno: null,
+  organizadorId: null,
   advogadoId: ADVOGADO,
   clienteId: CLIENTE,
   criadoEm: null as never,
   historico: [],
 };
 
-function montar(reuniao: Partial<DocumentoReuniao> = {}): {
+/** A conta organizadora do escritorio, ficticia. */
+const ORGANIZADORA = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
+const DA_ANA = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';
+
+function montar(
+  reuniao: Partial<DocumentoReuniao> = {},
+  {
+    organizadorDoAdvogado = null as string | null,
+    configuracao = {
+      modo: 'falso',
+      graph: null,
+      organizadorPadrao: ORGANIZADORA,
+    } as ConfiguracaoReunioes,
+  } = {},
+): {
   servico: ConvitesService;
   banco: FirestoreFalso;
   sala: SalaDeReuniaoFalsa;
@@ -63,7 +77,7 @@ function montar(reuniao: Partial<DocumentoReuniao> = {}): {
   });
   banco.documentos.set(`advogados/${ADVOGADO}`, {
     nome: 'Ana Souza',
-    usuarioTeams: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
+    organizadorTeams: organizadorDoAdvogado,
   });
 
   const sala = new SalaDeReuniaoFalsa();
@@ -73,6 +87,7 @@ function montar(reuniao: Partial<DocumentoReuniao> = {}): {
       db,
       sala,
       new OutboxService(db, CONFIG_OUTBOX),
+      configuracao,
     ),
     banco,
     sala,
@@ -113,16 +128,97 @@ describe('ConvitesService.criarSala', () => {
     ).toBe(true);
   });
 
-  it('passa o usuarioTeams do advogado a porta', async () => {
+  it('cria pela conta organizadora, com externalId do pedido e da reuniao', async () => {
     const { servico, sala } = montar();
 
     await servico.criarSala(EVENTO);
 
-    expect(sala.pedidos[0]).toMatchObject({
-      reuniaoId: 'r001',
-      usuarioTeams: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
-      assunto: 'Reunião: Revisao de contrato',
+    expect(sala.pedidos[0]).toEqual({
+      externalId: `${PEDIDO}-r001`,
+      advogadoId: ADVOGADO,
+      organizadorId: ORGANIZADORA,
+      inicio: REUNIAO.inicio,
+      fim: REUNIAO.fim,
+      assunto: 'Reunião LexIntegra — pedido pedido-1',
     });
+  });
+
+  /** LGPD: o assunto da sala nao leva nome, produto nem dado do cliente. */
+  it('o assunto da sala so tem o codigo curto do pedido', () => {
+    expect(assuntoDaSala('pix_char_czxa1U3t5ZpHDY6p65fWCFnW_001')).toBe(
+      'Reunião LexIntegra — pedido fWCFnW-001',
+    );
+  });
+
+  it('o organizadorTeams do advogado vence a conta organizadora', async () => {
+    const { servico, sala } = montar({}, { organizadorDoAdvogado: DA_ANA });
+
+    await servico.criarSala(EVENTO);
+
+    expect(sala.pedidos[0]?.organizadorId).toBe(DA_ANA);
+  });
+
+  it('le o nome antigo do campo do advogado', async () => {
+    const { servico, banco, sala } = montar();
+    banco.documentos.set(`advogados/${ADVOGADO}`, {
+      nome: 'Ana Souza',
+      usuarioTeams: DA_ANA,
+    });
+
+    await servico.criarSala(EVENTO);
+
+    expect(sala.pedidos[0]?.organizadorId).toBe(DA_ANA);
+  });
+
+  /**
+   * O ORGANIZADOR E FIXADO ANTES DO GRAPH. A falha de policy deixa a reuniao
+   * sem link, mas com o organizador gravado; o administrador muda o cadastro
+   * do advogado; a nova tentativa usa o MESMO organizador. Sem isso, ela criaria
+   * a sala noutra conta, e a primeira ficaria sem ninguem para apaga-la.
+   */
+  it('a nova tentativa usa o organizador gravado, nao o cadastro atual', async () => {
+    const { servico, banco, sala } = montar();
+    sala.falharProximas(1, 'policy');
+
+    await servico.criarSala(EVENTO);
+    expect(
+      banco.documentos.get(`pedidos/${PEDIDO}/reunioes/r001`),
+    ).toMatchObject({ organizadorId: ORGANIZADORA, link: null });
+
+    banco.documentos.set(`advogados/${ADVOGADO}`, {
+      nome: 'Ana Souza',
+      organizadorTeams: DA_ANA,
+    });
+    await servico.criarSala(EVENTO);
+
+    expect(sala.pedidos.map((pedido) => pedido.organizadorId)).toEqual([
+      ORGANIZADORA,
+      ORGANIZADORA,
+    ]);
+  });
+
+  it('sem organizador nenhum, falha nomeada e sem chamar a porta', async () => {
+    const { servico, banco, sala } = montar(
+      {},
+      {
+        configuracao: {
+          modo: 'sem-sala',
+          graph: null,
+          organizadorPadrao: null,
+        },
+      },
+    );
+
+    const resultado = await servico.criarSala(EVENTO);
+
+    expect(resultado).toEqual({
+      sucesso: false,
+      motivo: expect.stringContaining('TEAMS_ORGANIZADOR_PADRAO ausente'),
+    });
+    expect(sala.pedidos).toHaveLength(0);
+    expect(
+      banco.documentos.get(`pedidos/${PEDIDO}/reunioes/r001`),
+    ).toMatchObject({ estado: 'reservada_sem_link', organizadorId: null });
   });
 
   it('reporta a falha da porta, sem gravar link', async () => {
@@ -187,6 +283,146 @@ describe('ConvitesService.criarSala', () => {
       servico.criarSala({ ...EVENTO, reuniaoId: 'r099' }),
     ).resolves.toMatchObject({ sucesso: false });
   });
+
+  /**
+   * A CORRIDA COM O CANCELAMENTO. O cliente cancelou enquanto o Graph criava a
+   * sala: o cancelamento nao pediu DELETE (ainda nao havia `idExterno`), entao
+   * quem pede e a gravacao do link, que encontra a reuniao cancelada.
+   */
+  it('cancelada durante a criacao, grava o link e pede o DELETE', async () => {
+    const { servico, banco, sala } = montar();
+    const criar = sala.criar.bind(sala);
+    sala.criar = async (nova) => {
+      const criada = await criar(nova);
+      banco.documentos.set(`pedidos/${PEDIDO}/reunioes/r001`, {
+        ...banco.documentos.get(`pedidos/${PEDIDO}/reunioes/r001`),
+        estado: 'cancelada_com_devolucao',
+      });
+      return criada;
+    };
+
+    await servico.criarSala(EVENTO);
+
+    expect(
+      banco.documentos.get(`pedidos/${PEDIDO}/reunioes/r001`),
+    ).toMatchObject({
+      estado: 'cancelada_com_devolucao',
+      idExterno: `sala_falsa_${PEDIDO}-r001`,
+    });
+    expect(
+      banco.documentos.has(`outbox/remover-sala-reuniao_${PEDIDO}_r001`),
+    ).toBe(true);
+    expect(
+      [...banco.documentos.keys()].some((k) =>
+        k.startsWith('outbox/convite-reuniao'),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('ConvitesService.atualizarSala e removerSala', () => {
+  const COM_SALA: Partial<DocumentoReuniao> = {
+    estado: 'confirmada',
+    sequence: 1,
+    link: 'https://teams.test/sala',
+    idExterno: 'sala_1',
+    organizadorId: ORGANIZADORA,
+    inicio: '2026-10-01T17:00:00.000Z',
+    fim: '2026-10-01T18:00:00.000Z',
+  };
+  const REMARCADA = { ...EVENTO, sequence: 1 };
+
+  it('remarca no organizador e na sala persistidos, no horario atual', async () => {
+    const { servico, banco, sala } = montar(COM_SALA, {
+      organizadorDoAdvogado: DA_ANA,
+    });
+    banco.documentos.set(`pedidos/${PEDIDO}/reunioes/r001`, {
+      ...banco.documentos.get(`pedidos/${PEDIDO}/reunioes/r001`),
+      inicio: '2026-10-02T17:00:00.000Z',
+      fim: '2026-10-02T18:00:00.000Z',
+    });
+
+    await expect(servico.atualizarSala(REMARCADA)).resolves.toEqual({
+      sucesso: false,
+      motivo: 'NotFound: sala inexistente neste organizador.',
+    });
+    /* O falso recusa porque a sala nao foi criada por ele; o pedido e o que importa. */
+    expect(sala.atualizacoes).toEqual([
+      {
+        organizadorId: ORGANIZADORA,
+        idExterno: 'sala_1',
+        inicio: '2026-10-02T17:00:00.000Z',
+        fim: '2026-10-02T18:00:00.000Z',
+        assunto: 'Reunião LexIntegra — pedido pedido-1',
+      },
+    ]);
+  });
+
+  it('a sala criada pelo fluxo normal aceita a remarcacao', async () => {
+    const { servico, sala } = montar();
+    await servico.criarSala(EVENTO);
+
+    await expect(servico.atualizarSala(EVENTO)).resolves.toEqual({
+      sucesso: true,
+    });
+    expect(sala.atualizacoes).toHaveLength(1);
+  });
+
+  it.each([
+    [
+      'sem sala',
+      { ...COM_SALA, idExterno: null, link: null },
+      'reuniao ainda sem sala',
+    ],
+    [
+      'cancelada',
+      { ...COM_SALA, estado: 'cancelada_com_devolucao' as const },
+      'reuniao cancelada',
+    ],
+    ['superada', { ...COM_SALA, sequence: 2 }, 'superado por remarcacao'],
+  ])('pula a remarcacao %s, com sucesso', async (_caso, reuniao, pulado) => {
+    const { servico, sala } = montar(reuniao);
+
+    await expect(servico.atualizarSala(REMARCADA)).resolves.toEqual({
+      sucesso: true,
+      pulado,
+    });
+    expect(sala.atualizacoes).toHaveLength(0);
+  });
+
+  it('remove a sala no organizador persistido', async () => {
+    const { servico, sala } = montar(
+      { ...COM_SALA, estado: 'cancelada_com_devolucao' },
+      { organizadorDoAdvogado: DA_ANA },
+    );
+
+    await expect(servico.removerSala(REMARCADA)).resolves.toEqual({
+      sucesso: true,
+    });
+    expect(sala.remocoes).toEqual([
+      { organizadorId: ORGANIZADORA, idExterno: 'sala_1' },
+    ]);
+  });
+
+  it('pula a remocao da reuniao sem sala', async () => {
+    const { servico, sala } = montar({ estado: 'cancelada_com_devolucao' });
+
+    await expect(servico.removerSala(EVENTO)).resolves.toEqual({
+      sucesso: true,
+      pulado: 'reuniao sem sala',
+    });
+    expect(sala.remocoes).toHaveLength(0);
+  });
+
+  it('sala sem organizador gravado e falha nomeada, sem adivinhar', async () => {
+    const { servico, sala } = montar({ ...COM_SALA, organizadorId: null });
+
+    await expect(servico.removerSala(REMARCADA)).resolves.toEqual({
+      sucesso: false,
+      motivo: 'reuniao com sala e sem organizadorId gravado',
+    });
+    expect(sala.remocoes).toHaveLength(0);
+  });
 });
 
 describe('ConvitesService.montarConvite', () => {
@@ -207,6 +443,34 @@ describe('ConvitesService.montarConvite', () => {
     expect(convite.mensagem.anexos?.[0].tipoConteudo).toContain(
       'text/calendar',
     );
+  });
+
+  /**
+   * O ADVOGADO ENTRA COMO CONVIDADO (`feat/ligar-teams`): quem organiza a sala
+   * e a conta do escritorio. O texto dele diz como entrar; o do cliente fala do
+   * saldo e da remarcacao, que so o cliente faz.
+   */
+  it('o advogado recebe o texto de quem entra como convidado', async () => {
+    const { servico } = montar(COM_SALA);
+    const ana: Destinatario = {
+      uid: ADVOGADO,
+      nome: 'Ana Souza',
+      email: 'ana@escritorio.test',
+    };
+
+    const doAdvogado = await servico.montarConvite(EVENTO, ana);
+    const doCliente = await servico.montarConvite(EVENTO, CLARA);
+
+    if (!doAdvogado.enviar || !doCliente.enviar) {
+      throw new Error('os dois convites deveriam sair');
+    }
+    expect(doAdvogado.mensagem.corpoTexto).toContain(
+      'abra o link no navegador e digite o seu nome',
+    );
+    expect(doAdvogado.mensagem.corpoTexto).toContain('sem precisar de conta');
+    expect(doAdvogado.mensagem.corpoTexto).not.toContain('saldo');
+    expect(doCliente.mensagem.corpoTexto).toContain('volta ao saldo');
+    expect(doCliente.mensagem.corpoTexto).not.toContain('convidado');
   });
 
   it('o .ics leva o UID da reuniao e o link da sala', async () => {

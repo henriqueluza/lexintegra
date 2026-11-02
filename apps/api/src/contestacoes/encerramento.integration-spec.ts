@@ -129,7 +129,7 @@ async function criarPedidos(): Promise<void> {
     nome: 'Adv',
     email: 'adv@escritorio.test',
     status: 'ativo',
-    usuarioTeams: null,
+    organizadorTeams: null,
   });
 }
 

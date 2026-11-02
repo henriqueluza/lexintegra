@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 import { reuniaoAtiva } from 'shared';
-import type { EmailAnexo, EmailRedigido } from '../email/email-transport.js';
+import type { EmailRedigido } from '../email/email-transport.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import type { ReuniaoDoEvento } from '../outbox/evento.js';
@@ -16,12 +16,33 @@ import {
 } from './icalendar.js';
 import { SUBCOLECAO_REUNIOES, type DocumentoReuniao } from './reuniao.js';
 import {
+  anexoDeCalendario,
+  assuntoDa,
+  remetenteDoConvite,
+  TEXTO_CANCELAMENTO,
+  TEXTO_DESCRICAO,
+  textoDaReuniaoDesmarcada,
+  textoDoConvite,
+} from './textos-de-reuniao.js';
+import {
+  assuntoDaSala,
+  eventoDeRemocaoDaSala,
+  fixarOrganizador,
+  organizadorGravado,
+  salaDa,
+  SEM_ORGANIZADOR_GRAVADO,
+  type AlteracaoDaSala,
+} from './sala-da-reuniao.js';
+import {
+  CONFIGURACAO_REUNIOES,
+  type ConfiguracaoReunioes,
+} from './sala/modo.js';
+import {
+  externalIdDa,
   SALA_DE_REUNIAO,
   type ResultadoDaSala,
   type SalaDeReuniao,
 } from './sala/sala-de-reuniao.js';
-
-const COLECAO_ADVOGADOS = 'advogados';
 
 /** O que sai de uma montagem: um e-mail para enviar, ou a razao de nao enviar. */
 export type Convite =
@@ -55,6 +76,8 @@ export class ConvitesService {
     @Inject(FIRESTORE) private readonly db: Firestore,
     @Inject(SALA_DE_REUNIAO) private readonly sala: SalaDeReuniao,
     private readonly outbox: OutboxService,
+    @Inject(CONFIGURACAO_REUNIOES)
+    private readonly configuracao: ConfiguracaoReunioes,
   ) {}
 
   /**
@@ -80,19 +103,90 @@ export class ConvitesService {
       return { sucesso: true, link: '', idExterno: '', jaExistia: true };
     }
 
+    const organizadorId = await fixarOrganizador(
+      this.db,
+      this.referenciaDa(evento),
+      antes.reuniao,
+      this.configuracao.organizadorPadrao,
+    );
+    if (organizadorId === null) {
+      return {
+        sucesso: false,
+        motivo:
+          `sem organizador para a sala: advogado ${antes.reuniao.advogadoId} ` +
+          'sem organizadorTeams e TEAMS_ORGANIZADOR_PADRAO ausente.',
+      };
+    }
+
     const criada = await this.sala.criar({
-      reuniaoId: evento.reuniaoId,
+      externalId: externalIdDa(evento),
       advogadoId: antes.reuniao.advogadoId,
-      usuarioTeams: await this.usuarioTeams(antes.reuniao.advogadoId),
+      organizadorId,
       inicio: antes.reuniao.inicio,
       fim: antes.reuniao.fim,
-      assunto: assuntoDa(antes.pedido),
+      assunto: assuntoDaSala(evento.pedidoId),
     });
 
     if (!criada.sucesso) return criada;
 
     await this.gravarSala(evento, criada.link, criada.idExterno);
     return criada;
+  }
+
+  /**
+   * O PATCH da remarcacao, com o horario que vale AGORA (relido), e nao o do
+   * registro. Um registro atrasado nunca leva a sala de volta a um horario
+   * antigo: no maximo repete o PATCH que o mais novo ja fez.
+   *
+   * PULA, com sucesso, quando nao ha o que fazer: reuniao cancelada (o DELETE
+   * cuida), sala que ainda nao existe (a criacao aplica o horario atual) ou
+   * registro superado por remarcacao mais nova (o registro dela chega).
+   */
+  async atualizarSala(evento: ReuniaoDoEvento): Promise<AlteracaoDaSala> {
+    const lido = await this.lerReuniao(evento);
+    if (lido === null) return { sucesso: true, pulado: 'reuniao inexistente' };
+
+    const { reuniao } = lido;
+    if (!reuniaoAtiva(reuniao.estado)) {
+      return { sucesso: true, pulado: 'reuniao cancelada' };
+    }
+    const idExterno = salaDa(reuniao);
+    if (idExterno === null) {
+      return { sucesso: true, pulado: 'reuniao ainda sem sala' };
+    }
+    if (evento.sequence < reuniao.sequence) {
+      return { sucesso: true, pulado: 'superado por remarcacao' };
+    }
+
+    const organizadorId = organizadorGravado(reuniao);
+    if (organizadorId === null) return SEM_ORGANIZADOR_GRAVADO;
+
+    return this.sala.atualizar({
+      organizadorId,
+      idExterno,
+      inicio: reuniao.inicio,
+      fim: reuniao.fim,
+      assunto: assuntoDaSala(evento.pedidoId),
+    });
+  }
+
+  /**
+   * O DELETE do cancelamento, no organizador e na sala PERSISTIDOS. Pula, com
+   * sucesso, a reuniao que nunca ganhou sala.
+   */
+  async removerSala(evento: ReuniaoDoEvento): Promise<AlteracaoDaSala> {
+    const lido = await this.lerReuniao(evento);
+    if (lido === null) return { sucesso: true, pulado: 'reuniao inexistente' };
+
+    const { reuniao } = lido;
+    const idExterno = salaDa(reuniao);
+    if (idExterno === null)
+      return { sucesso: true, pulado: 'reuniao sem sala' };
+
+    const organizadorId = organizadorGravado(reuniao);
+    if (organizadorId === null) return SEM_ORGANIZADOR_GRAVADO;
+
+    return this.sala.remover(organizadorId, idExterno);
   }
 
   /**
@@ -103,7 +197,8 @@ export class ConvitesService {
    *
    * - CANCELADA: o link e gravado mesmo assim (a sala existe, e o registro dela
    *   e util para o administrador), mas a reuniao NAO volta para `confirmada` e
-   *   nenhum convite nasce.
+   *   nenhum convite nasce. Nasce, no lugar, o DELETE da sala: o cancelamento
+   *   aconteceu quando ela ainda nao tinha `idExterno`, e por isso nao o pediu.
    * - REMARCADA: o convite sai com o `sequence` ATUAL, e nao com o que estava no
    *   registro do outbox. Sem isso, o cliente receberia um convite com o horario
    *   velho depois de ja ter remarcado. Quem garante isso e
@@ -128,14 +223,22 @@ export class ConvitesService {
 
       const ativa = reuniaoAtiva(reuniao.estado);
 
+      /* Os registros do outbox sao a ULTIMA leitura antes das escritas. */
       if (ativa) {
-        /* Os convites sao a ULTIMA leitura antes das escritas. */
         await registrarConvitesDaReuniao(
           this.outbox,
           transacao,
           evento,
           reuniao,
         );
+      } else {
+        const remocao = eventoDeRemocaoDaSala(evento, {
+          ...reuniao,
+          idExterno,
+        });
+        if (remocao.length > 0) {
+          await this.outbox.registrarSeAusenteEmLote(transacao, remocao);
+        }
       }
 
       transacao.update(referencia, {
@@ -193,7 +296,7 @@ export class ConvitesService {
       mensagem: {
         para: [destinatario.email],
         assunto: `Reunião marcada: ${pedido.snapshot.nome}`,
-        corpoTexto: TEXTO_CONVITE,
+        corpoTexto: textoDoConvite(destinatario.uid === pedido.clienteId),
         acao: {
           rotulo: 'Ver pedido',
           url: `${urlDaAplicacao()}/${destinatario.uid === pedido.clienteId ? 'painel' : 'advogado/demandas'}`,
@@ -332,86 +435,4 @@ export class ConvitesService {
       .collection(SUBCOLECAO_REUNIOES)
       .doc(evento.reuniaoId);
   }
-
-  private async usuarioTeams(advogadoId: string): Promise<string | null> {
-    const documento = await this.db
-      .collection(COLECAO_ADVOGADOS)
-      .doc(advogadoId)
-      .get();
-    const dados = documento.data() as { usuarioTeams?: string } | undefined;
-
-    return dados?.usuarioTeams ?? null;
-  }
-}
-
-/** O assunto do evento no calendario. Vem do SNAPSHOT (regra inviolavel 5). */
-function assuntoDa(pedido: DocumentoPedido): string {
-  return `Reunião: ${pedido.snapshot.nome}`;
-}
-
-/**
- * O `.ics` vai como ANEXO.
- *
- * `parteAlternativa` existe no contrato do `EmailTransport` e continua sem
- * implementacao no Resend ate o spike previsto: o cartao de resposta do Gmail e
- * mais confiavel com o calendario como parte alternativa (ADR-05, risco de
- * entregabilidade), e descobrir se o provedor expoe esse controle depende do
- * dominio verificado — a chave de teste so entrega ao dono da conta.
- */
-function anexoDeCalendario(ics: string): EmailAnexo {
-  return {
-    nomeArquivo: 'reuniao.ics',
-    conteudo: Buffer.from(ics, 'utf8'),
-    tipoConteudo: 'text/calendar; charset=utf-8; method=REQUEST',
-  };
-}
-
-/**
- * Ver `urlDaAplicacao`, em `outbox/link-de-senha.ts`: mesma forma.
- *
- * O `ORGANIZER` e o REMETENTE, e nao o reply-to, de proposito: cliente de
- * e-mail que ve organizador diferente de quem enviou trata o convite como
- * suspeito. A resposta escrita vai ao suporte pelo cabecalho; a resposta de
- * calendario (aceitar/recusar) a plataforma nao processa.
- */
-export function remetenteDoConvite(
-  ambiente: NodeJS.ProcessEnv = process.env,
-): string {
-  const configurado = ambiente['EMAIL_FROM'];
-  return configurado === undefined || configurado === ''
-    ? 'suporte@notificacoes.lexintegra.com.br'
-    : configurado;
-}
-
-/**
- * Os textos dos e-mails de reunião (B2, decisoes.md 1.2). Sem obrigação
- * jurídica no corpo de um convite: o que importa é dizer o que o anexo faz. O
- * rodapé de todo e-mail é acrescentado pelo despachante.
- */
-const TEXTO_CONVITE =
-  'Sua reunião foi marcada. Abra o convite em anexo para adicioná-la ao seu ' +
-  'calendário; o link da sala está na descrição do evento. Para remarcar ou ' +
-  'cancelar, use a sua área: com pelo menos 24 horas de antecedência, a ' +
-  'reunião volta ao saldo do pedido.';
-
-const TEXTO_CANCELAMENTO =
-  'Sua reunião foi cancelada. O anexo remove o compromisso do seu calendário.';
-
-const TEXTO_DESCRICAO = 'Reunião do seu pedido na LexIntegra.';
-
-/**
- * O escritório desmarcou (ADR-21, decisão H). A data sai no fuso do escritório
- * (decisão 8), por extenso.
- */
-export function textoDaReuniaoDesmarcada(inicio: string, base: string): string {
-  const quando = new Date(inicio).toLocaleString('pt-BR', {
-    timeZone: 'America/Sao_Paulo',
-    dateStyle: 'full',
-    timeStyle: 'short',
-  });
-  return (
-    `O escritório precisou desmarcar a sua reunião de ${quando}. ` +
-    'A reunião voltou ao saldo do seu pedido, e você pode marcar outro ' +
-    `horário na sua área do cliente: ${base}/painel`
-  );
 }

@@ -12,7 +12,7 @@ describe('ZodPipe', () => {
     ).toEqual({
       nome: 'Ana Souza',
       email: 'ana@x.test',
-      usuarioTeams: null,
+      organizadorTeams: null,
     });
   });
 

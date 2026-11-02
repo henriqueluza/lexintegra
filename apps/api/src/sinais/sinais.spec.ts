@@ -25,6 +25,7 @@ function montar(modo: ModoReunioes = 'desligado'): {
   const servico = new SinaisService(banco as unknown as Firestore, {
     modo,
     graph: null,
+    organizadorPadrao: null,
   });
   /*
    * As metricas do Monitoring leem o LOG, e nao o retorno: e a linha com
@@ -49,7 +50,6 @@ describe('SinaisService', () => {
       outboxSegundos: 0,
       quarentenaSegundos: 0,
       reuniaoSemSalaSegundos: 0,
-      advogadosSemLink: null,
     });
   });
 
@@ -207,72 +207,32 @@ describe('SinaisService', () => {
       const medicao = await servico.medir(AGORA);
 
       expect(medicao.reuniaoSemSalaSegundos).toBe(0);
-      expect(medicao.advogadosSemLink).toBeNull();
     });
   });
 
-  describe('disponibilidade publicada sem link (achado 4.2, opcao a)', () => {
-    const SEMANA = '2026-09-14';
-
-    function comAdvogados(modo: ModoReunioes): ReturnType<typeof montar> {
-      const arranjo = montar(modo);
-      const { banco } = arranjo;
-      banco.documentos.set('advogados/uid-sem', {
-        nome: 'Sem Teams',
-        status: 'ativo',
-        usuarioTeams: null,
-      });
-      banco.documentos.set('advogados/uid-com', {
-        nome: 'Com Teams',
-        status: 'ativo',
-        usuarioTeams: '11111111-2222-3333-4444-555555555555',
-      });
-      banco.documentos.set('advogados/uid-suspenso', {
-        nome: 'Suspenso',
-        status: 'suspenso',
-        usuarioTeams: null,
-      });
-      banco.documentos.set('advogados/uid-sem-grade', {
-        nome: 'Sem grade',
-        status: 'ativo',
-        usuarioTeams: null,
-      });
-      for (const advogadoId of ['uid-sem', 'uid-com', 'uid-suspenso']) {
-        banco.documentos.set(`disponibilidades/${advogadoId}_x`, {
-          advogadoId,
-          semana: SEMANA,
-          inicio: '2026-09-18T15:00:00.000Z',
-          fim: '2026-09-18T16:00:00.000Z',
-          reserva: null,
-        });
-      }
-      return arranjo;
-    }
-
-    it('emite uma linha por advogado ativo com horario publicado e sem usuarioTeams', async () => {
-      const { servico, linhas } = comAdvogados('falso');
-
-      const { advogadosSemLink } = await servico.medir(AGORA);
-
-      expect(advogadosSemLink).toBe(1);
-      const emitidas = linhasDoSinal(linhas, 'disponibilidade.sem-link');
-      expect(emitidas.map((linha) => linha.campos['advogadoId'])).toEqual([
-        'uid-sem',
-      ]);
+  /**
+   * O SINAL PREVENTIVO SAIU (`feat/ligar-teams`): com a conta organizadora do
+   * escritorio, advogado sem `organizadorTeams` tem sala do mesmo jeito. Uma
+   * linha `disponibilidade.sem-link` aqui reacenderia um alerta que nao tem mais
+   * politica nem runbook.
+   */
+  it('nao emite disponibilidade.sem-link, nem com advogado sem organizador', async () => {
+    const { servico, banco, linhas } = montar('falso');
+    banco.documentos.set('advogados/uid-sem', {
+      nome: 'Sem organizador proprio',
+      status: 'ativo',
+      organizadorTeams: null,
+    });
+    banco.documentos.set('disponibilidades/uid-sem_x', {
+      advogadoId: 'uid-sem',
+      semana: '2026-09-14',
+      inicio: '2026-09-18T15:00:00.000Z',
+      fim: '2026-09-18T16:00:00.000Z',
+      reserva: null,
     });
 
-    /**
-     * Com o Teams desligado, TODO advogado esta "sem link" e ninguem marca
-     * reuniao. Emitir aqui faria o alerta disparar para sempre por uma
-     * integracao que esta desligada de proposito.
-     */
-    it('com REUNIOES_MODO desligado, nao emite nada', async () => {
-      const { servico, linhas } = comAdvogados('desligado');
+    await servico.medir(AGORA);
 
-      const { advogadosSemLink } = await servico.medir(AGORA);
-
-      expect(advogadosSemLink).toBeNull();
-      expect(linhasDoSinal(linhas, 'disponibilidade.sem-link')).toEqual([]);
-    });
+    expect(linhasDoSinal(linhas, 'disponibilidade.sem-link')).toEqual([]);
   });
 });

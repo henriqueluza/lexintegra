@@ -29,6 +29,7 @@ import { exigirSemContestacao } from '../pedidos/pausa.js';
 import { COLECAO_PEDIDOS, type DocumentoPedido } from '../pedidos/pedido.js';
 import type { NovoEvento } from '../outbox/evento.js';
 import { eventosDeCancelamento } from './convites-no-outbox.js';
+import { eventoDeRemocaoDaSala } from './sala-da-reuniao.js';
 import {
   paraResumo,
   SUBCOLECAO_REUNIOES,
@@ -210,7 +211,9 @@ function estadoDoCancelamento(
  *   sempre porque ficou em `reservada_sem_link`;
  * - o aviso ao cliente quando quem desmarcou foi o ESCRITORIO (ADR-21, decisao
  *   H): sempre, inclusive da reuniao que nunca ganhou sala, convidando a
- *   remarcar.
+ *   remarcar;
+ * - o DELETE da sala no Teams, se ela existe (`feat/ligar-teams`): sem ele, o
+ *   link de uma reuniao cancelada continuaria abrindo a sala.
  */
 function eventosDoCancelamento(
   alvo: Alvo,
@@ -218,10 +221,12 @@ function eventosDoCancelamento(
   sequence: number,
   ator: AtorDoCancelamento,
 ): NovoEvento[] {
-  const cancelamentos =
-    reuniao.sequenceComunicada === null
+  const cancelamentos = [
+    ...(reuniao.sequenceComunicada === null
       ? []
-      : eventosDeCancelamento(alvo, { ...reuniao, sequence });
+      : eventosDeCancelamento(alvo, { ...reuniao, sequence })),
+    ...eventoDeRemocaoDaSala(alvo, { ...reuniao, sequence }),
+  ];
   if (ator.perfil !== 'admin') return cancelamentos;
 
   return [

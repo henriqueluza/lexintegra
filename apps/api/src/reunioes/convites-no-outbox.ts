@@ -35,17 +35,19 @@ export async function registrarConvitesDaReuniao(
   transacao: Transaction,
   alvo: { readonly pedidoId: string; readonly reuniaoId: string },
   reuniao: Pick<DocumentoReuniao, 'sequence' | 'clienteId' | 'advogadoId'>,
+  /** Outros eventos da mesma transacao, no MESMO lote (leitura antes da escrita). */
+  junto: readonly NovoEvento[] = [],
 ): Promise<string[]> {
   const carga = { ...alvo, sequence: reuniao.sequence };
 
-  return outbox.registrarSeAusenteEmLote(
-    transacao,
-    [reuniao.clienteId, reuniao.advogadoId].map((destinatarioUid) => ({
+  return outbox.registrarSeAusenteEmLote(transacao, [
+    ...[reuniao.clienteId, reuniao.advogadoId].map((destinatarioUid) => ({
       tipo: 'convite-reuniao' as const,
       destinatarioUid,
       reuniao: carga,
     })),
-  );
+    ...junto,
+  ]);
 }
 
 /**

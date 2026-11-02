@@ -15,6 +15,7 @@ import { COLECAO_CLIENTES } from '../clientes/cliente.js';
 import { COLECAO_DISPONIBILIDADES } from '../disponibilidades/slot.js';
 import type { NovoEvento } from '../outbox/evento.js';
 import { eventosDeCancelamento } from '../reunioes/convites-no-outbox.js';
+import { eventoDeRemocaoDaSala } from '../reunioes/sala-da-reuniao.js';
 import {
   SUBCOLECAO_REUNIOES,
   type DocumentoReuniao,
@@ -93,20 +94,22 @@ export function futurasACancelar(
  * depois do cancelamento. So das que ja chegaram ao calendario de alguem
  * (`sequenceComunicada`), pela mesma razao de `CancelamentoDeReuniaoService`:
  * cancelar o que nunca foi convidado mandaria um `CANCEL` para um `UID` que
- * ninguem viu.
+ * ninguem viu. E o DELETE da sala no Teams das que tem sala (`feat/ligar-teams`).
  */
 export function eventosDasReunioesCanceladas(
   pedidoId: string,
   futuras: readonly ReuniaoLida[],
 ): NovoEvento[] {
-  return futuras
-    .filter((r) => r.dados.sequenceComunicada !== null)
-    .flatMap((r) =>
-      eventosDeCancelamento(
-        { pedidoId, reuniaoId: r.id },
-        { ...r.dados, sequence: r.dados.sequence + 1 },
-      ),
-    );
+  return futuras.flatMap((r) => {
+    const alvo = { pedidoId, reuniaoId: r.id };
+    const depois = { ...r.dados, sequence: r.dados.sequence + 1 };
+    return [
+      ...(r.dados.sequenceComunicada === null
+        ? []
+        : eventosDeCancelamento(alvo, depois)),
+      ...eventoDeRemocaoDaSala(alvo, depois),
+    ];
+  });
 }
 
 /**

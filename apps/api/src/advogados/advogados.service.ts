@@ -13,6 +13,7 @@ import {
 } from 'firebase-admin/firestore';
 import {
   NOME_CLAIM_PERFIL,
+  organizadorTeamsDe,
   type AdvogadoResumo,
   type NovoAdvogado,
   type StatusAdvogado,
@@ -31,19 +32,19 @@ interface DocumentoAdvogado {
   criadoEm: Timestamp | FieldValue;
   criadoPor: string;
   /**
-   * Etapa 10 (ADR-21, decisao B). O object ID do advogado no Entra ID, que e o
-   * `{userId}` da chamada ao Graph — NAO o uid do Firebase.
+   * O organizador proprio do advogado no Entra ID, que SOBREPOE a conta
+   * organizadora do escritorio (`TEAMS_ORGANIZADOR_PADRAO`). E o `{userId}` da
+   * chamada ao Graph — NAO o uid do Firebase. `null` usa a conta organizadora.
    *
    * SEMPRE ESCRITO, inclusive como `null`, pela armadilha de sempre: uma consulta
-   * futura por "advogados sem identificador do Teams" usaria igualdade, e
-   * documento sem o campo nao casa com `== null` no Firestore.
+   * futura por igualdade nao casaria com documento sem o campo.
    */
-  usuarioTeams: string | null;
-}
-
-/** O documento anterior a Etapa 10 nao tem o campo, e isso e o mesmo que nulo. */
-function usuarioTeamsDe(dados: DocumentoAdvogado): string | null {
-  return dados.usuarioTeams ?? null;
+  organizadorTeams: string | null;
+  /**
+   * O NOME ANTERIOR do campo (Etapa 10 ate `feat/ligar-teams`), quando cada
+   * advogado era o proprio organizador. So lido, nunca escrito: a edicao o apaga.
+   */
+  usuarioTeams?: string | null;
 }
 
 /**
@@ -51,12 +52,12 @@ function usuarioTeamsDe(dados: DocumentoAdvogado): string | null {
  *
  * O schema garante a chave quando o corpo passa pelo `ZodPipe`, mas este servico
  * tambem e chamado DIRETO — pela suite de integracao e por quem vier a precisar
- * dele. Sem isto, `usuarioTeams: undefined` chega ao Firestore, que recusa a
+ * dele. Sem isto, `organizadorTeams: undefined` chega ao Firestore, que recusa a
  * escrita inteira com "Cannot use undefined as a Firestore value" e derruba a
  * criacao do advogado. Foi exatamente assim que a suite de integracao pegou isto.
  */
-function usuarioTeamsDoPedido(dados: NovoAdvogado): string | null {
-  return dados.usuarioTeams ?? null;
+function organizadorTeamsDoPedido(dados: NovoAdvogado): string | null {
+  return dados.organizadorTeams ?? null;
 }
 
 /**
@@ -119,7 +120,7 @@ export class AdvogadosService {
       email: dados.email,
       status: 'ativo',
       criadoEm: null,
-      usuarioTeams: usuarioTeamsDoPedido(dados),
+      organizadorTeams: organizadorTeamsDoPedido(dados),
     };
   }
 
@@ -140,7 +141,7 @@ export class AdvogadosService {
           dados.criadoEm instanceof Timestamp
             ? dados.criadoEm.toDate().toISOString()
             : null,
-        usuarioTeams: usuarioTeamsDe(dados),
+        organizadorTeams: organizadorTeamsDe(dados),
       };
     });
   }
@@ -229,7 +230,7 @@ export class AdvogadosService {
         dados.criadoEm instanceof Timestamp
           ? dados.criadoEm.toDate().toISOString()
           : null,
-      usuarioTeams: usuarioTeamsDe(dados),
+      organizadorTeams: organizadorTeamsDe(dados),
     };
   }
 
@@ -283,7 +284,7 @@ export class AdvogadosService {
       nome: dados.nome,
       email: dados.email,
       status: 'ativo',
-      usuarioTeams: usuarioTeamsDoPedido(dados),
+      organizadorTeams: organizadorTeamsDoPedido(dados),
       criadoEm: FieldValue.serverTimestamp(),
       criadoPor,
     };

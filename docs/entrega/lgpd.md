@@ -116,7 +116,7 @@ a rotina seguinte retoma. Falha no meio emite o alerta crítico
 `lgpd.eliminacao-falhou`.
 
 **O que o sistema não elimina** (seção 4): cópias já baixadas pelo escritório,
-registros no AbacatePay, no Resend e no Microsoft 365, e a janela de 7 dias do
+registros no AbacatePay, no Resend e no Microsoft 365 (seção 4.1), e a janela de 7 dias do
 PITR e do soft delete. A resposta ao titular precisa dizer isso.
 
 ### A rotina de 30 dias dos arquivos é outra coisa
@@ -163,7 +163,7 @@ um dia depois do deploy que a aplicou.
 | **Logs** | Bucket `_Default` do Cloud Logging, com 30 dias. A aplicação não loga dado pessoal por regra, mas mensagens de terceiros podem conter. O motivo de falha de e-mail tem o endereço redigido. **Registros de acesso** (log de requisição da API: data, hora, IP, caminho) também no bucket `registros-de-acesso`, por 186 dias (Marco Civil, art. 15), sem o `webhookSecret` |
 | **AbacatePay** | Guarda os dados de quem pagou com cartão, digitados na página hospedada, e o histórico das cobranças. O PIX sai sem `customer`. Eliminação é pedido ao AbacatePay |
 | **Resend** | Guarda endereço, assunto e registro das mensagens enviadas, fora do Brasil (arquitetura, seção 13). Eliminação é pedido ao Resend |
-| **Microsoft 365** | Quando o Teams for ligado: salas criadas em nome do advogado, que **não são apagadas** no cancelamento (ADR-21, decisão 7), e convites nas caixas de cliente e advogado |
+| **Microsoft 365 (Teams)** | Ver a seção 4.1. Em resumo: as salas ficam na **conta organizadora do escritório**, sem dado do cliente no assunto; são apagadas no cancelamento; a sala de reunião realizada fica na conta até expirar. Os convites (`.ics`) ficam nas caixas de cliente e advogado |
 | **Firebase Auth** | A conta de login do cliente. Fora do Brasil (arquitetura, seção 13) |
 | **Cópias baixadas pelo escritório** | Entregáveis e anexos baixados por advogados ficam nas máquinas deles, fora do sistema |
 | **Pagamentos órfãos** | `pagamentos/{cobrancaId}` com `situacao` anômala guarda só ids e valor. Sem vínculo recuperável, o sistema não sabe de qual titular é, e a conciliação é humana (runbook do titular e [`pagamento-orfao.md`](../runbooks/pagamento-orfao.md)) |
@@ -171,6 +171,26 @@ um dia depois do deploy que a aplicou.
 | **Anexos do cliente** | 30 dias depois de todos os entregáveis do pedido em `entregue`, no mesmo ciclo dos entregáveis (seção 3) |
 | **Equipe (advogados e administradores)** | `advogados/{uid}` e `administradores/{uid}` guardam nome e e-mail de quem trabalha na plataforma, fora do mapa do **cliente** (`lgpd/mapa.ts`). O log de auditoria (`auditoria/`, B2) guarda quem fez cada ação administrativa e, na edição de advogado, o e-mail antes e depois; está no mapa pelo `alvo`, como `trilha` (append-only, nunca eliminado). A guarda dos dados da equipe segue o contrato de trabalho de cada um, fora desta política |
 | **Pré-cadastros que nunca compraram** | Eliminados 6 meses depois do último envio, pela rotina diária (seção 3) |
+
+### 4.1 Reuniões no Teams (`feat/ligar-teams`, 01/11/2026)
+
+As salas são criadas pela **conta organizadora** do tenant do escritório
+(`operacional@`), e advogado e cliente entram como **convidados anônimos**,
+digitando o próprio nome. O que a plataforma manda à Microsoft e o que fica
+lá:
+
+| O quê | Como fica |
+|---|---|
+| Enviado pela plataforma | Início e fim, o assunto `Reunião LexIntegra — pedido {código curto}` e o `externalId` `{pedidoId}-{rNNN}`. O código curto são 6 caracteres da cobrança e o número do item: identifica o pedido para quem tem o painel e não diz nada a quem não tem. **Nenhum nome, e-mail, produto ou dado do cliente ou do advogado** sai da plataforma para o Graph |
+| Digitado por quem entra | O nome que cada convidado digita ao entrar fica com a Microsoft, como dado da reunião no tenant do escritório. A plataforma não o recebe |
+| Gravação e transcrição | Desligadas em **dois** lugares: na política de reunião `LexIntegra-Organizadora` e na própria sala, pelo PATCH (`allowRecording: false`, `allowTranscription: false`, `recordAutomatically: false`). A sala vem do Graph com as duas primeiras verdadeiras; sem o PATCH, quem impediria seria só a política do tenant |
+| Chat | Desligado na sala (`allowMeetingChat: disabled`); o convidado anônimo não tem chat |
+| Cancelamento | A sala é **apagada** (`DELETE`, pelo outbox). Errata do ADR-21, decisão 7, que a deixava no Teams |
+| Reunião realizada | A sala continua na conta organizadora até expirar (`expiryDateTime`, cerca de 60 dias depois do fim), sem conteúdo gravado. Não é apagada pela eliminação do titular, que não tem como apontá-la: o assunto não leva dado dele |
+
+Quem tem acesso à conta organizadora vê as salas e os nomes digitados nelas.
+A política de privacidade precisa citar a Microsoft como operadora das
+reuniões, e o escritório decide quem opera essa conta.
 
 ## 5. Quem atende um pedido de titular
 

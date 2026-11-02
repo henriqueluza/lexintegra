@@ -321,6 +321,7 @@ export class ReunioesService {
       estado: 'reservada_sem_link',
       link: null,
       idExterno: null,
+      organizadorId: null,
       advogadoId,
       pedidoId,
       clienteId: clienteUid,

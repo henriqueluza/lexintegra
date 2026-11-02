@@ -678,6 +678,14 @@ documento fixava. Elas continuam isoladas o suficiente para mudar sem reescrever
    **Ponto a revisitar** se o escritório passar a considerar sala órfã um problema de
    conformidade.
 
+   **Errata (01/11/2026, `feat/ligar-teams`).** Revisitado: com as salas numa conta
+   organizadora só, uma sala de reunião cancelada é um link que ainda abre uma sala do
+   escritório. **No cancelamento a sala é apagada** (`DELETE`, evento
+   `remover-sala-reuniao` no outbox) e **na remarcação ela muda de horário** (`PATCH`,
+   evento `atualizar-sala-reuniao`), porque a sala expira a partir do horário que tem. O
+   link continua o mesmo na remarcação. Os dois usam o organizador e a sala gravados na
+   reunião.
+
 8. **Horários.** Guardados em UTC, como o slot já faz. Exibidos e escritos no convite em
    `America/Sao_Paulo`. O fuso é explícito em todo cálculo (ver `packages/shared/src/semana.ts`):
    o Cloud Run roda em UTC, e às 22h de um domingo brasileiro um cálculo sem fuso responde
@@ -727,6 +735,28 @@ mais cômodo e faria a integração depender de o e-mail da plataforma ser o mes
 Microsoft 365 do escritório — suposição que quebra em silêncio no dia em que um advogado se
 cadastrar com outro endereço. O adaptador do Graph recusa com erro claro e **reentregável**
 quando o campo está vazio.
+
+**Errata de B (01/11/2026, `feat/ligar-teams`): a sala é da conta organizadora.** Por
+decisão do escritório, as salas são criadas por uma **conta organizadora** do tenant
+(`operacional@`, Business Basic), e advogado e cliente entram como convidados anônimos.
+O `{userId}` do caminho passa a ser `TEAMS_ORGANIZADOR_PADRAO`, obrigatório no modo
+`graph`; o campo do advogado foi **renomeado para `organizadorTeams`**, continua só GUID e
+opcional, e sobrepõe a conta quando o advogado tiver licença própria (a leitura aceita o
+nome antigo). O organizador escolhido é **gravado na reunião** (`organizadorId`) antes da
+primeira chamada, e a nova tentativa, o PATCH e o DELETE usam o gravado. Três
+consequências:
+
+- o `externalId` passou a ser `{pedidoId}-{rNNN}`. A identidade da sala no `createOrGet` é
+  o trio (tenant, organizador, `externalId`), e com um organizador só o `r001` de dois
+  pedidos casaria — o segundo pedido receberia a sala do primeiro;
+- a criação são duas chamadas: `createOrGet` (idempotente) e `PATCH` com as opções da
+  sala (todos apresentam, sem chat, sem gravação automática, ninguém no lobby), porque o
+  `createOrGet` não aceita essas opções. O link só sai depois do PATCH;
+- a conferência do object ID no tenant (`GET /users`, `User.Read.All`) saiu: o aplicativo
+  fica só com `OnlineMeetings.ReadWrite.All`.
+
+A trava contra agendamento duplo continua **por advogado** (`{advogadoId}_{inicio}`): a
+conta organizadora tem reuniões simultâneas de advogados diferentes.
 
 **D. Atribuição e suspensão respeitam reunião futura.** Atribuir, remover atribuição e
 suspender advogado respondem **409 enquanto houver reunião futura ativa** do pedido — ou do
@@ -1079,7 +1109,7 @@ Defesas complementares ao ClamAV: verificação de magic bytes contra a extensã
 
 Pelos itens 2.4.3 a 2.4.7, apenas o administrador global cria acessos de advogado. Com o ADR-07, em vez de senha inicial, o advogado recebe link de definição de senha. O administrador mantém a capacidade de editar, suspender, excluir e redefinir.
 
-**Edição (B2, decisões 4.1).** `PUT /api/admin/advogados/{uid}` edita nome, e-mail e `usuarioTeams` (`advogados/edicao.service.ts`). O `usuarioTeams` novo é conferido no Graph (`GET /users/{id}`, permissão `User.Read.All`) antes de qualquer escrita: inexistente é 422, Graph indisponível não bloqueia. Trocar o e-mail atualiza o Auth **antes** da transação (efeito externo, regra 2; 409 se o endereço é de outra conta) e, na transação, grava o documento, a linha de auditoria e o evento `acesso-advogado-atualizado`, com a chave na versão do acesso — cada troca, o seu e-mail. Não mexe na claim, no status nem na distribuição: a atribuição mora no pedido, pelo uid, e o uid não muda.
+**Edição (B2, decisões 4.1).** `PUT /api/admin/advogados/{uid}` edita nome, e-mail e `organizadorTeams` (`advogados/edicao.service.ts`; até `feat/ligar-teams` o campo se chamava `usuarioTeams`, e era conferido no Graph com `User.Read.All` — a conferência saiu, e só o formato GUID é validado, ver a errata de B no ADR-21). Trocar o e-mail atualiza o Auth **antes** da transação (efeito externo, regra 2; 409 se o endereço é de outra conta) e, na transação, grava o documento, a linha de auditoria e o evento `acesso-advogado-atualizado`, com a chave na versão do acesso — cada troca, o seu e-mail. Não mexe na claim, no status nem na distribuição: a atribuição mora no pedido, pelo uid, e o uid não muda.
 
 **Log de auditoria (B2).** `auditoria/{id}` guarda `acao`, `atorUid`, `alvo`, `antes`, `depois` e `em`, escrito na mesma transação da ação administrativa (`auditoria/auditoria.ts`). É append-only: nenhuma rota altera ou apaga. Está no mapa da LGPD pelo `alvo`.
 

@@ -22,6 +22,12 @@ import { ConvitesService } from './convites.service.js';
 import { HorariosService } from './horarios.service.js';
 import type { DocumentoReuniao } from './reuniao.js';
 import { ReunioesService } from './reunioes.service.js';
+import {
+  ERRO_SEGREDO_EXPIRADO,
+  ERRO_SEM_POLICY,
+  reuniaoNoFormatoReal,
+} from '../arnes-reuniao.js';
+import { GraphSalaDeReuniao } from './sala/graph.sala-de-reuniao.js';
 import { SalaDeReuniaoFalsa } from './sala/sala-de-reuniao-falsa.js';
 import type { ConfiguracaoReunioes } from './sala/modo.js';
 
@@ -40,7 +46,11 @@ const CONFIG_OUTBOX: ConfiguracaoDoOutbox = {
   loteDoVarredor: 100,
 };
 
-const LIGADO: ConfiguracaoReunioes = { modo: 'falso', graph: null };
+const LIGADO: ConfiguracaoReunioes = {
+  modo: 'falso',
+  graph: null,
+  organizadorPadrao: '00000000-0000-4000-8000-000000000000',
+};
 
 const ADMIN = 'uid-admin';
 const CLIENTE = 'uid-clara';
@@ -90,7 +100,7 @@ beforeEach(async () => {
   reunioes = new ReunioesService(banco, outbox, enfileirador, LIGADO);
   alteracoes = new AlteracoesDeReuniaoService(banco, outbox, enfileirador);
   cancelamento = new CancelamentoDeReuniaoService(banco, outbox, enfileirador);
-  convites = new ConvitesService(banco, sala, outbox);
+  convites = new ConvitesService(banco, sala, outbox, LIGADO);
   consulta = new ConsultaReunioesService(banco, new ClientesService(banco));
   horarios = new HorariosService(banco);
 });
@@ -102,6 +112,7 @@ beforeEach(async () => {
 interface Compra {
   readonly pedidoId?: string;
   readonly clienteId?: string;
+  readonly advogadoId?: string;
   readonly quantidadeReunioes?: number;
   readonly intervaloMinimoReunioesDias?: number;
   readonly prazoValidadeReunioesDias?: number;
@@ -109,6 +120,7 @@ interface Compra {
 
 async function comprar(opcoes: Compra = {}): Promise<string> {
   const pedidoId = opcoes.pedidoId ?? 'pedido-1';
+  const advogadoId = opcoes.advogadoId ?? ADVOGADO;
   const produtos = new ProdutosService(banco);
   const pedidos = new PedidosService(banco);
 
@@ -149,14 +161,14 @@ async function comprar(opcoes: Compra = {}): Promise<string> {
     .collection('pedidos')
     .doc(pedidoId)
     .update({
-      advogadoId: ADVOGADO,
+      advogadoId,
       distribuido: true,
       criadoEm: new Date(COMPRA),
     });
   await banco
     .collection('advogados')
-    .doc(ADVOGADO)
-    .set({ nome: 'Ana Souza', status: 'ativo', usuarioTeams: null });
+    .doc(advogadoId)
+    .set({ nome: 'Ana Souza', status: 'ativo', organizadorTeams: null });
 
   return pedidoId;
 }
@@ -398,13 +410,13 @@ describe('agendamento', () => {
       AGORA,
     );
 
-    expect(await horarios.listar('pedido-1', CLIENTE, null, null, NA_SEMANA)).toEqual(
-      [],
-    );
     expect(
-      (await horarios.listar('pedido-1', CLIENTE, reuniao.id, null, NA_SEMANA)).map(
-        (h) => h.slotId,
-      ),
+      await horarios.listar('pedido-1', CLIENTE, null, null, NA_SEMANA),
+    ).toEqual([]);
+    expect(
+      (
+        await horarios.listar('pedido-1', CLIENTE, reuniao.id, null, NA_SEMANA)
+      ).map((h) => h.slotId),
     ).toEqual([outro]);
   });
 });
@@ -632,6 +644,90 @@ describe('a sala e o convite', () => {
     ).toHaveLength(2);
   });
 
+  /**
+   * AS DUAS FALHAS QUE O TENANT PRODUZ, no ADAPTADOR REAL do Graph (so o
+   * `fetch` e dublado, com os corpos reais de cada erro): a application access
+   * policy que ainda nao chegou a conta organizadora, e o client secret
+   * vencido. As duas viram falha REENTREGAVEL, a reuniao fica sem link, o painel
+   * a mostra com o registro do outbox, e o motivo diz o que aconteceu — e
+   * quando o tenant se corrige, a mesma reuniao ganha a sala.
+   */
+  /*
+   * O roteiro da segunda tentativa muda de um caso para o outro, e de
+   * proposito: na policy o token foi emitido e fica guardado; no segredo
+   * vencido nao houve token, e a segunda tentativa pede um.
+   */
+  const TOKEN = { status: 200, corpo: { access_token: 't', expires_in: 3600 } };
+  const SALA_PRONTA = [
+    { status: 201, corpo: reuniaoNoFormatoReal() },
+    { status: 200, corpo: reuniaoNoFormatoReal() },
+  ];
+
+  it.each([
+    [
+      'sem application access policy',
+      [TOKEN, { status: 403, corpo: ERRO_SEM_POLICY }, ...SALA_PRONTA],
+      'No application access policy found',
+    ],
+    [
+      'com o client secret expirado',
+      [{ status: 401, corpo: ERRO_SEGREDO_EXPIRADO }, TOKEN, ...SALA_PRONTA],
+      'AADSTS7000222',
+    ],
+  ])(
+    'o Graph %s deixa a reuniao no painel, e a reentrega confirma',
+    async (_caso, roteiro, motivo) => {
+      await marcar();
+      const respostas = [...roteiro];
+      const graph = new GraphSalaDeReuniao(
+        {
+          tenantId: 'aaaaaaaa-1111-4222-8333-bbbbbbbbbbbb',
+          clientId: '11111111-2222-4333-8444-555555555555',
+          clientSecret: 'segredo-de-teste',
+        },
+        {
+          fetch: (() => {
+            const proxima = respostas.shift();
+            if (proxima === undefined)
+              throw new Error('resposta nao programada');
+            return Promise.resolve({
+              ok: proxima.status < 400,
+              status: proxima.status,
+              json: () => Promise.resolve(proxima.corpo),
+            } as Response);
+          }) as unknown as typeof fetch,
+        },
+      );
+      const comGraph = new ConvitesService(
+        banco,
+        graph,
+        new OutboxService(banco, CONFIG_OUTBOX),
+        LIGADO,
+      );
+
+      await expect(comGraph.criarSala(EVENTO)).resolves.toEqual({
+        sucesso: false,
+        motivo: expect.stringContaining(motivo),
+      });
+      expect(await lerReuniao('pedido-1', 'r001')).toMatchObject({
+        estado: 'reservada_sem_link',
+        link: null,
+        organizadorId: LIGADO.organizadorPadrao,
+      });
+      expect(await consulta.semSala()).toMatchObject([
+        { id: 'r001', eventoOutboxId: 'criar-sala-reuniao_pedido-1_r001' },
+      ]);
+
+      await expect(comGraph.criarSala(EVENTO)).resolves.toMatchObject({
+        sucesso: true,
+      });
+      expect(await lerReuniao('pedido-1', 'r001')).toMatchObject({
+        estado: 'confirmada',
+      });
+      expect(await consulta.semSala()).toEqual([]);
+    },
+  );
+
   /** Corrida 1: cancelada antes de a sala ser criada. */
   it('reuniao cancelada antes da sala nao chama o provedor', async () => {
     await marcar();
@@ -725,6 +821,62 @@ describe('concorrencia', () => {
       expect((recusada as PromiseRejectedResult).reason).toBeInstanceOf(
         ConflictException,
       );
+    },
+    PRAZO_DE_CONCORRENCIA_NO_EMULADOR,
+  );
+
+  /**
+   * A TRAVA E POR ADVOGADO, NAO POR ORGANIZADOR (`feat/ligar-teams`). A conta
+   * organizadora do escritorio e uma so, e vai organizar reunioes SIMULTANEAS de
+   * advogados diferentes: o slot continua sendo `{advogadoId}_{inicio}`, e nada
+   * no agendamento passa a olhar o organizador. As duas salas nascem na mesma
+   * conta, cada uma com o seu `externalId`; e o advogado ocupado continua
+   * recusando um terceiro cliente no mesmo horario.
+   */
+  it(
+    'dois advogados, mesmo horario, mesma conta organizadora: as duas marcam',
+    async () => {
+      await comprar({ pedidoId: 'pedido-1', clienteId: CLIENTE });
+      await comprar({
+        pedidoId: 'pedido-2',
+        clienteId: OUTRO_CLIENTE,
+        advogadoId: OUTRO_ADVOGADO,
+      });
+      const daAna = await publicarSlot(INICIO, FIM);
+      const doCarlos = await publicarSlot(INICIO, FIM, OUTRO_ADVOGADO);
+
+      const resultados = await Promise.allSettled([
+        reunioes.agendar('pedido-1', CLIENTE, daAna, AGORA),
+        reunioes.agendar('pedido-2', OUTRO_CLIENTE, doCarlos, AGORA),
+      ]);
+      expect(resultados.map((r) => r.status)).toEqual([
+        'fulfilled',
+        'fulfilled',
+      ]);
+
+      const evento = { reuniaoId: 'r001', sequence: 0 };
+      await expect(
+        convites.criarSala({ pedidoId: 'pedido-1', ...evento }),
+      ).resolves.toMatchObject({ sucesso: true });
+      await expect(
+        convites.criarSala({ pedidoId: 'pedido-2', ...evento }),
+      ).resolves.toMatchObject({ sucesso: true });
+
+      expect(sala.pedidos.map((p) => [p.organizadorId, p.externalId])).toEqual([
+        [LIGADO.organizadorPadrao, 'pedido-1-r001'],
+        [LIGADO.organizadorPadrao, 'pedido-2-r001'],
+      ]);
+      const [uma, outra] = await Promise.all([
+        lerReuniao('pedido-1', 'r001'),
+        lerReuniao('pedido-2', 'r001'),
+      ]);
+      expect([uma.estado, outra.estado]).toEqual(['confirmada', 'confirmada']);
+      expect(uma.link).not.toBe(outra.link);
+
+      await comprar({ pedidoId: 'pedido-3', clienteId: 'uid-dora' });
+      await expect(
+        reunioes.agendar('pedido-3', 'uid-dora', daAna, AGORA),
+      ).rejects.toBeInstanceOf(ConflictException);
     },
     PRAZO_DE_CONCORRENCIA_NO_EMULADOR,
   );

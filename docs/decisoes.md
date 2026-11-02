@@ -276,7 +276,10 @@ O admin pode **editar todos os campos** de um advogado já criado, inclusive
 
 → **Construir:** endpoint admin, tela e testes. Notas de implementação:
 - Troca de e-mail atualiza também o Firebase Auth e envia novo e-mail de acesso.
-- `usuarioTeams` é validado contra o Graph antes de salvar.
+- `usuarioTeams` é validado contra o Graph antes de salvar. **Errata
+  (01/11/2026, `feat/ligar-teams`):** o campo virou `organizadorTeams` e a
+  conferência no Graph saiu — as salas passaram a ser de uma conta organizadora
+  do escritório, e o aplicativo fica só com `OnlineMeetings.ReadWrite.All`.
 - Editar não redistribui pedidos: os pedidos já distribuídos continuam com o
   mesmo advogado.
 - Suspender continua sendo uma ação separada (perde o acesso na hora).

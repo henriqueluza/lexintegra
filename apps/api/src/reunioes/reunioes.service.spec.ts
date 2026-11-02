@@ -16,7 +16,11 @@ const CONFIG_OUTBOX: ConfiguracaoDoOutbox = {
   loteDoVarredor: 100,
 };
 
-const LIGADO: ConfiguracaoReunioes = { modo: 'falso', graph: null };
+const LIGADO: ConfiguracaoReunioes = {
+  modo: 'falso',
+  graph: null,
+  organizadorPadrao: '00000000-0000-4000-8000-000000000000',
+};
 
 /* 24/09/2026 (quinta), 14h em Sao Paulo. `agora` fica 30 dias antes. */
 const INICIO = '2026-09-24T17:00:00.000Z';
@@ -172,7 +176,7 @@ describe('ReunioesService.agendar', () => {
    */
   it('em sem-sala, a sala espera estacionada e nada vai para a fila', async () => {
     const { servico, banco, fila } = montar({
-      configuracao: { modo: 'sem-sala', graph: null },
+      configuracao: { modo: 'sem-sala', graph: null, organizadorPadrao: null },
     });
 
     const resumo = await servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA);
@@ -356,7 +360,7 @@ describe('ReunioesService.agendar', () => {
    */
   it('com REUNIOES_MODO=desligado recusa com 503, sem escrever', async () => {
     const { servico, banco } = montar({
-      configuracao: { modo: 'desligado', graph: null },
+      configuracao: { modo: 'desligado', graph: null, organizadorPadrao: null },
     });
 
     await expect(servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA)).rejects.toThrow(

@@ -12,7 +12,7 @@ describe('esquemaNovoAdvogado', () => {
     ).toEqual({
       nome: 'Ana Souza',
       email: 'ana@escritorio.test',
-      usuarioTeams: null,
+      organizadorTeams: null,
     });
   });
 
@@ -80,18 +80,18 @@ describe('esquemaNovoAdvogado', () => {
         status: 'suspenso',
         role: 'admin',
       }),
-    ).toEqual({ nome: 'Ana Souza', email: 'ana@x.test', usuarioTeams: null });
+    ).toEqual({ nome: 'Ana Souza', email: 'ana@x.test', organizadorTeams: null });
   });
 });
 
-describe('usuarioTeams (Etapa 10, ADR-21 decisao B)', () => {
+describe('organizadorTeams (Etapa 10, ADR-21 decisao B)', () => {
   it('aceita o object ID do Entra', () => {
     expect(
       esquemaNovoAdvogado.parse({
         nome: 'Ana Souza',
         email: 'ana@x.test',
-        usuarioTeams: GUID,
-      }).usuarioTeams,
+        organizadorTeams: GUID,
+      }).organizadorTeams,
     ).toBe(GUID);
   });
 
@@ -100,8 +100,8 @@ describe('usuarioTeams (Etapa 10, ADR-21 decisao B)', () => {
       esquemaNovoAdvogado.parse({
         nome: 'Ana Souza',
         email: 'ana@x.test',
-        usuarioTeams: GUID.toUpperCase(),
-      }).usuarioTeams,
+        organizadorTeams: GUID.toUpperCase(),
+      }).organizadorTeams,
     ).toBe(GUID);
   });
 
@@ -111,13 +111,13 @@ describe('usuarioTeams (Etapa 10, ADR-21 decisao B)', () => {
     ['vazio', ''],
     ['so espacos', '   '],
     ['nulo', null],
-  ])('trata %s como null', (_caso, usuarioTeams) => {
+  ])('trata %s como null', (_caso, organizadorTeams) => {
     expect(
       esquemaNovoAdvogado.parse({
         nome: 'Ana Souza',
         email: 'ana@x.test',
-        usuarioTeams,
-      }).usuarioTeams,
+        organizadorTeams,
+      }).organizadorTeams,
     ).toBeNull();
   });
 
@@ -133,7 +133,7 @@ describe('usuarioTeams (Etapa 10, ADR-21 decisao B)', () => {
       esquemaNovoAdvogado.safeParse({
         nome: 'Ana Souza',
         email: 'ana@x.test',
-        usuarioTeams: 'ana@escritorio.onmicrosoft.com',
+        organizadorTeams: 'ana@escritorio.onmicrosoft.com',
       }).success,
     ).toBe(false);
   });
@@ -144,12 +144,12 @@ describe('usuarioTeams (Etapa 10, ADR-21 decisao B)', () => {
     ['com caractere fora do hexadecimal', '3g2504e0-4f89-41d3-9a0c-0305e82c3301'],
     ['com sobra no fim', `${GUID}x`],
     ['nao e texto', 42],
-  ])('recusa GUID %s', (_caso, usuarioTeams) => {
+  ])('recusa GUID %s', (_caso, organizadorTeams) => {
     expect(
       esquemaNovoAdvogado.safeParse({
         nome: 'Ana Souza',
         email: 'ana@x.test',
-        usuarioTeams,
+        organizadorTeams,
       }).success,
     ).toBe(false);
   });

@@ -37,6 +37,8 @@ const ROTULO_DO_TIPO: Readonly<Record<string, string>> = {
   'acesso-cliente': 'Acesso de cliente',
   'estorno-integral': 'Estorno integral no gateway',
   'criar-sala-reuniao': 'Sala da reunião no Teams',
+  'atualizar-sala-reuniao': 'Novo horário da sala no Teams',
+  'remover-sala-reuniao': 'Remoção da sala no Teams',
   'convite-reuniao': 'Convite de reunião',
   'cancelamento-reuniao': 'Cancelamento de reunião',
   'pausa-contestacao': 'Pedido pausado por contestação',

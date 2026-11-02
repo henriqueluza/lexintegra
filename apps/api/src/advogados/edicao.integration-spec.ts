@@ -16,7 +16,6 @@ import { OutboxService } from '../outbox/outbox.service.js';
 import { GatewayPagamentoFalso } from '../pagamentos/gateway/gateway-falso.js';
 import type { ConvitesService } from '../reunioes/convites.service.js';
 import { ConsultaReunioesService } from '../reunioes/consulta.service.js';
-import { SalaDeReuniaoFalsa } from '../reunioes/sala/sala-de-reuniao-falsa.js';
 import { FilaFalsa } from '../tarefas/fila.js';
 import { AdvogadosService } from './advogados.service.js';
 import { EdicaoDeAdvogadoService } from './edicao.service.js';
@@ -38,7 +37,7 @@ let edicao: EdicaoDeAdvogadoService;
 const ANA = {
   nome: 'Ana Souza',
   email: 'ana@escritorio.test',
-  usuarioTeams: null,
+  organizadorTeams: null,
 };
 const ADMIN = 'uid-admin';
 
@@ -75,7 +74,6 @@ beforeEach(async () => {
   edicao = new EdicaoDeAdvogadoService(
     auth,
     banco,
-    new SalaDeReuniaoFalsa(),
     outbox,
     enfileirador,
   );

@@ -8,6 +8,7 @@
 export * from './anamnese.js';
 export * from './carrinho.js';
 export * from './cnpj.js';
+export * from './codigo-do-pedido.js';
 export * from './estado-entregavel.js';
 export * from './estado-reuniao.js';
 export * from './evento-outbox.js';

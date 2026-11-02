@@ -260,7 +260,7 @@ describe('AdvogadosService.criar', () => {
       email: 'ana@escritorio.test',
       status: 'ativo',
       criadoEm: null,
-      usuarioTeams: null,
+      organizadorTeams: null,
     });
     expect(banco.documentos.get('advogados/uid-1')).toMatchObject({
       nome: 'Ana Souza',
@@ -390,7 +390,7 @@ describe('AdvogadosService.listar', () => {
     await expect(servico.listar()).resolves.toEqual([
       {
         uid: 'uid-9',
-        usuarioTeams: null,
+        organizadorTeams: null,
         nome: 'Bruno Lima',
         email: 'bruno@escritorio.test',
         status: 'suspenso',

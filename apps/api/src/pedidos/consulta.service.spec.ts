@@ -14,7 +14,7 @@ import type { ConfiguracaoReunioes } from '../reunioes/sala/modo.js';
  * com o Teams nao existir, e o cartao diz isso ao cliente em vez de oferecer um
  * botao que responde 503 — ver `CartaoPedido.agendamentoDisponivel`.
  */
-const LIGADO: ConfiguracaoReunioes = { modo: 'falso', graph: null };
+const LIGADO: ConfiguracaoReunioes = { modo: 'falso', graph: null, organizadorPadrao: '00000000-0000-4000-8000-000000000000' };
 
 const ADMIN = 'uid-admin';
 const CLARA = 'uid-clara';
@@ -200,7 +200,7 @@ describe('ConsultaPedidosService', () => {
       const desligado = new ConsultaPedidosService(
         banco as unknown as Firestore,
         clientes,
-        { modo: 'desligado', graph: null },
+        { modo: 'desligado', graph: null, organizadorPadrao: null },
       );
 
       expect(

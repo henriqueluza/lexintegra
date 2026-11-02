@@ -190,7 +190,13 @@ describe('AlteracoesDeReuniaoService.remarcar', () => {
     expect(
       banco.documentos.has(`outbox/convite-reuniao_${PEDIDO}_r001_s1_${ADVOGADO}`),
     ).toBe(true);
-    expect(fila.tarefas).toHaveLength(2);
+    /* E o PATCH da sala, um por remarcacao (`sequence`), sem destinatario. */
+    expect(
+      banco.documentos.get(`outbox/atualizar-sala-reuniao_${PEDIDO}_r001_s1`),
+    ).toMatchObject({
+      reuniao: { pedidoId: PEDIDO, reuniaoId: 'r001', sequence: 1 },
+    });
+    expect(fila.tarefas).toHaveLength(3);
   });
 
   /** A serializacao por pedido, a mesma do agendamento. */
@@ -336,6 +342,7 @@ describe('AlteracoesDeReuniaoService.remarcar', () => {
       reuniao: {
         estado: 'reservada_sem_link',
         link: null,
+        idExterno: null,
         sequenceComunicada: null,
       },
     });
