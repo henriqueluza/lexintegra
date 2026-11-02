@@ -12,8 +12,8 @@
  *
  * O QUE ELA PROVA que a documentacao nao provava: com a politica de reuniao da
  * conta organizadora, `allowRecording` e `allowTranscription` VEM `true` na
- * sala — quem impede gravacao e transcricao e a politica do tenant, nao a sala
- * (ver `docs/entrega/lgpd.md`). E o `id` da reuniao tem 148 caracteres, base64
+ * sala — por isso o PATCH as desliga tambem na sala (`OPCOES_DA_SALA`), e nao
+ * so pela politica do tenant (ver `docs/entrega/lgpd.md`). E o `id` da reuniao tem 148 caracteres, base64
  * com `=`: vai para o caminho do PATCH e do DELETE por `encodeURIComponent`.
  *
  * Arnes de teste, e nao codigo de producao: fora da cobertura

@@ -29,7 +29,8 @@ O primeiro vem da sonda `sinais-operacionais`, a cada 5 minutos
    organizadora do escritório, `TEAMS_ORGANIZADOR_PADRAO`, ou o
    `organizadorTeams` do advogado, se houver) e chama o Graph em duas etapas:
    `createOrGet` cria a sala e o `PATCH` aplica as opções do escritório
-   (convidados sem lobby, todos apresentam, sem chat, sem gravação). Só com as
+   (convidados sem lobby, todos apresentam, sem chat, sem gravação nem
+   transcrição). Só com as
    duas, a reunião vira `confirmada` e o convite iCalendar sai.
 3. Se qualquer das duas falhar, a reunião **fica** em `reservada_sem_link`: o
    slot e o saldo continuam reservados. É estado previsto, não erro. A nova

@@ -218,7 +218,7 @@ reunião** na primeira tentativa (`organizadorId`):
 | Chamada | Quando |
 |---|---|
 | `POST …/createOrGet` com `externalId = {pedidoId}-{rNNN}`, horários e assunto | Criação da sala. Idempotente: repetir devolve a mesma sala |
-| `PATCH …/{id}` com `allowedPresenters: everyone`, `allowMeetingChat: disabled`, `recordAutomatically: false`, `lobbyBypassSettings: {scope: everyone, isDialInBypassEnabled: true}` e os horários | Logo depois do `createOrGet` (o link só sai se ele der certo) e em cada remarcação |
+| `PATCH …/{id}` com `allowedPresenters: everyone`, `allowMeetingChat: disabled`, `recordAutomatically: false`, `allowRecording: false`, `allowTranscription: false`, `lobbyBypassSettings: {scope: everyone, isDialInBypassEnabled: true}` e os horários | Logo depois do `createOrGet` (o link só sai se ele der certo) e em cada remarcação |
 | `DELETE …/{id}` | Cancelamento da reunião (cliente, escritório, cancelamento ou estorno do pedido, contestação). 404 conta como sucesso |
 
 O assunto da sala é `Reunião LexIntegra — pedido {código curto}`, sem nome,
@@ -288,7 +288,7 @@ $r1.StatusCode; $r1.Content | Out-File createorget-1.json -Encoding utf8; $sala 
 O primeiro `createOrGet` responde **201**.
 
 ```powershell
-$opcoes = '{"allowedPresenters":"everyone","allowMeetingChat":"disabled","recordAutomatically":false,"lobbyBypassSettings":{"scope":"everyone","isDialInBypassEnabled":true},"startDateTime":"2026-11-20T13:00:00Z","endDateTime":"2026-11-20T13:30:00Z","subject":"Reunião LexIntegra — pedido TESTE-001"}'
+$opcoes = '{"allowedPresenters":"everyone","allowMeetingChat":"disabled","recordAutomatically":false,"allowRecording":false,"allowTranscription":false,"lobbyBypassSettings":{"scope":"everyone","isDialInBypassEnabled":true},"startDateTime":"2026-11-20T13:00:00Z","endDateTime":"2026-11-20T13:30:00Z","subject":"Reunião LexIntegra — pedido TESTE-001"}'
 ```
 
 ```powershell
@@ -299,8 +299,8 @@ $r2 = Invoke-WebRequest -UseBasicParsing -Method Patch -Uri "$salas/$([uri]::Esc
 $r2.StatusCode; $r2.Content | Out-File patch.json -Encoding utf8
 ```
 
-O PATCH responde **200**, com `allowedPresenters`, `allowMeetingChat` e
-`lobbyBypassSettings` como enviados. Antes de seguir, abra o `joinWebUrl` em
+O PATCH responde **200**, com `allowedPresenters`, `allowMeetingChat`,
+`allowRecording`, `allowTranscription` e `lobbyBypassSettings` como enviados. Antes de seguir, abra o `joinWebUrl` em
 duas janelas anônimas do navegador e confira que as duas entram sem lobby.
 
 ```powershell

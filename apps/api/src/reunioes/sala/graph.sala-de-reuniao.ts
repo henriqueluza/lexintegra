@@ -85,7 +85,11 @@ const respostaReuniao = z.object({
  *   precisa poder compartilhar a tela.
  * - `allowMeetingChat: disabled`: convidado anonimo nao tem chat de todo jeito,
  *   e um chat que so a conta organizadora visse seria registro sem dono.
- * - `recordAutomatically: false`: sem gravacao (LGPD; ver `docs/entrega/lgpd.md`).
+ * - `recordAutomatically: false`, `allowRecording: false` e
+ *   `allowTranscription: false`: sem gravacao nem transcricao (LGPD; ver
+ *   `docs/entrega/lgpd.md`). A sala nasce do Graph com as duas ultimas
+ *   VERDADEIRAS (`arnes-reuniao.ts`), e ate aqui quem as impedia era so a
+ *   politica do tenant: mexer nela reabriria as duas sem nada no codigo saber.
  * - `lobbyBypassSettings.scope: everyone`: ninguem espera no lobby, porque nao ha
  *   quem admitir — o organizador e uma conta de servico que nunca entra.
  */
@@ -93,6 +97,8 @@ export const OPCOES_DA_SALA = {
   allowedPresenters: 'everyone',
   allowMeetingChat: 'disabled',
   recordAutomatically: false,
+  allowRecording: false,
+  allowTranscription: false,
   lobbyBypassSettings: { scope: 'everyone', isDialInBypassEnabled: true },
 } as const;
 

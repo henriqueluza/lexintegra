@@ -182,6 +182,8 @@ describe('GraphSalaDeReuniao', () => {
       allowedPresenters: 'everyone',
       allowMeetingChat: 'disabled',
       recordAutomatically: false,
+      allowRecording: false,
+      allowTranscription: false,
       lobbyBypassSettings: { scope: 'everyone', isDialInBypassEnabled: true },
       startDateTime: '2026-09-24T17:00:00.000Z',
       endDateTime: '2026-09-24T18:00:00.000Z',
@@ -191,6 +193,8 @@ describe('GraphSalaDeReuniao', () => {
       allowedPresenters: 'everyone',
       allowMeetingChat: 'disabled',
       recordAutomatically: false,
+      allowRecording: false,
+      allowTranscription: false,
       lobbyBypassSettings: { scope: 'everyone', isDialInBypassEnabled: true },
     });
   });

@@ -183,7 +183,7 @@ lá:
 |---|---|
 | Enviado pela plataforma | Início e fim, o assunto `Reunião LexIntegra — pedido {código curto}` e o `externalId` `{pedidoId}-{rNNN}`. O código curto são 6 caracteres da cobrança e o número do item: identifica o pedido para quem tem o painel e não diz nada a quem não tem. **Nenhum nome, e-mail, produto ou dado do cliente ou do advogado** sai da plataforma para o Graph |
 | Digitado por quem entra | O nome que cada convidado digita ao entrar fica com a Microsoft, como dado da reunião no tenant do escritório. A plataforma não o recebe |
-| Gravação e transcrição | Desligadas pela política de reunião `LexIntegra-Organizadora`. A sala vem do Graph com `allowRecording` e `allowTranscription` verdadeiros: **quem impede é a política do tenant**, e mudá-la reabre as duas. A sala também nasce com `recordAutomatically: false` |
+| Gravação e transcrição | Desligadas em **dois** lugares: na política de reunião `LexIntegra-Organizadora` e na própria sala, pelo PATCH (`allowRecording: false`, `allowTranscription: false`, `recordAutomatically: false`). A sala vem do Graph com as duas primeiras verdadeiras; sem o PATCH, quem impediria seria só a política do tenant |
 | Chat | Desligado na sala (`allowMeetingChat: disabled`); o convidado anônimo não tem chat |
 | Cancelamento | A sala é **apagada** (`DELETE`, pelo outbox). Errata do ADR-21, decisão 7, que a deixava no Teams |
 | Reunião realizada | A sala continua na conta organizadora até expirar (`expiryDateTime`, cerca de 60 dias depois do fim), sem conteúdo gravado. Não é apagada pela eliminação do titular, que não tem como apontá-la: o assunto não leva dado dele |
