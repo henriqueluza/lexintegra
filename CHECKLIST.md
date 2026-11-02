@@ -731,18 +731,23 @@ faz. Os comandos estão em
   produção em `https://lexintegra.com.br/api/pagamentos/webhook`, com os seis
   eventos (`transparent.*` e `checkout.*` de `completed`, `refunded` e
   `disputed`), e conferir que nenhum webhook antigo aponta para `/api/webhook`.
-- [ ] **Teste — Caique e escritório:** primeira transação real de valor baixo
+- [x] **Teste — Caique e escritório:** primeira transação real de valor baixo
   feita à mão pelo painel; o evento chega à URL (503 com o modo desligado) e o
-  dinheiro cai (runbook 1.4, regra 20).
-- [ ] **Commit de destravamento — Henrique (ou agente, a pedido):**
+  dinheiro cai (runbook 1.4, regra 20). Feito em 01/11/2026: PIX de R$ 1,00
+  pago, `503` nos Webhook Logs e o valor visível no painel.
+- [x] **Commit de destravamento — Henrique (ou agente, a pedido):**
   `PRODUCAO_DESTRAVADA = true` e `pagamentos_modo = "producao"` (runbook 1.5).
+  Branch `chore/ligar-pagamentos-producao`, 01/11/2026.
 - [ ] **Teste — Henrique:** compra PIX real pela plataforma e estorno; confere
   a permissão dos estornos (runbook 1.6). Também conferir a URL assinada do
   primeiro arquivo real (`limpeza-infra.md` §3).
 - [ ] **Teste — Henrique, no sandbox, depois da homologação:** rodada de cartão
   da seção 4 de `docs/runbooks/checkout-sandbox.md`; confirma o nome do evento
   de conclusão do cartão, **o maior risco em aberto**. Depois, PR com
-  `pagamentos_cartao = "habilitado"`.
+  `pagamentos_cartao = "habilitado"`. **O cartão foi habilitado em
+  01/11/2026 sem esta rodada** (branch `chore/ligar-pagamentos-producao`), por
+  decisão do Henrique: a primeira compra por cartão em produção, de valor
+  baixo e estornada, faz o papel dela.
 - [ ] **Teste — Henrique, no sandbox:** alerta artificial pelo caminho real
   (webhook com corpo ilegível, `pagamento.webhook-ilegivel`;
   `alerta-artificial.md`). O caminho alternativo já foi testado em 29/09.
