@@ -19,11 +19,16 @@ import type {
   CobrancaPixExibida,
   MetodoPagamento,
 } from 'shared/esquemas/checkout';
+import {
+  MARCAS_ACEITAS,
+  type MarcaDePagamento,
+} from 'shared/formas-de-pagamento';
 import { VERSAO_TERMOS_CHECKOUT } from 'shared/termos-checkout';
 import { ApiCheckoutService } from '../../autenticacao/api-checkout.service';
 import { AppCheckService } from '../../autenticacao/app-check';
 import { paraReais } from '../../comum/moeda';
 import { descreverPreco } from '../../comum/parcela';
+import { MarcasPagamento } from '../../ui/marcas-pagamento/marcas-pagamento';
 import { CarrinhoService } from '../../publico/carrinho.service';
 import { PreCadastroService } from '../../publico/pre-cadastro.service';
 import { AvisoPrivacidade } from '../../ui/aviso-privacidade/aviso-privacidade';
@@ -44,6 +49,8 @@ export const NAVEGAR_PARA_FORA = new InjectionToken<(url: string) => void>(
 );
 
 /** O intervalo do polling comeca curto e cresce ate o teto. */
+const SO_PIX: readonly MarcaDePagamento[] = ['pix'];
+
 export const INTERVALO_INICIAL_MS = 4_000;
 export const INTERVALO_MAXIMO_MS = 30_000;
 
@@ -72,6 +79,7 @@ type Fase =
     Botao,
     Campo,
     Carregando,
+    MarcasPagamento,
     MensagemErro,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -122,6 +130,14 @@ export class Checkout {
       ? `ou em até ${preco.destaque} no cartão`
       : `ou em até ${preco.destaque} no cartão (${primeira})`;
   });
+
+  /**
+   * As marcas da fonte unica (`shared/formas-de-pagamento`). Com o cartao fora
+   * do ar, so o Pix: bandeira de um metodo que o checkout recusa nao aparece.
+   */
+  protected readonly marcasAceitas = computed(() =>
+    this.cartaoDisponivel() ? MARCAS_ACEITAS : SO_PIX,
+  );
 
   /** O codigo copia-e-cola, num campo somente leitura para selecionar a mao. */
   protected readonly codigoPix = new FormControl('', { nonNullable: true });

@@ -89,6 +89,12 @@
           >
           }
         </label>
+        <app-marcas-pagamento
+          class="checkout__marcas"
+          tamanho="p"
+          [marcas]="marcasAceitas()"
+          rotulo="Formas de pagamento aceitas"
+        />
         @if (!cartaoDisponivel()) {
         <p class="checkout__auxiliar" id="checkout-cartao-em-breve">
           {{ textos.formulario.dicaCartaoIndisponivel }}

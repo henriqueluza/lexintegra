@@ -489,6 +489,39 @@ describe('Checkout', () => {
     ).toMatch(/^\d{2}:\d{2}$/);
   });
 
+  describe('marcas aceitas', () => {
+    function marcas(fixture: ComponentFixture<Checkout>): (string | null)[] {
+      return [
+        ...(fixture.nativeElement as HTMLElement).querySelectorAll(
+          '.checkout__marcas svg',
+        ),
+      ].map((svg) => svg.getAttribute('aria-label'));
+    }
+
+    it('com o cartao no ar, mostra o Pix e o que vem com o cartao', async () => {
+      const { fixture } = await montar({ cartao: true });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(marcas(fixture)).toEqual([
+        'Pix',
+        'Visa',
+        'Mastercard',
+        'Apple Pay',
+        'Google Pay',
+      ]);
+    });
+
+    /** Bandeira de metodo que o checkout recusa seria propaganda enganosa. */
+    it('com o cartao fora do ar, mostra so o Pix', async () => {
+      const { fixture } = await montar({ cartao: false });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(marcas(fixture)).toEqual(['Pix']);
+    });
+  });
+
   describe('parcelamento no resumo', () => {
     function condicao(fixture: ComponentFixture<Checkout>): string {
       const elemento = (fixture.nativeElement as HTMLElement).querySelector(

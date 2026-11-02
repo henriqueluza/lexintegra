@@ -1,0 +1,60 @@
+/*
+ * Cores e medidas das MARCAS DE PAGAMENTO (01/11/2026).
+ *
+ * Estas cores nao sao da LexIntegra e nao seguem a direcao visual: sao as das
+ * marcas, fixadas pelos manuais de cada uma, e nao podem ser recoloridas. Ficam
+ * em arquivo de token porque e o unico lugar onde valor literal e permitido
+ * (regra inviolavel 8); `ui/marcas-pagamento` le daqui por classe.
+ *
+ * Origem de cada valor — o mesmo do arquivo de onde o desenho saiu, registrado
+ * no LEIA-ME do componente:
+ *   Pix: Manual de Uso da Marca Pix, v1.6 (BCB, 14/05/2025), "Cores": verde Pix
+ *        RGB 119 182 168. O arquivo vetorial do BC vem em CMYK; a tela usa o
+ *        RGB que o proprio manual da.
+ *   Visa: arquivo do Wikimedia Commons, "Visa Inc. logo (2021-present).svg"
+ *        (nao e arquivo do kit da Visa, que exige cadastro; ver o LEIA-ME).
+ *   Mastercard: mc_symbol_SVG.zip, Mastercard Brand Center.
+ *   Apple Pay: Apple-Pay-Mark.zip (developer.apple.com/apple-pay/marketing).
+ *   Google Pay: Google-Pay-Acceptance.zip (developers.google.com/pay).
+ */
+:root {
+  /*
+   * Altura de toda marca na lista. O manual do Pix exige que nenhuma outra
+   * marca seja mais alta que o simbolo Pix e que o simbolo tenha no minimo
+   * 24 px; Apple e Google pedem que a marca deles nao seja menor que as outras.
+   * Altura igual para todas atende os tres.
+   */
+  --marca-pagamento-altura: 32px;
+  --marca-pagamento-altura-p: 24px;
+  /*
+   * Area de protecao: Apple pede 1/4 da altura; Google, metade da altura do
+   * "G" (cerca de 1/4 da altura do selo). 12 px cobre as duas a 32 px.
+   */
+  --marca-pagamento-espaco: 12px;
+
+  /*
+   * A Visa e um logotipo sem selo em volta: na mesma altura das outras ela
+   * pesaria o dobro. Fica mais baixa, o que nenhum manual proibe (o do Pix
+   * so limita para cima).
+   */
+  --marca-pagamento-altura-visa: 20px;
+  --marca-pagamento-altura-visa-p: 15px;
+
+  --marca-pix-verde: #77b6a8;
+
+  --marca-visa-azul: #1434cb;
+
+  --marca-mastercard-vermelho: #eb001b;
+  --marca-mastercard-amarelo: #f79e1b;
+  --marca-mastercard-laranja: #ff5f00;
+
+  --marca-apple-preto: #000;
+  --marca-apple-branco: #fff;
+
+  --marca-google-branco: #fff;
+  --marca-google-cinza: #3c4043;
+  --marca-google-azul: #4285f4;
+  --marca-google-verde: #34a853;
+  --marca-google-amarelo: #fabb05;
+  --marca-google-vermelho: #e94235;
+}
