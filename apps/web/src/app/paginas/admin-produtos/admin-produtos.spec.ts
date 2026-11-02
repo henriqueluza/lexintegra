@@ -15,6 +15,7 @@ const PARECER: ProdutoResumo = {
   prazoValidadeReunioesDias: 180,
   intervaloMinimoReunioesDias: 0,
   numeroRevisoesPermitidas: 1,
+  parcelas: 3,
   ativo: true,
   criadoEm: '2026-09-01T12:00:00.000Z',
   atualizadoEm: null,
@@ -133,6 +134,7 @@ function preencherValido(
     prazoValidadeReunioesDias: '180',
     intervaloMinimoReunioesDias: '0',
     numeroRevisoesPermitidas: '1',
+    parcelas: '3',
     ...alteracoes,
   });
   componente.lista('entregaveis').at(0).setValue('Parecer em PDF');
@@ -202,7 +204,7 @@ describe('AdminProdutos', () => {
     it('resume a composicao do produto', async () => {
       const { fixture } = await montar({ lista: [LGPD] });
       expect(textoDaTela(fixture)).toContain(
-        '2 entregável(eis) · 3 reunião(ões) · 2 revisão(ões)',
+        '2 entregável(eis) · 3 reunião(ões) · 2 revisão(ões) · até 3x',
       );
     });
 
@@ -265,7 +267,17 @@ describe('AdminProdutos', () => {
         prazoValidadeReunioesDias: 180,
         intervaloMinimoReunioesDias: 0,
         numeroRevisoesPermitidas: 1,
+        parcelas: 3,
       });
+    });
+
+    it('recusa parcelas fracionadas, sem chamar a API', async () => {
+      const { fixture, api } = await montar();
+      preencherValido(fixture, { parcelas: '1,5' });
+      await enviar(fixture);
+
+      expect(api.chamadas).toEqual(['listar todos']);
+      expect(textoDaTela(fixture)).toContain('Confira os valores numéricos');
     });
 
     /**

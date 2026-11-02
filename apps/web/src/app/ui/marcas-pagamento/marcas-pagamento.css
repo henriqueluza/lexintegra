@@ -1,0 +1,91 @@
+:host {
+  display: block;
+}
+
+.marcas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--marca-pagamento-espaco);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.marcas__item {
+  display: flex;
+}
+
+/*
+ * So a altura e fixada: a largura sai da proporcao do `viewBox` de cada marca.
+ * Esticar ou achatar e proibido pelos cinco manuais.
+ */
+.marca {
+  display: block;
+  width: auto;
+  height: var(--marca-pagamento-altura);
+}
+
+.marcas--p .marca {
+  height: var(--marca-pagamento-altura-p);
+}
+
+.marca--visa {
+  height: var(--marca-pagamento-altura-visa);
+}
+
+.marcas--p .marca--visa {
+  height: var(--marca-pagamento-altura-visa-p);
+}
+
+.marca__pix-verde {
+  fill: var(--marca-pix-verde);
+}
+
+.marca__visa-azul {
+  fill: var(--marca-visa-azul);
+}
+
+.marca__mastercard-vermelho {
+  fill: var(--marca-mastercard-vermelho);
+}
+
+.marca__mastercard-amarelo {
+  fill: var(--marca-mastercard-amarelo);
+}
+
+.marca__mastercard-laranja {
+  fill: var(--marca-mastercard-laranja);
+}
+
+.marca__apple-preto {
+  fill: var(--marca-apple-preto);
+}
+
+.marca__apple-branco {
+  fill: var(--marca-apple-branco);
+}
+
+.marca__google-branco {
+  fill: var(--marca-google-branco);
+}
+
+.marca__google-cinza {
+  fill: var(--marca-google-cinza);
+}
+
+.marca__google-azul {
+  fill: var(--marca-google-azul);
+}
+
+.marca__google-verde {
+  fill: var(--marca-google-verde);
+}
+
+.marca__google-amarelo {
+  fill: var(--marca-google-amarelo);
+}
+
+.marca__google-vermelho {
+  fill: var(--marca-google-vermelho);
+}

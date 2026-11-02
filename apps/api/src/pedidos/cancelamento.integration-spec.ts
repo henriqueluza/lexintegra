@@ -27,6 +27,7 @@ const PARECER: NovoProduto = {
   prazoValidadeReunioesDias: 365,
   intervaloMinimoReunioesDias: 15,
   numeroRevisoesPermitidas: 2,
+  parcelas: 1,
 };
 
 let app: INestApplication;

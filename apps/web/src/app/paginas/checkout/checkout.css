@@ -85,6 +85,12 @@
   font-weight: var(--peso-maximo);
 }
 
+.checkout__parcelas {
+  color: var(--texto-2);
+  font-size: var(--t-menor);
+  font-variant-numeric: tabular-nums;
+}
+
 .checkout__auxiliar {
   font-size: var(--t-mini);
   color: var(--texto-3);
@@ -117,7 +123,8 @@
   color: var(--texto);
 }
 
-.checkout__metodos .checkout__auxiliar {
+.checkout__metodos .checkout__auxiliar,
+.checkout__metodos .checkout__marcas {
   grid-column: 1 / -1;
 }
 

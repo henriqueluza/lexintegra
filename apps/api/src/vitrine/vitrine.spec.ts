@@ -19,6 +19,7 @@ const PRODUTO: ProdutoResumo = {
   prazoValidadeReunioesDias: 365,
   intervaloMinimoReunioesDias: 7,
   numeroRevisoesPermitidas: 2,
+  parcelas: 1,
   ativo: true,
   criadoEm: null,
   atualizadoEm: null,
@@ -144,6 +145,7 @@ describe('VitrineService', () => {
       entregaveis: ['Parecer em PDF'],
       quantidadeReunioes: 2,
       numeroRevisoesPermitidas: 2,
+      parcelas: 1,
     });
   });
 });

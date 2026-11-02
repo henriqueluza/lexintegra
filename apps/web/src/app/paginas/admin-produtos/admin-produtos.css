@@ -30,8 +30,15 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  .produtos__campos--quatro {
-    grid-template-columns: repeat(4, 1fr);
+  .produtos__campos--numeros {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Cinco campos numericos numa linha so quando cabem sem espremer a dica. */
+@media (min-width: 72rem) {
+  .produtos__campos--numeros {
+    grid-template-columns: repeat(5, 1fr);
   }
 }
 

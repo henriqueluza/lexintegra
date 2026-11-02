@@ -38,6 +38,8 @@ interface Cenario {
 interface Opcoes {
   liberado?: boolean;
   itens?: number;
+  /** Parcelas de cada item do carrinho; 1 por padrao. */
+  parcelas?: number;
   retorno?: string | null;
   resposta?: CheckoutIniciado | Error | HttpErrorResponse;
   /** B2, decisoes.md 3.4: o que `GET /api/checkout/metodos` responde. */
@@ -123,6 +125,7 @@ async function montar(opcoes: Opcoes = {}): Promise<Cenario> {
       entregaveis: ['x'],
       quantidadeReunioes: 1,
       numeroRevisoesPermitidas: 1,
+      parcelas: opcoes.parcelas ?? 1,
     });
   }
 
@@ -484,6 +487,82 @@ describe('Checkout', () => {
         PIX.metodo === 'pix' ? PIX.pix.expiraEm : '',
       ),
     ).toMatch(/^\d{2}:\d{2}$/);
+  });
+
+  describe('marcas aceitas', () => {
+    function marcas(fixture: ComponentFixture<Checkout>): (string | null)[] {
+      return [
+        ...(fixture.nativeElement as HTMLElement).querySelectorAll(
+          '.checkout__marcas svg',
+        ),
+      ].map((svg) => svg.getAttribute('aria-label'));
+    }
+
+    it('com o cartao no ar, mostra o Pix e o que vem com o cartao', async () => {
+      const { fixture } = await montar({ cartao: true });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(marcas(fixture)).toEqual([
+        'Pix',
+        'Visa',
+        'Mastercard',
+        'Apple Pay',
+        'Google Pay',
+      ]);
+    });
+
+    /** Bandeira de metodo que o checkout recusa seria propaganda enganosa. */
+    it('com o cartao fora do ar, mostra so o Pix', async () => {
+      const { fixture } = await montar({ cartao: false });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(marcas(fixture)).toEqual(['Pix']);
+    });
+  });
+
+  describe('parcelamento no resumo', () => {
+    function condicao(fixture: ComponentFixture<Checkout>): string {
+      const elemento = (fixture.nativeElement as HTMLElement).querySelector(
+        '.checkout__parcelas',
+      );
+      return (elemento?.textContent ?? '').replace(/\s/g, ' ').trim();
+    }
+
+    it('anuncia a parcela do carrinho com a mesma conta do catalogo', async () => {
+      const { fixture } = await montar({ parcelas: 2 });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(condicao(fixture)).toBe('ou em até 2x de R$ 1.000,00 no cartão');
+    });
+
+    it('diz a primeira parcela quando a divisao nao fecha', async () => {
+      const { fixture } = await montar({ parcelas: 12 });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(condicao(fixture)).toBe(
+        'ou em até 12x de R$ 166,66 no cartão (1ª parcela R$ 166,74)',
+      );
+    });
+
+    it('nao anuncia parcela sem item parcelavel', async () => {
+      const { fixture } = await montar({ parcelas: 1 });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(condicao(fixture)).toBe('');
+    });
+
+    it('nao anuncia parcela com o cartao fora do ar', async () => {
+      const { fixture } = await montar({ parcelas: 12, cartao: false });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(condicao(fixture)).toBe('');
+    });
   });
 
   describe('cartao fora do ar (B2, decisoes.md 3.4)', () => {

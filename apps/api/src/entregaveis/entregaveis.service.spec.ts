@@ -31,6 +31,7 @@ const PRODUTO: NovoProduto = {
   prazoValidadeReunioesDias: 365,
   intervaloMinimoReunioesDias: 0,
   numeroRevisoesPermitidas: 2,
+  parcelas: 1,
 };
 
 interface Arranjo {

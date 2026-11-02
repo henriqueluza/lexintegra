@@ -4,8 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 const produto = {
   id: 'diagnostico',
   nome: 'Diagnóstico contratual',
-  descricao:
-    'Diagnóstico completo da operação. Pode ser parcelado em 3x de R$ 245,00.',
+  descricao: 'Diagnóstico completo da operação.',
   precoCentavos: 69000,
   entregaveis: [
     'Anamnese inicial',
@@ -17,6 +16,7 @@ const produto = {
   ],
   quantidadeReunioes: 2,
   numeroRevisoesPermitidas: 0,
+  parcelas: 3,
 };
 
 async function liberar(page: Page): Promise<void> {
@@ -63,6 +63,11 @@ test('ficha, expansão, busca interrompível e carrinho preservam os dados', asy
   );
   await expect(card.locator('.produto__meta')).toHaveText(
     '28 entregáveis · 2 reuniões',
+  );
+  /* A parcela e calculada do preco e de `parcelas`, nao lida da descricao. */
+  await expect(card.locator('.produto__preco')).toHaveText(/3x de R\$\s230,00/);
+  await expect(card.locator('.produto__total')).toHaveText(
+    /Total R\$\s690,00/,
   );
   await card.getByRole('button', { name: 'Ver tudo (6)' }).click();
   await expect(

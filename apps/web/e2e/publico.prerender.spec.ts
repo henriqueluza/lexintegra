@@ -99,6 +99,22 @@ test.describe('pre-renderizacao da area publica', () => {
     ).toBeVisible();
   });
 
+  /**
+   * As formas de pagamento estao no HTML pre-renderizado, como lista com nome,
+   * e sao exatamente as de `shared/formas-de-pagamento`.
+   */
+  test('o rodape lista as formas de pagamento aceitas', async ({ page }) => {
+    await page.goto('/');
+
+    const lista = page
+      .locator('app-rodape-publico')
+      .getByRole('list', { name: 'Formas de pagamento aceitas' });
+    await expect(lista.getByRole('listitem')).toHaveCount(5);
+    for (const nome of ['Pix', 'Visa', 'Mastercard', 'Apple Pay', 'Google Pay']) {
+      await expect(lista.getByRole('img', { name: nome })).toBeVisible();
+    }
+  });
+
   test('o HTML e pre-renderizado, e nao uma casca vazia', async ({ page }) => {
     await page.goto('/');
 

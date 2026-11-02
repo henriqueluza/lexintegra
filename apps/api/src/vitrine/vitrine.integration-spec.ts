@@ -29,6 +29,7 @@ function produto(nome: string): NovoProduto {
     prazoValidadeReunioesDias: 365,
     intervaloMinimoReunioesDias: 7,
     numeroRevisoesPermitidas: 2,
+    parcelas: 1,
   };
 }
 
@@ -114,6 +115,7 @@ describe('vitrine liberada por pre-cadastro', () => {
       'id',
       'nome',
       'numeroRevisoesPermitidas',
+      'parcelas',
       'precoCentavos',
       'quantidadeReunioes',
     ]);

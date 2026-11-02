@@ -66,6 +66,7 @@ const MAXIMO: NovoProduto = {
   prazoValidadeReunioesDias: 3650,
   intervaloMinimoReunioesDias: 365,
   numeroRevisoesPermitidas: 20,
+  parcelas: 1,
 };
 
 let app: INestApplication;

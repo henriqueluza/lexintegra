@@ -12,6 +12,10 @@
  * Os valores esperados vêm de `packages/shared/src/contato-publico.ts`, lidos
  * como texto: um literal repetido aqui envelheceria na primeira troca.
  *
+ * Desde 01/11/2026 confere também as formas de pagamento aceitas: cada nome
+ * de `NOME_DA_MARCA` (`packages/shared/src/formas-de-pagamento.ts`, lido do
+ * mesmo jeito) precisa estar no rodapé como nome acessível de uma imagem.
+ *
  * Uso: node scripts/conferir-rodape-prerenderizado.mjs [caminho/do/index.html]
  */
 import { readFileSync } from 'node:fs';
@@ -33,6 +37,19 @@ function campo(nome) {
   return achado[1];
 }
 
+const formas = readFileSync(
+  join(raiz, 'packages/shared/src/formas-de-pagamento.ts'),
+  'utf8',
+);
+const blocoDasMarcas = /NOME_DA_MARCA[^{]*\{([^}]+)\}/u.exec(formas);
+if (blocoDasMarcas === null)
+  throw new Error('formas-de-pagamento.ts sem NOME_DA_MARCA');
+const marcas = [...blocoDasMarcas[1].matchAll(/:\s*'([^']+)'/gu)].map(
+  (achado) => achado[1],
+);
+if (marcas.length === 0)
+  throw new Error('NOME_DA_MARCA sem nenhuma marca');
+
 const html = readFileSync(arquivo, 'utf8');
 const inicio = html.indexOf('<app-rodape-publico');
 const fim = html.indexOf('</app-rodape-publico>');
@@ -48,6 +65,11 @@ const exigidos = [
   ['e-mail de contato', `href="mailto:${email}"`],
   ['link dos termos de uso', 'href="/termos"'],
   ['link da politica de privacidade', 'href="/privacidade"'],
+  ['lista das formas de pagamento', 'aria-label="Formas de pagamento aceitas"'],
+  ...marcas.map((marca) => [
+    `marca ${marca}`,
+    `aria-label="${marca}"`,
+  ]),
 ];
 const faltando = exigidos.filter(([, trecho]) => !rodape.includes(trecho));
 if (faltando.length > 0) {
@@ -62,5 +84,5 @@ if (rodape.includes('href="tel:')) {
   process.exit(1);
 }
 console.log(
-  'Rodape pre-renderizado com nome, CNPJ, e-mail, termos e privacidade.',
+  `Rodape pre-renderizado com nome, CNPJ, e-mail, termos, privacidade e ${String(marcas.length)} marcas de pagamento.`,
 );

@@ -176,8 +176,10 @@ h2 {
   font-weight: var(--lex-weight-medium);
   font-variant-numeric: tabular-nums;
 }
-.produto__condicao {
+.produto__total {
+  margin-top: var(--lex-space-1);
   font-size: var(--lex-text-small);
+  font-variant-numeric: tabular-nums;
   color: var(--lex-bg);
 }
 .adicionar {

@@ -48,9 +48,14 @@ a:hover {
   text-decoration: underline;
   text-underline-offset: var(--lex-space-1);
 }
-.rodape__base {
+.rodape__pagamento {
   border-top: var(--borda-fina) solid var(--lex-border-hairline);
   margin-top: var(--lex-space-7);
+  padding-top: var(--lex-space-5);
+}
+.rodape__base {
+  border-top: var(--borda-fina) solid var(--lex-border-hairline);
+  margin-top: var(--lex-space-5);
   padding-top: var(--lex-space-5);
   font-size: var(--lex-text-caption);
 }

@@ -35,6 +35,7 @@ const PARECER: NovoProduto = {
   prazoValidadeReunioesDias: 365,
   intervaloMinimoReunioesDias: 15,
   numeroRevisoesPermitidas: 2,
+  parcelas: 1,
 };
 
 const CHAVE = '7d3c2f7e-1b1a-4c5e-9a3f-2b8d9c0e1f2a';
