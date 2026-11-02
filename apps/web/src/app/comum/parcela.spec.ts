@@ -7,7 +7,7 @@ describe('descreverPreco', () => {
   it('poe a parcela em destaque e o total embaixo', () => {
     const preco = descreverPreco(708_000, 12);
     expect(normalizar(preco.destaque)).toBe('12x de R$ 590,00');
-    expect(normalizar(preco.total)).toBe('Total R$ 7.080,00');
+    expect(normalizar(preco.total)).toBe('ou R$ 7.080,00 à vista');
   });
 
   it('mostra so o total, sem "1x de", quando nao ha parcelamento', () => {
@@ -20,7 +20,7 @@ describe('descreverPreco', () => {
     const preco = descreverPreco(180_000, 7);
     expect(normalizar(preco.destaque)).toBe('7x de R$ 257,14');
     expect(normalizar(preco.total)).toBe(
-      'Total R$ 1.800,00 · 1ª parcela R$ 257,16',
+      'ou R$ 1.800,00 à vista · 1ª parcela R$ 257,16',
     );
   });
 

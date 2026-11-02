@@ -91,7 +91,7 @@ describe('Apresentação do catálogo, sem alterar os dados de compra', () => {
       parcelas: 12,
     });
     expect(ficha.preco.replace(/\s/g, ' ')).toBe('12x de R$ 590,00');
-    expect(ficha.total.replace(/\s/g, ' ')).toBe('Total R$ 7.080,00');
+    expect(ficha.total.replace(/\s/g, ' ')).toBe('ou R$ 7.080,00 à vista');
   });
 
   it('mostra só o total, sem "1x de", quando o produto não é parcelável', () => {

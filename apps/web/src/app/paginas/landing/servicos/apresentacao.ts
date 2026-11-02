@@ -115,7 +115,7 @@ export interface FichaProduto {
   descricao: string;
   /** Em destaque: a parcela ("12x de R$ 590,00") ou, sem parcelamento, o total. */
   preco: string;
-  /** Menor, embaixo: "Total R$ 7.080,00"; vazio quando `preco` ja e o total. */
+  /** Menor, embaixo: "ou R$ 7.080,00 à vista"; vazio quando `preco` ja e o total. */
   total: string;
   busca: string;
 }
