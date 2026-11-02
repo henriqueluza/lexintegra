@@ -67,7 +67,7 @@ test('ficha, expansão, busca interrompível e carrinho preservam os dados', asy
   /* A parcela e calculada do preco e de `parcelas`, nao lida da descricao. */
   await expect(card.locator('.produto__preco')).toHaveText(/3x de R\$\s230,00/);
   await expect(card.locator('.produto__total')).toHaveText(
-    /Total R\$\s690,00/,
+    /ou R\$\s690,00 à vista/,
   );
   await card.getByRole('button', { name: 'Ver tudo (6)' }).click();
   await expect(
