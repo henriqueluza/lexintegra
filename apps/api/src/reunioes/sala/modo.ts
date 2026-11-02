@@ -14,8 +14,15 @@ export type ModoReunioes = 'desligado' | 'sem-sala' | 'falso' | 'graph';
  * aplicativo estar registrado no Entra ID com consentimento, a application
  * access policy propagada, as credenciais no Secret Manager e a chamada de
  * teste manual ter criado uma sala.
+ *
+ * DESTRAVADA EM 01/11/2026 (`feat/ligar-teams`): aplicativo registrado com
+ * `OnlineMeetings.ReadWrite.All` e consentimento, policy `LexIntegra-Reunioes`
+ * e politica de reuniao `LexIntegra-Organizadora` na conta organizadora, secret
+ * no Secret Manager, e a chamada manual criou uma sala em que dois convidados
+ * anonimos entraram. A trava que continua valendo e a de `lerGraph`: `graph` so
+ * sobe com `NODE_ENV=production`, nunca a partir de maquina de desenvolvimento.
  */
-export const INTEGRACAO_GRAPH_DESTRAVADA = false;
+export const INTEGRACAO_GRAPH_DESTRAVADA = true;
 
 /** Tenant e aplicativo do Entra ID sao GUIDs; outra coisa e erro de colagem. */
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;

@@ -688,15 +688,14 @@ faz. Os comandos estão em
   client secret no `graph-client-secret`; application access policy
   `LexIntegra-Reunioes` e política de reunião `LexIntegra-Organizadora` na
   conta organizadora; teste manual com duas pessoas anônimas (runbook 2.1).
-- [ ] **Credencial — Henrique:** informar no PR de `feat/ligar-teams` a data
-  de expiração do client secret, que substitui
-  `{{DATA-EXPIRACAO-SECRET-GRAPH}}` em `operacao.md` 4.3, `ligar-terceiros.md`
-  2.1 e 2.5 e `reuniao-sem-link.md`.
-- [ ] **Teste — Henrique, antes do merge de `feat/ligar-teams`:** os comandos
-  de PowerShell do runbook 2.3 (`createOrGet`, `PATCH`, segundo `createOrGet`
-  com o mesmo `externalId`, `DELETE`), trazendo as respostas para o agente
-  regravar o `arnes-reuniao.ts` anonimizado.
-- [ ] **Operação — Henrique, antes do vencimento:** trocar o client secret
+- [x] **Credencial — Henrique:** o client secret vence em **01/11/2027**
+  (`operacao.md` 4.3, `ligar-terceiros.md` 2.1 e 2.5, `reuniao-sem-link.md`).
+- [x] **Teste — Henrique (01/11/2026):** os comandos de PowerShell do runbook
+  2.3 (`createOrGet`, `PATCH`, segundo `createOrGet` com o mesmo `externalId`,
+  `DELETE`) rodaram no tenant, e tudo funcionou. As respostas não vieram para
+  o repositório: o `arnes-reuniao.ts` segue com a do `POST` de 01/11/2026, que
+  tem a mesma forma.
+- [ ] **Operação — Henrique, antes de 01/11/2027:** trocar o client secret
   (runbook 2.5).
 - [x] Calendário do mês para cliente e advogado, feriados nacionais, janela de
   publicação de doze meses e modo `REUNIOES_MODO=sem-sala` (07/10/2026, PR
@@ -714,9 +713,9 @@ faz. Os comandos estão em
 - [ ] **Revisão — Henrique:** regravar e aprovar as imagens de referência de
   `/admin/advogados` (o campo e a coluna viraram "Organizador no Teams";
   `scripts/visual.sh paineis --update-snapshots`).
-- [ ] **Commit de destravamento — agente, em `feat/ligar-teams`:**
+- [x] **Commit de destravamento — agente, em `feat/ligar-teams`:**
   `INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"`, os GUIDs e
-  `TEAMS_ORGANIZADOR_PADRAO` (runbook 2.4). Falta o Application (client) ID.
+  `TEAMS_ORGANIZADOR_PADRAO` (runbook 2.4).
 - [ ] **Deploy — Henrique:** depois do merge, o `apply` pelo pipeline; ele
   também remove a métrica e a política `disponibilidade_sem_link`.
 - [ ] **Teste — Henrique:** marcar, remarcar e cancelar uma reunião de teste;

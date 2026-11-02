@@ -10,8 +10,9 @@ terceiro é, nesta ordem:
 4. **um commit de destravamento**, revisado como qualquer PR;
 5. o teste manual **pela** aplicação.
 
-As travas continuam fechadas até o passo 4: `PAGAMENTOS_MODO=desligado`,
-`REUNIOES_MODO=desligado` e `PAGAMENTOS_CARTAO=desabilitado`. Cada uma é **duas
+As travas continuam fechadas até o passo 4: `PAGAMENTOS_MODO=desligado` e
+`PAGAMENTOS_CARTAO=desabilitado`. A do Teams foi aberta em `feat/ligar-teams`
+(seção 2.4). Cada uma é **duas
 coisas**, e o commit de destravamento troca as duas juntas:
 
 | Trava | No código | No Terraform (`infra/terraform/variables.tf`) |
@@ -203,7 +204,7 @@ Feito e testado pelo Henrique, com o administrador do tenant:
 | Item | Como ficou |
 |---|---|
 | Aplicativo no Entra ID | Registrado, single tenant. Permissão de **aplicativo** `OnlineMeetings.ReadWrite.All`, com consentimento do administrador. **Nenhuma outra**: nada de `User.Read.All` (a conferência do cadastro saiu) nem de `Calendars.ReadWrite` (ADR-05) |
-| Client secret | No Secret Manager, `graph-client-secret`. **Expira em `{{DATA-EXPIRACAO-SECRET-GRAPH}}`** (seção 2.5) |
+| Client secret | No Secret Manager, `graph-client-secret`. **Expira em 01/11/2027** (seção 2.5) |
 | Application access policy | `LexIntegra-Reunioes`, concedida **só à conta organizadora** |
 | Política de reunião | `LexIntegra-Organizadora`, na conta organizadora: entrada anônima permitida, a reunião começa sem o organizador, lobby liberado para todos, todos podem apresentar, sem gravação e sem transcrição |
 | Teste manual | Reunião criada pela API com a conta organizadora. Duas pessoas anônimas entraram sem lobby, se viram e compartilharam a tela. O anônimo **não tem chat** |
@@ -344,7 +345,7 @@ humano, pelo pipeline.
 
 ### 2.5 Antes de o client secret vencer
 
-O segredo vence em **`{{DATA-EXPIRACAO-SECRET-GRAPH}}`**. Vencido, toda sala
+O segredo vence em **01/11/2027**. Vencido, toda sala
 nova falha com `HTTP 401: invalid_client: AADSTS7000222` no `ultimoErro` do
 registro, a reunião fica em `/admin/reunioes` sem link, e o alerta *Reuniao
 marcada sem sala do Teams* dispara depois de 60 minutos. Para trocar, com
@@ -416,7 +417,4 @@ marcadas continuam; as sem sala aparecem em `/admin/reunioes`.
 Não é código a terminar, é o que só o terceiro responde:
 
 - o nome do evento de conclusão do cartão (`checkout-sandbox.md`, item 1);
-- as respostas do `createOrGet`, do PATCH e do segundo `createOrGet` (2.3),
-  para o `arnes-reuniao.ts`, que hoje tem a resposta real do `POST` de
-  01/11/2026;
 - a permissão de API key dos dois estornos (1.2).

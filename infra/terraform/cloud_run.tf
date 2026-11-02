@@ -238,10 +238,19 @@ resource "google_cloud_run_v2_service" "api" {
       # O Graph, so com `graph` (e com `INTEGRACAO_GRAPH_DESTRAVADA` no codigo).
       # Tenant e aplicativo sao identificadores, nao segredo; o client secret
       # vem do Secret Manager.
+      #
+      # `TEAMS_ORGANIZADOR_PADRAO` e o object ID, no Entra, da CONTA ORGANIZADORA
+      # do escritorio (`operacional@`, Business Basic): quem cria todas as salas
+      # (`feat/ligar-teams`, 01/11/2026). Advogado e cliente entram como
+      # convidados. Nao e segredo. Com `graph` e sem ele, a API recusa subir.
+      # Trocar a conta exige conceder a ela a application access policy
+      # `LexIntegra-Reunioes` e a politica de reuniao `LexIntegra-Organizadora`
+      # ANTES (docs/runbooks/ligar-terceiros.md, 2.6).
       dynamic "env" {
         for_each = var.reunioes_modo == "graph" ? {
-          GRAPH_TENANT_ID = var.graph_tenant_id
-          GRAPH_CLIENT_ID = var.graph_client_id
+          GRAPH_TENANT_ID          = var.graph_tenant_id
+          GRAPH_CLIENT_ID          = var.graph_client_id
+          TEAMS_ORGANIZADOR_PADRAO = "9d14277c-f5da-465a-8ccc-f2e0ae71018a"
         } : {}
         content {
           name  = env.key

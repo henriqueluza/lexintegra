@@ -18,20 +18,40 @@ describe('configuracaoDeReunioes', () => {
       ['em producao', { NODE_ENV: 'production' }],
       ['em desenvolvimento', {}],
       ['sob emulador', { FIRESTORE_EMULATOR_HOST: '127.0.0.1:8081' }],
-    ])('recusa REUNIOES_MODO=graph %s', (_caso, ambiente) => {
-      expect(() =>
-        configuracaoDeReunioes({ ...ambiente, REUNIOES_MODO: 'graph' }),
-      ).toThrow(/trava fechada/);
-    });
+    ])(
+      'com a trava fechada, recusa REUNIOES_MODO=graph %s',
+      (_caso, ambiente) => {
+        expect(() =>
+          configuracaoDeReunioes(
+            { ...ambiente, REUNIOES_MODO: 'graph' },
+            false,
+          ),
+        ).toThrow(/trava fechada/);
+      },
+    );
 
     /** A mensagem diz o que falta fazer, e nao so que falhou. */
     it('a recusa nomeia a permissao e a policy', () => {
-      expect(() => configuracaoDeReunioes({ REUNIOES_MODO: 'graph' })).toThrow(
-        /OnlineMeetings\.ReadWrite\.All/,
-      );
-      expect(() => configuracaoDeReunioes({ REUNIOES_MODO: 'graph' })).toThrow(
-        /application access policy/,
-      );
+      expect(() =>
+        configuracaoDeReunioes({ REUNIOES_MODO: 'graph' }, false),
+      ).toThrow(/OnlineMeetings\.ReadWrite\.All/);
+      expect(() =>
+        configuracaoDeReunioes({ REUNIOES_MODO: 'graph' }, false),
+      ).toThrow(/application access policy/);
+    });
+
+    /**
+     * DESTRAVADA, a trava que sobra e a do ambiente: `graph` nao sobe fora de
+     * producao, nem com as credenciais todas, nem sob emulador. E o que impede
+     * uma maquina de desenvolvimento de criar sala no tenant do escritorio.
+     */
+    it.each([
+      ['em desenvolvimento', {}],
+      ['sob emulador', { FIRESTORE_EMULATOR_HOST: '127.0.0.1:8081' }],
+    ])('destravada, ainda recusa graph %s', (_caso, ambiente) => {
+      expect(() =>
+        configuracaoDeReunioes({ ...ambiente, REUNIOES_MODO: 'graph' }),
+      ).toThrow(/so sobe com NODE_ENV=production/);
     });
   });
 
@@ -147,7 +167,7 @@ describe('configuracaoDeReunioes', () => {
     /* O espaco ao redor nao salva `graph`: a trava vale depois do `trim`. */
     it('recusa graph com espacos em volta', () => {
       expect(() =>
-        configuracaoDeReunioes({ REUNIOES_MODO: '  graph  ' }),
+        configuracaoDeReunioes({ REUNIOES_MODO: '  graph  ' }, false),
       ).toThrow(/trava fechada/);
     });
   });
@@ -164,8 +184,9 @@ describe('configuracaoDeReunioes', () => {
     ).toBeNull();
   });
 
-  it('a trava esta fechada no codigo', () => {
-    expect(INTEGRACAO_GRAPH_DESTRAVADA).toBe(false);
+  /** O commit de destravamento de `ligar-terceiros.md`, 2.4 (01/11/2026). */
+  it('a trava do codigo esta aberta', () => {
+    expect(INTEGRACAO_GRAPH_DESTRAVADA).toBe(true);
   });
 
   /**

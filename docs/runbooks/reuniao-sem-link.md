@@ -43,7 +43,7 @@ O primeiro vem da sonda `sinais-operacionais`, a cada 5 minutos
 **O tenant** (configurado em 01/11/2026; detalhe em
 [`ligar-terceiros.md`](ligar-terceiros.md), seção 2.1): aplicativo com
 `OnlineMeetings.ReadWrite.All` e consentimento do administrador; client secret
-em `graph-client-secret`, **vencendo em `{{DATA-EXPIRACAO-SECRET-GRAPH}}`**;
+em `graph-client-secret`, **vencendo em 01/11/2027**;
 application access policy `LexIntegra-Reunioes` e política de reunião
 `LexIntegra-Organizadora`, as duas na conta organizadora.
 

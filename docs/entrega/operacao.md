@@ -96,10 +96,10 @@ servindo.
 | `ABACATEPAY_API_KEY` | com `sandbox` ou `producao` | não definida (secret `abacatepay-api-key`, sem versão, só referenciado com `producao`) | Em `sandbox`, recusa subir sem ela e recusa chave sem o prefixo `abc_dev_`; em `producao`, sem o prefixo `abc_prod_` | `pagamentos/gateway/modo.ts` |
 | `ABACATEPAY_WEBHOOK_SECRET` | com a chave | não definida (secret `abacatepay-webhook-secret`) | Com a chave e sem ela, recusa subir | `pagamentos/gateway/modo.ts` |
 | `ABACATEPAY_WEBHOOK_CHAVE_HMAC` | com a chave | não definida (secret `abacatepay-webhook-chave-hmac`) | Com a chave e sem ela, recusa subir | `pagamentos/gateway/modo.ts` |
-| `REUNIOES_MODO` | sim | `desligado` | Ausente ou inválido, recusa subir. `graph` recusa enquanto `INTEGRACAO_GRAPH_DESTRAVADA` for `false` e, destravado, exige `NODE_ENV=production` e as três `GRAPH_*`. `falso` recusa em produção | `reunioes/sala/modo.ts` |
-| `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID` | com `graph` | não definidas (variáveis `graph_tenant_id` e `graph_client_id`, com placeholder) | Com `graph`, ausentes ou fora do formato GUID, recusa subir | `reunioes/sala/modo.ts` |
-| `GRAPH_CLIENT_SECRET` | com `graph` | não definida (secret `graph-client-secret`, sem versão) | Com `graph` e sem ela, recusa subir | `reunioes/sala/modo.ts` |
-| `TEAMS_ORGANIZADOR_PADRAO` | com `graph` | não definida até o destravamento | Object ID, no Entra, da conta organizadora que cria as salas. Com `graph`, ausente recusa subir; em qualquer modo, fora do formato GUID recusa subir. No `falso`, ausente usa um organizador fictício | `reunioes/sala/modo.ts` |
+| `REUNIOES_MODO` | sim | `graph` (desde o destravamento de `feat/ligar-teams`) | Ausente ou inválido, recusa subir. `graph` recusa enquanto `INTEGRACAO_GRAPH_DESTRAVADA` for `false` e, destravado, exige `NODE_ENV=production` e as três `GRAPH_*`. `falso` recusa em produção | `reunioes/sala/modo.ts` |
+| `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID` | com `graph` | os GUIDs do tenant e do aplicativo (variáveis `graph_tenant_id` e `graph_client_id`) | Com `graph`, ausentes ou fora do formato GUID, recusa subir | `reunioes/sala/modo.ts` |
+| `GRAPH_CLIENT_SECRET` | com `graph` | secret `graph-client-secret`, versão `latest`; vence em 01/11/2027 | Com `graph` e sem ela, recusa subir | `reunioes/sala/modo.ts` |
+| `TEAMS_ORGANIZADOR_PADRAO` | com `graph` | o object ID da conta organizadora, literal no `cloud_run.tf` | Object ID, no Entra, da conta organizadora que cria as salas. Com `graph`, ausente recusa subir; em qualquer modo, fora do formato GUID recusa subir. No `falso`, ausente usa um organizador fictício | `reunioes/sala/modo.ts` |
 | `RELOGIO_FIXO` | **proibida** | não definida | Fora de emulador, **recusa subir** | `relogio.ts`, conferida em `reunioes/sala/sala.module.ts` |
 | `RASTREIO_AMOSTRAGEM` | não | `0.1` | Vazia ou `0` desliga o rastreio. Valor fora de 0–1 **recusa subir** | `observabilidade/amostragem.ts` |
 | `LOG_FORMATO` | não | `json` | Valor desconhecido recusa subir. Ausente, usa `json` em produção | `observabilidade/criar-logger.ts` |
@@ -140,8 +140,8 @@ delas: commit, PR e deploy. Nunca um `apply` local.
 | `proxies_confiaveis` | `2` | Vira `PROXIES_CONFIAVEIS` |
 | `rastreio_amostragem` | `"0.1"` | Vira `RASTREIO_AMOSTRAGEM` |
 | `pagamentos_modo` | `desligado` | Vira `PAGAMENTOS_MODO`; com `producao`, liga os três secrets do AbacatePay. Só junto com `PRODUCAO_DESTRAVADA` ([`ligar-terceiros.md`](../runbooks/ligar-terceiros.md)) |
-| `reunioes_modo` | `desligado` | Vira `REUNIOES_MODO`; com `graph`, liga `GRAPH_*`. Só junto com `INTEGRACAO_GRAPH_DESTRAVADA` |
-| `graph_tenant_id`, `graph_client_id` | `PREENCHER-NO-DESTRAVAMENTO` | GUIDs do Entra ID; o Terraform recusa o placeholder com `graph` |
+| `reunioes_modo` | `graph` | Vira `REUNIOES_MODO`; com `graph`, liga `GRAPH_*` e `TEAMS_ORGANIZADOR_PADRAO`. Voltar atrás é `desligado` |
+| `graph_tenant_id`, `graph_client_id` | os GUIDs reais | GUIDs do Entra ID; o Terraform recusa valor fora do formato com `graph` |
 | `alertas_email_suporte` | `suportelexintegra@gmail.com` | Canal de e-mail que recebe **todos** os alertas (decisões 5.2) |
 | `alertas_email_desenvolvimento` | vem do GitHub (`ALERTAS_EMAIL_DESENVOLVIMENTO`) | Canal provisório, sem alerta roteado desde 05/10/2026; sai na transferência |
 | `limite_outbox_minutos`, `limite_falhas_de_entrega`, `limite_quarentena_minutos`, `limite_base_clamav_horas` | 30, 5, 60, 48 | Limiares das políticas de alerta |
@@ -158,7 +158,7 @@ em vez de assumir um valor padrão.
 | Modo | Estado hoje | O que ele faz agora | O que o destrava |
 |---|---|---|---|
 | `PAGAMENTOS_MODO` | `desligado` | Checkout e webhook respondem 503 | Chave de produção nos secrets, primeira transação real feita por uma pessoa e o **commit de destravamento** (`PRODUCAO_DESTRAVADA = true` e `pagamentos_modo = "producao"`). Ver a seção 4.2 |
-| `REUNIOES_MODO` | `desligado` | O cartão do pedido diz que o agendamento está indisponível | Entra ID e Teams configurados na conta organizadora (feito em 01/11/2026), teste no tenant e o **commit de destravamento** (`INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"`, os GUIDs e `TEAMS_ORGANIZADOR_PADRAO`). Ver a seção 4.3 |
+| `REUNIOES_MODO` | `graph` (destravado em `feat/ligar-teams`) | Cria as salas na conta organizadora, remarca e apaga pelo Graph | Já destravado: `INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"`, os GUIDs e `TEAMS_ORGANIZADOR_PADRAO`. A trava que sobra: `graph` só sobe com `NODE_ENV=production`. Ver a seção 4.3 |
 | `APP_CHECK_ENFORCE` | `true` | Rotas `@Publico()`, fora health e webhook e relato de erro, exigem token de App Check | Já está ligado (commit `67be0ca`). O provedor usa a site key de `vars.APP_CHECK_SITE_KEY` e, sem `vars.APP_CHECK_PROVEDOR`, o provedor `recaptcha-enterprise`. Para desligar numa emergência: `app_check_enforce = "false"` por PR |
 | `RELOGIO_FIXO` | ausente | — | **Nunca em produção.** Só jornadas e regressão visual, sob emulador |
 
@@ -364,7 +364,7 @@ só para o dia em que o escritório licenciar os advogados (abaixo).
 | Item | Como ficou |
 |---|---|
 | Aplicativo no Entra ID | Permissão de aplicativo `OnlineMeetings.ReadWrite.All`, com consentimento do administrador. Nenhuma outra |
-| Client secret | `graph-client-secret` no Secret Manager. **Expira em `{{DATA-EXPIRACAO-SECRET-GRAPH}}`** |
+| Client secret | `graph-client-secret` no Secret Manager. **Expira em 01/11/2027** |
 | Application access policy | `LexIntegra-Reunioes`, concedida à conta organizadora |
 | Política de reunião | `LexIntegra-Organizadora`, na conta organizadora: entrada anônima, início sem organizador, lobby liberado, todos podem apresentar, sem gravação nem transcrição |
 | Teste manual | Reunião criada pela API; duas pessoas anônimas entraram sem lobby, se viram e compartilharam a tela |
@@ -390,7 +390,7 @@ só o formato GUID.
 mesma conta organizadora tem reuniões simultâneas de advogados diferentes, e o
 slot continua sendo `{advogadoId}_{inicio}`.
 
-**Renovar o client secret** antes de `{{DATA-EXPIRACAO-SECRET-GRAPH}}`:
+**Renovar o client secret** antes de 01/11/2027:
 [`ligar-terceiros.md`](../runbooks/ligar-terceiros.md), 2.5. Vencido, as salas
 novas falham com `AADSTS7000222` e as reuniões aparecem em `/admin/reunioes`.
 
