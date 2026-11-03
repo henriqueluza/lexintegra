@@ -21,276 +21,92 @@ contornar uma restrição de seu ambiente.
 - Cadastro inicial continua sendo liberação do catálogo. Desde 07/10/2026, quem já fez o pré-cadastro pode solicitar uma senha antes da compra pelo fluxo de recuperação (emenda ADR-07). A ficha inicial continua obrigatória somente após a compra.
 - Painéis: menu lateral com ícones (`shell/shell-autenticada`), barra de topo com a pessoa, `ui/resumo` com os números do topo. **O cliente ganhou menu** (pedidos, contratar, ficha), sem item de agendamento: a reunião continua dentro do cartão.
 - Os exemplos de serviço da home não afirmam número nem popularidade — o catálogo real nasce vazio e é o escritório que o preenche (há teste).
-- Termos são minutas versionadas, sujeitas à revisão jurídica. A ficha definitiva da contratante continua pendente.
+- Termos são minutas versionadas, sujeitas à revisão jurídica. A ficha definitiva (`definitiva-v1`) está construída.
 - Sem animação na hero. Underline da navbar e respostas do FAQ têm transições com respeito a movimento reduzido. Nenhuma landing acessa a API.
-- As notas por etapa abaixo são históricas. Onde falarem de Cátedra escura, Source Serif, quatro fotografias ou menu ausente para o cliente, prevalece este registro.
+- As notas por etapa (em `docs/historico-etapas.md`) são históricas. Onde falarem de Cátedra escura, Source Serif, quatro fotografias ou menu ausente para o cliente, prevalece este registro.
 
-## Estado atual do projeto
+## Estado do projeto (02/11/2026)
 
-**Bloco A — LGPD do titular (branch `feat/lgpd-titular`):** mapa canonico em
-`apps/api/src/lgpd/mapa.ts`, exportacao TAR (JSON + arquivos atuais limpos),
-simulacao e protocolo de eliminacao retomavel, somente para admin. Rotas sob
-`/api/admin/lgpd/{clientes|pre-cadastros}/{id}`. Runbook:
-`docs/runbooks/lgpd-titular.md`. **Desde 05/10/2026 (PR `feat/fechamento-sem-terceiros`)
-o executor elimina**, pela politica de guarda de `packages/shared/src/politica-de-guarda.ts`
-(decisoes 2.1, proposta sujeita a aprovacao do escritorio no Bloco I): 5 anos
-depois do ultimo pedido para o que e `contrato`, 6 meses para o cadastro inicial
-sem conta, aviso pelo outbox 7 dias antes do envio confirmado, retencao legal
-registrada pelo admin. A rotina por prazo roda dentro da `retencao-diaria`.
-Prazo dos direitos do art. 18: 15 dias corridos. Registros de acesso: 186 dias
-no bucket de logs `registros-de-acesso` (Marco Civil). Detalhe em
-`docs/entrega/lgpd.md`, secao 3.
+*Seção transitória: o que uma sessão nova precisa saber para não repetir
+trabalho nem perguntas já resolvidas. Não é fonte de verdade permanente. As
+notas por etapa que ficavam aqui (Etapas 2 a 12, Blocos A e B, fechamento sem
+terceiros, calendário) estão, sem mudança, em
+[`docs/historico-etapas.md`](docs/historico-etapas.md): consulte antes de mexer
+num módulo, porque elas guardam as armadilhas de cada um.*
 
-**Fechamento sem terceiros (05/10/2026):** e-mail UNICO de contato
-`suportelexintegra@gmail.com` (a caixa `privacidade@` nao sera criada; termos
-do checkout em `checkout-v4-2026-10`); rodape publico com nome, CNPJ, e-mail e
-links legais, conferido no HTML pre-renderizado pelo CI; landing inteira no
-celular, com a primeira tela so com a hero (titulo, texto e "Ver servicos e
-precos"; `landing-celular.css`); copia "Copys da plataforma VFinal" na landing
-(05/10/2026, `conteudo-nevoa.ts`), sem pagina intermediaria antes do cadastro
-(`/cadastro` e `/servicos` se encaminham conforme o cadastro inicial, lido so
-do navegador); PWA instalavel (manifesto e tags do Safari,
-sem service worker de proposito, `src/app/pwa.spec.ts`); todos os alertas para o suporte por e-mail,
-nenhum acorda alguem (lint); WIF pronto para um segundo repositorio
-(`github_repositorios_adicionais`, vazio); AbacatePay e Microsoft prontos para
-receber credenciais — secrets declarados sem valor, codigo de producao e de
-Graph atras de constantes de destravamento (`PRODUCAO_DESTRAVADA`,
-`INTEGRACAO_GRAPH_DESTRAVADA`). Ligar: `docs/runbooks/ligar-terceiros.md`.
+**Em produção em `https://lexintegra.com.br`, com as três integrações ligadas:**
 
-**Calendário de reuniões e modo `sem-sala` (07/10/2026, branch `feat/calendario-reunioes`):**
-o cliente marca e remarca por um **calendário do mês** dentro do cartão do pedido
-(`cliente-pedidos/calendario-horarios`), navegando até o mês em que vencem as
-reuniões; a API devolve um mês por vez (`GET /api/pedidos/:id/horarios?mes=AAAA-MM`).
-O advogado tem **uma tela só**, `/advogado/agenda`: calendário do mês com reuniões
-e horários, e um painel do dia para ligar e desligar horas (`/advogado/disponibilidade`
-redireciona). A publicação continua **por semana**, agora da corrente até **52
-semanas à frente** (errata do ADR-06, `SEMANAS_EDITAVEIS`). Feriados nacionais e
-pontos facultativos federais vêm de `shared/feriados` e só são marcados. O modo
-**`REUNIOES_MODO=sem-sala`** é aceito em produção: marca a reunião, que fica em
-`reservada_sem_link`, sem convite e sem link inventado (regra 13). O evento
-`criar-sala-reuniao` nasce **`estacionado`** — estado novo do outbox que a fila, o
-varredor, a sonda de idade e `reivindicar` ignoram; só o reenvio manual o acorda,
-e é assim que as salas nascem quando o Teams for ligado. Em `sem-sala`, a sonda não
-mede reunião sem sala.
+- **Pagamento real (AbacatePay)** desde 01/11/2026 (#89): `PRODUCAO_DESTRAVADA
+  = true`, `pagamentos_modo = "producao"`. PIX transparente e **cartão pelo
+  checkout hospedado** (`pagamentos_cartao = "habilitado"`, ADR-19). Webhook v2
+  em `https://lexintegra.com.br/api/pagamentos/webhook` com seis eventos
+  (cadastrado em 20/10/2026); os três secrets com valor. **Risco aberto:** o
+  evento `checkout.completed` nunca foi capturado; a primeira compra por cartão
+  em produção o confirma (`docs/runbooks/ligar-terceiros.md` 1.6 e 1.8).
+- **Preços e parcelas** (#90 e #94): `parcelas` é campo do produto (1 a 12,
+  padrão 1), congelado no snapshot; o catálogo anuncia a parcela
+  (`shared/parcelamento`, resto na primeira) e "ou R$ X à vista". A página do
+  AbacatePay oferece até 12x em todo produto (configuração global do painel);
+  o campo só governa o que o site anuncia. Formas de pagamento numa fonte só
+  (`shared/formas-de-pagamento`). Os seis produtos do ar ainda precisam de
+  preço e parcelas pelo painel: `scripts/cadastrar-catalogo-inicial.mjs`
+  **pula produto existente e não tem `--atualizar`**.
+- **Teams pela conta organizadora** desde o deploy de 02/11/2026 (#91):
+  `INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"`. As salas são
+  criadas por `operacional@` (`TEAMS_ORGANIZADOR_PADRAO`, literal no
+  `cloud_run.tf`); advogado e cliente entram como convidados anônimos. Só
+  `OnlineMeetings.ReadWrite.All`. `organizadorTeams` (antes `usuarioTeams`) é
+  opcional e sobrepõe a conta; o `organizadorId` é gravado na reunião antes da
+  primeira chamada. `createOrGet` + `PATCH`; remarcação e cancelamento no Graph
+  (`atualizar-sala-reuniao`, `remover-sala-reuniao`); `externalId =
+  {pedidoId}-{rNNN}`. **O client secret vence em 01/11/2027**
+  (`docs/runbooks/secret-expirado.md`).
+- **E-mail (Resend)** pelo domínio próprio: remetente
+  `suporte@notificacoes.lexintegra.com.br`, reply-to e único contato
+  `suportelexintegra@gmail.com`, plano gratuito (100 por dia). Todos os
+  alertas vão para o mesmo endereço; nenhum acorda alguém (lint).
 
-**Teams pela conta organizadora (01/11/2026, branch `feat/ligar-teams`):** as salas
-são criadas por uma **conta organizadora** do tenant (`operacional@`, Business Basic,
-object ID em `TEAMS_ORGANIZADOR_PADRAO`, obrigatório no modo `graph`), e advogado e
-cliente entram como **convidados anônimos**. O campo do advogado virou
-`organizadorTeams` (opcional, GUID, sobrepõe a conta; a leitura aceita o nome antigo
-`usuarioTeams`), e a conferência no tenant (`User.Read.All`) saiu. O organizador é
-**gravado na reunião** (`organizadorId`) antes da primeira chamada ao Graph. A sala nasce
-com `createOrGet` (`externalId = {pedidoId}-{rNNN}`: com um organizador só, o `r001` de
-dois pedidos casaria) e um `PATCH` com as opções (todos apresentam, sem chat, sem
-gravação, ninguém no lobby); **o link só sai depois do PATCH**. Remarcar grava
-`atualizar-sala-reuniao` (PATCH) e cancelar grava `remover-sala-reuniao` (DELETE),
-errata da decisão 7 do ADR-21. O assunto da sala não leva dado do cliente
-(`codigoCurtoDoPedido`). A trava de agendamento continua **por advogado**. O sinal
-`disponibilidade.sem-link` e o alerta dele saíram. O que está no tenant e a data de
-vencimento do client secret: `docs/runbooks/ligar-terceiros.md`, seção 2.
+**Documentação completa:** o índice é [`docs/README.md`](docs/README.md)
+(caminho principal, arquitetura em uma página, todos os documentos). Entrega em
+`docs/entrega/` (operação com os modos e como desligar cada um, credenciais,
+LGPD, transferência, custos, minutas do termo de cessão e dos desvios),
+runbooks em `docs/runbooks/` e manuais por perfil em `docs/manuais/`, com
+capturas geradas no emulador por `pnpm capturas:manuais` (dados fictícios; não
+roda no CI). `pnpm lint:docs` confere variáveis, políticas, secrets e os links
+de `docs/entrega`, `docs/runbooks`, `docs/manuais` e `docs/README.md`.
 
-**Bloco B — resíduos do checkout (branch `fix/residuos-checkout`):** o
-`webhookSecret` saiu do log de requisição (exclusão no Cloud Logging pelo nome do
-parâmetro) e dos spans (redação em `observabilidade/instrumentacao-http.ts`). **A
-chave do HMAC do AbacatePay é pública: o segredo da URL é a única trava do
-webhook** (errata do ADR-19). O 409 de estorno e cancelamento com trabalho
-iniciado está provado de ponta a ponta nos três estados, e a TTL de `checkouts`
-tem teste sobre todo caminho de escrita. **O segredo de produção do webhook só
-nasce depois deste bloco mesclado e da exclusão aplicada.** Próximo passo de
-segurança registrado: a confirmação consultar a cobrança no gateway.
+**LGPD do titular:** mapa canônico em `apps/api/src/lgpd/mapa.ts`; exportação,
+eliminação a pedido e por prazo pela política de guarda
+(`shared/politica-de-guarda`: 5 anos depois do último pedido, 6 meses para o
+cadastro inicial, aviso 7 dias antes, retenção legal), dentro da
+`retencao-diaria`. Só admin, sem tela (`docs/runbooks/lgpd-titular.md`). A
+política de guarda e os textos jurídicos são **minutas** sujeitas à revisão do
+escritório.
 
-*Seção transitória — atualizar ou remover conforme o projeto avança. Não é fonte de verdade permanente; é o que uma sessão nova precisa saber para não repetir trabalho ou perguntas já resolvidas.*
+**Fatos de infraestrutura que não estão no código:**
 
-**Concluído:**
+- **ID real do projeto: `plataforma-juridica-36bda`** (número
+  `616781378293`), não o nome de exibição. Região `southamerica-east1`.
+  State do Terraform em `gs://lexintegra-tfstate-36bda`, prefixo `etapa-2`.
+- **O Cloud Run é gerido pelo Terraform** (`cloud_run.tf`); a imagem é
+  publicada pelo `terraform apply` do pipeline, nunca por `gcloud run deploy`.
+- **Sem subdomínio de API:** `/api/**` vai ao Cloud Run por rewrite do Hosting
+  (ADR-15); Domain Mapping não existe em `southamerica-east1`.
+- **CI por Workload Identity Federation**, sem chave JSON: provider
+  `projects/616781378293/locations/global/workloadIdentityPools/github-pool/providers/github-provider`,
+  condição presa ao nome do repositório (`henriqueluza/lexintegra`, mais
+  `github_repositorios_adicionais` para a transferência).
+- **Os papéis de projeto de `terraform-ci` não são geridos pelo Terraform**
+  (concessão manual de bootstrap). Recurso de serviço novo exige declarar o
+  papel em `papeis-de-bootstrap.json` (lint) e concedê-lo à mão **antes** do
+  merge: o `plan` do PR passa verde e o 403 só aparece no deploy.
+- A SA de runtime é `api-lexintegra-run@…`; a SA padrão do Compute não tem
+  mais `roles/editor` (29/09/2026), e a chave JSON da `firebase-adminsdk-fbsvc`
+  foi apagada (30/09/2026). O repositório é privado desde 29/09/2026.
 
-- Nome definido: LexIntegra. Domínio `lexintegra.com.br` comprado e ativo.
-- **Etapa 1 (direção visual) decidida** — ver `docs/design.md`. Direção A (Cátedra) para páginas públicas/landing; Direção B (Pauta) para módulos internos autenticados. Direção C (Margem) descartada. `docs/prototipos/` contém apenas `direcao-A-catedra.html` e `direcao-B-pauta.html`; a referência a `direcao-C-margem.html`, `lexintegra-landing.html` e ao PDF comparativo foi corrigida em `design.md` na Etapa 3 — os arquivos seguem fora do repositório.
-- Projeto Firebase/GCP criado, nome de exibição `plataforma-juridica`, **ID real do projeto: `plataforma-juridica-36bda`** (use este ID, não o nome de exibição, em comandos gcloud/terraform/CI). Plano Blaze ativo, conta de faturamento do escritório vinculada.
-- Conta AbacatePay do escritório criada, documentos de verificação enviados. Chave de API **Dev** (`abc_dev_...`) já obtida e armazenada no Secret Manager (`abacatepay-api-key-dev`) — permite testes de integração mesmo antes da aprovação final da conta.
-- Conta Resend criada, subdomínio `notificacoes.lexintegra.com.br` adicionado. Registros DNS (DKIM, dois CNAMEs de tracking, DMARC) cadastrados no Registro.br; verificação em andamento/concluída — confirmar status atual no painel do Resend antes de assumir. Chave de API armazenada no Secret Manager (`resend-api-key`) — **a chave original foi exposta acidentalmente e revogada; a que está em uso é uma chave nova, gerada depois do incidente.**
-- Paleta de cores extraída do portfólio da B&C (ADR-10); vinho `#6C0C0C`, dourado `#A8783C`.
-
-**Etapa 2 — infraestrutura provisionada (ver ADR-15 para a topologia de domínio):**
-
-- Repositório GitHub: `henriqueluza/lexintegra`, conectado via SSH.
-- Firebase Hosting: domínio `lexintegra.com.br` conectado e verificado (registro A + TXT). Deploy funcional via `firebase deploy --only hosting`.
-- Cloud Run: serviço `api-lexintegra` (região `southamerica-east1`), com `--allow-unauthenticated`. O esqueleto NestJS real foi escrito na Etapa 2 e substitui a imagem placeholder `gcr.io/cloudrun/hello` no primeiro deploy pelo pipeline. **O serviço é gerido pelo Terraform** (`infra/terraform/cloud_run.tf`) e a imagem é publicada por `terraform apply` com `TF_VAR_api_image`, nunca por `gcloud run deploy` — duas ferramentas escrevendo o mesmo serviço geram drift. Manter o mesmo nome e região.
-- Roteamento API: **sem subdomínio próprio.** `lexintegra.com.br/api` e `lexintegra.com.br/api/**` são roteados por rewrite do Firebase Hosting para o Cloud Run (ver `firebase.json` e ADR-15). Isso existe porque Domain Mapping do Cloud Run não está disponível em `southamerica-east1`. Não reintroduzir `api.lexintegra.com.br` sem revisitar essa decisão.
-- Terraform: bucket de state criado e versionado em `gs://lexintegra-tfstate-36bda`. Backend do Terraform aponta para ele, prefixo `etapa-2`. (O registro anterior dizia que `lexintegra-tfstate` sem sufixo estava tomado por terceiros; **não estava** — existia neste mesmo projeto, vazio, e já foi removido. Ver o item de bucket sobrando abaixo.)
-- Service account do CI: `terraform-ci@plataforma-juridica-36bda.iam.gserviceaccount.com`, com papéis `storage.admin`, `datastore.owner`, `run.admin`, `secretmanager.admin`, `cloudkms.admin`, `artifactregistry.admin`, `iam.serviceAccountUser` (bootstrap) mais `iam.serviceAccountAdmin`, `resourcemanager.projectIamAdmin`, `serviceusage.serviceUsageAdmin`, `firebasehosting.admin` e `iam.workloadIdentityPoolAdmin` (acrescentados na Etapa 2), mais `cloudtasks.admin` e `cloudscheduler.admin` (acrescentados na Etapa 7) e `logging.configWriter` e `monitoring.editor` (acrescentados na Etapa 12). **Autenticação via Workload Identity Federation, sem chave JSON**: pool `github-pool`, provider `github-provider`, condição de atributo restrita ao repositório `henriqueluza/lexintegra`. Nome completo do provider para uso no workflow do GitHub Actions: `projects/616781378293/locations/global/workloadIdentityPools/github-pool/providers/github-provider`.
-- Secret Manager: secrets `resend-api-key` e `abacatepay-api-key-dev` já criados, com acesso de leitura concedido à service account padrão do Compute (`616781378293-compute@developer.gserviceaccount.com`), usada pelo Cloud Run até a Etapa 2. **Resolvido:** a service account de runtime dedicada `api-lexintegra-run@…` foi criada e recebeu a mesma concessão, e a da SA padrão do Compute saiu no Bloco D.
-- Hooks de bloqueio: `.claude/settings.json` + `.claude/hooks/block-dangerous.sh` já commitados, bloqueando `terraform apply`/`destroy`, `firebase deploy`/`gcloud run deploy` diretos, `delete` de recurso de nuvem, e leitura de `.env`/chave de service account. `terraform plan` permanece livre. **Errata da Etapa 8: até ela, o hook não funcionava** (sem bit de execução) — ver "Sobre os limites deste arquivo", no fim.
-- **Terraform escrito na Etapa 2**, em `infra/terraform/` — ver o `README.md` de lá antes de mexer. Os recursos do bootstrap foram **importados** por blocos `import`, não recriados; um `apply` que tentasse criá-los falharia por conflito. Os blocos (`imports.tf`) saíram no Bloco D; a armadilha do `import` com `for_each` ficou em "Armadilhas conhecidas" no README de lá.
-- **Firestore não existia** no bootstrap (verificado: `NOT_FOUND`). É criado pelo Terraform, não importado.
-- **Service account de runtime dedicada criada**: `api-lexintegra-run@plataforma-juridica-36bda.iam.gserviceaccount.com`, com acesso de leitura aos dois secrets. Substitui a service account padrão do Compute, que tinha `roles/editor` no projeto inteiro. A concessão antiga aos secrets, mantida como caminho de volta, saiu no Bloco D.
-- **Papéis acrescentados a `terraform-ci` na Etapa 2** (o bootstrap não os tinha): `iam.serviceAccountAdmin`, `resourcemanager.projectIamAdmin`, `serviceusage.serviceUsageAdmin`, `firebasehosting.admin`, `iam.workloadIdentityPoolAdmin`. Sem eles o Terraform não cria a service account de runtime, não concede IAM de projeto, não gere APIs, o pipeline não publica o Hosting e o plan nem consegue ler o pool de Workload Identity para importá-lo.
-- **Os papéis de projeto de `terraform-ci` NÃO são geridos pelo Terraform** — são concessão manual de bootstrap, e por isso não aparecem em `iam.tf`. A consequência: **recurso de um serviço novo exige conceder o papel à mão ANTES do primeiro apply**, e nada no repositório avisa. Aconteceu na Etapa 7 — `cloudtasks.admin` e `cloudscheduler.admin` faltavam, e o `terraform plan` do PR passou verde porque plan não cria nada; a falha só apareceu no apply. Não dá para o Terraform conceder a si mesmo no mesmo apply: mesmo com `resourcemanager.projectIamAdmin`, IAM tem propagação eventual e não há dependência implícita entre a concessão e o recurso que precisa dela.
-- **Pipeline no GitHub Actions**: `.github/workflows/ci.yml` (lint, testes com limiar, build, `terraform plan` comentado no PR) e `deploy.yml` (push na `main` → imagem para o Artifact Registry, `terraform apply`, Hosting, smoke test contra `/api/health` comparando o `commitSha`). Autenticação por Workload Identity Federation; nenhum segredo de GCP cadastrado no GitHub.
-- **Bucket sobrando, já removido:** `gs://lexintegra-tfstate` (sem sufixo) existia no projeto, vazio e sem uso — o registro anterior dizia que o nome estava tomado por terceiros, e não estava. Foi apagado à mão em 03/09/2026; hoje responde 404. Conferência em `docs/runbooks/limpeza-infra.md`, seção 1.
-
-**Pendências: a lista única é o [`CHECKLIST.md`](CHECKLIST.md), na raiz** (desde 28/09/2026). Ela absorveu `docs/entrega/pendencias.md` (apagado), as listas de espera que ficavam aqui e os blocos "Só você" ainda abertos do plano. Pendência nova entra lá, e em nenhum outro lugar — nem aqui.
-
-**Logo resolvida:** a arte foi adaptada para "LexIntegra" no redesign (`docs/identidade-navegacao.md`); a pendência do wordmark antigo (ADR-10) está fechada.
-
-**Etapa 3 — sistema de design implementado (branch `feat/sistema-design`):**
-
-- **Tokens em três camadas**, em `apps/web/src/styles/tokens/`. Primitivos por direção (nomes idênticos aos de `design.md`), semânticos dentro de `[data-direcao='catedra']` e `[data-direcao='pauta']`, e tokens de componente para as diferenças estruturais. **Componente nunca lê primitivo** — é isso que faz um único jogo de componentes servir as duas direções.
-- **As direções se aninham.** O `<html>` é sempre `catedra`; a shell autenticada põe `pauta` abaixo dele. Consequência: **em `semanticos.css`, seletor que mistura `[data-direcao]` com descendente é sempre suspeito** — o primeiro desvio de escopo foi escrito assim e vazava o dourado da Cátedra para dentro da área do cliente. Use indireção de token.
-- **Auditoria de contraste feita e transformada em teste** (`apps/web/src/styles/contraste.spec.ts`, 57 pares). As duas pendências que `design.md` listava não eram os problemas; seis outros pares reprovavam e foram corrigidos. `--ouro-500` e os vinhos **não** mudaram (ADR-10). Detalhe em `docs/design.md`.
-- **Onze componentes base** em `apps/web/src/app/ui/`, cada um com todos os seus estados e teste de componente. `app-selo-estado` importa `EstadoEntregavel` de `packages/shared`: acrescentar um quinto estado lá passa a impedir a compilação do frontend.
-- **Catálogo em `/catalogo`**, só em desenvolvimento — a configuração de produção troca suas rotas por lista vazia (`fileReplacements`), e o CI confere que ele não vazou para o pacote publicado. Abrir com `pnpm --filter web dev`.
-- **Regressão visual e axe em contêiner** (`scripts/visual.sh`, e o mesmo em CI). Precisa de Docker. As imagens de referência ficam em `apps/web/e2e/referencia/`.
-- **`pnpm lint` inclui stylelint**, que é o critério de aceite formal da etapa: nenhuma cor, espaçamento ou tamanho de fonte escrito direto numa tela. As exceções estão listadas em `.stylelintrc.mjs` e qualquer adição a elas afrouxa o critério.
-- **Cobertura do `apps/web`: 95/88/90/95.**
-
-**Etapa 4 — identidade e autorização (branch `feat/auth`):**
-
-- **Três perfis numa única claim, `role`** (`cliente` | `advogado` | `admin`), definida em `packages/shared/src/perfil.ts`. O nome é em inglês porque a claim do admin global já foi gravada assim, à mão, fora da aplicação — renomear exigiria reescrever a claim de um usuário existente.
-- **Dois guards globais na API**, não por controlador. Rota nova nasce **fechada**: esquecer `@Publico()` dá 401 na primeira chamada; esquecer de proteger daria vazamento silencioso. Só o health e o pedido de redefinição de senha são públicos.
-- **`verifyIdToken(token, true)` — `checkRevoked` ligado em toda requisição.** É a metade que faz a suspensão valer contra sessão já aberta; a outra metade é `revokeRefreshTokens` no serviço. Cada uma sozinha passa nos próprios testes de unidade e não suspende ninguém — só o teste de integração pega isso.
-- **As regras do Firestore negam tudo, e é a forma final delas** (ver `docs/arquitetura.md` 6.1). 264 asserções em `packages/regras-firestore`, mais um controle positivo sem o qual a suíte passaria verde por arnês quebrado. `apps/web` não pode importar `firebase/firestore` — regra de dependency-cruiser.
-- **Outbox mínimo** (`outbox/`), com o despachante separado da escrita: `OutboxService` recebe a transação de fora e não abre a sua; `DespachanteOutbox` só roda depois do commit. O documento **não guarda o link nem o e-mail** — link é credencial viva, endereço é dado pessoal em repouso.
-- **Adaptador do Resend e transporte falso** antecipados da Etapa 7 (ADR-07.1). `RESEND_API_KEY` e `EMAIL_FROM` vêm de variável de ambiente; em produção, ausência é erro de inicialização, não degradação silenciosa.
-- **`pnpm dev` sobe os emuladores junto**, porque a API recusa iniciar sem projeto configurado e sem emulador. `pnpm semear` cria um usuário de cada perfil (só emulador).
-- **Cobertura:** `apps/api` 88/80/85/90, `apps/web` 95/88/90/95.
-
-**Etapa 5 — modelo de dados e administração de produtos (branch `feat/modelo-produtos`):**
-
-- **Coleção `produtos` com CRUD administrativo**, sem exclusão física. Produto sai da vitrine por desativação (`POST`/`DELETE .../ativacao`, ativação como recurso e não campo); a API não expõe `DELETE /produtos/:id`, e há teste que defende a ausência — pedido já comprado referencia o produto pela trilha de auditoria.
-- **A unidade está no nome do campo:** `precoCentavos`, `prazoValidadeReunioesDias`, `intervaloMinimoReunioesDias`. `ativo` fica **fora** do schema de criação e de edição, como `status` fica fora de `esquemaNovoAdvogado` — senão um PUT de preço reativaria em silêncio um produto tirado do ar.
-- **`congelarProduto` é o único lugar que sabe quais campos entram no snapshot**, e é usada nas duas pontas (escrita do catálogo e criação do pedido). Campo novo no produto entra nos dois de uma vez, ou em nenhum.
-- **`PedidosService` tem duas fases, `preparar` (só lê) e `gravar` (só escreve).** Não é estilo: "toda leitura antes de toda escrita" vale para a **transação inteira**, então uma função única funcionaria com um item do carrinho e falharia com dois. Quem achou isso foi o teste de integração — o dublê em memória não impõe a regra.
-- **Máquina de estados aplicada em `EntregaveisService`**, sem `mudarEstado(destino)`: só eventos de domínio, com a aresta vindo de `TRANSICAO_DO_EVENTO` em `packages/shared`. `entregue` tem três travas — vem de `em_elaboracao`, exige `arquivoAtual != null`, e só o `clienteId` do pedido dispara.
-- **Upload não muda estado** (ADR-11: "cliente revisa o PDF" não é estado) e por isso não entra em `transicoes` — a trilha do arquivo é `arquivoAtual.versao`.
-- **Um índice composto**, `produtos` por `ativo` + `nome`, em `infra/terraform/firestore.tf`. Um por consulta que existe, nunca por consulta imaginável.
-- **Dados fictícios isolados** em `scripts/dados-ficticios/catalogo-produtos.ts`, fora de `apps/` e portanto sem caminho até o bundle ou a imagem. Consumidos só pelo seed do emulador e pela suíte de integração, que os valida contra `esquemaNovoProduto`. **O catálogo de produção nasce vazio**; os seis produtos iniciais do escritório (outubro de 2026) ficam em `scripts/catalogo-inicial/` e entram por `scripts/cadastrar-catalogo-inicial.mjs`, **pela API** (`POST /api/admin/produtos`, o mesmo caminho do painel), pulando o que já existe pelo nome. Desde eles, o teto é de 60 entregáveis por produto (o limite de 500 escritas por transação do Firestore caiu em 2023; ver `compra-maxima.integration-spec.ts`). Estes dados nunca vão para produção, e há teste que prova isso (`apps/api/src/sem-dados-ficticios-em-producao.spec.ts`) — ver o LEIA-ME de lá.
-- **Integração roda com `maxWorkers: 1`**: há um emulador só, e todo arquivo o limpa no `beforeEach`. Em paralelo, um apaga o dado do outro, e o sintoma são falhas que mudam de nome a cada execução.
-- **Cobertura:** `apps/api` 92/85/93/94, `apps/web` 97/91/92/97, `packages/shared` 95/100/100/95.
-
-**Etapa 6 — área pública e pré-cadastro (branch `feat/area-publica`):**
-
-- **A home não chama a API. Ponto.** É o critério de aceite formal da etapa e a mitigação de cold start do Cloud Run (regra 10). Há três guardas: `app.routes.spec.ts` (rota pública sem resolver nem guard), um teste no `Landing` que recusa dependência de rede, e `apps/web/e2e/publico.spec.ts`, que espia toda requisição a `/api` enquanto rola a página inteira. A vitrine só busca dados depois de `liberado()` virar verdadeiro.
-- **Três defesas na fronteira pública, com escopos diferentes de propósito** (ADR-16): App Check só em rotas `@Publico()`, limite de requisições como **primeiro** guard global da cadeia, e validação de entrada pelo `ZodPipe`. `APP_CHECK_ENFORCE` é obrigatória em produção — ausente, a API recusa subir.
-- **Rate limiting é guard próprio, em memória** (`apps/api/src/limite/`). `@nestjs/throttler` declara par `@nestjs/common ^11` e o projeto está no 12. Por instância, como o ADR-02 já aceitava. O contador tem teto de chaves: sem ele, endereços forjados transformariam o mecanismo de defesa em vazamento de memória.
-- **`trust proxy` vem de `PROXIES_CONFIAVEIS`.** Com o número errado, `requisicao.ip` é o endereço do proxy e o limitador conta o mundo inteiro como um visitante só — não falha, só para de proteger. **O valor 2 foi medido em produção em 30/09/2026** (`X-Forwarded-For` com dois endereços, `ip` = o visitante) e há teste que o trava (`proxies-confiaveis.spec.ts`).
-- **A liberação da vitrine é token opaco com hash no servidor.** O navegador lembra em `localStorage` com o mesmo prazo de sete dias; a autorização mesmo é o `PreCadastroGuard`, a cada requisição.
-- **`pre-cadastros` guarda três campos e mais nada** — sem IP, sem user-agent, sem referenciador. Há teste que lista os campos gravados, para acrescentar um ser decisão e não acidente. ID determinístico do e-mail (regra 4).
-- **O interceptor de token pula as quatro rotas públicas.** Injetar `SessaoService` dispara o `import()` do SDK do Firebase: sem o recorte, enviar o pré-cadastro baixaria meio megabyte no momento da conversão.
-- **Todo o texto da home em `paginas/landing/textos.ts`**, um arquivo só, `{{TODO-TEXTO-INSTITUCIONAL}}`. O aviso de privacidade jurídico sai literal como `{{TODO-TEXTO-PRIVACIDADE-JURIDICO}}`, e há teste que cai quando ele for substituído.
-- **Hero com fotografia de martelo em três posições discretas**, por decisão do Marcos (3D descartado). Sem biblioteca de animação; `IntersectionObserver` e `transform`. **A foto não existe ainda** e a ordem dos lados depende de confirmação por escrito.
-- **`app.integration-spec.ts` sobe a aplicação inteira sobre HTTP.** É o único lugar que prova que os três guards globais estão na cadeia, na ordem certa, e que o prefixo `/api` está no lugar.
-- **Cobertura:** `apps/api` 93/86/95/95, `apps/web` 97/92/93/98.
-
-**Etapa 9 — áreas do cliente, do advogado e distribuição (branch `feat/areas-cliente-advogado`):**
-
-- **A atribuição mora no PEDIDO** (`pedidos.advogadoId` + `distribuido`), não no advogado — `docs/arquitetura.md` 5.1 foi corrigido. O booleano é redundante de propósito: igualdade contra `null` no Firestore mistura campo ausente com campo nulo.
-- **Três controladores de pedido, um por perfil** (`cliente`, `advogado`, `admin`), com `@Perfis` na classe. Um controlador único faria o endpoint novo nascer aberto aos três — e o que nasceria aberto ali é leitura de pedido alheio.
-- **Lacuna de servidor fechada:** até a Etapa 5, `iniciar-trabalho`, `retomar-trabalho` e `registrarArquivo` eram alcançáveis por **qualquer** advogado autenticado em **qualquer** pedido. `@Perfis('advogado')` separa perfis, não pessoas. A conferência entrou em `EntregaveisService`, dentro da transação.
-- **Negação por atribuição responde 404, não 403** — um 403 confirmaria a existência do id. Vive na API, não nas regras do Firestore: ver a errata do critério de aceite em `docs/plano-de-execucao.md`, Etapa 9.
-- **A semana de disponibilidade é calculada na leitura**, nunca aberta por rotina (arquitetura, seção 8). `packages/shared/src/semana.ts` usa fuso explícito — o Cloud Run roda em UTC, e às 22h de um domingo brasileiro um cálculo sem fuso devolve a semana errada.
-- **`observacoes` é append-only**, sem edição nem exclusão na API, com teste que defende a ausência.
-- **Anexos são PLACEHOLDER**: gravam nome, tipo e tamanho, nenhum byte em bucket. `status: 'metadado_sem_arquivo'`, que **não pode virar `limpo`** — regra inviolável 6 valendo antes de existir arquivo. A integração real é a Etapa 11, no mesmo ponto.
-- **O cartão é a unidade da área do cliente.** A ação de marcar reunião vive dentro dele; `app.routes.spec.ts` falha se alguém criar rota de agendamento de topo.
-- **`ApiService` foi dividido por área** (`ApiClienteService`, `ApiAdvogadoService`, `ApiDistribuicaoService`), espelhando os controladores. O arquivo único passava do limite de 300 linhas do lint.
-- **Cinco índices compostos** novos em `infra/terraform/firestore.tf`.
-- **Cobertura:** `apps/api` 94/84/95/96, `apps/web` 96/90/94/98, `packages/shared` 99/100/100/99.
-
-**Etapa 11 — upload e varredura de malware (mesclada na `main` pelo PR #14):**
-
-> ⚠️ O PR #10 foi mesclado com base em `feat/areas-cliente-advogado`, e não em `main` — e essa branch já tinha sido mesclada três dias antes. Os dois commits ficaram fora da `main` até o PR #14 da Etapa 7 integrá-los. **Confira a base ao abrir PR de etapa.**
-
-
-- **ADR-17 e ADR-18** novos em `docs/arquitetura.md`: armazenamento atrás de uma porta, e a topologia Cloud Tasks → API → scanner.
-- **Os dois fluxos de upload são separados de verdade** (arquitetura 6.2): módulos, controladores, prefixos de bucket, políticas e retenções distintas. Compartilham só a porta de armazenamento e o portão de leitura.
-- **A regra inviolável 6 virou LINT.** A emissão de link vive em `arquivos/leitura.ts` e só `arquivos/portao.ts` pode importá-la — regra de dependency-cruiser. Teste prova que o portão confere; o lint prova que ninguém contorna.
-- **Duas conferências:** ClamAV ("tem malware?") e magic bytes ("isto é mesmo um PDF?"). Nenhuma cobre a outra — um HTML com extensão `.pdf` passa limpo pelo antivírus. **Desde a B2, o DOCX do advogado tem uma terceira, estrutural** (`apps/api/src/varredura/docx.ts`): todo ZIP passa pelo magic bytes, inclusive o `.docm` com macro, então a varredura lê o diretório do ZIP por faixa e exige o tipo de conteúdo do Word sem macro.
-- **`indisponivel` não é `infectado`.** Scanner fora do ar faz a tarefa falhar para reentrega; tratá-lo como reprovação apagaria arquivo legítimo.
-- **O aceite de termos é por versão do arquivo**, não um "aceitei" global da conta.
-- **A retenção é em duas passagens** (avisa no 23º dia, exclui no 30º), com o aviso nascendo no outbox na mesma transação.
-- **Assinar URL sem chave JSON exige `roles/iam.serviceAccountTokenCreator` da SA sobre si mesma.** Sem isso falha em produção e **funciona** na máquina do desenvolvedor — a armadilha mais confusa do módulo, documentada no ADR-17.
-- **O scanner não usa `packages/shared`**, de propósito: é o que permite construí-lo e implantá-lo sozinho.
-- **Cobertura:** `apps/api` 93/82/92/94, `apps/web` 96/90/92/97, `shared` 99/100/100/99, `scanner` 100/88/100/100.
-
-**Etapa 7 — outbox e entrega de eventos (branch `feat/outbox-entrega-eventos`):**
-
-- **A infraestrutura de fila saiu de `varredura/` para `tarefas/`** — guard de tarefa interna, decorador, porta `Fila<T>`, adaptador do Cloud Tasks e a fábrica. Dois consumidores agora; `outbox/` importando de `varredura/` seria acoplamento sem razão. `enfileirar` ganhou um **nome** opcional, que é o que o Cloud Tasks usa para deduplicar.
-- **Entrega deixou de acontecer em processo.** `advogados` e `senha` enfileiram; quem entrega é o Cloud Tasks chamando `POST /api/interno/outbox`. **O status HTTP é o controle da reentrega**: `falhou` com orçamento vira 503 (a fila aplica o próprio backoff), `abandonado` e `em-andamento` viram 200. Antes, a falha era engolida e virava 200 — uma fila que nunca tentaria de novo, com toda a aparência de resiliência.
-- **Três camadas contra e-mail duplicado, e só a segunda é trava:** nome determinístico da tarefa, **arrendamento transacional** (`OutboxService.reivindicar`) e `Idempotency-Key` no Resend. O ADR-03 traz a justificativa — foi descoberta ao implementar. A verificação `if (estado === 'enviado')` que existia era TOCTOU.
-- **`tentativas` incrementa na REIVINDICAÇÃO, não na conclusão.** É o que faz um processo morto consumir uma tentativa e torna o teto real. Reintroduzir `increment` em `concluir` gasta o orçamento em dobro — há teste só para isso.
-- **`ciclo` existe para o reenvio manual chegar.** Ele entra na chave de idempotência; sem ele o botão carregaria a chave da entrega que falhou e seria deduplicado pelo provedor.
-- **`varrerApos` é sempre escrito e nunca fica antes de `arrendadoAte`.** É o amortecedor entre os dois mecanismos de retentativa. Campo sempre presente pela armadilha de sempre — `where(campo,'!=',null)` ignora documento sem o campo.
-- **Duas desigualdades sustentam o desenho, e as duas são verificadas** — comentário não bastava, porque violá-las desliga a trava contra e-mail duplicado sem nada falhar. `OUTBOX_ARRENDAMENTO_SEGUNDOS` (900) **>** prazo de despacho da tarefa (10 min, padrão do Cloud Tasks): `configuracaoDoOutbox` **recusa abaixo de 660s e derruba o boot**. `max_attempts` da fila (12) **>** teto da política (10): o teste **lê `infra/terraform/outbox.tf`** em vez de repetir o número — com o valor digitado à mão, baixar o `max_attempts` passaria verde.
-- **`nomeDaTarefa` vive sozinho em `nome-da-tarefa.ts`, protegido por dependency-cruiser** (`so-o-enfileirador-monta-nome-de-tarefa`), como `arquivos/leitura.ts` na Etapa 11. Um chamador que monte o nome à mão com um campo a menos não quebra nada — a tarefa é criada, o teste passa, e a deduplicação deixa de acontecer.
-- **O varredor só enfileira.** Não lê usuário, não monta mensagem, não envia. Quem decide se vale entregar é `reivindicar`, e é um lugar só para os três caminhos de entrada.
-- **Três filas, não duas.** Produção usa Cloud Tasks; o teste usa a falsa, que segura as tarefas; e **desenvolvimento entrega no próprio processo** (`FilaEmProcesso`). Não existe emulador de Cloud Tasks — com a fila falsa, `pnpm dev` deixaria o e-mail sem sair, sem erro nenhum, com o desenvolvedor procurando o link no log do transporte falso.
-- **Alerta é log estruturado; o destinatário fica fora do código.** A política do Monitoring consome a entrada de log — é Etapa 12. Alerta não passa pelo outbox: seria circular.
-- **A verificação do token OIDC virou porta** (`VerificadorDeToken`). O teste de aceite troca só quem valida a assinatura; o guard continua na cadeia. Um teste que desliga o guard não prova que ele está lá.
-- **O teste de concorrência que importa é o determinístico**, com o transporte falso pausado segurando o arrendamento. O de `Promise.all` dispara as duas requisições de verdade, mas não escolhe o caminho da perdedora — com o arrendamento removido, ele continuou passando. O pausado falha. Cuidado com dois detalhes de supertest registrados lá: o `Test` é preguiçoso (sem encadear, a requisição não sai) e a liberação precisa de `finally`, senão a falha pendura a suíte.
-- **Duas extensões no dublê do Firestore:** o operador `<=` (campo ausente não casa, como no real) e `FieldValue.increment`/`delete` **aplicados** em vez de guardados crus.
-- **`EntregaResumo` é `type` e não `interface`** — `app-tabela` recebe `Record<string, unknown>`, e só alias de tipo ganha assinatura de índice implícita. Com `interface`, compila no teste e quebra no `ng build`.
-- **Cobertura:** `apps/api` 93/83/92/94, `apps/web` 96/89/92/97, `packages/shared` 99/100/100/99.
-
-**Etapa 8 — checkout, pagamento e estorno, PARCIAL (branch `feat/checkout-sandbox-abacatepay`):**
-
-- **Não fecha a etapa.** Faltam a chave de produção, o webhook no painel do escritório, a ficha de anamnese definitiva, os textos jurídicos, a **homologação de cartão da conta** e, depois dela, a **parte de cartão da rodada no sandbox** (`docs/runbooks/checkout-sandbox.md`). A prova automatizada roda contra o **gateway falso**; o PIX já foi conferido contra o sandbox real.
-- **ADR-19**: o transparente do AbacatePay é só PIX; **cartão vai pelo checkout hospedado, com redirecionamento** — desvio da arquitetura 7.1 a comunicar à CONTRATANTE. Estorno no gateway é só integral, e sandbox e produção usam a mesma URL.
-- **O snapshot passou para o checkout.** O `preparar` antigo lia o produto vivo na transação do webhook — congelava na confirmação. Agora `congelar` lê no checkout, `checkouts/{id}` guarda os snapshots, e a confirmação só reidrata.
-- **`checkoutId = hash(carrinhoId + hashItens + metodo)`.** Mesmo carrinho reaproveita a cobrança; carrinho alterado marca o anterior `substituido` (e se o QR antigo for pago, honra o snapshot dele, com alerta). `apagarApos` alimenta a **TTL nativa do Firestore** — o emulador não executa TTL.
-- **O ID do pagamento é o da cobrança** (errata do ADR-04). Webhook 3× → 1 pagamento e 2 pedidos, provado contra o emulador com entregas concorrentes. Valor divergente, conta de outro perfil e checkout inexistente viram pagamento `divergente`/`conflito_de_conta`/`orfao`, com alerta crítico e sem pedido.
-- **A conta do cliente é criada ANTES da transação** (efeito externo), idempotente, por `ContasClienteService` — o segundo escritor de claim da **regra 17 emendada**. O e-mail sai pelo evento `acesso-cliente` do outbox.
-- **Estorno e cancelamento (errata do ADR-12).** O administrador estorna; o cliente cancela, e cancelar não devolve dinheiro. Os dois só sem trabalho iniciado, validados na transação. Estorno isolado é registrado e devolvido à mão; quando todos os pedidos da cobrança são estornados, sai o integral pelo gateway **via outbox** (`estorno-integral`, regra 20). `pedidos.situacao` é eixo separado do estado dos entregáveis, e `iniciar-trabalho` recusa pedido não `ativo`.
-- **Trava contra produção no código (regra 20):** `PAGAMENTOS_MODO` (`desligado | sandbox`; `producao` derruba o boot), prefixo `abc_dev_`, `devMode` conferido em tudo. Terraform com `desligado`, sem secret novo.
-- **Placeholders com teste que cai ao substituir:** `{{TODO-TEXTO-REGRA-ESTORNO-ADR-12}}` (versão `checkout-v0-pendente-adr-12`), `{{TODO-TEXTO-CANCELAMENTO-JURIDICO}}`, `{{TODO-FICHA-ANAMNESE-DA-CONTRATANTE}}`. A anamnese era **stub** (`provisoria-v0`, três perguntas); a definitiva entrou no Bloco A da B2.
-- **Todo texto que sai para o gateway passa por `pagamentos/gateway/texto-do-gateway.ts`.** A rodada no sandbox achou o primeiro caso: o AbacatePay responde 400 "Disallowed character in description" a um travessão, e a suíte não pegava porque o gateway falso aceitava tudo. **O falso agora recusa o que o real recusa** — é essa a defesa, e vale para qualquer limite do gateway que se descubra. O nome e a descrição do produto vêm do catálogo, escrito por gente: o filtro é o que impede o catálogo criado pelo escritório de derrubar a compra por cartão.
-- **Rodada no sandbox (16/09, encerrada): PIX validado de ponta a ponta, e estorno manual, integral via outbox e idempotência da confirmação validados contra o gateway real; cartão BLOQUEADO por homologação de conta, não testado.** O 409 com trabalho iniciado ficou para a próxima rodada por sequenciamento, sem bloqueio. **O `abacatepay listen` mutila o corpo do evento — não use para validar formato**; use o evento do painel de Webhook Logs com a assinatura calculada à parte (método no roteiro). O AbacatePay recusou o checkout hospedado com `CARD is not available for this store` — não é defeito de código, e não se "corrige" aqui. O nome do evento de conclusão do cartão segue sem confirmação. **Não trate a seção de cartão do roteiro como pendência de execução**: ela só pode ser feita depois da homologação.
-- **O evento real do webhook NÃO tem `id` na raiz** (sandbox, 16/09), ao contrário da documentação, e a cobrança vem sob a chave do prefixo do evento (`data.transparent`). O parser exigia o `id` e todo pagamento real voltava 422. **Teste de webhook usa `eventoNoFormatoReal` de `apps/api/src/arnes-webhook.ts`** (o payload capturado, verbatim) — montar o corpo à mão no formato da documentação foi o que deixou o defeito passar.
-- **Evento assinado que não é pagamento nem estorno não some em silêncio.** Nome desconhecido e chargeback (`*.disputed`) respondem 200 `alertado` com alerta crítico (desde a B2, o chargeback também pausa os pedidos da cobrança — ADR-12); só `subscription.*`, `transfer.*` e `payout.*` são `ignorado`. A documentação não confirma que o cartão pago emite `checkout.completed` — é o item 1 do roteiro do sandbox. **Não devolva "evento desconhecido" para 200 silencioso.**
-- **O `webhookSecret` na URL é a ÚNICA trava do webhook, e foi tirado dos logs no Bloco B** (ADR-19): a chave do HMAC é pública, então quem autentica é o segredo. Exclusão no Cloud Logging pelo nome do parâmetro e redação nos spans, as duas amarradas por teste a `PARAMETRO_SEGREDO_WEBHOOK`. **Não logue URL nem query no caminho do webhook** — `webhook-sem-segredo-no-log.integration-spec.ts` falha.
-- **Corpo cru do webhook:** `rawBody: true` vive em `OPCOES_DA_APLICACAO` (`configurar.ts`), usada por `main.ts` **e por todo arnês HTTP de teste**. Arnês novo que crie a aplicação sem ela valida HMAC sobre um corpo que produção nunca veria.
-- **O hook de bloqueio não funcionava até aqui** — ver "Sobre os limites deste arquivo".
-- **Desenvolvimento:** sem chave, a API usa o gateway falso; `node scripts/simular-webhook.mjs <checkoutId>` faz o papel do AbacatePay (só loopback e emulador).
-- **Cobertura:** `apps/api` 93/85/93/95, `apps/web` 96/91/92/97, `packages/shared` 99/100/100/99.
-
-**Etapa 12 — observabilidade, qualidade e endurecimento (branch `feat/observabilidade`):**
-
-- **O log estruturado e um `LoggerService` proprio** (`observabilidade/logger-estruturado.ts`). O `json: true` do Nest escreve `level` e `timestamp` numerico; o Cloud Logging le `severity`. Ate aqui o alerta critico chegava como `textPayload` e **nenhuma politica casaria com ele**.
-- **Trace por OTLP para a Telemetry API, nao pelo exportador do Cloud Trace** (ADR-20): aquele sera arquivado em 30/10/2026. Exige `telemetry.googleapis.com` habilitada e `roles/telemetry.tracesWriter`; `cloudtrace.agent`, do exportador antigo, saiu depois de a exportacao por OTLP ser confirmada em producao (Bloco D).
-- **Sem gancho de ESM**, e nao por acaso: o Express 5 e CommonJS, entao o gancho de `require` da conta. Nao ha variavel que ligue o gancho de ESM — `RASTREIO_HOOK_ESM`, citada aqui ate o Bloco E, nunca existiu no codigo; liga-lo seria mudar `observabilidade/instrumentacao.ts`. `instrumentation-nestjs-core` nao entra — declara `>=4 <12`.
-- **A amostragem NAO usa as variaveis padrao do OpenTelemetry**: `parentbased_traceidratio` deixa `remoteParentNotSampled` em `AlwaysOff`, que e o caso comum no Cloud Run — nenhum trace nosso existiria.
-- **O registro do outbox guarda `rastreio`**, o traceparent de origem, e a entrega loga o trace id dele. A entrega quase sempre roda noutro trace.
-- **Relato de erro do navegador**: `POST /api/erros-do-navegador`, publico, **sem App Check** (exigi-lo violaria a regra 10, e o erro que mais interessa e o da propria inicializacao do App Check). **A regra 10 ganha da observabilidade**: na home, antes do pre-cadastro, o relato espera em memoria.
-- **Os listeners globais de erro sao do Angular** (`provideBrowserGlobalErrorListeners`), nao nossos — acrescentar os proprios duplicaria cada relato.
-- **A base do ClamAV e publicada DUAS VEZES POR DIA por causa do alerta**, nao da base: a condicao de ausencia do Monitoring tem teto de 23h30m, e com publicacao diaria o intervalo normal (24h) ja e maior que a janela — o alerta gritaria todo dia. Filtro de alerta tambem exige `resource.type`, e o do job e `cloud_run_job`, nao `cloud_run_revision`.
-- **A sonda `POST /api/interno/sinais`** (5º job do Scheduler, US$ 0,10/mes) existe porque o Monitoring nao consulta o Firestore. So le e loga; o limiar vive na politica.
-- **Roteamento de alerta e ARQUIVO** (`infra/terraform/alertas-roteamento.json`); desde 05/10/2026 tudo em `suporte` (e-mail para `suportelexintegra@gmail.com`), e `acordar` nao e destino aceito. `pnpm lint` confere os dois lados. O destinatario vem do secret `ALERTAS_EMAIL_DESENVOLVIMENTO` do GitHub — **nao do repositorio**, que ficou publico de 03/09 a 29/09/2026 e e privado desde entao.
-- **A falta de papel do CI virou LINT** (`scripts/conferir-papeis-de-bootstrap.mjs`). Tipo de recurso novo exige declarar o papel em `papeis-de-bootstrap.json` e conceder A MAO antes do merge: o `plan` do PR nao cria nada e passa verde, e o 403 aparece so no deploy. Mordeu na Etapa 7 e de novo na 12, com sete recursos recusados.
-- **Jornadas autenticadas** (`pnpm test:jornadas`, portas 8090/4201/9299 para nao disputar com o `pnpm dev`). Elas acharam tres defeitos silenciosos: dependencia circular no `ErrorHandler` que derrubava o **login**, `ng serve` sem resolver `zod` nas rotas autenticadas, e o ouvinte do armazenamento falso recortando o caminho errado.
-- **Upload passou a funcionar em desenvolvimento**: o armazenamento falso ouve HTTP (`ARMAZENAMENTO_FALSO_PORTA`, proxy em `proxy.conf.json`) e a varredura ganhou fila em processo. A semente passou a gravar `advogados/{uid}` — sem eles o seletor do administrador vinha vazio.
-- **EICAR continua fora do repositorio** (decisao da Etapa 11): quem reprova o arquivo na jornada e um marcador do projeto que so o duble conhece.
-- **O dependency-cruiser estava cego em tres pontos** — `dist` sem ancora casando com `distribuicao`, `shared` resolvendo para `dist/`, e `node_modules` excluido desligando toda regra sobre pacote externo. `so-o-armazenamento-conhece-o-sdk-do-storage` e `sem-dev-dep-em-producao` **nunca dispararam** ate aqui. A regra que defende a inviolavel 7 continua sem morder e virou teste de fonte (`sem-firestore-no-navegador.spec.ts`).
-- **Mutacao medida** (`pnpm mutacao`): `shared` 98,46% e API 88,69%, limiar dois pontos abaixo do piso.
-- **Cobertura:** `apps/api` 93/85/93/95, `apps/web` 96/90/92/97, `shared` 99/100/100/99, `scanner` 100/90/100/100.
-
-**Etapa 10 — agendamento e convite de calendário, PARCIAL (branch `feat/agendamento-reunioes`):**
-
-- **Não fecha a etapa.** Faltam os três pré-requisitos do Entra ID — licença Teams confirmada por advogado, aplicativo registrado com consentimento para `OnlineMeetings.ReadWrite.All`, e application access policy por PowerShell (propagação de até 48h) — mais o `usuarioTeams` de cada advogado e a aprovação das imagens de referência. O domínio inteiro está provado contra o **adaptador falso**, como a Etapa 8 com o gateway. O adaptador do Graph está escrito e **não ligado**: `REUNIOES_MODO=graph` derruba o boot.
-- **O ID da reunião é estável e sequencial** (`r001`), nunca o do slot, e **remarcar atualiza o mesmo documento** (ADR-21, decisão A). O `externalId` do Graph *é* esse id: um id que mudasse criaria uma segunda sala a cada remarcação. O número sai de `pedidos.reunioesEmitidas`, não da contagem dos documentos — contar daria o mesmo número depois de um cancelamento, e duas reuniões colidiriam.
-- **Dois mecanismos de exclusividade, e o segundo não é redundante.** `disponibilidades.reserva` protege o slot; escrever o **documento do pedido** protege o saldo. Transação do Firestore só conflita nos documentos que toca: duas marcações do mesmo pedido em **slots diferentes** não conflitariam e passariam as duas. Há um teste de concorrência por mecanismo, e o segundo falha sem `reunioesEmitidas`.
-- **`sequenceComunicada` decide se o `METHOD:CANCEL` sai.** É o último `SEQUENCE` **escrito no outbox** — não entregue. Cancelar reunião que nunca chegou ao calendário de ninguém produziria um cancelamento para um `UID` que o destinatário nunca viu.
-- **O despachante relê a reunião na transação.** Ele roda depois do commit e pode chegar tarde: cancelada não vira sala; remarcada emite o convite com o `sequence` **atual**, não o do registro. Convite só sai com link.
-- **`reservada_sem_link` é estado desenhado, não exceção** — quando a criação da sala falha, a reunião fica assim e o painel do admin a lista com o id do registro do outbox; o botão de tentar de novo reenvia **aquele** registro pelo caminho normal (regra 3).
-- **Em produção, `REUNIOES_MODO` só aceitava `desligado`** — `graph` e `falso` derrubam o boot. **Desde 07/10/2026 aceita também `sem-sala`** (ver "Calendário de reuniões e modo `sem-sala`" no topo). `falso` foi proibido na revisão do PR #26: a sala falsa **devolve sucesso** com link `teams.microsoft.test`, então a reunião viraria `confirmada` e o convite iCalendar sairia para o cliente real com um link que não existe. É a regra inviolável 13 furada por configuração em vez de por código, e nenhuma das duas metades falha. A variável está no `cloud_run.tf` com `desligado` — faltava lá, e sem ela a revisão nova não passaria do startup probe.
-- **Com `desligado`, o cartão diz que o agendamento está indisponível** em vez de oferecer um botão que responde 503. `CartaoPedido.agendamentoDisponivel` vem do servidor (é configuração de processo, a tela não tem como saber) e vem **antes** dos impedimentos do próprio pedido: não adianta dizer que o saldo acabou se nem daria para marcar. O padrão de `paraCartao` é `false` — com o padrão fechado, o pior que acontece é dizer "indisponível" onde havia agendamento.
-- **A janela de validade é calculada na leitura**, e o job de expiração de 12 meses que a arquitetura previa **não existe** — mesmo raciocínio da semana de disponibilidade da Etapa 9. Regra geral registrada na arquitetura, seção 8: estado derivável do tempo se calcula na leitura; rotina agendada é para efeito externo.
-- **`RELOGIO_FIXO` só é aceito sob emulador, e derruba o boot fora dele** — **no boot**, e não na primeira reunião: `agora()` lê a variável na primeira chamada, e até a revisão do PR #26 era só isso, então um relógio fixo esquecido em produção passava pelo startup probe e pelo smoke test e só aparecia como 500 para o primeiro cliente. A leitura vive em `configuracaoNaInicializacao`, ao lado de `configuracaoDeReunioes`. Servidor, navegador (`page.clock`) e semente leem o mesmo instante — sem isso a jornada e a regressão visual mudariam de resultado todo dia. Efeito colateral: `advogado/disponibilidade` entrou na regressão visual, de onde estava excluída porque a grade mudava toda segunda. **`DisponibilidadesService` lê o mesmo relógio**: com metade do servidor num relógio e metade noutro, o advogado publicaria a grade de uma semana e o cliente escolheria horários de outra, sem nada falhar.
-- **A lista de horários precisa saber que é remarcação** (`?reuniao=`). Sem isso a reunião movida conta contra o próprio intervalo e o próprio saldo, e a lista volta vazia — remarcar era impossível pela tela, em todo pedido. **Quem pegou foi a jornada autenticada**; unidade e integração chamam `remarcar` direto, que é o caminho que sempre funcionou.
-- **Dois índices de GRUPO DE COLEÇÕES** (`reunioes` é subcoleção). O emulador não impõe índice, então eles só existem depois do `apply`; a prova local é o `terraform plan`.
-- **As consultas de reunião filtram por estado, não por horário** — o dublê do Firestore não implementa faixa, e o recorte de futuro acontece em memória. **Isso não limita o crescimento**, e o comentário que dizia que limitava foi corrigido na revisão do PR #26: filtrar por estado tira só as canceladas, e `confirmada` acumula para sempre, porque reunião que já aconteceu continua confirmada. Aceitável no volume previsto; o gatilho para trocar pela faixa sobre `inicio` está no ADR-21.
-- **A lista de sobreviventes da mutação do `apps/api` tem falso alarme** — pelo menos dois, verificados à mão, são mortos por testes que já existem. Antes de escrever teste para um sobrevivente de lá, **aplique o mutante à mão e rode a suíte**. Ver `apps/api/stryker.config.mjs`. O relatório de `packages/shared` não tem esse problema.
-- **Imagens de referência:** nove novas, **não aprovadas**, e todas as existentes dos painéis mudaram porque o menu ganhou item. Revisão humana, uma a uma.
-- **Cobertura:** `apps/api` 91/82/90/92, `apps/web` 96/89/91/97, `shared` 99/100/100/99. **Mutação:** `shared` 98,15%, API 87,69%.
-
-**Próximo trabalho recomendado:** o que estiver aberto no [`CHECKLIST.md`](CHECKLIST.md), na ordem da seção 0 de lá.
+**Pendências: a lista única é o [`CHECKLIST.md`](CHECKLIST.md)**, que desde
+02/11/2026 só tem duas listas abertas: **testes em produção** e
+**transferência**. Pendência nova entra lá, e em nenhum outro lugar.
 
 ## Stack
 
@@ -518,7 +334,7 @@ Estas vêm de decisões registradas nos ADRs. Violá-las é bug, não preferênc
 
 12. **Convite de calendário é iCalendar montado aqui, sem API externa.** `UID` estável e `SEQUENCE` incrementado a cada alteração são campos persistidos da reunião. Remarcação reusa o `UID`; cancelamento usa `METHOD:CANCEL`.
 
-13. **O link de reunião vem da Microsoft Graph API, nunca é inventado ou fixo.** Uma reunião do Teams por chamada (`POST /users/{advogadoId}/onlineMeetings`), nunca um link reaproveitado de outra reunião. Se a chamada falhar, o slot fica reservado mas a reunião entra em estado "sem link", visível no painel — nunca mostrar link vazio ou de outra reunião como solução alternativa.
+13. **O link de reunião vem da Microsoft Graph API, nunca é inventado ou fixo.** Uma sala do Teams por reunião (`POST /users/{organizador}/onlineMeetings/createOrGet`, com `externalId` estável, e o `PATCH` das opções antes de o link sair), nunca um link reaproveitado de outra reunião. Se a chamada falhar, o slot fica reservado mas a reunião entra em estado "sem link", visível no painel — nunca mostrar link vazio ou de outra reunião como solução alternativa.
 
 14. **Status de entregável é máquina de estados fixa, sem transição manual.** Os quatro estados (`solicitado`, `em_elaboracao`, `em_revisao`, `entregue`) e as transições entre eles são código, não dado configurável. `entregue` só é alcançado por confirmação do cliente após upload — nunca por escrita direta de campo, nem por admin, nem por advogado. O número de revisões permitidas é o único parâmetro por produto; validar no servidor sempre, mesmo que a interface já esconda o botão quando o saldo acabar.
 
