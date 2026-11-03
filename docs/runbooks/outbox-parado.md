@@ -11,10 +11,20 @@
 O outbox carrega **tudo** que sai do sistema:
 
 - e-mails: `definir-senha`, `redefinir-senha`, `acesso-cliente`,
-  `aviso-exclusao-arquivos`;
-- sala e convite do Teams: `criar-sala-reuniao`, `convite-reuniao`,
-  `cancelamento-reuniao`;
+  `aviso-exclusao-arquivos`, `pausa-contestacao`,
+  `reuniao-desmarcada-escritorio`, `acesso-advogado-atualizado`,
+  `convite-administrador` e `aviso-eliminacao-titular`;
+- sala do Teams (chamada ao Graph, não e-mail): `criar-sala-reuniao`,
+  `atualizar-sala-reuniao` e `remover-sala-reuniao`;
+- convites de calendário: `convite-reuniao` e `cancelamento-reuniao`;
 - estorno no gateway: `estorno-integral`.
+
+A lista é a de `TIPOS_EVENTO`, em `packages/shared/src/evento-outbox.ts`.
+
+**`estacionado` não é parado.** Um `criar-sala-reuniao` gravado com o modo
+`sem-sala` nasce `estacionado`: a fila, o varredor e a sonda o ignoram de
+propósito, e ele não conta para *Outbox parado*. Só o reenvio manual o acorda
+([`reuniao-sem-link.md`](reuniao-sem-link.md) e `ligar-terceiros.md`, 2.8).
 
 Outbox parado quer dizer que um cliente pagou e não recebeu o acesso, ou que
 um estorno não saiu (ADR-03).

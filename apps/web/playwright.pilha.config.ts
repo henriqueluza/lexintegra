@@ -38,7 +38,11 @@ export const RELOGIO_DA_PILHA = '2026-09-21T12:00:00.000Z';
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: ['jornadas/**/*.spec.ts', 'paineis/**/*.spec.ts'],
+  testMatch: [
+    'jornadas/**/*.spec.ts',
+    'paineis/**/*.spec.ts',
+    'manuais/**/*.spec.ts',
+  ],
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env['CI'],
@@ -77,6 +81,37 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 1000 },
+      },
+    },
+    /*
+     * As capturas dos manuais (`docs/manuais/`). NAO E TESTE: grava imagens em
+     * `docs/manuais/imagens/` e so roda por `pnpm capturas:manuais`, fora do CI.
+     * Largura de desktop so, como as imagens dos manuais.
+     */
+    {
+      name: 'manuais',
+      testMatch: 'manuais/**/*.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 900 },
+        deviceScaleFactor: 1,
+        /* O seletor de arquivo do navegador tambem aparece na imagem. */
+        locale: 'pt-BR',
+        /* O convite de cadastro ja fechado, como em `playwright.config.ts`. */
+        storageState: {
+          cookies: [],
+          origins: [
+            {
+              origin: 'http://localhost:4201',
+              localStorage: [
+                {
+                  name: 'lexintegra:convite-cadastro',
+                  value: String(Date.now()),
+                },
+              ],
+            },
+          ],
+        },
       },
     },
     {

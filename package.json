@@ -13,6 +13,7 @@
     "test": "pnpm --filter \"./apps/*\" --filter \"./packages/*\" test",
     "test:integration": "scripts/emuladores.sh",
     "test:e2e": "pnpm --filter web test:e2e",
+    "capturas:manuais": "pnpm --filter shared build && pnpm --filter api build && scripts/emuladores.sh 'pnpm --filter web exec playwright test --config playwright.pilha.config.ts --project manuais'",
     "test:jornadas": "pnpm --filter shared build && pnpm --filter api build && scripts/emuladores.sh 'pnpm --filter web test:jornadas'",
     "lint": "pnpm run lint:eslint && pnpm run lint:styles && pnpm run lint:deps && pnpm run lint:terraform && pnpm run lint:docs && pnpm --filter api emails:check",
     "lint:eslint": "eslint .",

@@ -30,7 +30,13 @@ const OPERACAO = 'docs/entrega/operacao.md';
 const CREDENCIAIS = 'docs/entrega/credenciais.md';
 const OBSERVABILIDADE = 'infra/terraform/observabilidade.tf';
 const SECRETS = 'infra/terraform/secrets.tf';
-const PASTAS_DE_DOCS = ['docs/entrega', 'docs/runbooks'];
+/*
+ * `docs/manuais` e o indice `docs/README.md` (02/11/2026) entram na conferencia
+ * de links: os manuais apontam para as capturas, e uma imagem renomeada pelo
+ * roteiro de capturas quebraria o manual sem nada falhar.
+ */
+const PASTAS_DE_DOCS = ['docs/entrega', 'docs/runbooks', 'docs/manuais'];
+const DOCS_AVULSOS = ['docs/README.md'];
 
 /** Todo `.ts` de producao: sem teste, sem arnes de teste. */
 function arquivosDeProducao(pasta) {
@@ -146,14 +152,19 @@ function linksRelativos(texto) {
 
 function conferirLinks(problemas) {
   let total = 0;
-  for (const pasta of PASTAS_DE_DOCS) {
-    for (const nome of readdirSync(pasta).filter((n) => n.endsWith('.md'))) {
-      const arquivo = join(pasta, nome);
-      for (const alvo of linksRelativos(readFileSync(arquivo, 'utf8'))) {
-        total += 1;
-        if (!existsSync(resolve(dirname(arquivo), alvo))) {
-          problemas.push(`${arquivo} aponta para "${alvo}", que nao existe.`);
-        }
+  const arquivos = [
+    ...PASTAS_DE_DOCS.flatMap((pasta) =>
+      readdirSync(pasta)
+        .filter((n) => n.endsWith('.md'))
+        .map((nome) => join(pasta, nome)),
+    ),
+    ...DOCS_AVULSOS,
+  ];
+  for (const arquivo of arquivos) {
+    for (const alvo of linksRelativos(readFileSync(arquivo, 'utf8'))) {
+      total += 1;
+      if (!existsSync(resolve(dirname(arquivo), alvo))) {
+        problemas.push(`${arquivo} aponta para "${alvo}", que nao existe.`);
       }
     }
   }

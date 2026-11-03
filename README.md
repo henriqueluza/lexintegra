@@ -1,8 +1,8 @@
 # LexIntegra
 
 Plataforma de comercialização e acompanhamento de serviços jurídicos. O cliente
-conhece o catálogo depois de um cadastro inicial, compra pelo checkout (PIX; o
-cartão entra quando for homologado), recebe o acesso por e-mail e acompanha
+conhece o catálogo depois de um cadastro inicial, compra pelo checkout (PIX ou
+cartão, em até 12x), recebe o acesso por e-mail e acompanha
 cada pedido: ficha inicial, documentos, revisões e reuniões. O escritório
 distribui os pedidos aos advogados, que entregam o trabalho pela própria área.
 
@@ -27,6 +27,9 @@ versão em PNG, de origem, é
 
 ## Por onde começar
 
+- [`docs/README.md`](docs/README.md): o índice de toda a documentação, com o
+  caminho principal, a arquitetura em uma página e os manuais do cliente, do
+  advogado e do administrador.
 - [`AGENTS.md`](AGENTS.md): o resumo operacional, as regras invioláveis e os
   comandos (`pnpm dev`, `pnpm test`, `pnpm test:integration`, `pnpm lint`).
 - [`docs/arquitetura.md`](docs/arquitetura.md): as decisões e os ADRs.

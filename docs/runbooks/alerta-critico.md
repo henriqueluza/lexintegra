@@ -48,6 +48,13 @@ um incidente aberto em Monitoring → Alerting → Incidents.
 | `pagamento.webhook-evento-desconhecido` | Evento assinado com nome que o código não conhece. Suspeito principal: a conclusão do cartão com outro nome | [webhook-fora-do-ar.md](webhook-fora-do-ar.md) |
 | `pagamento.contestacao` | Chargeback (`checkout.disputed` ou `transparent.disputed`). Os pedidos da cobrança foram pausados | abaixo |
 | `pagamento.contestacao-sobre-estorno` | Contestação perdida sobre pedido que o escritório já tinha devolvido | abaixo |
+| `outbox.enfileiramento-falhou` | O registro foi gravado no outbox, mas a tarefa do Cloud Tasks não foi criada (`outbox/enfileirador.service.ts`). O varredor o reenfileira em minutos; o alerta só pede atenção se repetir | [outbox-parado.md](outbox-parado.md) |
+| `lgpd.eliminacao-falhou` | A rotina da política de guarda, dentro da `retencao-diaria`, não conseguiu eliminar um titular (`lgpd/eliminacao.service.ts`). O protocolo fica retomável | [lgpd-titular.md](lgpd-titular.md) |
+
+Alertas de nível `aviso` (não disparam a política, ficam só no log):
+`pagamento.estorno-externo` (estorno feito no painel do gateway, fora da
+plataforma) e `pagamento.checkout-substituido-pago` (o cliente pagou o QR de um
+carrinho já substituído; o pedido é criado com o snapshot dele).
 
 ### `pagamento.contestacao`
 

@@ -176,9 +176,10 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       # Etapa 8. Obrigatoria em producao: ausente, a API RECUSA SUBIR (ver
-      # `pagamentos/gateway/modo.ts`). `desligado` e decisao, e nao
-      # esquecimento: checkout e webhook respondem 503 ate a chave de producao
-      # existir e a primeira transacao real ser feita a mao.
+      # `pagamentos/gateway/modo.ts`). Em `producao` desde 01/11/2026 (#89),
+      # depois da chave de producao gravada e da primeira transacao real feita a
+      # mao. `desligado` (checkout e webhook respondem 503) e o caminho de
+      # emergencia; a ordem segura esta em `docs/entrega/operacao.md`, secao 3.
       #
       # `producao` SO SOBE COM A TRAVA DO CODIGO ABERTA (`PRODUCAO_DESTRAVADA`,
       # regra inviolavel 20): trocar so a variavel derruba o deploy, nao liga
@@ -218,11 +219,11 @@ resource "google_cloud_run_v2_service" "api" {
       # probe, o recurso ficaria tainted, e `deletion_protection = true` na API
       # transforma isso em impasse (ver "Notas de plataforma" no CLAUDE.md).
       #
-      # `desligado` e decisao, e nao esquecimento: marcar reuniao responde 503 ate
-      # o aplicativo estar registrado no Entra ID, a application access policy
-      # propagada e uma chamada de teste manual feita ("So voce — Etapa 10"). O
-      # cartao do cliente le esse estado e diz que o agendamento esta
-      # indisponivel, em vez de oferecer um botao que falha.
+      # Em `graph` desde o #91 (01/11/2026), depois do aplicativo registrado no
+      # Entra ID, das politicas aplicadas a conta organizadora e de uma chamada de
+      # teste manual. `desligado` e o caminho de emergencia: marcar reuniao
+      # responde 503, e o cartao do cliente le esse estado e diz que o
+      # agendamento esta indisponivel, em vez de oferecer um botao que falha.
       #
       # `graph` SO SOBE COM A TRAVA DO CODIGO ABERTA (`INTEGRACAO_GRAPH_DESTRAVADA`)
       # e com as credenciais: trocar so a variavel derruba o deploy. `falso` e

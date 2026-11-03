@@ -7,9 +7,18 @@ contra o gateway **falso** — ela prova o nosso lado, e não o que o AbacatePay
 realmente manda. O código foi escrito a partir da documentação da API v2; cada item
 da seção "O que conferir" é uma suposição que só a rodada desmente.
 
-> ⚠️ **Só sandbox.** Nenhuma chave `abc_prod_…` entra nesta rodada, em shell nenhum.
-> A API recusa subir com chave sem o prefixo `abc_dev_` e recusa `PAGAMENTOS_MODO=producao`
-> (regra inviolável 20) — mas a trava é a última linha, não a primeira.
+> ⚠️ **Só sandbox.** Nenhuma chave de produção entra nesta rodada, em shell nenhum.
+> Com `PAGAMENTOS_MODO=sandbox`, a API recusa subir com chave sem o prefixo
+> `abc_dev_` e recusa resposta sem `devMode: true` (regra inviolável 20). Desde
+> 01/11/2026 a trava do código está aberta (`PRODUCAO_DESTRAVADA = true`): a
+> máquina local **aceita** `producao` com `NODE_ENV=production` e uma chave de
+> produção, e por isso o cuidado com a chave é o que protege, não a trava.
+>
+> **Estado em 02/11/2026: o pagamento está em produção (#89), PIX e cartão.**
+> Este roteiro continua útil para testar mudança no adaptador ou no parser
+> antes do merge. A seção 4 (cartão) **não foi feita no sandbox e foi
+> substituída** pela primeira compra por cartão em produção, de valor baixo e
+> estornada (`ligar-terceiros.md`, 1.6 e 1.8).
 
 ## Antes de começar
 
@@ -219,7 +228,21 @@ guarda os códigos: pegue o `oobCode` mais recente de
 
 ## 4. Compra com cartão
 
-> ⛔ **BLOQUEADA POR HOMOLOGAÇÃO DE CONTA — não testada na rodada de 16/09/2026.**
+> 🔁 **SUBSTITUÍDA EM 01/11/2026.** O cartão foi habilitado em produção sem esta
+> rodada (`pagamentos_cartao = "habilitado"`, commit `f5d6fff`). As suposições
+> 1, 7 a 9, 11 e 12 da tabela são confirmadas pela primeira compra por cartão
+> em produção (`ligar-terceiros.md`, 1.6, passo 3), não aqui. Registre o
+> resultado na tabela quando ela acontecer.
+>
+> **Parcelas.** A página do AbacatePay oferece até 12x em todo produto (é
+> configuração global do painel). O campo `parcelas` do produto só governa o
+> que o site anuncia (`packages/shared/src/parcelamento.ts`); o checkout e o
+> pedido não guardam parcelas, e o webhook confere o `amount` da cobrança, não
+> o valor pago com juros. Na primeira compra parcelada, confira se a primeira
+> parcela da página do gateway difere em centavos da que o site anuncia (o
+> site põe o resto da divisão na primeira).
+>
+> ⛔ **Bloqueada por homologação de conta na rodada de 16/09/2026.**
 >
 > Ao criar o checkout hospedado com cartão, o AbacatePay respondeu
 > **`HTTP 400: CARD is not available for this store`**. Não é defeito do nosso código
