@@ -24,6 +24,8 @@
  * Uso, com `pnpm dev` no ar em outro terminal:
  *   node scripts/simular-webhook.mjs <checkoutId>             pagamento confirmado
  *   node scripts/simular-webhook.mjs <checkoutId> estornado   estorno integral
+ *   node scripts/simular-webhook.mjs <checkoutId> contestado  contestacao (chargeback)
+ *   node scripts/simular-webhook.mjs <checkoutId> divergente  valor pago diferente do checkout
  *
  * O `checkoutId` e o `?id=` da tela de checkout. O evento sai igual a cada
  * execucao: rodar duas vezes e a REENTREGA dele, e a API responde `duplicata`.
@@ -48,9 +50,16 @@ const API = process.env.API_LOCAL ?? 'http://localhost:8080';
 const HOST_FIRESTORE = process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8081';
 const PROJETO = process.env.GCLOUD_PROJECT ?? 'demo-lexintegra';
 
+/*
+ * `divergente` e o pagamento com um real a mais que o checkout: a confirmacao
+ * o recusa como `divergente`, com alerta e sem pedido. Existe para as capturas
+ * dos manuais (`e2e/manuais/`) mostrarem `/admin/pagamentos` com conteudo.
+ */
 const ACOES = {
-  pago: { sufixo: 'completed' },
-  estornado: { sufixo: 'refunded' },
+  pago: { sufixo: 'completed', ajusteCentavos: 0 },
+  estornado: { sufixo: 'refunded', ajusteCentavos: 0 },
+  contestado: { sufixo: 'disputed', ajusteCentavos: 0 },
+  divergente: { sufixo: 'completed', ajusteCentavos: 100 },
 };
 
 function conferirGuardas() {
@@ -100,7 +109,8 @@ async function principal() {
   const [checkoutId, acao = 'pago'] = process.argv.slice(2);
   if (checkoutId === undefined || !(acao in ACOES)) {
     console.error(
-      'Uso: node scripts/simular-webhook.mjs <checkoutId> [pago|estornado]',
+      'Uso: node scripts/simular-webhook.mjs <checkoutId> ' +
+        '[pago|estornado|contestado|divergente]',
     );
     process.exitCode = 2;
     return;
@@ -110,7 +120,7 @@ async function principal() {
   await confirmarEmuladorFirestore(HOST_FIRESTORE, PROJETO);
   const checkout = await lerCheckout(checkoutId);
 
-  const { sufixo } = ACOES[acao];
+  const { sufixo, ajusteCentavos } = ACOES[acao];
   const origem = checkout.metodo === 'cartao' ? 'checkout' : 'transparent';
   /*
    * No formato do evento REAL do sandbox (`arnes-webhook.ts`): sem `id` na raiz, e
@@ -122,7 +132,7 @@ async function principal() {
       evento: `${origem}.${sufixo}`,
       cobrancaId: checkout.cobrancaId,
       checkoutId,
-      valorCentavos: checkout.totalCentavos,
+      valorCentavos: checkout.totalCentavos + ajusteCentavos,
     }),
   );
 
