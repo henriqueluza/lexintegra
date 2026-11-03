@@ -154,6 +154,7 @@ runbook.
 ### Registros históricos
 
 Documentos de uma fase do projeto, mantidos como registro:
+[`historico-etapas.md`](historico-etapas.md) (as notas por etapa que ficavam no `AGENTS.md`, com as armadilhas de cada módulo),
 [`achados-2026-09-29-alertas-e-clamav.md`](achados-2026-09-29-alertas-e-clamav.md),
 [`design-audit.md`](design-audit.md),
 [`etapa6-relatorio-acessibilidade-performance.md`](etapa6-relatorio-acessibilidade-performance.md),
