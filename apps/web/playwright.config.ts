@@ -53,9 +53,10 @@ export default defineConfig({
    * API — sem o recorte, `pnpm test:visual` tenta roda-las e 57 casos falham por
    * falta de sessao, o que nao tem nada a ver com regressao visual. Elas rodam
    * por `playwright.pilha.config.ts` (`pnpm test:jornadas` e
-   * `scripts/visual.sh paineis`).
+   * `scripts/visual.sh paineis`). As capturas dos manuais (`manuais/`) tambem:
+   * rodam so por `pnpm capturas:manuais`.
    */
-  testIgnore: ['jornadas/**', 'paineis/**'],
+  testIgnore: ['jornadas/**', 'paineis/**', 'manuais/**'],
 
   fullyParallel: true,
   forbidOnly: !!process.env['CI'],
