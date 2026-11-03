@@ -1,6 +1,7 @@
-# Termo de cessão de direitos: minuta
+# Termo de cessão de direitos: MINUTA
 
-> **MINUTA PARA REVISÃO JURÍDICA.** Rascunho técnico preparado a partir da
+> **MINUTA PARA REVISÃO JURÍDICA — NÃO ASSINAR NESTA FORMA.** Revista em
+> 02/11/2026. Rascunho técnico preparado a partir da
 > cláusula 8ª do contrato. Não é peça jurídica pronta. Todos os trechos entre
 > `[PREENCHER]` dependem de dado que o repositório não tem, e o texto inteiro
 > precisa ser revisado por advogado antes de qualquer assinatura.
@@ -39,10 +40,11 @@ ocorrida em `[PREENCHER: data da quitação]`, comprovada por
 
 | Item | Identificação |
 |---|---|
-| Código-fonte | Repositório GitHub `henriqueluza/lexintegra`, no commit final `[PREENCHER: hash do commit final]` (último item da seção D do `CHECKLIST.md`) |
-| Documentação | Os documentos de `docs/entrega/` no mesmo commit, e os demais de `docs/` |
+| Código-fonte | Repositório GitHub `henriqueluza/lexintegra` (ou o repositório de destino da transferência, `[PREENCHER: nome]`), no commit final `[PREENCHER: hash do commit final]` (último item da seção D do `CHECKLIST.md`) |
+| Documentação | No mesmo commit: o índice `docs/README.md`, os documentos de `docs/entrega/`, os runbooks de `docs/runbooks/`, os manuais por perfil de `docs/manuais/` (com as capturas de tela, geradas com dados fictícios) e os demais de `docs/` |
 | Projeto de nuvem | Projeto Google Cloud/Firebase de ID `plataforma-juridica-36bda`, região `southamerica-east1`, com os recursos descritos em `docs/entrega/inventario-custos.md` e `docs/entrega/transferencia.md`. `[PREENCHER: forma e data da transferência da titularidade do projeto e da conta de faturamento]` |
 | Marca e domínio | Nome "LexIntegra". Domínio `lexintegra.com.br`. `[PREENCHER: confirmar se entram na cessão e em nome de quem estão registrados]` |
+| Configurações em contas de terceiros | Não são cedidas, porque já pertencem ao escritório: o aplicativo da LexIntegra no Entra ID do tenant da B&C, as políticas `LexIntegra-Reunioes` e `LexIntegra-Organizadora` e a conta organizadora `operacional@`; o webhook e as chaves na conta do AbacatePay; o domínio verificado na conta do Resend. O termo registra que foram configuradas pelo CONTRATADO a pedido da CONTRATANTE |
 | Credenciais | Não fazem parte do objeto. Segredos ficam no Secret Manager e são trocados conforme `docs/entrega/credenciais.md` |
 
 ## 4. Ressalva: componentes de terceiros

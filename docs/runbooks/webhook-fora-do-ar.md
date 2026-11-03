@@ -41,8 +41,17 @@ O **log de requisição** do Cloud Run para esta rota **não existe de propósit
 a exclusão `webhook-segredo-na-url` o descarta. A linha `webhook.recebido` e os
 `WARNING` do guard são o que sobra.
 
-HTTP **503** em todas as entregas é o comportamento normal com
-`PAGAMENTOS_MODO=desligado` (`apps/api/src/pagamentos/webhook/assinatura.guard.ts`).
+HTTP **503** em todas as entregas só é normal com `PAGAMENTOS_MODO=desligado`
+(`apps/api/src/pagamentos/webhook/assinatura.guard.ts`). **Em produção o modo
+é `producao` desde 01/11/2026**: 503 hoje quer dizer revisão sem subir ou
+modo desligado por engano ([`deploy-recusado.md`](deploy-recusado.md)).
+
+**Cartão: o evento nunca foi capturado.** Até a primeira compra por cartão em
+produção, o formato de `checkout.completed` é o da documentação, não o real
+(`ligar-terceiros.md`, 1.8). Se essa compra gerar
+`pagamento.webhook-evento-desconhecido` ou `pagamento.webhook-ilegivel`, o
+parser precisa de correção por PR, e o evento é reenviado pelos *Webhook Logs*
+depois do deploy.
 
 ## O que fazer
 

@@ -15,8 +15,15 @@ nota obrigatória e linha no log de auditoria. A tela não move dinheiro.
 **Quem executa:** a análise, quem atende a operação, com leitura no Firestore.
 A decisão e o estorno, o escritório, no painel do AbacatePay.
 
-> Enquanto `PAGAMENTOS_MODO=desligado`, este incidente não acontece: o webhook
-> responde 503 antes de ler o evento.
+> **Em produção desde 01/11/2026** (`PAGAMENTOS_MODO=producao`, PIX e cartão).
+> Se o modo for desligado numa emergência, este incidente deixa de acontecer:
+> o webhook responde 503 antes de ler o evento.
+>
+> **PIX e cartão chegam ao mesmo lugar.** O PIX é cobrança transparente
+> (eventos `transparent.*`); o cartão vai pelo checkout hospedado do
+> AbacatePay (eventos `checkout.*`, ADR-19), onde o cliente escolhe as
+> parcelas. Os três casos abaixo valem para os dois, e o campo `origem` diz
+> qual foi.
 
 ---
 
@@ -35,10 +42,13 @@ A decisão e o estorno, o escritório, no painel do AbacatePay.
    documento anômalo guarda só isto (`registrarAnomalia` em
    `apps/api/src/pagamentos/webhook/confirmacao.service.ts`):
    - `situacao`;
+   - `cobrancaId`;
    - `valorCentavos`;
    - `checkoutId`;
-   - `origem` (PIX ou cartão);
+   - `origem` (`transparent` para PIX, `checkout` para cartão);
    - `eventoId`;
+   - `devMode` (em produção, sempre `false`; `true` seria evento de sandbox,
+     que a produção recusa antes de chegar aqui);
    - `registradoEm`.
 
    Não há nome nem e-mail. Os dados de quem pagou estão no painel do
@@ -48,7 +58,7 @@ A decisão e o estorno, o escritório, no painel do AbacatePay.
 | `situacao` | Causa | Onde olhar |
 |---|---|---|
 | `orfao` | O checkout foi apagado pela TTL (vencimento da cobrança + 48 h) antes de o webhook chegar, ou o `checkoutId` é desconhecido | `checkouts/{checkoutId}` não existe. Veja nos *Webhook Logs* do AbacatePay quando o evento foi entregue |
-| `divergente` | O valor cobrado é diferente do total congelado | `checkouts/{checkoutId}`, se ainda existir, tem os itens e o total |
+| `divergente` | O valor cobrado é diferente do total congelado | `checkouts/{checkoutId}`, se ainda existir, tem os itens e o total. **No cartão, juros de parcelamento não causam divergência**: a conferência usa o `amount` da cobrança (o valor cobrado), não o valor pago com juros (`pagamentos/webhook/evento.ts`). Divergência no cartão é sinal de checkout adulterado ou de erro do gateway, não de parcelas |
 | `conflito_de_conta` | O e-mail do comprador já pertence a um advogado ou administrador. A regra 17 proíbe trocar a claim | Firebase Auth, pelo e-mail que aparece na cobrança no painel do gateway |
 
 ## O que fazer
@@ -63,7 +73,9 @@ A decisão e o estorno, o escritório, no painel do AbacatePay.
      valor é devolvido à origem.
    - **Estorno:** iniciado em até **5 dias úteis** depois de aprovado. No PIX o
      valor volta na hora em que o estorno é feito; no cartão segue o prazo da
-     operadora. Os termos dizem isso ao cliente.
+     operadora, e a devolução de compra parcelada segue a regra da bandeira
+     (em geral, o crédito das parcelas na fatura). Os termos dizem isso ao
+     cliente.
 2. **Caminhos possíveis.** O código não oferece outro:
    - **Estornar no painel do AbacatePay.** Esse estorno é feito por uma pessoa
      no painel. O botão de estorno da plataforma só existe para **pedidos**, e

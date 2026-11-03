@@ -11,8 +11,10 @@ A métrica lê a linha que o `AssinaturaWebhookGuard` escreve a cada recusa
 `assinatura`). A linha nunca traz o segredo, a assinatura, o corpo ou a URL
 (ADR-19).
 
-> Com `PAGAMENTOS_MODO=desligado`, o webhook responde 503 **antes** de
-> conferir qualquer coisa, e este alerta não dispara.
+> **Em produção desde 01/11/2026** (`PAGAMENTOS_MODO=producao`), para PIX
+> (`transparent.*`) e cartão (`checkout.*`). Se o modo for desligado numa
+> emergência, o webhook responde 503 **antes** de conferir qualquer coisa, e
+> este alerta deixa de disparar.
 
 **Quem executa:** quem atende a operação. Trocar segredo exige acesso ao Secret
 Manager e ao painel do AbacatePay do escritório.
