@@ -10,9 +10,25 @@ escritório indicar. **Ambos** quer dizer os dois juntos, numa chamada ou
 presencialmente.
 
 Antes de começar, tenha à mão [`credenciais.md`](credenciais.md), que traz o
-inventário e a tabela de acessos pessoais, e [`operacao.md`](operacao.md).
+inventário e a tabela de acessos pessoais, e [`operacao.md`](operacao.md). O
+registro escrito dos desvios do contrato, para o escritório assinar, está em
+[`desvios-minuta.md`](desvios-minuta.md).
 
-Estado conferido em 24/09/2026:
+**Três regras valem para todas as fases:**
+
+1. **O escritório recebe antes de o desenvolvedor sair.** Em toda conta, o
+   acesso novo do escritório é criado e conferido **antes** de o do
+   desenvolvedor ser reduzido. Nenhuma conta fica, nem por um minuto, sem dono
+   humano do lado do escritório.
+2. **Credencial muda de mãos só por gerenciador de senhas** compartilhado com o
+   escritório, ou por acesso criado direto na conta do escritório. Nunca por
+   e-mail, chat, documento ou print. O que passou pela máquina do
+   desenvolvedor é **rotacionado** depois (Fase 5).
+3. **Nada de produção para.** Pagamento real (AbacatePay) e salas do Teams
+   estão ligados desde 01–02/11/2026: cada passo diz o que pode parar e como
+   conferir.
+
+Estado conferido em 24/09/2026, com o que mudou até 02/11/2026:
 
 - o projeto GCP não pertence a nenhuma organização;
 - o único `roles/owner` do projeto é a conta do desenvolvedor;
@@ -20,7 +36,11 @@ Estado conferido em 24/09/2026:
   proteção de branch**. **Em 29/09/2026** ele passou a **privado** (foi público
   de 03/09 a 29/09) e a `main` foi protegida (ver a Fase 2).
 - a conta de faturamento tem dois `billing.admin`: o desenvolvedor e Auan Bastos
-  (dono do escritório e da conta). Ninguém mais.
+  (dono do escritório e da conta). Ninguém mais;
+- **pagamento real em produção desde 01/11/2026** (#89) e **Teams pela conta
+  organizadora** `operacional@` desde 02/11/2026 (#91);
+- o client secret do Graph **vence em 01/11/2027**: quem assume a operação
+  precisa da data na agenda ([`secret-expirado.md`](../runbooks/secret-expirado.md)).
 
 ---
 
@@ -31,7 +51,9 @@ Estado conferido em 24/09/2026:
 | 0.1 | O escritório escolhe as contas de destino: uma conta Google para dono do projeto, uma organização ou conta no GitHub, e e-mails no domínio do escritório para Resend e alertas (arquitetura, seção 13, "Governança de contas") | Escritório | Lista escrita das contas | — |
 | 0.2 | ~~Decidir quem recebe alertas~~ **Decidido em 05/10/2026** (decisões 5.2): todos por e-mail para `suportelexintegra@gmail.com`, nenhum acorda alguém. Só muda se o escritório quiser outro endereço (Fase 4) | — | — | — |
 | 0.3 | Preencher a tabela de acessos que ficam durante a garantia, em [`credenciais.md`](credenciais.md), seção 4 | Dev | Tabela preenchida e aceita pelo escritório | — |
-| 0.4 | Rotação que não depende de ninguém: apagar a chave JSON da `firebase-adminsdk-fbsvc` e tirar `roles/editor` da SA padrão do Compute ([`credenciais.md`](credenciais.md), 3.1, item 1) | Dev | `gcloud iam service-accounts keys list --managed-by=user` vazio para ela. Seção 2.4 de [`limpeza-infra.md`](../runbooks/limpeza-infra.md) | Seção 2.5 de `limpeza-infra.md`. A chave apagada não volta: se algo depender dela, crie uma identidade nova |
+| 0.4 | ~~Rotação que não depende de ninguém~~ **Feito:** chave JSON da `firebase-adminsdk-fbsvc` apagada em 30/09/2026 e `roles/editor` fora da SA padrão do Compute em 29/09/2026 | — | — | — |
+| 0.5 | O escritório cria o **cofre no gerenciador de senhas** onde as credenciais que não são criadas direto na conta dele vão chegar (senha de `operacional@`, do Gmail de suporte, se o desenvolvedor as tiver) | Escritório | Cofre criado, desenvolvedor com acesso só de escrita, se o gerenciador permitir | — |
+| 0.6 | Entregar a documentação: [`docs/README.md`](../README.md), esta pasta, os manuais em `docs/manuais/` e a planilha de custos | Dev | Recebido por escrito | — |
 
 ## Fase 1 — Projeto GCP e Firebase
 
@@ -119,9 +141,10 @@ workflows e não mudam.
 | # | Serviço | O que "transferir" quer dizer | O que para enquanto isso | Quem | Conferir depois | Voltar atrás |
 |---|---|---|---|---|---|---|
 | 3.1 | **Resend** | Se a conta já é do escritório: remover o acesso do desenvolvedor e gerar **chave nova**. Se é do desenvolvedor: o escritório cria conta, **verifica o domínio nela**, gera a chave e grava a versão nova de `resend-api-key` ([`credenciais.md`](credenciais.md), seção 3). Hoje o domínio `notificacoes.lexintegra.com.br` está **verificado na conta do escritório**, criada com o e-mail do dono (Auan Bastos), conferido em 29/09/2026: vale o primeiro caso. `[CONFIRMAR: se o Resend aceita o mesmo domínio em duas contas]` | Enquanto o domínio não estiver verificado na conta nova e a chave dela não estiver em produção, os e-mails saem pela conta antiga. Se a conta antiga perder o domínio antes, **nenhum e-mail sai** | Escritório, Dev acompanha | Um e-mail de teste `enviado` em `/admin/entregas` e visível no painel da conta **nova** | Reabilitar a versão anterior do secret e publicar revisão |
-| 3.2 | **AbacatePay** | A conta já é do escritório (arquitetura, seção 12). Transferir é: tirar o acesso do desenvolvedor ao painel, se houver, e trocar a chave `abc_dev_` que passou pela máquina dele. A de produção nasce depois, direto na conta do escritório | Nada: `PAGAMENTOS_MODO=desligado` | Escritório | O desenvolvedor não aparece nos membros do painel. `abacatepay-api-key-dev` tem versão nova, se ainda for usada | — |
+| 3.2 | **AbacatePay** | A conta já é do escritório (arquitetura, seção 12). Transferir é: tirar o acesso do desenvolvedor ao painel, se houver, e **rotacionar o que passou pela máquina dele**: a chave de produção, o segredo do webhook e a chave de desenvolvimento ([`credenciais.md`](credenciais.md), 3.1, item 3) | **Pagamento real está ligado.** A troca da chave é sem parada (versão nova e revisão nova). A do segredo do webhook tem uma janela: entre gravar a versão nova e trocar no painel, o webhook recusa eventos, que o AbacatePay reentrega por até ~18 h. Faça os dois passos em seguida, fora de horário de compra | Escritório (Caique no painel) e quem tem o Secret Manager | Compra PIX de valor baixo vira pedido e é estornada; o desenvolvedor não aparece nos membros do painel | Reabilitar as versões anteriores dos secrets e publicar revisão, enquanto as chaves antigas não forem revogadas no painel |
 | 3.3 | **Registro.br** (`lexintegra.com.br`) | O **titular** já é o dono do escritório (Auan Bastos, conferido em 29/09/2026): não há titularidade a mudar. O que muda é o **contato técnico**, hoje o desenvolvedor, que passa a alguém do escritório. **Não mexa na zona DNS**: os registros do Firebase Hosting (A e TXT) e os do Resend (DKIM, rastreamento e DMARC) precisam continuar | Nada, se a zona DNS for preservada. Um DNS apagado derruba o site e o e-mail | Ambos | `dig lexintegra.com.br` e o painel do Resend continuam iguais | Restaurar os registros anteriores. Anote todos antes |
-| 3.4 | **Microsoft 365 / Entra ID** | O tenant é do escritório. Não há o que transferir: o aplicativo do Graph deve ser registrado **pelo** administrador do escritório ([`operacao.md`](operacao.md), 4.3). Remover o desenvolvedor, se ele tiver sido convidado ao tenant | Nada: `REUNIOES_MODO=desligado` | Escritório | O desenvolvedor não é membro nem convidado do tenant | — |
+| 3.4 | **Microsoft 365 / Entra ID** | O tenant é do escritório, e o aplicativo, as duas políticas e a conta organizadora `operacional@` já estão nele (01/11/2026). Transferir é: **novo client secret** no Entra ID (o atual passou pela máquina do desenvolvedor), gravado em `graph-client-secret` com revisão nova; anotar a nova data de vencimento; confirmar quem do escritório tem a senha e o MFA de `operacional@`; remover o desenvolvedor do tenant, se ele tiver papel nele | Entre apagar o segredo antigo e a revisão nova subir, nenhuma sala nasce. Apague o antigo **só depois** de uma sala nova nascer ([`secret-expirado.md`](../runbooks/secret-expirado.md)) | Administrador do tenant e quem tem o Secret Manager | Reunião de teste vira `confirmada`, com link; o desenvolvedor não é membro nem convidado do tenant | Reabilitar a versão anterior, enquanto o segredo antigo existir no Entra ID |
+| 3.5 | **Gmail `suportelexintegra@gmail.com`** | Recebe todos os alertas, as respostas dos e-mails e os pedidos de titular. Confirmar que a senha e a recuperação estão só com o escritório, com verificação em duas etapas | Nada | Escritório | O escritório entra na caixa; o telefone e o e-mail de recuperação são do escritório | — |
 
 ## Fase 4 — Canal de alertas
 
@@ -142,13 +165,16 @@ Hoje:
 | 4.1 | Se o escritório quiser outro destinatário, trocar `alertas_email_suporte` | Escritório | `infra/terraform/variables.tf`, por PR | O canal *Suporte LexIntegra* mostra o endereço novo | Reverter o PR |
 | 4.2 | Plantão (SMS, telefone) **não existe por decisão** (decisões 5.2). Mudar isso exige reabrir `acordar` em `scripts/conferir-roteamento-alertas.mjs` e criar o canal | Escritório | Por PR | — | Reverter o PR |
 | 4.3 | Tirar o canal provisório: apagar o bloco `desenvolvimento` de `observabilidade.tf`, a variável `alertas_email_desenvolvimento`, as duas linhas `TF_VAR_alertas_email_desenvolvimento` dos workflows e o secret `ALERTAS_EMAIL_DESENVOLVIMENTO` | Escritório, ou Dev na garantia | Por PR; o secret, no GitHub | Plano mostra só o `destroy` do canal provisório | Reverter o PR |
-| 4.4 | — | — | — | — | — |
 | 4.5 | **Disparar o alerta artificial** e confirmar que chega | Escritório | [`runbooks/alerta-artificial.md`](../runbooks/alerta-artificial.md) | O e-mail chegou. Registre data e destinatário | — |
 
 ## Fase 5 — Rotação que dependia das contas
 
 Depois das Fases 2 e 3: a ordem da seção 3.1 de
-[`credenciais.md`](credenciais.md), itens 2 a 4.
+[`credenciais.md`](credenciais.md), itens 2 a 5. Tudo marcado "Rotacionar após
+a entrega" no inventário ([`credenciais.md`](credenciais.md), seção 1) sai
+nesta fase: `resend-api-key` (versão 1), `abacatepay-api-key`,
+`abacatepay-webhook-secret`, `abacatepay-api-key-dev`, `graph-client-secret` e
+as senhas de pessoas que passaram pelo desenvolvedor.
 
 ## Fase 6 — Por último: remover os acessos do desenvolvedor
 

@@ -5,7 +5,10 @@ configuração**. **Nenhum preço está aqui, de propósito.** Os preços entram
 planilha de custos, preparada fora do repositório a partir desta lista.
 
 Cada linha aponta o arquivo e o recurso de onde saiu. Os valores medidos em
-produção foram lidos em 24/09/2026, só com comandos de leitura. Projeto
+produção foram lidos em 24/09/2026, só com comandos de leitura. As contagens de
+recursos foram conferidas contra o Terraform em 02/11/2026. A planilha
+[`custos-regime-permanente.xlsx`](custos-regime-permanente.xlsx) e o resumo da
+seção 9 de [`operacao.md`](operacao.md) saem desta lista. Projeto
 `plataforma-juridica-36bda`, região `southamerica-east1` em tudo que permite
 escolher.
 
@@ -71,8 +74,8 @@ download gera uma URL assinada e uma leitura.
   README do Terraform registra que o PITR é uma SKU cobrada;
 - proteção contra exclusão ligada;
 - **nenhum backup agendado** no Terraform;
-- **14 índices compostos**: 11 em `firestore.tf` e 3 em `sinais.tf`, dos quais
-  4 são de grupo de coleções (2 de `reunioes`, 1 de `anexos` e 1 de `entregaveis`). Mais 1 campo com **TTL**, `checkouts.apagarApos`
+- **16 índices compostos**: 13 em `firestore.tf` e 3 em `sinais.tf`, dos quais
+  5 são de grupo de coleções. Mais 1 campo com **TTL**, `checkouts.apagarApos`
   (`google_firestore_field.checkouts_ttl`). A TTL apaga sem custo de exclusão.
 
 Leituras recorrentes, independentes de usuário:
@@ -85,7 +88,7 @@ Leituras recorrentes, independentes de usuário:
 
 | Item | Arquivo | Quantidade |
 |---|---|---|
-| Secret Manager | `secrets.tf` | **6 secrets** desde 05/10/2026: `resend-api-key` e `abacatepay-api-key-dev` com versão, e `abacatepay-api-key`, `abacatepay-webhook-secret`, `abacatepay-webhook-chave-hmac` e `graph-client-secret` **declarados sem versão** (secret sem versão não é cobrado). Ligados os terceiros, são cerca de 6 versões ativas, dentro das 6 gratuitas; cada uma a mais custa US$ 0,06/mês. Acessos: um por inicialização de instância da API por secret referenciado |
+| Secret Manager | `secrets.tf` | **6 secrets**, todos com versão desde 01/11/2026: `resend-api-key`, `abacatepay-api-key-dev`, `abacatepay-api-key`, `abacatepay-webhook-secret`, `abacatepay-webhook-chave-hmac` e `graph-client-secret`. São cerca de 6 versões ativas, no limite das 6 gratuitas; cada versão ativa a mais (por exemplo, a antiga ainda habilitada depois de uma troca) custa US$ 0,06/mês. Acessos: um por inicialização de instância da API por secret referenciado |
 | KMS | `kms.tf` / `google_kms_key_ring.lexintegra`, `google_kms_crypto_key.storage` | 1 keyring, **1 chave** `storage-cmek`, **1 versão ativa** hoje. Rotação a cada 90 dias, e cada rotação soma uma versão ativa. Operações de criptografia a cada leitura e escrita nos buckets de quarentena e de arquivos |
 | Artifact Registry | `artifact_registry.tf` / `google_artifact_registry_repository.lexintegra` | 1 repositório Docker, **1,75 GB** em 24/09/2026, com 31 versões de `api` e 16 de `scanner`. Limpeza: mantém as 5 mais recentes, apaga as sem tag com mais de 7 dias e as com tag com mais de 30 dias. Como o projeto tem menos de 30 dias, a limpeza por idade ainda não apagou nada. Uma imagem de API e uma de scanner por deploy |
 
@@ -96,10 +99,10 @@ Tudo em `observabilidade.tf`, salvo indicação.
 | Item | Quantidade |
 |---|---|
 | Métricas personalizadas por log | **8**: `alertas-criticos`, `outbox-atraso-segundos`, `quarentena-atraso-segundos`, `outbox-entregas`, `clamav-base-idade-horas`, `reuniao-sem-sala-segundos`, `webhook-recusado`, `retencao-passagens` |
-| Políticas de alerta | **15** no código (12 existiam em produção em 29/09/2026, antes do deploy que cria as três de log do ClamAV). Três são de correspondência de log, uma condição cada; as demais têm condição sobre métrica. A arquitetura, seção 12, registra que o Monitoring passa a cobrar alertas a partir de 01/09/2027 |
+| Políticas de alerta | **14** no código (a `disponibilidade_sem_link` saiu no #91). Três são de correspondência de log, uma condição cada; as demais têm condição sobre métrica. A arquitetura, seção 12, registra que o Monitoring passa a cobrar alertas a partir de 01/09/2027 |
 | Uptime check | **1**, `API LexIntegra (/api/health)`, a cada **300 s**, a partir de várias regiões |
 | Painel | 1 (`paineis/operacao.json`) |
-| Canal de notificação | 1 e-mail, e só existe com a variável do GitHub definida |
+| Canal de notificação | **2** e-mails: *Suporte LexIntegra* (`suportelexintegra@gmail.com`, recebe todos os alertas) e *Desenvolvimento (PROVISORIO)*, que só existe com o secret do GitHub definido e não recebe nenhum alerta |
 | Exclusão de log | 1 (`webhook-segredo-na-url`), que **reduz** o volume ingerido |
 | Logging | Bucket `_Default`, retenção de 30 dias. Uma linha estruturada por requisição relevante, uma por execução da sonda (a cada 5 min) e uma por entrega do outbox. **Desde 05/10/2026, também o bucket `registros-de-acesso`** (`registros-de-acesso.tf`, Marco Civil art. 15): só o log de requisição da API, 186 dias. A ingestão cabe nos 50 GiB/mês gratuitos; a retenção além de 30 dias custa US$ 0,01/GiB-mês — no volume previsto (poucos MiB/mês), centavos |
 | Trace | `RASTREIO_AMOSTRAGEM = 0.1` (10% das requisições), por OTLP para a Telemetry API (`cloud_run.tf`, ADR-20) |
@@ -112,8 +115,8 @@ Tudo em `observabilidade.tf`, salvo indicação.
 | **Firebase Auth** | Uma conta por cliente, advogado e administrador. `verifyIdToken(…, true)` em **toda** requisição autenticada (Etapa 4). **Confirmado em 29/09/2026:** o projeto usa o **Firebase Auth padrão**. A Identity Toolkit Admin API (`GET admin/v2/projects/plataforma-juridica-36bda/config`, só leitura) devolve `subtype: FIREBASE_AUTH`, e não `IDENTITY_PLATFORM`; MFA está `DISABLED`. Custo: a página oficial de preços do Firebase ([firebase.google.com/pricing](https://firebase.google.com/pricing), consultada em 29/09/2026) informa e-mail/senha sem custo até 50 mil usuários ativos por mês. A página não informa a tarifa acima disso (remete ao preço do Google Cloud) nem se MFA é cobrado. Login por SMS seria cobrado por mensagem, mas o projeto não o usa. Se o projeto for atualizado para o Identity Platform no futuro, o subtype muda e este item deve ser revisto. | `autenticacao/` |
 | **App Check (reCAPTCHA Enterprise)** | Uma avaliação na primeira interação com o formulário da área pública (ADR-16, decisão 3) e nas chamadas públicas seguintes | `app-check/`, `vars.APP_CHECK_SITE_KEY` |
 | **Resend** | E-mails por evento (`packages/shared/src/evento-outbox.ts`, `apps/api/src/outbox/evento.ts`), listados abaixo. A arquitetura, seção 12, registra o teto de 100/dia no plano gratuito | `email/`, `outbox/` |
-| **AbacatePay** | Uma cobrança por checkout. O mesmo carrinho reaproveita a cobrança (ADR-19). Para o cartão, um produto no gateway por combinação de nome, descrição e preço (`produtos-gateway`). Tarifa por transação conforme o meio (PIX ou cartão) e um estorno integral por cobrança totalmente estornada. **Hoje, zero**: `PAGAMENTOS_MODO=desligado` | `checkout/`, `pagamentos/`, `estornos/` |
-| **Microsoft Graph** | Uma chamada `onlineMeetings/createOrGet` por reunião. A remarcação reaproveita a sala, e o cancelamento não a apaga (ADR-21, decisão 7). Mais um token OAuth por sessão do adaptador. **Hoje, zero**: `REUNIOES_MODO=desligado`. Exige licença Microsoft 365 com Teams por advogado, que é custo do escritório | `reunioes/sala/` |
+| **AbacatePay** | Uma cobrança por checkout. O mesmo carrinho reaproveita a cobrança (ADR-19). Para o cartão, um produto no gateway por combinação de nome, descrição e preço (`produtos-gateway`). Tarifa por transação conforme o meio (PIX ou cartão, este em até 12x pela configuração do painel) e um estorno integral por cobrança totalmente estornada. **Em produção desde 01/11/2026** (`PAGAMENTOS_MODO=producao`, cartão habilitado). As tarifas não estão no repositório: são as do contrato da conta | `checkout/`, `pagamentos/`, `estornos/` |
+| **Microsoft Graph** | Por reunião: um `createOrGet` e um `PATCH` na criação, um `PATCH` por remarcação e um `DELETE` no cancelamento (errata da decisão 7 do ADR-21). Mais um token OAuth por sessão do adaptador. A API do Graph não cobra por chamada. **Em produção desde 02/11/2026** (`REUNIOES_MODO=graph`). Licença: **uma** conta Microsoft 365 Business Basic, a organizadora `operacional@`, custo do escritório; advogado e cliente entram como convidados, sem licença | `reunioes/sala/` |
 | **GitHub Actions** | CI com 7 jobs por PR (qualidade, scanner, versão do Playwright, visual, jornadas, mutação, Terraform) e deploy com 3 jobs por push na `main`. Repositório **privado** desde 29/09/2026 (foi público de 03/09 a 29/09), então os minutos contam na cota do plano da conta (seção 7.1) | `.github/workflows/` |
 | **Registro.br** | Domínio `lexintegra.com.br` | fora do repositório |
 
@@ -127,9 +130,14 @@ E-mails por evento:
 | `aviso-exclusao-arquivos` | 1 por pedido, no 23º dia depois de `entregue` |
 | `convite-reuniao` | **2** por reunião marcada ou remarcada: cliente e advogado |
 | `cancelamento-reuniao` | **2** por cancelamento de reunião que já tinha convite |
+| `reuniao-desmarcada-escritorio` | 1 quando o escritório cancela a reunião, convidando a remarcar |
+| `pausa-contestacao` | 1 por contestação aberta (chargeback) |
+| `acesso-advogado-atualizado` | 1 quando o e-mail de um advogado muda |
+| `convite-administrador` | 1 por administrador convidado |
+| `aviso-eliminacao-titular` | 1 por eliminação de titular pela política de guarda, 7 dias antes |
 
-`criar-sala-reuniao` e `estorno-integral` passam pelo outbox, mas não são
-e-mail.
+`criar-sala-reuniao`, `atualizar-sala-reuniao`, `remover-sala-reuniao` e
+`estorno-integral` passam pelo outbox, mas não são e-mail.
 
 **APIs habilitadas** pelo Terraform (`services.tf`), 20 no total:
 artifactregistry, cloudkms, cloudresourcemanager, cloudscheduler, cloudtasks,
@@ -191,10 +199,6 @@ O que existiu, ou foi previsto e cobrado na conta, e não existe mais.
 | Exportador `@google-cloud/opentelemetry-cloud-trace-exporter` | Dependência instalada durante a Etapa 12. Trocado por OTLP (ADR-20) | Antes do merge da Etapa 12 (`a392160`) |
 | Imagem placeholder `gcr.io/cloudrun/hello` no serviço da API | Imagem do bootstrap | Primeiro deploy da Etapa 2 (`0dfe53b`). Ficou só como `default` de `api_image` |
 
-**Ainda não removidos, com remoção planejada:**
-
-- `roles/editor` da SA padrão do Compute: operação humana,
-  `runbooks/limpeza-infra.md`, seção 2.
-- `roles/cloudtrace.agent` da `api-lexintegra-run`: branch
-  `chore/remover-cloudtrace-agent`, depois da conferência da seção 4 do mesmo
-  runbook.
+| `roles/editor` da SA padrão do Compute | Papel amplo do bootstrap | Removido à mão em 29/09/2026 (`runbooks/limpeza-infra.md`, seção 2) |
+| `roles/cloudtrace.agent` da `api-lexintegra-run` | Papel do exportador antigo | `chore/remover-cloudtrace-agent` (#49), 30/09/2026 |
+| Métrica e política `disponibilidade_sem_link` | Alerta de horário publicado sem sala | `feat/ligar-teams` (#91) |

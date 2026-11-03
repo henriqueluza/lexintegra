@@ -5,9 +5,32 @@ e o que a política de retenção do controlador precisa decidir. O passo a pass
 técnico está em [`docs/runbooks/lgpd-titular.md`](../runbooks/lgpd-titular.md).
 Este documento não o repete.
 
-**Papéis** (arquitetura, seção 13): o escritório B&C é o **controlador**. A
-contratante opera a plataforma. O desenvolvedor foi suboperador durante a
-construção.
+**Papéis** (arquitetura, seção 13):
+
+| Papel | Quem | O que faz |
+|---|---|---|
+| **Controlador** | O escritório B&C | Decide para que e por quanto tempo os dados são tratados; atende o titular |
+| **Encarregado (DPO)** | Auan Bastos, pelo `suportelexintegra@gmail.com` (seção 5) | Canal com titulares e com a ANPD |
+| **Operadora da plataforma** | A contratante | Opera o sistema em nome do controlador |
+| **Operadores (subprocessadores)** | Google (Cloud, Firebase e reCAPTCHA), Resend, AbacatePay e Microsoft | Tratam só o necessário à função de cada um (seção 6) |
+| **Suboperador durante a construção** | O desenvolvedor | Acesso que termina na transferência ([`transferencia.md`](transferencia.md)) |
+
+⏳ Os contratos de operador com cada subprocessador (termos de serviço e
+adendos de proteção de dados) são do controlador: o repositório não os guarda.
+
+**Base legal** (LGPD, art. 7º; o mesmo texto da política de privacidade,
+`packages/shared/src/documentos-legais.ts`):
+
+| Tratamento | Base |
+|---|---|
+| Cadastro inicial, compra, conta, pedidos, ficha, arquivos, reuniões e entrega | Execução de contrato e procedimentos preliminares (art. 7º, V) |
+| Guarda de pedidos, pagamentos e aceites por 5 anos; registros de acesso por 6 meses | Cumprimento de obrigação legal (art. 7º, II) |
+| Contestações, estornos e a trilha de auditoria | Exercício regular de direitos em processo (art. 7º, VI) |
+| Proteção contra abuso na área pública (App Check, limite por endereço) | ⏳ Legítimo interesse (art. 7º, IX), a confirmar pelo controlador: a política de privacidade não o nomeia |
+
+A plataforma não usa consentimento como base, não faz publicidade e não
+trata dado pessoal sensível (art. 5º, II): a ficha inicial pede dados da
+**empresa**.
 
 ---
 
@@ -215,3 +238,126 @@ reuniões, e o escritório decide quem opera essa conta.
   quando (`GET .../simulacao` mostra o `escopo`, a `guardaAte` e, por
   documento, `eliminadoNesteEscopo`). Depois da execução, o protocolo
   `concluida` traz o resumo.
+
+---
+
+## 6. Dados por coleção e destino de cada um
+
+### 6.1 No banco (Firestore, `southamerica-east1`)
+
+Gerado a partir de `apps/api/src/lgpd/mapa.ts` (o mapa que a exportação e a
+eliminação usam; coleção nova sem entrada nele é dado sem caminho de
+eliminação). A coluna **Grupo** diz a guarda (seção 3).
+
+| Coleção | Vínculo com o titular | Dado pessoal | Grupo | Como sai |
+|---|---|---|---|---|
+| `pre-cadastros` | e-mail (id determinístico) | nome, e-mail e telefone, mais o hash do token de liberação e as datas (há teste que lista os campos gravados) | `eliminavel` | 6 meses depois do último envio, sem aviso; ou a pedido |
+| `checkouts` | `preCadastroId` | nome e e-mail do comprador, itens congelados | `eliminavel` | **TTL** (`apagarApos`: vencimento da cobrança + 48 h, até ~24 h de atraso do Firestore); ou a pedido |
+| `clientes/{uid}` | `uid` | nome, e-mail, produtos contratados | `contrato` | Eliminação total, 5 anos depois do último pedido |
+| `clientes/{uid}/anamnese` | pai | dados da empresa (confidenciais, não sensíveis) | `contrato` | Idem |
+| `pedidos` | `clienteId` | snapshot do produto, situação, advogado atribuído | `contrato` | Idem |
+| `pedidos/…/entregaveis` e `…/transicoes` | pai | nome e estado do arquivo; quem fez cada transição | `contrato` | Idem; o arquivo em si sai antes (30 dias, seção 3) |
+| `pedidos/…/observacoes` | pai | texto livre do cliente e do escritório | `contrato` | Idem |
+| `pedidos/…/anexos` | pai | nome, tipo e tamanho do arquivo | `contrato` | Idem; o arquivo sai em 30 dias |
+| `pedidos/…/reunioes` | pai | horário, `organizadorId`, link da sala, `UID` e `SEQUENCE` do convite | `contrato` | Idem |
+| `pagamentos` | `clienteId` | ids da cobrança e do checkout, valor, origem | `contrato` | Idem. O anômalo (órfão) não tem vínculo: seção 4 |
+| `estornos`, `contestacoes` | `clienteId` | motivo, valores, resultado | `contrato` | Idem |
+| `outbox` | `destinatarioUid` | tipo do evento e estado; **sem** endereço nem link (ADR-03) | `contrato` | Idem |
+| `aceites-de-termos` | `usuarioUid` | versão aceita e data | `contrato` | Idem |
+| `disponibilidades` | `reserva.pedidoId` | dado do **advogado**; a reserva aponta o pedido | `limpar_referencia` | Perde só a referência |
+| `auditoria` | `alvo` | quem fez a ação administrativa; na edição de advogado, e-mail antes e depois | `trilha` | Nunca (append-only) |
+| `solicitacoes-lgpd` | `titularChave` (pseudônimo) | o protocolo do atendimento | `trilha` | Nunca: é a prova do atendimento |
+| `retencoes-legais` | pseudônimo do titular | `motivo` e `descricao` em texto livre | fora do mapa | Removida pelo administrador (`DELETE .../retencao-legal`) |
+| `advogados`, `administradores` | — | nome e e-mail da **equipe** | fora do mapa do cliente | Contrato de trabalho de cada um (seção 4) |
+| `produtos`, `produtos-gateway` | — | nenhum | — | — |
+
+### 6.2 Fora do banco
+
+| Onde | Dado | Prazo |
+|---|---|---|
+| Firebase Auth (fora do Brasil) | `uid`, e-mail, nome de exibição, telefone, e-mail verificado, bloqueio, datas de criação e de último acesso (`MAPA_AUTH`) | `eliminavel`: sai na eliminação, parcial ou total |
+| Bucket `lexintegra-quarentena-36bda` | Upload antes da varredura | Segundos, normalmente; regra do bucket apaga em **7 dias**; soft delete zero |
+| Bucket `lexintegra-arquivos-36bda` | Entregáveis e anexos `limpo` | 30 dias depois de `entregue` (seção 3); soft delete de **7 dias** |
+| PITR do Firestore | Todo documento | **7 dias** de recuperação depois da exclusão |
+| Cloud Logging `_Default` | Logs da aplicação (sem conteúdo de documento nem corpo de anamnese, por regra) | **30 dias** |
+| Bucket de logs `registros-de-acesso` | Data, hora, IP e caminho de cada requisição à API | **186 dias** (Marco Civil, art. 15) |
+| Cloud Trace (Telemetry API) | 10% das requisições: caminho, duração, status | Retenção padrão do Cloud Trace |
+| Navegador do visitante (`localStorage`) | Liberação do catálogo (7 dias), carrinho, sessão | Até o titular limpar o navegador |
+| State do Terraform (`lexintegra-tfstate-36bda`, versionado) | Os e-mails de destino dos alertas | Enquanto o state existir; versões antigas com soft delete de 7 dias |
+
+## 7. Subprocessadores e transferência internacional
+
+| Subprocessador | Para quê | O que recebe | Onde | Eliminação |
+|---|---|---|---|---|
+| **Google Cloud e Firebase** | Infraestrutura, banco, arquivos, filas, logs, hospedagem e autenticação | Tudo o que a plataforma guarda (seção 6) | Firestore, buckets, Cloud Run e logs em `southamerica-east1`; **Firebase Auth fora do Brasil** | Pela própria plataforma (seção 3) |
+| **Google reCAPTCHA Enterprise** (App Check) | Proteger a área pública contra abuso | Sinais do navegador e IP na primeira interação com formulário público | Fora do Brasil | Retenção do Google; a plataforma não guarda o resultado |
+| **Resend** | Envio de e-mail | Endereço, assunto e corpo de cada mensagem (link de senha, convite, aviso) | **Fora do Brasil** | Pedido do controlador ao Resend |
+| **AbacatePay** | Pagamento | No PIX: valor, descrição do produto e ids, **sem** dados do comprador. No cartão: nome, e-mail e dados do cartão, **digitados na página do AbacatePay**, que a plataforma nunca vê | Brasil | Pedido do controlador ao AbacatePay; histórico financeiro guardado pela obrigação legal dele |
+| **Microsoft (Teams, Graph)** | Sala da reunião | Início, fim, assunto `Reunião LexIntegra — pedido {código curto}` e `externalId` `{pedidoId}-{rNNN}`. **Nenhum nome, e-mail ou produto.** Chat desligado, **sem gravação e sem transcrição** (política e PATCH; seção 4.1). Quem entra digita o próprio nome, que fica com a Microsoft | Tenant do escritório | Sala apagada no cancelamento; a realizada expira em ~60 dias |
+
+**Transferência internacional** (art. 33): a autenticação (Firebase Auth), o
+envio de e-mail (Resend) e o reCAPTCHA processam dados fora do Brasil, sob as
+cláusulas contratuais dos prestadores. A política de privacidade publicada diz
+isso. ⏳ O texto público ainda diz "quando as reuniões on-line estiverem
+habilitadas, Microsoft Teams" (`documentos-legais.ts`): o Teams está ligado
+desde 02/11/2026, e a frase precisa de versão nova da política, decisão do
+controlador junto com a revisão dos textos do Bloco I.
+
+## 8. Apagado ou anonimizado
+
+**A plataforma apaga; não anonimiza.** A eliminação é exclusão física
+(`doc.delete()`, `auth.deleteUser`, exclusão do objeto no bucket), com as
+janelas de recuperação da seção 6.2 (PITR e soft delete de 7 dias).
+
+O que fica depois da eliminação **não é anônimo**:
+
+- a `trilha` (`solicitacoes-lgpd` e `auditoria`) identifica o titular por um
+  **pseudônimo**: SHA-256 de `uid:` ou `email:`, **sem sal**
+  (`lgpd/titular.ts`). Quem souber o e-mail recalcula o pseudônimo. Pela LGPD
+  (art. 13, § 4º), dado pseudonimizado continua sendo dado pessoal;
+- na eliminação **parcial** (dentro dos 5 anos), o `contrato` inteiro fica,
+  identificado, até a `guardaAte`.
+
+⏳ **Decisão do controlador:** aceitar a trilha pseudonimizada como está
+(prova do atendimento, art. 37) ou pedir que o pseudônimo passe a usar um sal
+secreto, o que exige mudança de código e de procedimento de busca.
+
+## 9. Registro do atendimento
+
+Todo pedido de titular vira um **protocolo** em `solicitacoes-lgpd`, com o
+estado (`impedida`, `aguardando_execucao`, `em_execucao`, `concluida`), as
+datas, o escopo, o que saiu e o que ficou (`mantidos`, `guardaAte`). O
+protocolo é `trilha`: nunca é apagado, nem pela eliminação total, e é a
+resposta a uma fiscalização da ANPD sobre aquele titular.
+
+A exportação não gera protocolo no banco. ⏳ O controlador registra, no
+controle dele, a data do pedido, a data da entrega do pacote e o canal usado
+(o sistema não sabe por onde o pacote saiu). O roteiro está em
+[`lgpd-titular.md`](../runbooks/lgpd-titular.md).
+
+## 10. Incidente com dado pessoal
+
+Incidente é acesso não autorizado, vazamento, perda ou alteração indevida de
+dado pessoal: um secret exposto, um arquivo servido sem varredura, uma conta
+administrativa usada por terceiro, um bucket aberto.
+
+1. **Conter.** Revogue a credencial ([`credenciais.md`](credenciais.md), seção
+   3, e [`secret-expirado.md`](../runbooks/secret-expirado.md)), suspenda a
+   conta (`/admin/advogados` ou `/admin/administradores`) ou desligue a
+   integração ([`operacao.md`](operacao.md), seção 3). Não apague log nem
+   documento: são a prova.
+2. **Avaliar.** Quais dados, de quantos titulares, desde quando. Os registros
+   de acesso (186 dias), a `auditoria/` e o log da API respondem quem acessou o
+   quê.
+3. **Comunicar.** A LGPD (art. 48) manda o controlador comunicar à **ANPD** e
+   aos **titulares** o incidente que possa causar risco ou dano relevante. A
+   Resolução CD/ANPD nº 15/2024 fixa o prazo em **3 dias úteis** do
+   conhecimento, pelo formulário do site da ANPD. ⏳ Prazo e formulário a
+   confirmar pelo controlador no momento do incidente, e o **responsável pela
+   comunicação é o encarregado** (seção 5). O desenvolvedor, durante a
+   garantia, apoia na avaliação técnica; não comunica em nome do controlador.
+4. **Registrar.** Guardar o que aconteceu, o que foi feito e quando, mesmo que
+   se conclua que não havia risco relevante (a resolução exige o registro).
+
+O repositório já foi público de 03/09 a 29/09/2026; a varredura de segredos
+feita em 30/09 não achou credencial vazada (`CHECKLIST.md`, B1).
