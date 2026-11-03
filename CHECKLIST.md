@@ -3,13 +3,163 @@
 **Esta é a ÚNICA lista de pendências do projeto (desde 28/09/2026).** Pendência
 nova entra aqui, e em nenhum outro lugar. Quando um item fechar, marque `[x]`.
 Os documentos citados entre parênteses guardam o roteiro e o detalhe de cada
-item. Eles só mudam se o conteúdo deles mudar.
+item.
 
-Itens marcados com ❓ podem já ter sido feitos. Se foram, é só marcar.
+**Estado em 02/11/2026.** O código, a infraestrutura e a documentação estão
+completos: pagamento real (AbacatePay, PIX e cartão) desde 01/11/2026, salas do
+Teams pela conta organizadora desde o deploy de 02/11/2026, documentação de
+entrega, manuais e runbooks em [`docs/README.md`](docs/README.md). **O que
+sobra é só o que exige produção real ou o escritório**, em duas listas, na
+ordem de execução. O histórico do que foi feito, item por item, está no fim
+desta página.
+
+👤 = Henrique. 🏢 = escritório. 🤝 = os dois juntos.
 
 ---
 
-## Ordem de trabalho
+## 1. Testes em produção
+
+Na ordem: os de pagamento primeiro (cada compra vira pedido para os testes
+seguintes), e as reuniões depois de haver pedido distribuído.
+
+- [ ] 👤 **Compra PIX real e estorno**, de valor baixo, com um e-mail que você
+  lê: pedido em `/admin/distribuicao`, e-mail de acesso, pagamento
+  `confirmado`; estornar em `/admin/distribuicao` e conferir o
+  `estorno-integral` `enviado` em `/admin/entregas` e no painel. Confirma a
+  permissão `REFUND:CREATE` da chave
+  ([`ligar-terceiros.md`](docs/runbooks/ligar-terceiros.md) 1.6, passos 1 e 2).
+- [ ] 👤 **Compra por cartão real e estorno**, de valor baixo, parcelada se
+  possível. **É o maior risco em aberto:** o evento `checkout.completed` nunca
+  foi capturado. Conferir também se a primeira parcela da página do AbacatePay
+  bate com a anunciada (`ligar-terceiros.md` 1.6, passo 3, e 1.8;
+  [`checkout-sandbox.md`](docs/runbooks/checkout-sandbox.md), seção 4).
+- [ ] 👤 **URL assinada do primeiro arquivo real**
+  ([`limpeza-infra.md`](docs/runbooks/limpeza-infra.md) §3).
+- [ ] 👤 **EICAR:** o arquivo de teste reprova e nunca fica acessível em
+  nenhum momento ([`scanner-indisponivel.md`](docs/runbooks/scanner-indisponivel.md)).
+- [ ] 👤 **Reunião de teste:** marcar, remarcar e cancelar; link do Teams e
+  convite em Gmail, Outlook e Apple Mail; entrar como convidado; a sala muda de
+  horário e some no cancelamento (`ligar-terceiros.md` 2.7).
+- [ ] 👤 **Acordar as reuniões marcadas no modo `sem-sala`**, se houver:
+  `/admin/reunioes`, **Tentar de novo** (`ligar-terceiros.md` 2.8).
+- [ ] 👤 **E-mail real** em Gmail, Outlook e Apple Mail, fora do spam, com
+  *Responder* indo para `suportelexintegra@gmail.com`
+  ([`operacao.md`](docs/entrega/operacao.md) 4.1, passo 5).
+- [ ] 👤 **`traceparent` atravessa o Cloud Tasks:** "Esqueci minha senha" em
+  `/entrar` e comparar o `trace` da requisição com o da entrega da task
+  (`limpeza-infra.md` §4.4).
+- [ ] 👤 **Alerta artificial** chega em `suportelexintegra@gmail.com`
+  ([`alerta-artificial.md`](docs/runbooks/alerta-artificial.md)), e, no
+  sandbox, pelo caminho real (webhook com corpo ilegível,
+  `pagamento.webhook-ilegivel`).
+- [ ] 🏢 **Preços e parcelas dos seis produtos do ar.** Eles não têm
+  `parcelas` (aparecem "só à vista") e três ainda dizem "Pode ser parcelado em
+  3x" na descrição (PR #90). **O `--atualizar` não existe:**
+  `scripts/cadastrar-catalogo-inicial.mjs` só aceita `--dry-run` e `--prod` e
+  **pula produto que já existe**. Ajustar pelo painel, em `/admin/produtos`
+  (**Editar**: preço, parcelas e descrição; [manual do administrador](docs/manuais/admin.md)
+  §1), a partir de `scripts/catalogo-inicial/produtos.data.ts`.
+- [ ] 👤 **Bateria do app inteiro** no celular e no desktop, por perfil, com os
+  manuais como roteiro ([cliente](docs/manuais/cliente.md),
+  [advogado](docs/manuais/advogado.md), [administrador](docs/manuais/admin.md)):
+  landing sem chamada à API; cadastro, catálogo e carrinho; senha e
+  redefinição; ficha; anexos (o quarto e o de tipo errado recusados); cancelar
+  antes e depois de o trabalho começar; baixar, pedir revisão e confirmar;
+  advogado vê só o seu; grade e agenda; produtos, advogados (suspenso perde o
+  acesso na hora), distribuição, clientes, estornos, entregas, reuniões,
+  pagamentos; exportação LGPD de um titular; telas em 360 px, tablet e
+  desktop, com teclado e movimento reduzido. Anotar o que falhar e passar como
+  "ajustes finais".
+- [ ] 👤 **PWA instalado** no Android (Chrome → *Instalar app*) e no iPhone
+  (Safari → *Adicionar à Tela de Início*): ícone e tela cheia.
+- [ ] 👤 Conferências rápidas: `curl -i https://lexintegra.com.br/api/rota-que-nao-existe`
+  responde 404 com `content-type: application/json`; o `ci.yml` disparado na
+  `main` dá "No changes".; o objeto do teste de soft delete de 29/09
+  (`teste-soft-delete/20260929-100813.txt`) sumiu de vez de
+  `lexintegra-arquivos-36bda` (`operacao.md` §6).
+
+## 2. Transferência
+
+Na ordem de [`transferencia.md`](docs/entrega/transferencia.md): o escritório
+recebe **antes** de o desenvolvedor sair.
+
+**Antes de entregar**
+
+- [ ] 👤 Revisar e mesclar os PRs desta entrega (`docs/documentacao-completa`,
+  depois `docs/checklist-fechamento`), esperando o deploy de cada merge.
+- [ ] 👤 Regravar e aprovar as imagens de referência dos **painéis** do
+  cliente e do advogado, que mudaram com o calendário e não rodam no CI
+  (`scripts/visual.sh paineis --update-snapshots`).
+- [ ] 👤 **Por último:** registrar o hash do commit final e gerar de novo a
+  lista de licenças nesse commit (comando no PR `docs/checklist-fechamento`).
+
+**Formalidades com a contratante**
+
+- [ ] 🤝 Revisar os textos do Bloco I e levar ao escritório: termos,
+  `checkout-v4-2026-10`, privacidade (inclui citar o Teams como ligado), e a
+  **política de guarda** (decisões 2.1), que é proposta.
+- [ ] 🏢 Confirmar o número de revisões por produto (`REVISOES_PADRAO`) e os
+  pontos do catálogo do PR do catálogo inicial (anamnese no Pacote 1, limites
+  mensais só no texto).
+- [ ] 🤝 Assinar o registro dos desvios: Teams, cartão hospedado, carrinho e
+  upload, conta organizadora ([`desvios-minuta.md`](docs/entrega/desvios-minuta.md)).
+- [ ] 🤝 Aditivo da cláusula 7ª (o desvio 3 da minuta serve de texto).
+- [ ] 🤝 Sessão de validação do fluxo com o escritório (item 3.5).
+- [ ] 🏢 Criar no painel os acessos dos advogados reais (`/admin/advogados`,
+  **Organizador no Teams** vazio).
+- [ ] 🏢 Decisões de LGPD que são do controlador ([`lgpd.md`](docs/entrega/lgpd.md)
+  §§ 1, 8, 9 e 10): legítimo interesse na área pública, trilha pseudonimizada
+  sem sal, registro das exportações, prazo e responsável no incidente.
+
+**Contas e acessos** ([`transferencia.md`](docs/entrega/transferencia.md),
+fases 0 a 6)
+
+- [ ] 🏢 Informar o nome do repositório de destino; o PR A é uma linha em
+  `github_repositorios_adicionais` (`transferencia.md` 2.1).
+- [ ] 🏢 Indicar o segundo `billing.admin` (Marcos ou alguém da B&C)
+  **antes** de o Henrique sair.
+- [ ] 🤝 Confirmar a tabela da garantia, hoje **proposta**
+  ([`credenciais.md`](docs/entrega/credenciais.md) §4), e preencher o registro
+  final.
+- [ ] 🤝 Transferir o projeto GCP/Firebase, o repositório e as contas de
+  terceiros (fases 1 a 3).
+- [ ] 👤 Rotacionar **todas** as credenciais que passaram pela sua máquina
+  (`credenciais.md` §1 e 3.1), inclusive revogar no Resend a chave da conta
+  pessoal e desativar a versão 1 de `resend-api-key`.
+- [ ] 🏢 Tirar o canal de alertas provisório (bloco `desenvolvimento` em
+  `observabilidade.tf`, a variável, as linhas `TF_VAR_alertas_email_desenvolvimento`
+  e o secret `ALERTAS_EMAIL_DESENVOLVIMENTO`; `transferencia.md` 4.3) e
+  disparar o alerta artificial depois.
+- [ ] 👤 Apagar a branch `feat/modelo-produtos` (commit `be2217b`, com
+  `scripts/manual-only/`) depois de guardar o que quiser (decisoes.md, Anexo B).
+- [ ] 🤝 O Henrique convida o Auan em `/admin/administradores`; depois que o
+  Auan entrar, **o Auan remove o acesso do Henrique** (`transferencia.md` 6.4a).
+- [ ] 👤 Remover os acessos pessoais restantes, ou registrar por escrito o que
+  fica nos 30 dias de garantia (`transferencia.md`, fase 6).
+- [ ] 🏢 📅 **Trocar o client secret do Graph antes de 01/11/2027**
+  ([`secret-expirado.md`](docs/runbooks/secret-expirado.md)). Pôr na agenda de
+  quem opera, com um mês de folga.
+- [ ] 🏢 Conferir a primeira fatura do Google Cloud contra o resumo de custos
+  ([`operacao.md`](docs/entrega/operacao.md) §9; inclui o armazenamento de
+  `lexintegra-clamav-db-36bda`, ~108 MiB).
+
+**Encerramento**
+
+- [ ] 👤 Entregar a planilha de custos e a documentação ([`docs/README.md`](docs/README.md)).
+- [ ] 🤝 Assinar o termo de cessão ([`termo-de-cessao-minuta.md`](docs/entrega/termo-de-cessao-minuta.md)).
+- [ ] 🏢 Aprovação formal da contratante: dispara o saldo de 70% (cláusula
+  6.2) e os 30 dias de garantia (cláusula 4.4).
+- [ ] 👤 Emitir a cobrança do saldo.
+
+---
+
+# Histórico (fechado)
+
+Tudo abaixo está feito, ou foi movido para as duas listas acima. Fica como
+registro de como cada item fechou. Onde o item foi movido, a linha diz para
+onde.
+
+## Ordem de trabalho (histórica)
 
 | Passo | O que acontece | Seção |
 |---|---|---|
@@ -91,10 +241,11 @@ Itens marcados com ❓ podem já ter sido feitos. Se foram, é só marcar.
   não foi feita.
 - [x] Chaves do App Check configuradas no console do Firebase (29/09,
   reCAPTCHA Enterprise, `APP_CHECK_ENFORCE=true`).
-- [ ] Teste manual com o arquivo EICAR: ele reprova e nunca fica acessível em
+- ↪ Teste manual com o arquivo EICAR: ele reprova e nunca fica acessível em
   nenhum momento. **Adiado** até as correções do ClamAV (B1) e até haver como
   criar um pedido em produção (AbacatePay). É também o "refazer o EICAR depois
   das correções" do bloco do ClamAV.
+  *Movido para "Testes em produção", no topo.*
 - [x] Alerta artificial disparado e recebido (29/09, 14:22 UTC, em
   `henriqueluza@gmail.com`), pelo caminho alternativo
   (`docs/runbooks/alerta-artificial.md`). O caminho real ficou em C →
@@ -124,25 +275,32 @@ Mande as respostas ao Claude para ele preencher os documentos.
 - [x] Dono da conta de faturamento: Auan Bastos; `billing.admin`: Auan e
   Henrique. **O escritório ainda precisa indicar um segundo `billing.admin`**
   (ver D).
-- [ ] Tabela de acessos pessoais: o que você tem e o que fica durante a
+- ↪ Tabela de acessos pessoais: o que você tem e o que fica durante a
   garantia (`credenciais.md` §4). Respostas de 29/09 já dadas; faltam as linhas
   de Resend, AbacatePay e Microsoft e a coluna "Na garantia", para a reunião de
   30/09.
+  *Movido para "Transferência", no topo.*
 
 ### A2. Ao longo do caminho
 
-- [ ] Revisar e mesclar os PRs do Claude e do Codex. **Merge na `main` é
+- ↪ Revisar e mesclar os PRs do Claude e do Codex. **Merge na `main` é
   deploy.** Esperar o deploy de cada merge terminar com sucesso antes de mesclar
   o próximo: em 29/09, o #39 foi mesclado em cima do deploy quebrado do #38.
-- [ ] Aprovar, uma a uma, as imagens de referência da regressão visual. Faça
+  *Movido para "Transferência", no topo.*
+- [x] Aprovar, uma a uma, as imagens de referência da regressão visual. Faça
   isso **depois do redesign**, porque as atuais vão todas mudar.
-- [ ] Aprovar os textos institucionais do site.
-- [ ] Criar no painel admin os acessos dos advogados reais.
-- [ ] 📅 Por volta de 06/10: o objeto excluído no teste de soft delete sumiu de
+  **Fechado em 02/11/2026:** As do #90 (públicas, rodapé, checkout e catálogo com parcelas) e as do #91 (painéis, inclusive `/admin/advogados`) foram aprovadas no merge, em 02/11/2026. A regravação dos painéis do calendário, que não roda no CI, foi para "Transferência".
+- ↪ Aprovar os textos institucionais do site.
+  *Movido para "Transferência", no topo.*
+- ↪ Criar no painel admin os acessos dos advogados reais.
+  *Movido para "Transferência", no topo.*
+- ↪ 📅 Por volta de 06/10: o objeto excluído no teste de soft delete sumiu de
   vez (retenção de 604800 s a partir das 13:08 UTC de 29/09).
-- [ ] 📅 No faturamento de outubro: o armazenamento de
+  *Movido para "Testes em produção", no topo.*
+- ↪ 📅 No faturamento de outubro: o armazenamento de
   `lexintegra-clamav-db-36bda` caiu. **A premissa mudou em 29/09**: o bucket
   estava vazio e agora tem cerca de 108 MiB. Reavaliar o que esperar.
+  *Movido para "Transferência", no topo.*
 
 ### A3. Testes manuais do app inteiro (passo 6)
 
@@ -151,54 +309,82 @@ e passe a lista ao Claude como "ajustes finais".
 
 **Visitante**
 
-- [ ] Landing: navegação, FAQ, rodapé e links. A home não pode chamar a API.
-- [ ] Cadastro inicial (`/cadastro`) libera o catálogo (`/servicos`).
-- [ ] Catálogo vazio mostra uma mensagem adequada. Depois de criar um produto
+- ↪ Landing: navegação, FAQ, rodapé e links. A home não pode chamar a API.
+  *Movido para "Testes em produção", no topo.*
+- ↪ Cadastro inicial (`/cadastro`) libera o catálogo (`/servicos`).
+  *Movido para "Testes em produção", no topo.*
+- ↪ Catálogo vazio mostra uma mensagem adequada. Depois de criar um produto
   no admin, ele aparece.
-- [ ] Carrinho: adicionar, remover e seguir para o checkout.
-- [ ] Checkout PIX: QR, pagamento e confirmação.
-- [ ] Checkout cartão: redirecionamento e volta.
-- [ ] Chega o e-mail de acesso. Definir a senha e entrar (`/entrar`).
-- [ ] Redefinição de senha.
+  *Movido para "Testes em produção", no topo.*
+- ↪ Carrinho: adicionar, remover e seguir para o checkout.
+  *Movido para "Testes em produção", no topo.*
+- ↪ Checkout PIX: QR, pagamento e confirmação.
+  *Movido para "Testes em produção", no topo.*
+- ↪ Checkout cartão: redirecionamento e volta.
+  *Movido para "Testes em produção", no topo.*
+- ↪ Chega o e-mail de acesso. Definir a senha e entrar (`/entrar`).
+  *Movido para "Testes em produção", no topo.*
+- ↪ Redefinição de senha.
+  *Movido para "Testes em produção", no topo.*
 
 **Cliente**
 
-- [ ] Um cartão por pedido, com estado correto.
-- [ ] Ficha de anamnese definitiva.
-- [ ] Enviar até 3 anexos (jpg ou pdf, 5 MB): o quarto é recusado, e o
+- ↪ Um cartão por pedido, com estado correto.
+  *Movido para "Testes em produção", no topo.*
+- ↪ Ficha de anamnese definitiva.
+  *Movido para "Testes em produção", no topo.*
+- ↪ Enviar até 3 anexos (jpg ou pdf, 5 MB): o quarto é recusado, e o
   arquivo errado também.
-- [ ] Marcar, remarcar e cancelar reunião. O convite chega no Gmail, no
+  *Movido para "Testes em produção", no topo.*
+- ↪ Marcar, remarcar e cancelar reunião. O convite chega no Gmail, no
   Outlook e no Apple Mail, com link do Teams.
-- [ ] Cancelar o pedido antes de o trabalho começar. Depois de começar, o
+  *Movido para "Testes em produção", no topo.*
+- ↪ Cancelar o pedido antes de o trabalho começar. Depois de começar, o
   cancelamento é recusado.
-- [ ] Baixar o entregável: aceitar o termo, pedir revisão e confirmar a
+  *Movido para "Testes em produção", no topo.*
+- ↪ Baixar o entregável: aceitar o termo, pedir revisão e confirmar a
   entrega.
+  *Movido para "Testes em produção", no topo.*
 
 **Advogado**
 
-- [ ] Vê só o que lhe foi distribuído.
-- [ ] Iniciar trabalho e enviar o entregável.
-- [ ] Publicar a grade de disponibilidade. A agenda mostra o que foi marcado.
+- ↪ Vê só o que lhe foi distribuído.
+  *Movido para "Testes em produção", no topo.*
+- ↪ Iniciar trabalho e enviar o entregável.
+  *Movido para "Testes em produção", no topo.*
+- ↪ Publicar a grade de disponibilidade. A agenda mostra o que foi marcado.
+  *Movido para "Testes em produção", no topo.*
 
 **Admin**
 
-- [ ] Criar, editar e desativar produto.
-- [ ] Criar, editar e suspender advogado. Um advogado suspenso perde o acesso
+- ↪ Criar, editar e desativar produto.
+  *Movido para "Testes em produção", no topo.*
+- ↪ Criar, editar e suspender advogado. Um advogado suspenso perde o acesso
   na hora.
-- [ ] Distribuir pedido.
-- [ ] Buscar e filtrar clientes.
-- [ ] Estornar pedido: manual, e o integral quando todos os pedidos da
+  *Movido para "Testes em produção", no topo.*
+- ↪ Distribuir pedido.
+  *Movido para "Testes em produção", no topo.*
+- ↪ Buscar e filtrar clientes.
+  *Movido para "Testes em produção", no topo.*
+- ↪ Estornar pedido: manual, e o integral quando todos os pedidos da
   cobrança forem estornados.
-- [ ] Painel de entregas: reenviar um e-mail que falhou.
-- [ ] Reuniões sem sala: tentar de novo.
-- [ ] LGPD: exportar os dados de um titular.
-- [ ] Pagamentos problemáticos, se a tela for construída.
+  *Movido para "Testes em produção", no topo.*
+- ↪ Painel de entregas: reenviar um e-mail que falhou.
+  *Movido para "Testes em produção", no topo.*
+- ↪ Reuniões sem sala: tentar de novo.
+  *Movido para "Testes em produção", no topo.*
+- ↪ LGPD: exportar os dados de um titular.
+  *Movido para "Testes em produção", no topo.*
+- ↪ Pagamentos problemáticos, se a tela for construída.
+  *Movido para "Testes em produção", no topo.*
 
 **Geral**
 
-- [ ] Todos os e-mails chegam pelo domínio próprio e fora do spam.
-- [ ] As telas funcionam em 360 px, em tablet e em desktop, com teclado e com
+- ↪ Todos os e-mails chegam pelo domínio próprio e fora do spam.
+  *Movido para "Testes em produção", no topo.*
+- ↪ As telas funcionam em 360 px, em tablet e em desktop, com teclado e com
   movimento reduzido.
+  *Movido para "Testes em produção", no topo.*
 
 ---
 
@@ -235,12 +421,14 @@ e passe a lista ao Claude como "ajustes finais".
 - [x] PWA instalável no Chrome e no Safari (05/10/2026): manifesto, ícones a
   partir do símbolo do logo (192, 512, maskable e `apple-touch-icon` opaco) e
   as tags do Safari, sem service worker de propósito (`src/app/pwa.spec.ts`).
-  - [ ] 👤 Instalar no celular: no Android, Chrome → *Instalar app*; no
+  - ↪ 👤 Instalar no celular: no Android, Chrome → *Instalar app*; no
     iPhone, Safari → Compartilhar → *Adicionar à Tela de Início*. Conferir o
     ícone e a abertura em tela cheia.
-  - [ ] 👤 Aprovar, uma a uma, as referências visuais regravadas no PR
+    *Movido para "Testes em produção", no topo.*
+  - [x] 👤 Aprovar, uma a uma, as referências visuais regravadas no PR
     `feat/fechamento-sem-terceiros` (rodapé em todas as telas públicas,
     landing estreita, catálogo estreito e o grupo de opções).
+    **Fechado em 02/11/2026:** Regravadas de novo e aprovadas no merge do #90 (as 13 telas públicas nas três larguras).
 - [x] Restaurar as animações do modelo: hero, capítulos, títulos, faixa de passos,
   revelações, arraste do Line-up e menu móvel; respeitar movimento reduzido.
 - [x] Navbar pública por estado: visitante vê Entrar/Cadastro; pré-cadastrado
@@ -251,24 +439,27 @@ e passe a lista ao Claude como "ajustes finais".
   decorativos borrados, sem nomes, preços ou ofertas fictícias. A home mantém
   apenas a prévia reservada e links de cadastro/acesso; os serviços ficam em
   outra página (`/servicos`). Nenhuma consulta à API foi adicionada à landing.
-- [ ] Adicionar o catálogo real de serviços em `/servicos`: o escritório deve
+- [x] Adicionar o catálogo real de serviços em `/servicos`: o escritório deve
   cadastrar e publicar os produtos pelo módulo administrativo, com escopo,
   entregáveis e preços definitivos. Validar a exibição para usuários com acesso
   e o fluxo de contratação. Os placeholders da landing não são produtos reais.
+  **Fechado em 02/11/2026:** Os seis produtos iniciais estão em produção (corpo do #90). O ajuste de preços e parcelas foi para "Testes em produção".
 - [x] Script de cadastro dos seis produtos iniciais, pela API, idempotente pelo
   nome (`scripts/cadastrar-catalogo-inicial.mjs`, dados em
   `scripts/catalogo-inicial/produtos.data.ts`). Teto de entregáveis subiu de 20
   para 60 por causa do Plano Prime de 12 meses (59).
 - [x] Confirmações do catálogo inicial (06/10/2026): 4 análises contratuais no
   Prime 3 meses, 3 reuniões no Pacote 2, nenhuma no Pacote 3 por enquanto.
-- [ ] 👤 Confirmar com o escritório o número de revisões permitidas
+- ↪ 👤 Confirmar com o escritório o número de revisões permitidas
   (`REVISOES_PADRAO`, zero por enquanto em todos os produtos). Levar também: o Pacote 1 lista "Anamnese inicial" como entregável, separado da
   ficha de anamnese que a plataforma já tem; as descrições prometem "3x" no
   cartão, que segue bloqueado pela homologação; e os limites mensais
   (tira-dúvidas, contratos por mês) ficam só no texto, sem trava no sistema.
-- [ ] 👤 Depois das confirmações, ajustar o arquivo de dados e rodar
+  *Movido para "Transferência", no topo.*
+- [x] 👤 Depois das confirmações, ajustar o arquivo de dados e rodar
   `node scripts/cadastrar-catalogo-inicial.mjs --prod` (pede e-mail e senha de
   administrador no terminal e confirmação pelo domínio).
+  **Fechado em 02/11/2026:** Rodado: os seis produtos estão no ar (#90). O ajuste de preços e parcelas foi para "Testes em produção" (o script não tem `--atualizar`).
 
 
 **Alertas e ClamAV (achados de 29/09)**
@@ -551,10 +742,11 @@ constroem**. As decisões vão para um `decisoes.md`.
   redesign Névoa. A regra de estorno vive numa constante só
   (`packages/shared/src/regra-estorno.ts`). Versões novas:
   `checkout-v3-2026-10` e `v3-2026-10` (download).
-- [ ] 👤 Revisar os textos do Bloco I e levar ao escritório para aprovação.
+- ↪ 👤 Revisar os textos do Bloco I e levar ao escritório para aprovação.
   Inclui a **política de guarda** (decisoes.md 2.1), que é proposta do Henrique
   sujeita à aprovação do escritório, e os termos do checkout
   `checkout-v4-2026-10`.
+  *Movido para "Transferência", no topo.*
 - [x] Encarregado (DPO) e canal de contato: Auan Bastos e
   `privacidade@lexintegra.com.br` (decisoes.md, 1.3), na política de
   privacidade, no rodapé dos e-mails e em `lgpd.md` (Bloco I). **Emenda de
@@ -619,8 +811,9 @@ constroem**. As decisões vão para um `decisoes.md`.
   `suportelexintegra@gmail.com`, nenhum acorda alguém (decisoes.md 5.2,
   05/10/2026). `alertas-roteamento.json`, Terraform (canal *Suporte
   LexIntegra*), lint que recusa `acordar` e `operacao.md`.
-  - [ ] 👤 Depois do deploy, disparar o alerta artificial e conferir que chega
+  - ↪ 👤 Depois do deploy, disparar o alerta artificial e conferir que chega
     em `suportelexintegra@gmail.com` (`docs/runbooks/alerta-artificial.md`).
+    *Movido para "Testes em produção", no topo.*
 - [x] Quem resolve um pagamento órfão, quem devolve o dinheiro no estorno
   manual, e em quanto tempo. Decidido (decisoes.md, 5.3); runbook
   `pagamento-orfao.md` no Bloco B. O texto dos termos é o Bloco I.
@@ -638,17 +831,19 @@ constroem**. As decisões vão para um `decisoes.md`.
 - [x] PR que faz o WIF aceitar os dois repositórios (`transferencia.md` 2.1):
   pronto em 05/10/2026 (`github_repositorios_adicionais` em `iam.tf`), sem
   mudança no plan enquanto a lista estiver vazia.
-- [ ] 👤 Informar o nome do repositório de destino. O PR A da transferência
+- ↪ 👤 Informar o nome do repositório de destino. O PR A da transferência
   passa a ser uma linha: o nome em `github_repositorios_adicionais`
   (`infra/terraform/variables.tf`).
+  *Movido para "Transferência", no topo.*
 - [x] Destino de `arquitetura-lexintegra.{jpg,png}`: movidas para
   `docs/imagens/`, ilustrando o `README.md` da raiz, origem "geradas por IA"
   registrada (decisoes.md, 6.2; Bloco H).
-- [ ] 👤 Branch `feat/modelo-produtos`: **não apagar por enquanto** (Anexo B).
+- ↪ 👤 Branch `feat/modelo-produtos`: **não apagar por enquanto** (Anexo B).
   Ela tem o commit `be2217b` fora da `main`, com
   `scripts/manual-only/atribuir-admin.js` e dois scripts de teste de e-mail
   (sem chave escrita neles, conferido no Bloco H). O Henrique guarda o que
   quiser e apaga depois.
+  *Movido para "Transferência", no topo.*
 - [x] A regra `deny` de `scripts/manual-only/` fica (decisoes.md, 6.4).
 
 ---
@@ -695,33 +890,39 @@ faz. Os comandos estão em
   `DELETE`) rodaram no tenant, e tudo funcionou. As respostas não vieram para
   o repositório: o `arnes-reuniao.ts` segue com a do `POST` de 01/11/2026, que
   tem a mesma forma.
-- [ ] **Operação — Henrique, antes de 01/11/2027:** trocar o client secret
+- ↪ **Operação — Henrique, antes de 01/11/2027:** trocar o client secret
   (runbook 2.5).
+  *Movido para "Transferência", no topo.*
 - [x] Calendário do mês para cliente e advogado, feriados nacionais, janela de
   publicação de doze meses e modo `REUNIOES_MODO=sem-sala` (07/10/2026, PR
   `feat/calendario-reunioes`): em produção dá para marcar reunião sem o Teams;
   o link fica pendente e o evento da sala, estacionado.
-- [ ] **Depois de ligar o Teams — Henrique:** acordar as salas das reuniões
+- ↪ **Depois de ligar o Teams — Henrique:** acordar as salas das reuniões
   marcadas no modo `sem-sala` (runbook 2.8: `/admin/reunioes`, "Tentar de
   novo").
-- [ ] **Revisão — Henrique:** regravar e aprovar as imagens de referência dos
+  *Movido para "Testes em produção", no topo.*
+- ↪ **Revisão — Henrique:** regravar e aprovar as imagens de referência dos
   painéis do cliente e do advogado, que mudaram com o calendário
   (`scripts/visual.sh paineis --update-snapshots`; não roda no CI).
+  *Movido para "Transferência", no topo.*
 - [x] ~~Preencher o `usuarioTeams` de cada advogado~~ **Desnecessário desde
   01/11/2026**: o organizador é a conta do escritório. `organizadorTeams` só
   para advogado licenciado (runbook 2.6).
-- [ ] **Revisão — Henrique:** regravar e aprovar as imagens de referência de
+- [x] **Revisão — Henrique:** regravar e aprovar as imagens de referência de
   `/admin/advogados` (o campo e a coluna viraram "Organizador no Teams";
   `scripts/visual.sh paineis --update-snapshots`).
+  **Fechado em 02/11/2026:** Regravadas e aprovadas pelo Henrique no #91.
 - [x] **Commit de destravamento — agente, em `feat/ligar-teams`:**
   `INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"`, os GUIDs e
   `TEAMS_ORGANIZADOR_PADRAO` (runbook 2.4).
-- [ ] **Deploy — Henrique:** depois do merge, o `apply` pelo pipeline; ele
+- [x] **Deploy — Henrique:** depois do merge, o `apply` pelo pipeline; ele
   também remove a métrica e a política `disponibilidade_sem_link`.
-- [ ] **Teste — Henrique:** marcar, remarcar e cancelar uma reunião de teste;
+  **Fechado em 02/11/2026:** Deploy de `d45bff6` (#92, que integra o #91) verde na reexecução de 02/11/2026, e o de `3ae04fb` (#94) também.
+- ↪ **Teste — Henrique:** marcar, remarcar e cancelar uma reunião de teste;
   link do Teams e convite em Gmail, Outlook e Apple Mail, entrada como
   convidado, sala que muda de horário e some no cancelamento (runbook 2.7; é
   também item de A3).
+  *Movido para "Testes em produção", no topo.*
 
 ### AbacatePay
 
@@ -732,21 +933,26 @@ faz. Os comandos estão em
   valor e ligados ao Cloud Run só com `producao`. Rotas e permissão da chave em
   `operacao.md` 4.2; URL do webhook de produção decidida:
   `https://lexintegra.com.br/api/pagamentos/webhook` (runbook 1.7).
-- [ ] **Configuração manual — Caique:** pedir a **nova análise do site** ao
+- [x] **Configuração manual — Caique:** pedir a **nova análise do site** ao
   AbacatePay e tê-la **aprovada**. O rodapé exigido já está no HTML
   pré-renderizado.
-- [ ] **Configuração manual — Caique:** homologação de cartão da conta;
+  **Fechado em 02/11/2026:** Aprovada: a chave de produção só sai depois da aprovação, e existe desde 01/11/2026 (#89).
+- [x] **Configuração manual — Caique:** homologação de cartão da conta;
   confirmar se ela vale por conta ou por ambiente.
-- [ ] **Credencial — Caique, depois da aprovação:** chave de produção
+  **Fechado em 02/11/2026:** Cartão liberado no checkout da conta (corpo do #89).
+- [x] **Credencial — Caique, depois da aprovação:** chave de produção
   `abc_prod_` com `CHECKOUT:CREATE`, `CHECKOUT:READ`, `PRODUCT:CREATE` e
   `PRODUCT:READ` (runbook 1.2), e a chave HMAC de produção do painel.
-- [ ] **Credencial — Henrique:** gerar o segredo do webhook
+  **Fechado em 02/11/2026:** Chave de produção gravada em `abacatepay-api-key` em 01/11/2026 (#89), com as permissões da tabela oficial de 21/10/2026 (`operacao.md` 4.2). A chave HMAC é a pública da documentação, gravada em 20/10/2026.
+- [x] **Credencial — Henrique:** gerar o segredo do webhook
   (`openssl rand -hex 24`), gravá-lo em `abacatepay-webhook-secret` e digitá-lo
   no painel; gravar a chave de API e a HMAC nos secrets (runbook 1.3).
-- [ ] **Configuração manual — Caique, com o Henrique:** cadastrar o webhook de
+  **Fechado em 02/11/2026:** Segredo gerado, gravado em `abacatepay-webhook-secret` e digitado no painel em 20/10/2026 (#89).
+- [x] **Configuração manual — Caique, com o Henrique:** cadastrar o webhook de
   produção em `https://lexintegra.com.br/api/pagamentos/webhook`, com os seis
   eventos (`transparent.*` e `checkout.*` de `completed`, `refunded` e
   `disputed`), e conferir que nenhum webhook antigo aponta para `/api/webhook`.
+  **Fechado em 02/11/2026:** Webhook v2 cadastrado em 20/10/2026, com a URL de produção e os seis eventos, conferido no painel (#89).
 - [x] **Teste — Caique e escritório:** primeira transação real de valor baixo
   feita à mão pelo painel; o evento chega à URL (503 com o modo desligado) e o
   dinheiro cai (runbook 1.4, regra 20). Feito em 01/11/2026: PIX de R$ 1,00
@@ -754,19 +960,22 @@ faz. Os comandos estão em
 - [x] **Commit de destravamento — Henrique (ou agente, a pedido):**
   `PRODUCAO_DESTRAVADA = true` e `pagamentos_modo = "producao"` (runbook 1.5).
   Branch `chore/ligar-pagamentos-producao`, 01/11/2026.
-- [ ] **Teste — Henrique:** compra PIX real pela plataforma e estorno; confere
+- ↪ **Teste — Henrique:** compra PIX real pela plataforma e estorno; confere
   a permissão dos estornos (runbook 1.6). Também conferir a URL assinada do
   primeiro arquivo real (`limpeza-infra.md` §3).
-- [ ] **Teste — Henrique, no sandbox, depois da homologação:** rodada de cartão
+  *Movido para "Testes em produção", no topo.*
+- ↪ **Teste — Henrique, no sandbox, depois da homologação:** rodada de cartão
   da seção 4 de `docs/runbooks/checkout-sandbox.md`; confirma o nome do evento
   de conclusão do cartão, **o maior risco em aberto**. Depois, PR com
   `pagamentos_cartao = "habilitado"`. **O cartão foi habilitado em
   01/11/2026 sem esta rodada** (branch `chore/ligar-pagamentos-producao`), por
   decisão do Henrique: a primeira compra por cartão em produção, de valor
   baixo e estornada, faz o papel dela.
-- [ ] **Teste — Henrique, no sandbox:** alerta artificial pelo caminho real
+  *Movido para "Testes em produção", no topo.*
+- ↪ **Teste — Henrique, no sandbox:** alerta artificial pelo caminho real
   (webhook com corpo ilegível, `pagamento.webhook-ilegivel`;
   `alerta-artificial.md`). O caminho alternativo já foi testado em 29/09.
+  *Movido para "Testes em produção", no topo.*
 - [x] Política de reentrega de webhook e reenvio manual de evento: documentados
   em `operacao.md` 4.2 e `webhook-fora-do-ar.md` (B1). O que a documentação
   não diz (o que acontece depois de ~18 h) segue como risco conhecido.
@@ -789,20 +998,23 @@ faz. Os comandos estão em
   `suportelexintegra@gmail.com` (`email_remetente`, `email_resposta`), com o
   rodapé dizendo que a resposta chega ao suporte. `operacao.md` 4.1 com plano,
   teto e troca de chave.
-- [ ] 👤 Depois do deploy do reply-to: revogar no painel a chave da conta
+- ↪ 👤 Depois do deploy do reply-to: revogar no painel a chave da conta
   pessoal e desativar a versão 1 de `resend-api-key`.
+  *Movido para "Transferência", no topo.*
 - [x] 🤖 E-mails em HTML com a identidade visual (layout MJML compilado no
   build, botão em tabela, rodapé com LexIntegra, CNPJ e contato; nome do escritório
   retirado a pedido). Convites de administrador e advogado têm link individual
   para criar senha. Textos puros e iCalendar preservados, modelos do provedor
   removidos. Implementação e preview: `docs/runbooks/emails-html.md`.
-- [ ] 👤 E-mail real de teste em Gmail, Outlook e Apple Mail.
-- [ ] 👤 Conferir que o `traceparent` sobrevive ao Cloud Tasks (roteiro completo na
+- ↪ 👤 E-mail real de teste em Gmail, Outlook e Apple Mail.
+  *Movido para "Testes em produção", no topo.*
+- ↪ 👤 Conferir que o `traceparent` sobrevive ao Cloud Tasks (roteiro completo na
   seção 4.4 de `docs/runbooks/limpeza-infra.md`): pedir
   "Esqueci minha senha" em `/entrar` e comparar o `trace` da requisição do
   navegador com o da entrega da task (user agent `Google-Cloud-Tasks`) no log do
   Cloud Run. Mesmo trace, ou link entre os dois, fecha o item. Adiado de A1 em
   29/09 porque o envio de e-mail ainda não funcionava.
+  *Movido para "Testes em produção", no topo.*
 
 ---
 
@@ -812,41 +1024,57 @@ faz. Os comandos estão em
 
 **Fechamento do repositório**
 
-- [ ] 🤖 Atualizar a seção transitória do `AGENTS.md` e o README de
+- [x] 🤖 Atualizar a seção transitória do `AGENTS.md` e o README de
   `docs/entrega` para o estado final.
-- [ ] 🤖 **Por último:** registrar o hash do commit final e gerar de novo a
+  **Fechado em 02/11/2026:** Feito no PR `docs/checklist-fechamento`, com o índice `docs/README.md` do PR `docs/documentacao-completa`.
+- ↪ 🤖 **Por último:** registrar o hash do commit final e gerar de novo a
   lista de licenças nesse commit.
+  *Movido para "Transferência", no topo.*
 
 **Formalidades com a contratante**
 
-- [ ] 👤 Registro escrito dos dois desvios:
+- ↪ 👤 Registro escrito dos dois desvios:
+  *Movido para "Transferência", no topo.*
   - Meet trocado por Teams (item 2.7.3);
   - cartão pelo checkout hospedado, que sai da plataforma e volta (ADR-19).
-- [ ] 👤 Sessão de validação do fluxo com o escritório (item 3.5).
-- [ ] 👤 Aditivo da cláusula 7ª assinado.
+- ↪ 👤 Sessão de validação do fluxo com o escritório (item 3.5).
+  *Movido para "Transferência", no topo.*
+- ↪ 👤 Aditivo da cláusula 7ª assinado.
+  *Movido para "Transferência", no topo.*
 
 **Transferência** (`docs/entrega/transferencia.md`, fases 0 a 4)
 
-- [ ] 👤 O escritório indica um segundo `billing.admin` (Marcos ou alguém da
+- ↪ 👤 O escritório indica um segundo `billing.admin` (Marcos ou alguém da
   B&C) **antes** de o Henrique sair; hoje são só Auan e Henrique.
-- [ ] 👤 Rotacionar **todas** as credenciais que passaram pela sua máquina.
-- [ ] 👤 Transferir o projeto GCP/Firebase (`plataforma-juridica-36bda`), o
+  *Movido para "Transferência", no topo.*
+- ↪ 👤 Rotacionar **todas** as credenciais que passaram pela sua máquina.
+  *Movido para "Transferência", no topo.*
+- ↪ 👤 Transferir o projeto GCP/Firebase (`plataforma-juridica-36bda`), o
   repositório e as contas de terceiros.
-- [ ] 👤 Disparar o alerta artificial depois de trocar o destinatário.
-- [ ] 👤 Tirar o canal de alertas provisório de desenvolvimento, que desde
+  *Movido para "Transferência", no topo.*
+- ↪ 👤 Disparar o alerta artificial depois de trocar o destinatário.
+  *Movido para "Transferência", no topo.*
+- ↪ 👤 Tirar o canal de alertas provisório de desenvolvimento, que desde
   05/10/2026 não recebe nada: bloco `desenvolvimento` em `observabilidade.tf`,
   a variável, as linhas `TF_VAR_alertas_email_desenvolvimento` dos workflows e
   o secret `ALERTAS_EMAIL_DESENVOLVIMENTO` (`transferencia.md` 4.3).
-- [ ] 👤 Remover seus acessos pessoais, ou registrar por escrito quais ficam
+  *Movido para "Transferência", no topo.*
+- ↪ 👤 Remover seus acessos pessoais, ou registrar por escrito quais ficam
   nos 30 dias de garantia e por quê.
-- [ ] 👤 O Henrique convida o Auan em `/admin/administradores`; depois que o
+  *Movido para "Transferência", no topo.*
+- ↪ 👤 O Henrique convida o Auan em `/admin/administradores`; depois que o
   Auan entrar, **o Auan remove o acesso de administrador do Henrique**
   (`operacao.md` §8, `transferencia.md` 6.4a).
+  *Movido para "Transferência", no topo.*
 
 **Encerramento**
 
-- [ ] 👤 Entregar a planilha de custos e a documentação de `docs/entrega/`.
-- [ ] 👤 Assinar o termo de cessão.
-- [ ] 👤 Obter a aprovação formal da contratante. Ela dispara o saldo de 70%
+- ↪ 👤 Entregar a planilha de custos e a documentação de `docs/entrega/`.
+  *Movido para "Transferência", no topo.*
+- ↪ 👤 Assinar o termo de cessão.
+  *Movido para "Transferência", no topo.*
+- ↪ 👤 Obter a aprovação formal da contratante. Ela dispara o saldo de 70%
   (cláusula 6.2) e os 30 dias de garantia (cláusula 4.4).
-- [ ] 👤 Emitir a cobrança do saldo.
+  *Movido para "Transferência", no topo.*
+- ↪ 👤 Emitir a cobrança do saldo.
+  *Movido para "Transferência", no topo.*
