@@ -13,9 +13,10 @@
 O primeiro vem da sonda `sinais-operacionais`, a cada 5 minutos
 (`apps/api/src/sinais/reunioes.ts`).
 
-> **Com o Teams desligado, nenhum dos dois dispara, e isso é o correto.**
-> Com `REUNIOES_MODO=desligado` (`infra/terraform/cloud_run.tf`), ninguém marca
-> reunião.
+> **O Teams está ligado em produção desde o deploy de 02/11/2026**
+> (`REUNIOES_MODO=graph`, #91). Se ele for desligado numa emergência
+> (`reunioes_modo = "desligado"`), nenhum dos dois alertas dispara, e isso é o
+> correto: ninguém marca reunião.
 >
 > O alerta preventivo *Disponibilidade publicada sem link de reuniao* (advogado
 > sem `usuarioTeams`) **saiu** em `feat/ligar-teams`: as salas passaram a ser
@@ -43,9 +44,26 @@ O primeiro vem da sonda `sinais-operacionais`, a cada 5 minutos
 **O tenant** (configurado em 01/11/2026; detalhe em
 [`ligar-terceiros.md`](ligar-terceiros.md), seção 2.1): aplicativo com
 `OnlineMeetings.ReadWrite.All` e consentimento do administrador; client secret
-em `graph-client-secret`, **vencendo em 01/11/2027**;
+em `graph-client-secret`, **vencendo em 01/11/2027**
+([`secret-expirado.md`](secret-expirado.md));
 application access policy `LexIntegra-Reunioes` e política de reunião
 `LexIntegra-Organizadora`, as duas na conta organizadora.
+
+**A conta organizadora** (`operacional@`, Microsoft 365 Business Basic) é o
+ponto único das salas: todas as reuniões de todos os advogados nascem nela,
+salvo advogado com `organizadorTeams` próprio. Consequências que este runbook
+precisa ter em mente:
+
+- **ninguém é anfitrião.** A política deixa a reunião começar sem o
+  organizador e libera o lobby; advogado e cliente entram como convidados
+  anônimos, pelo navegador, digitando o nome, sem chat;
+- **quem tem o link entra.** Não há lobby nem lista de participantes. O link
+  só vai para o cliente e o advogado daquela reunião, pelo convite;
+- **se a conta parar, todas as salas param.** Licença vencida, conta
+  bloqueada ou senha trocada com a conta desativada fazem toda criação,
+  remarcação e cancelamento falharem ao mesmo tempo. A senha da conta não é
+  usada pela plataforma (o token é de aplicação), mas a conta precisa existir,
+  estar ativa e manter a licença.
 
 **Quem executa:** quem atende a operação. As correções no Entra ID e no Teams
 são do administrador do tenant do escritório.
@@ -74,6 +92,7 @@ são do administrador do tenant do escritório.
 | `sala criada, opcoes nao aplicadas: …` | O `createOrGet` funcionou e o PATCH foi recusado. A sala existe, mas o link **não** saiu, de propósito | Leia o resto da mensagem (é o erro do PATCH). Corrigido o tenant, a nova tentativa reaproveita a mesma sala |
 | `sem organizador para a sala: … TEAMS_ORGANIZADOR_PADRAO ausente` | A API subiu sem a conta organizadora (só possível fora do modo `graph`) | Configure `TEAMS_ORGANIZADOR_PADRAO` no `cloud_run.tf` |
 | `HTTP 404` no PATCH da remarcação | A sala foi apagada à mão no Teams | Cancele a reunião pelo escritório e marque outra; não recrie a sala à mão |
+| `HTTP 404` ou `HTTP 403` em `/users/{organizador}/…` em **todas** as reuniões | A conta organizadora foi apagada, bloqueada ou perdeu a licença | O administrador do tenant reativa a conta e a licença. Se a conta mudar, o object ID novo vai em `TEAMS_ORGANIZADOR_PADRAO` por PR, e a policy e a política de reunião precisam ser concedidas a ela (`ligar-terceiros.md`, 2.1). Reuniões já marcadas guardam o organizador antigo |
 
 ## O que fazer
 
