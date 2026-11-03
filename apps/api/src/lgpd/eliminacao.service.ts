@@ -15,6 +15,7 @@ import {
 } from 'firebase-admin/firestore';
 import { ALERTAS, type CanalDeAlerta } from '../alertas/alerta.js';
 import { AUTH_FIREBASE, FIRESTORE } from '../firebase/firebase.module.js';
+import { executarTransacao } from '../firebase/transacao.js';
 import { DespachanteOutbox } from '../outbox/despachante.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import { agora } from '../relogio.js';
@@ -94,7 +95,7 @@ export class EliminacaoTitular {
     const protocolo = idDoProtocolo(inventario.titular.chave);
     const referencia = this.db.collection(SOLICITACOES).doc(protocolo);
 
-    const resultado = await this.db.runTransaction((transacao) =>
+    const resultado = await executarTransacao(this.db, (transacao) =>
       this.avaliar(transacao, referencia, inventario.titular, lista, {
         alvo: { tipo, id },
         ator,
