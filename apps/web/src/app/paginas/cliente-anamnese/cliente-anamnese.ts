@@ -7,7 +7,7 @@ import {
   signal,
   type OnInit,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   FormControl,
   FormGroup,
@@ -17,7 +17,7 @@ import {
   type ValidationErrors,
   type ValidatorFn,
 } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   BLOCOS_ANAMNESE,
   PERGUNTAS_ANAMNESE,
@@ -30,11 +30,13 @@ import {
   type PerguntaAnamnese,
   type RespostaAnamnese,
 } from 'shared/anamnese';
+import { map } from 'rxjs';
 import { cnpjEhValido, normalizarCnpj } from 'shared/cnpj';
 import { normalizarTelefone, telefoneEhValido } from 'shared/telefone';
 import { ApiClienteService } from '../../autenticacao/api-cliente.service';
 import { Botao } from '../../ui/botao/botao';
 import { Campo } from '../../ui/campo/campo';
+import type { Mascara } from '../../ui/campo/mascaras';
 import {
   GrupoOpcoes,
   type OpcaoGrupo,
@@ -113,6 +115,17 @@ export class ClienteAnamnese implements OnInit {
   private readonly api = inject(ApiClienteService);
   private readonly router = inject(Router);
   private readonly destruir = inject(DestroyRef);
+
+  /**
+   * Quem chegou aqui desviado de "Meus pedidos" (`exigirAnamnese`) precisa saber
+   * que os pedidos existem e o que falta para ve-los.
+   */
+  protected readonly pedidosAguardando = toSignal(
+    inject(ActivatedRoute).queryParamMap.pipe(
+      map((parametros) => parametros.get('pendente') === 'pedidos'),
+    ),
+    { initialValue: false },
+  );
 
   protected readonly aviso = AVISO_FICHA;
   protected readonly blocos = BLOCOS_ANAMNESE;
@@ -198,6 +211,12 @@ export class ClienteAnamnese implements OnInit {
     if (pergunta.formato === 'email') return 'email';
     if (pergunta.formato === 'telefone') return 'tel';
     return 'text';
+  }
+
+  protected mascaraDa(pergunta: PerguntaAnamnese): Mascara | null {
+    return pergunta.formato === 'telefone' || pergunta.formato === 'cnpj'
+      ? pergunta.formato
+      : null;
   }
 
   protected erroDa(pergunta: PerguntaAnamnese): string | null {

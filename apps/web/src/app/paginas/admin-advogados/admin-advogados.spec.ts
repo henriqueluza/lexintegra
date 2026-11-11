@@ -325,6 +325,19 @@ describe('AdminAdvogados', () => {
       expect(email.value).toBe('ana@escritorio.test');
     });
 
+    /**
+     * Feedback do teste manual (11/11/2026): o organizador do Teams saiu da tela.
+     * O valor gravado continua viajando na edicao, pelo controle sem campo.
+     */
+    it('nao mostra campo de organizador do Teams', async () => {
+      const { fixture } = await abrirEdicao();
+      const rotulos = [
+        ...(fixture.nativeElement as HTMLElement).querySelectorAll('label'),
+      ].map((rotulo) => rotulo.textContent.trim());
+      expect(rotulos.join(' ')).not.toMatch(/Teams/);
+      expect(rotulos).toHaveLength(2);
+    });
+
     it('salva pelo uid e volta ao cadastro', async () => {
       const { fixture, api } = await abrirEdicao();
       preencher(fixture, 'Ana Souza', 'ana.nova@escritorio.test');

@@ -87,11 +87,13 @@ export class AdminAdvogados implements OnInit {
   protected readonly emCurso = signal<string | null>(null);
 
   /*
-   * `organizadorTeams` e OPCIONAL, e sem `Validators.required` de proposito: as
+   * `organizadorTeams` SAIU DA TELA (feedback do teste manual, 11/11/2026): as
    * reunioes sao criadas pela conta organizadora do escritorio
-   * (`TEAMS_ORGANIZADOR_PADRAO`), e o campo so existe para o advogado que tiver
-   * licenca propria do Teams. O formato e conferido pelo mesmo schema que o
-   * servidor usa.
+   * (`TEAMS_ORGANIZADOR_PADRAO`) e o campo so confundia quem cadastra. O
+   * controle continua no formulario, sem campo visivel, para a EDICAO devolver
+   * ao servidor o valor que ja estava gravado — o contrato e o mesmo da
+   * criacao, e omitir o campo apagaria o organizador proprio de quem o tem.
+   * Cadastro novo manda vazio, que vira `null`: usa a conta organizadora.
    */
   protected readonly formulario = inject(FormBuilder).nonNullable.group({
     nome: ['', [Validators.required, Validators.minLength(3)]],

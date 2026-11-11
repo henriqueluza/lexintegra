@@ -193,6 +193,15 @@ describe('AdminProdutos', () => {
       expect(api.chamadas).toEqual(['listar todos']);
     });
 
+    /** Recusar calado fazia o botao parecer quebrado (teste manual, 11/11/2026). */
+    it('diz o que falta quando o formulario e invalido', async () => {
+      const { fixture } = await montar();
+      await enviar(fixture);
+      const texto = (fixture.nativeElement as HTMLElement).textContent;
+      expect(texto).toContain('Confira os campos destacados');
+      expect(texto).toContain('Campo obrigatório.');
+    });
+
     it('mostra preco em reais, e nao os centavos crus', async () => {
       const { fixture } = await montar({ lista: [PARECER] });
       const texto = textoDaTela(fixture);

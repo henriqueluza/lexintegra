@@ -10,6 +10,10 @@ import type {
 import { VERSAO_TERMOS_CHECKOUT } from 'shared/termos-checkout';
 import { ApiCheckoutService } from '../../autenticacao/api-checkout.service';
 import { AppCheckService } from '../../autenticacao/app-check';
+import {
+  SessaoService,
+  type UsuarioSessao,
+} from '../../autenticacao/sessao.service';
 import { CarrinhoService } from '../../publico/carrinho.service';
 import { PreCadastroService } from '../../publico/pre-cadastro.service';
 import { Checkout, INTERVALO_INICIAL_MS, NAVEGAR_PARA_FORA } from './checkout';
@@ -44,6 +48,8 @@ interface Opcoes {
   resposta?: CheckoutIniciado | Error | HttpErrorResponse;
   /** B2, decisoes.md 3.4: o que `GET /api/checkout/metodos` responde. */
   cartao?: boolean | Error;
+  /** Quem esta logado ao abrir o checkout; ninguem por padrao. */
+  conta?: UsuarioSessao;
 }
 
 async function montar(opcoes: Opcoes = {}): Promise<Cenario> {
@@ -77,6 +83,10 @@ async function montar(opcoes: Opcoes = {}): Promise<Cenario> {
         },
       },
       { provide: AppCheckService, useValue: { preparar: () => undefined } },
+      {
+        provide: SessaoService,
+        useValue: { usuario: signal(opcoes.conta ?? null) },
+      },
       {
         provide: ApiCheckoutService,
         useValue: {
@@ -216,6 +226,47 @@ describe('Checkout', () => {
       expect(conteudo).toContain('R$ 2.000,00');
       expect(conteudo).toContain('Escopo, entregáveis e condições da oferta');
       expect(conteudo).not.toContain('TODO');
+    });
+
+    /** Feedback do teste manual (11/11/2026): logado nao redigita o e-mail. */
+    describe('com a conta do cliente aberta', () => {
+      const conta: UsuarioSessao = {
+        uid: 'c1',
+        email: 'ana@empresa.com.br',
+        nome: 'Ana Ribeiro',
+        perfil: 'cliente',
+      };
+
+      it('preenche nome e e-mail e trava o e-mail', async () => {
+        const cenario = await montar({ conta });
+        const { nome, email } = interno(
+          cenario.fixture,
+        ).formulario.getRawValue();
+        expect({ nome, email }).toEqual({
+          nome: 'Ana Ribeiro',
+          email: 'ana@empresa.com.br',
+        });
+
+        const campo = (
+          cenario.fixture.nativeElement as HTMLElement
+        ).querySelector<HTMLInputElement>('input[type="email"]');
+        expect(campo?.readOnly).toBe(true);
+        expect(texto(cenario.fixture)).toContain(
+          TEXTOS_CHECKOUT.formulario.dicaEmailDaConta,
+        );
+        expect(texto(cenario.fixture)).not.toContain(
+          TEXTOS_CHECKOUT.formulario.dicaEmail,
+        );
+      });
+
+      it('advogado logado continua digitando (regra 17)', async () => {
+        const cenario = await montar({
+          conta: { ...conta, perfil: 'advogado' },
+        });
+        expect(interno(cenario.fixture).formulario.getRawValue().email).toBe(
+          '',
+        );
+      });
     });
 
     it('formulario invalido nao envia e pede o aceite', async () => {

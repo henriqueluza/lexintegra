@@ -38,6 +38,9 @@ export const TEXTOS_CHECKOUT = {
     nome: 'Nome completo',
     email: 'E-mail',
     dicaEmail: 'É para este e-mail que enviamos o link de definição de senha.',
+    /* Para quem ja esta logado: a compra entra na conta aberta. */
+    dicaEmailDaConta:
+      'Você já está na sua conta. O pedido aparece nela, com a senha que você já usa.',
     metodo: 'Forma de pagamento',
     pix: 'PIX',
     cartao: 'Cartão de crédito',
@@ -83,6 +86,9 @@ export const TEXTOS_CHECKOUT = {
     texto:
       'Enviamos para o seu e-mail o link para definir a senha de acesso. Depois de entrar, preencha a ficha inicial para o escritório começar o trabalho.',
     acao: 'Ir para a entrada',
+    textoDaConta:
+      'Seu pedido já está na sua área. Se ainda não preencheu a ficha inicial, ela é o próximo passo para o escritório começar o trabalho.',
+    acaoDaConta: 'Ir para meus pedidos',
   },
 
   vencido: {

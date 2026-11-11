@@ -105,8 +105,9 @@ recebe **antes** de o desenvolvedor sair.
   upload, conta organizadora ([`desvios-minuta.md`](docs/entrega/desvios-minuta.md)).
 - [ ] 🤝 Aditivo da cláusula 7ª (o desvio 3 da minuta serve de texto).
 - [ ] 🤝 Sessão de validação do fluxo com o escritório (item 3.5).
-- [ ] 🏢 Criar no painel os acessos dos advogados reais (`/admin/advogados`,
-  **Organizador no Teams** vazio).
+- [ ] 🏢 Criar no painel os acessos dos advogados reais (`/admin/advogados`;
+  o organizador do Teams não é mais campo da tela, todos usam a conta
+  organizadora).
 - [ ] 🏢 Decisões de LGPD que são do controlador ([`lgpd.md`](docs/entrega/lgpd.md)
   §§ 1, 8, 9 e 10): legítimo interesse na área pública, trilha pseudonimizada
   sem sal, registro das exportações, prazo e responsável no incidente.

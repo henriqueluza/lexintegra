@@ -59,7 +59,12 @@
         [rotulo]="textos.formulario.email"
         tipo="email"
         formControlName="email"
-        [dica]="textos.formulario.dicaEmail"
+        [dica]="
+          contaAberta() === null
+            ? textos.formulario.dicaEmail
+            : textos.formulario.dicaEmailDaConta
+        "
+        [somenteLeitura]="contaAberta() !== null"
         [obrigatorio]="true"
         [erro]="erro('email')"
       />
@@ -165,8 +170,15 @@
     } @case ('pago') {
     <section class="checkout__aviso" role="status">
       <h2>{{ textos.pago.titulo }}</h2>
+      @if (contaAberta() === null) {
       <p>{{ textos.pago.texto }}</p>
       <a class="checkout__link" routerLink="/entrar">{{ textos.pago.acao }}</a>
+      } @else {
+      <p>{{ textos.pago.textoDaConta }}</p>
+      <a class="checkout__link" routerLink="/painel"
+        >{{ textos.pago.acaoDaConta }}</a
+      >
+      }
     </section>
     } @case ('vencido') {
     <section class="checkout__aviso">

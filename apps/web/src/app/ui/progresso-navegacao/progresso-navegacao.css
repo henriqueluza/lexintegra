@@ -1,0 +1,47 @@
+:host {
+  display: contents;
+}
+
+.progresso {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: var(--camada-progresso);
+  height: var(--borda-grossa);
+  overflow: hidden;
+  background: var(--divisor);
+  pointer-events: none;
+}
+
+/*
+ * Um trecho que atravessa a tela, por `transform` — nada de largura animada,
+ * que recalcularia layout a cada quadro.
+ */
+.progresso__barra {
+  display: block;
+  width: 40%;
+  height: 100%;
+  background: var(--acento);
+  transform: translateX(-100%);
+  animation: progresso-passagem 1100ms cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes progresso-passagem {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(250%);
+  }
+}
+
+/*
+ * `base.css` congela toda animacao sob movimento reduzido. Parada, a barra
+ * ocupa a largura inteira: continua dizendo "carregando" sem se mexer.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .progresso__barra {
+    width: 100%;
+    transform: none;
+  }
+}

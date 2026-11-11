@@ -15,6 +15,7 @@ import { Campo } from './campo';
       [erro]="erro()"
       [obrigatorio]="obrigatorio()"
       [somenteLeitura]="somenteLeitura()"
+      [mascara]="mascara()"
     />
   `,
 })
@@ -26,6 +27,7 @@ class Hospedeiro {
   readonly erro = input<string | null>(null);
   readonly obrigatorio = input(false);
   readonly somenteLeitura = input(false);
+  readonly mascara = input<'telefone' | 'cnpj' | null>(null);
   readonly controle = new FormControl('');
 }
 
@@ -102,6 +104,44 @@ describe('Campo', () => {
       entrada(raiz).dispatchEvent(new Event('blur'));
 
       expect(controle.touched).toBe(true);
+    });
+  });
+
+  /** Feedback do teste manual (11/11/2026). As regras estao em `mascaras.spec.ts`. */
+  describe('mascara', () => {
+    it('formata o telefone enquanto a pessoa digita', () => {
+      const { raiz, controle } = montar({ mascara: 'telefone' });
+      const campo = entrada(raiz);
+      campo.value = '11988887777';
+      campo.dispatchEvent(new Event('input'));
+
+      expect(campo.value).toBe('(11) 98888-7777');
+      expect(controle.value).toBe('(11) 98888-7777');
+    });
+
+    it('descarta letra digitada num telefone, sem mexer no resto', () => {
+      const { raiz, controle } = montar({ mascara: 'telefone' });
+      const campo = entrada(raiz);
+      campo.value = '(11) 9x';
+      campo.dispatchEvent(new Event('input'));
+
+      expect(campo.value).toBe('(11) 9');
+      expect(controle.value).toBe('(11) 9');
+    });
+
+    it('formata o valor que ja vem do formulario', () => {
+      const { raiz, controle, detectar } = montar({ mascara: 'cnpj' });
+      controle.setValue('12345678000195');
+      detectar();
+      expect(entrada(raiz).value).toBe('12.345.678/0001-95');
+    });
+
+    it('sem mascara, o valor passa como foi digitado', () => {
+      const { raiz, controle } = montar();
+      const campo = entrada(raiz);
+      campo.value = '11988887777';
+      campo.dispatchEvent(new Event('input'));
+      expect(controle.value).toBe('11988887777');
     });
   });
 

@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
 import { MensagemErro } from '../mensagem-erro/mensagem-erro';
+import { aplicarMascara, cursorAposMascara, type Mascara } from './mascaras';
 
 /**
  * Contador de instancia para gerar os `id` que ligam rotulo, dica e erro ao
@@ -62,6 +63,11 @@ export class Campo implements ControlValueAccessor {
   readonly erro = input<string | null>(null);
   readonly obrigatorio = input(false);
   readonly somenteLeitura = input(false);
+  /**
+   * Formata telefone ou CNPJ enquanto a pessoa digita. So apresentacao: a
+   * validacao continua em `shared/telefone` e `shared/cnpj`, que normalizam.
+   */
+  readonly mascara = input<Mascara | null>(null);
   readonly linhas = input(4);
 
   private readonly indice = sequencia++;
@@ -90,7 +96,7 @@ export class Campo implements ControlValueAccessor {
   private aoTocar: () => void = () => {};
 
   writeValue(valor: string | null): void {
-    this.valor.set(valor ?? '');
+    this.valor.set(this.formatar(valor ?? ''));
   }
 
   registerOnChange(fn: (valor: string) => void): void {
@@ -107,8 +113,29 @@ export class Campo implements ControlValueAccessor {
 
   protected digitou(evento: Event): void {
     const alvo = evento.target as HTMLInputElement | HTMLTextAreaElement;
-    this.valor.set(alvo.value);
-    this.aoMudar(alvo.value);
+    const digitado = alvo.value;
+    const formatado = this.formatar(digitado);
+    if (formatado !== digitado) {
+      /*
+       * O `[value]` do template nao reescreve o campo quando o sinal nao muda
+       * (digitar uma letra num telefone formata para o MESMO texto de antes),
+       * entao o DOM e corrigido aqui, com o cursor de volta ao lugar.
+       */
+      const cursor = cursorAposMascara(
+        digitado,
+        alvo.selectionStart ?? digitado.length,
+        formatado,
+      );
+      alvo.value = formatado;
+      alvo.setSelectionRange(cursor, cursor);
+    }
+    this.valor.set(formatado);
+    this.aoMudar(formatado);
+  }
+
+  private formatar(valor: string): string {
+    const mascara = this.mascara();
+    return mascara === null ? valor : aplicarMascara(mascara, valor);
   }
 
   protected saiu(): void {

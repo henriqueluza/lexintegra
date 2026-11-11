@@ -357,10 +357,10 @@ test('admin: cadastros, distribuicao e financeiro', async ({ page }) => {
     await capturar(page, nome);
   }
 
-  /* Editar advogado: o campo "Organizador no Teams". */
+  /* Editar advogado: so nome e e-mail (o organizador do Teams saiu da tela). */
   await abrir(page, '/admin/advogados');
   await page.getByRole('button', { name: /Editar/ }).first().click();
-  await expect(page.getByLabel(/Organizador no Teams/)).toBeVisible();
+  await expect(page.getByText('Editar advogado')).toBeVisible();
   await capturar(page, 'admin-05-editar-advogado');
 
   /* Editar produto: preco, parcelas e entregaveis. */
