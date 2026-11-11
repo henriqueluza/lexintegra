@@ -138,6 +138,16 @@ export class AdminProdutos implements OnInit {
     this.lista(nome).removeAt(indice);
   }
 
+  /** Mesmos limites de `esquemaProduto`; o servidor valida de novo. */
+  protected erroDoCampo(nome: CampoDeTexto): string | null {
+    const controle = this.formulario.controls[nome];
+    if (!controle.touched || controle.valid) return null;
+    if (controle.hasError('required')) return 'Campo obrigatório.';
+    return nome === 'nome'
+      ? 'O nome precisa de pelo menos 3 caracteres.'
+      : 'Descreva o produto em pelo menos 10 caracteres.';
+  }
+
   protected precoFormatado(centavos: number): string {
     return paraReais(centavos);
   }
@@ -185,7 +195,18 @@ export class AdminProdutos implements OnInit {
 
   protected async salvar(): Promise<void> {
     this.formulario.markAllAsTouched();
-    if (this.formulario.invalid || this.salvando()) return;
+    if (this.salvando()) return;
+    /*
+     * Formulario invalido NAO pode recusar em silencio: sem a mensagem, o botao
+     * parece quebrado (achado do teste manual de 11/11/2026 — nenhum POST chegava
+     * a API e a tela nao dizia por que). Cada campo mostra o proprio erro.
+     */
+    if (this.formulario.invalid) {
+      this.falhaDoFormulario.set(
+        'Confira os campos destacados antes de cadastrar.',
+      );
+      return;
+    }
 
     const dados = this.montarProduto();
     if (dados === null) {
@@ -293,6 +314,16 @@ export class AdminProdutos implements OnInit {
     }
   }
 }
+
+type CampoDeTexto =
+  | 'nome'
+  | 'descricao'
+  | 'preco'
+  | 'quantidadeReunioes'
+  | 'prazoValidadeReunioesDias'
+  | 'intervaloMinimoReunioesDias'
+  | 'numeroRevisoesPermitidas'
+  | 'parcelas';
 
 /** Campo de lista em branco e o rastro de um "adicionar" que a pessoa desistiu de
  * preencher, nao um item vazio que ela quis criar. */

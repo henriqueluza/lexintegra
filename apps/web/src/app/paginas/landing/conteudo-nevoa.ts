@@ -87,7 +87,7 @@ export const NEVOA = {
     {
       titulo: 'Contrate',
       etapa: 'Contrate pela plataforma',
-      resumo: 'PIX; cartão em breve',
+      resumo: 'PIX ou cartão de crédito',
       foto: 'cap2-contrate-maos-assinando',
       pessoa: 'Você',
       texto:
@@ -141,7 +141,7 @@ export const NEVOA = {
     [
       'Contratação online',
       'Veja o preço e contrate pela própria plataforma.',
-      'PIX; cartão em breve.',
+      'PIX ou cartão de crédito (Visa e Mastercard).',
     ],
     [
       'Informações do caso',

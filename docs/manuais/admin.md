@@ -56,13 +56,13 @@ Em **Advogados** (`/admin/advogados`):
 - **Cadastrar:** nome completo e e-mail, depois **Cadastrar e enviar link**.
   O advogado recebe por e-mail o link para definir a senha. Não existe outra
   forma de criar acesso de advogado.
-- **Editar:** nome, e-mail e **Organizador no Teams**. Trocar o e-mail muda o
-  login e manda um link novo para o endereço novo.
-- **Organizador no Teams (opcional): deixe vazio.** Vazio, as salas das
-  reuniões dele são criadas pela conta organizadora do escritório, e ele entra
-  como convidado. Só preencha se o escritório tiver licenciado esse advogado no
-  Teams e concedido a ele as permissões do aplicativo; o valor é o **ID de
-  objeto do Entra**, não o e-mail ([`ligar-terceiros.md`](../runbooks/ligar-terceiros.md), 2.6).
+- **Editar:** nome e e-mail. Trocar o e-mail muda o login e manda um link novo
+  para o endereço novo.
+- **Reuniões no Teams:** não há nada a preencher. As salas são criadas pela
+  conta organizadora do escritório, e o advogado entra como convidado. A coluna
+  **Organizador no Teams** da lista só mostra valor para o advogado que tiver
+  licença própria, configurada pelo desenvolvedor
+  ([`ligar-terceiros.md`](../runbooks/ligar-terceiros.md), 2.6).
 - **Suspender:** corta o acesso **na hora**, inclusive de quem está com a
   sessão aberta. Recusado se o advogado tiver reunião futura marcada: cancele
   ou redistribua antes. **Reativar** devolve o acesso.

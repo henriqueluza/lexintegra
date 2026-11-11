@@ -422,9 +422,12 @@ próprias reuniões, **nesta ordem**:
    Grant-CsTeamsMeetingPolicy -PolicyName LexIntegra-Organizadora -Identity "<e-mail do advogado>"
    ```
 
-3. Depois da propagação, em `/admin/advogados`, **Editar** o advogado e
-   preencher **Organizador no Teams** com o object ID (*Entra ID → Users → o
-   advogado → Object ID*), não o e-mail.
+3. Depois da propagação, gravar o object ID do advogado (*Entra ID → Users → o
+   advogado → Object ID*, não o e-mail) em `organizadorTeams`. O campo saiu do
+   formulário de `/admin/advogados` em 11/11/2026, então a gravação é pela API,
+   com a sessão de um administrador: `PUT /api/admin/advogados/{uid}` com
+   `nome`, `email` e `organizadorTeams` no corpo. A coluna **Organizador no
+   Teams** da lista confirma o valor.
 
 Na ordem inversa, as reuniões novas dele falham com `No application access
 policy found` até a propagação terminar. As reuniões já marcadas **mantêm o

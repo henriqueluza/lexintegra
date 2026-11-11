@@ -18,11 +18,13 @@
         <app-campo
           rotulo="Nome do produto"
           formControlName="nome"
+          [erro]="erroDoCampo('nome')"
           [obrigatorio]="true"
         />
         <app-campo
           rotulo="Preço"
           formControlName="preco"
+          [erro]="erroDoCampo('preco')"
           marcador="3.200,00"
           dica="Informe o valor em reais."
           [obrigatorio]="true"
@@ -32,6 +34,7 @@
       <app-campo
         rotulo="Descrição"
         formControlName="descricao"
+        [erro]="erroDoCampo('descricao')"
         [multilinha]="true"
         [obrigatorio]="true"
       />
@@ -40,25 +43,30 @@
         <app-campo
           rotulo="Reuniões incluídas"
           formControlName="quantidadeReunioes"
+          [erro]="erroDoCampo('quantidadeReunioes')"
         />
         <app-campo
           rotulo="Prazo das reuniões"
           formControlName="prazoValidadeReunioesDias"
+          [erro]="erroDoCampo('prazoValidadeReunioesDias')"
           dica="Dias a partir da compra."
         />
         <app-campo
           rotulo="Intervalo mínimo"
           formControlName="intervaloMinimoReunioesDias"
+          [erro]="erroDoCampo('intervaloMinimoReunioesDias')"
           dica="Dias entre uma reunião e outra."
         />
         <app-campo
           rotulo="Revisões permitidas"
           formControlName="numeroRevisoesPermitidas"
+          [erro]="erroDoCampo('numeroRevisoesPermitidas')"
           dica="Número de revisões incluídas para cada entregável."
         />
         <app-campo
           rotulo="Parcelas no cartão"
           formControlName="parcelas"
+          [erro]="erroDoCampo('parcelas')"
           dica="De 1 a 12. Use 1 para só à vista."
         />
       </div>

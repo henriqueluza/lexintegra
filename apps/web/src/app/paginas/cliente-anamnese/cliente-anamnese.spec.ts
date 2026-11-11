@@ -1,6 +1,12 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import {
+  ActivatedRoute,
+  convertToParamMap,
+  provideRouter,
+  Router,
+} from '@angular/router';
+import { of } from 'rxjs';
 import { PERGUNTAS_ANAMNESE, type SituacaoAnamnese } from 'shared/anamnese';
 import { ApiClienteService } from '../../autenticacao/api-cliente.service';
 import { AVISO_FICHA, ClienteAnamnese } from './cliente-anamnese';
@@ -23,6 +29,7 @@ const SITUACAO: SituacaoAnamnese = {
 async function montar(
   resposta: Promise<unknown> = Promise.resolve({ preenchida: true }),
   situacao: Promise<SituacaoAnamnese> = Promise.resolve(SITUACAO),
+  pendente: string | null = null,
 ): Promise<Cenario> {
   const enviadas: unknown[] = [];
   const destinos: string[] = [];
@@ -31,6 +38,14 @@ async function montar(
     imports: [ClienteAnamnese],
     providers: [
       provideRouter([]),
+      {
+        provide: ActivatedRoute,
+        useValue: {
+          queryParamMap: of(
+            convertToParamMap(pendente === null ? {} : { pendente }),
+          ),
+        },
+      },
       {
         provide: ApiClienteService,
         useValue: {
@@ -97,6 +112,17 @@ describe('ClienteAnamnese', () => {
   afterEach(() => {
     jest.restoreAllMocks();
     TestBed.resetTestingModule();
+  });
+
+  it('explica o desvio a quem veio de "Meus pedidos"', async () => {
+    const texto = (cenario: Cenario): string =>
+      (cenario.fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(texto(await montar())).not.toContain('Seus pedidos aparecem');
+
+    TestBed.resetTestingModule();
+    expect(texto(await montar(undefined, undefined, 'pedidos'))).toContain(
+      'Seus pedidos aparecem',
+    );
   });
 
   it('mostra os dez blocos e o aviso', async () => {

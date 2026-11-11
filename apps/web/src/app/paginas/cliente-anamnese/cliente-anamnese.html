@@ -4,6 +4,12 @@
     Antes de o escritório começar, conte como a sua empresa funciona hoje. A
     ficha é preenchida uma vez e vale para todos os seus pedidos.
   </p>
+  @if (pedidosAguardando()) {
+  <p class="ficha__pendente" role="status">
+    Seus pedidos aparecem assim que você enviar esta ficha. Ela é pedida uma
+    única vez.
+  </p>
+  }
   <p class="ficha__aviso">{{ aviso }}</p>
 
   <form class="ficha__formulario" [formGroup]="respostas" (ngSubmit)="enviar()">
@@ -48,6 +54,7 @@
         [formControl]="texto(pergunta)"
         [rotulo]="pergunta.rotulo"
         [tipo]="tipoDoCampo(pergunta)"
+        [mascara]="mascaraDa(pergunta)"
         [erro]="erroDa(pergunta)"
       />
       } } @if (outroVisivel(pergunta)) {

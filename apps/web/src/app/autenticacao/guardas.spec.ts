@@ -32,8 +32,17 @@ function preparar(opcoes: {
       {
         provide: Router,
         useValue: {
-          createUrlTree: (comandos: string[]) =>
-            ({ destino: comandos.join('/') }) as unknown as UrlTree,
+          createUrlTree: (
+            comandos: string[],
+            extras?: { queryParams?: Record<string, string> },
+          ) => {
+            const consulta = new URLSearchParams(
+              extras?.queryParams,
+            ).toString();
+            return {
+              destino: comandos.join('/') + (consulta ? `?${consulta}` : ''),
+            } as unknown as UrlTree;
+          },
         },
       },
     ],
@@ -153,8 +162,9 @@ describe('exigirAnamnese', () => {
       perfil: 'cliente',
       anamnese: () => Promise.resolve({ preenchida: false }),
     });
+    // `pendente` e o que faz a ficha explicar o desvio; sem ele o menu parece mudo.
     expect(destinoDe(await executar(exigirAnamnese as never))).toBe(
-      '/painel/anamnese',
+      '/painel/anamnese?pendente=pedidos',
     );
   });
 

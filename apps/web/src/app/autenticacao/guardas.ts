@@ -113,7 +113,14 @@ export const exigirAnamnese: CanActivateFn = async (): Promise<
     const { preenchida, exigida } = await api.situacaoDaAnamnese();
     return preenchida || exigida === false
       ? true
-      : router.createUrlTree(['/painel/anamnese']);
+      : /*
+         * `pendente` faz a ficha dizer POR QUE a pessoa esta nela. Sem isso,
+         * clicar em "Meus pedidos" com a ficha em aberto devolvia a mesma tela,
+         * calada, e o menu parecia quebrado (teste manual de 11/11/2026).
+         */
+        router.createUrlTree(['/painel/anamnese'], {
+          queryParams: { pendente: 'pedidos' },
+        });
   } catch {
     return true;
   }

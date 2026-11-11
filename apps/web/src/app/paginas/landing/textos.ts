@@ -73,7 +73,7 @@ export const TEXTOS = {
       {
         titulo: 'Contrate no seu tempo',
         texto:
-          'Revise o carrinho e pague por PIX (o cartão entra em breve). Cada serviço vira um pedido próprio, e o acesso à sua área chega por e-mail.',
+          'Revise o carrinho e pague por PIX ou cartão de crédito. Cada serviço vira um pedido próprio, e o acesso à sua área chega por e-mail.',
       },
       {
         titulo: 'Descreva o caso',

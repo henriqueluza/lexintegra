@@ -473,7 +473,8 @@ novas falham com `AADSTS7000222` e as reuniões aparecem em `/admin/reunioes`
 ([`secret-expirado.md`](../runbooks/secret-expirado.md)).
 
 **Advogado novo.** Nada a fazer no tenant: crie o advogado em
-`/admin/advogados` e deixe **Organizador no Teams** vazio. As salas das
+`/admin/advogados` (nome e e-mail; o campo de organizador do Teams saiu da
+tela em 11/11/2026). As salas das
 reuniões dele nascem na conta organizadora, e ele entra como convidado, pelo
 navegador, digitando o nome, como o cliente. O e-mail de convite que ele recebe
 já diz isso (`reunioes/textos-de-reuniao.ts`).

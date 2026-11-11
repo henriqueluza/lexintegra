@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   inject,
   InjectionToken,
   signal,
@@ -26,6 +27,7 @@ import {
 import { VERSAO_TERMOS_CHECKOUT } from 'shared/termos-checkout';
 import { ApiCheckoutService } from '../../autenticacao/api-checkout.service';
 import { AppCheckService } from '../../autenticacao/app-check';
+import { SessaoService } from '../../autenticacao/sessao.service';
 import { paraReais } from '../../comum/moeda';
 import { descreverPreco } from '../../comum/parcela';
 import { MarcasPagamento } from '../../ui/marcas-pagamento/marcas-pagamento';
@@ -94,6 +96,27 @@ export class Checkout {
   private readonly router = inject(Router);
   private readonly navegarParaFora = inject(NAVEGAR_PARA_FORA);
   protected readonly carrinho = inject(CarrinhoService);
+  private readonly sessao = inject(SessaoService);
+
+  /**
+   * O e-mail de quem ja esta logado como CLIENTE (feedback do teste manual,
+   * 11/11/2026): a compra entra na conta aberta, e pedir de novo o endereco
+   * "para enviar a senha" a quem ja tem senha era pergunta sem sentido — alem
+   * de deixar a pessoa criar, por erro de digitacao, uma segunda conta.
+   *
+   * SO CLIENTE. Advogado e administrador logados continuam digitando: o e-mail
+   * deles no checkout vira pagamento `conflito_de_conta` (regra 17), e
+   * preencher sozinho seria conduzir a pessoa ate a recusa.
+   *
+   * Nao e autorizacao: o servidor continua criando ou achando a conta pelo
+   * e-mail do corpo, como sempre. Isto so poupa a digitacao.
+   */
+  protected readonly contaAberta = computed(() => {
+    const usuario = this.sessao.usuario();
+    return usuario?.perfil === 'cliente' && usuario.email !== null
+      ? { email: usuario.email, nome: usuario.nome }
+      : null;
+  });
 
   protected readonly textos = TEXTOS_CHECKOUT;
   protected readonly hidratado = signal(false);
@@ -164,6 +187,17 @@ export class Checkout {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.pararPolling());
+
+    effect(() => {
+      const conta = this.contaAberta();
+      if (conta === null) return;
+      const { nome, email } = this.formulario.controls;
+      email.setValue(conta.email);
+      /* Nao sobrescreve o que a pessoa ja digitou enquanto a sessao carregava. */
+      if (nome.value.trim() === '' && conta.nome !== null) {
+        nome.setValue(conta.nome);
+      }
+    });
 
     afterNextRender(() => {
       this.hidratado.set(true);

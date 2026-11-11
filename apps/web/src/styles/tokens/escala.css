@@ -88,4 +88,6 @@
   --camada-base: 0;
   --camada-fixa: 40;
   --camada-sobreposta: 50;
+  /* Acima do cabecalho publico e dos dialogos: a barra de troca de tela. */
+  --camada-progresso: 70;
 }
