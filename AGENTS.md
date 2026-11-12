@@ -48,8 +48,9 @@ num módulo, porque elas guardam as armadilhas de cada um.*
   (`shared/parcelamento`, resto na primeira) e "ou R$ X à vista". A página do
   AbacatePay oferece até 12x em todo produto (configuração global do painel);
   o campo só governa o que o site anuncia. Formas de pagamento numa fonte só
-  (`shared/formas-de-pagamento`). Os seis produtos do ar ainda precisam de
-  preço e parcelas pelo painel: `scripts/cadastrar-catalogo-inicial.mjs`
+  (`shared/formas-de-pagamento`). O catálogo do repositório (11/11/2026) são
+  3 planos e 23 avulsos, sem pacotes fechados; produção ainda tem os seis
+  produtos antigos (CHECKLIST): `scripts/cadastrar-catalogo-inicial.mjs`
   **pula produto existente e não tem `--atualizar`**.
 - **Teams pela conta organizadora** desde o deploy de 02/11/2026 (#91):
   `INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"`. As salas são

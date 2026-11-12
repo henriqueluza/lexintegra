@@ -55,16 +55,20 @@ describe('expandirEntregaveis', () => {
 });
 
 describe('catalogo inicial', () => {
-  it('tem os seis produtos, com slugs e nomes unicos', () => {
-    expect(CATALOGO_INICIAL.map((p) => p.slug)).toEqual([
+  it('tem os tres planos e os 23 avulsos, com slugs e nomes unicos', () => {
+    expect(CATALOGO_INICIAL.slice(0, 3).map((p) => p.slug)).toEqual([
       'plano-essencial-12m',
       'plano-prime-12m',
       'plano-prime-3m',
-      'pacote-1-diagnostico-operacao',
-      'pacote-2-diagnostico-completo',
-      'pacote-3-diagnostico-estrategico',
     ]);
-    expect(new Set(CATALOGO_INICIAL.map((p) => p.nome)).size).toBe(6);
+    expect(CATALOGO_INICIAL).toHaveLength(26);
+    expect(new Set(CATALOGO_INICIAL.map((p) => p.slug)).size).toBe(26);
+    expect(new Set(CATALOGO_INICIAL.map((p) => p.nome)).size).toBe(26);
+  });
+
+  /** Decisao de 02/11/2026: so assinaturas e avulsos neste primeiro momento. */
+  it('nao tem pacote fechado', () => {
+    expect(JSON.stringify(CATALOGO_INICIAL)).not.toMatch(/pacote \d/i);
   });
 
   it.each(CATALOGO_INICIAL.map((p) => [p.slug, p] as const))(
@@ -75,26 +79,42 @@ describe('catalogo inicial', () => {
     },
   );
 
-  /** A contagem que o escritorio conferiu, item a item, no PDF dos planos. */
-  it('expande para a contagem esperada de entregaveis', () => {
+  /** A contagem da secao 1 do documento de 02/11/2026, item a item. */
+  it('os planos expandem para a contagem esperada de entregaveis', () => {
     expect(
       Object.fromEntries(
-        CATALOGO_INICIAL.map((p) => [p.slug, paraCorpo(p).entregaveis.length]),
+        CATALOGO_INICIAL.slice(0, 3).map((p) => [
+          p.slug,
+          paraCorpo(p).entregaveis.length,
+        ]),
       ),
     ).toEqual({
-      'plano-essencial-12m': 13,
+      'plano-essencial-12m': 16,
       'plano-prime-12m': 59,
-      'plano-prime-3m': 16,
-      'pacote-1-diagnostico-operacao': 3,
-      'pacote-2-diagnostico-completo': 5,
-      'pacote-3-diagnostico-estrategico': 7,
+      'plano-prime-3m': 14,
     });
   });
 
-  /** Reais digitados no lugar de centavos passariam no schema: so o valor pega. */
+  it('cada avulso tem um entregavel so, e so a reuniao avulsa tem reuniao', () => {
+    const avulsos = CATALOGO_INICIAL.slice(3);
+    expect(avulsos.every((p) => paraCorpo(p).entregaveis.length === 1)).toBe(
+      true,
+    );
+    expect(avulsos.every((p) => p.parcelas === 1)).toBe(true);
+    expect(
+      avulsos.filter((p) => p.quantidadeReunioes > 0).map((p) => p.slug),
+    ).toEqual(['reuniao-avulsa-estrategica']);
+  });
+
+  /**
+   * Reais digitados no lugar de centavos passariam no schema: so o valor pega.
+   * Avulsos na coluna do primeiro trimestre, na ordem do documento.
+   */
   it('precos em centavos', () => {
     expect(CATALOGO_INICIAL.map((p) => p.precoCentavos)).toEqual([
-      420_000, 708_000, 225_000, 69_000, 129_000, 199_000,
+      420_000, 708_000, 225_000, 4_000, 9_000, 17_000, 22_000, 35_000, 52_000,
+      69_000, 104_000, 13_000, 30_000, 22_000, 22_000, 32_000, 26_000, 35_000,
+      32_000, 35_000, 35_000, 43_000, 67_000, 69_000, 69_000, 86_800,
     ]);
   });
 

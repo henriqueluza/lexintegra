@@ -15,7 +15,7 @@
  *
  * Uso:
  *   node scripts/cadastrar-catalogo-inicial.mjs --dry-run
- *       valida os seis produtos e imprime o que seria enviado; nao abre rede
+ *       valida os produtos e imprime o que seria enviado; nao abre rede
  *   node scripts/cadastrar-catalogo-inicial.mjs
  *       contra o `pnpm dev` (API em 127.0.0.1:8080, emulador de Auth), entrando
  *       como o admin da semente; recusa endereco que nao seja loopback
@@ -64,8 +64,8 @@ function reais(centavos) {
 }
 
 /**
- * Valida os seis ANTES de qualquer rede, com o mesmo schema da API. Um produto
- * invalido derruba a execucao inteira: cadastrar cinco e falhar no sexto
+ * Valida todos ANTES de qualquer rede, com o mesmo schema da API. Um produto
+ * invalido derruba a execucao inteira: cadastrar parte e falhar no meio
  * deixaria o catalogo pela metade.
  */
 function prepararProdutos() {
