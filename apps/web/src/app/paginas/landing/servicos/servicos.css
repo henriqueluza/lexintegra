@@ -96,6 +96,12 @@ h2 {
   display: block;
   -webkit-line-clamp: unset;
 }
+/* O limite do escopo: fecha o corpo do cartão, com o peso da descrição. */
+.produto__limite {
+  margin-top: var(--lex-space-4);
+  color: var(--lex-text-secondary);
+  font-size: var(--lex-text-small);
+}
 .produto__ficha {
   margin-top: var(--lex-space-5);
 }

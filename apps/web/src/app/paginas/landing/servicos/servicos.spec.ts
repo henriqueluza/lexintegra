@@ -146,6 +146,22 @@ describe('Servicos', () => {
       expect(total.replace(/\s/g, ' ').trim()).toBe('ou R$ 7.080,00 à vista');
     });
 
+    /** Seção 3 do documento de 02/11/2026: o limite aparece em todo cartão. */
+    it('diz em cada cartao que nao inclui processos', async () => {
+      const fixture = montar();
+
+      await liberar(fixture);
+
+      const raiz = fixture.nativeElement as HTMLElement;
+      const cartoes = raiz.querySelectorAll('.vitrine .produto');
+      const avisos = raiz.querySelectorAll('.vitrine .produto__limite');
+      expect(cartoes.length).toBeGreaterThan(0);
+      expect(avisos).toHaveLength(cartoes.length);
+      expect(avisos[0].textContent?.trim()).toBe(
+        'Não inclui processos judiciais ou administrativos.',
+      );
+    });
+
     it('sem parcelamento, mostra so o total, sem "1x de"', async () => {
       const fixture = montar();
 

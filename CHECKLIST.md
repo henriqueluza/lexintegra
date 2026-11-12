@@ -52,13 +52,24 @@ seguintes), e as reuniões depois de haver pedido distribuído.
   ([`alerta-artificial.md`](docs/runbooks/alerta-artificial.md)), e, no
   sandbox, pelo caminho real (webhook com corpo ilegível,
   `pagamento.webhook-ilegivel`).
-- [ ] 🏢 **Preços e parcelas dos seis produtos do ar.** Eles não têm
-  `parcelas` (aparecem "só à vista") e três ainda dizem "Pode ser parcelado em
-  3x" na descrição (PR #90). **O `--atualizar` não existe:**
-  `scripts/cadastrar-catalogo-inicial.mjs` só aceita `--dry-run` e `--prod` e
-  **pula produto que já existe**. Ajustar pelo painel, em `/admin/produtos`
-  (**Editar**: preço, parcelas e descrição; [manual do administrador](docs/manuais/admin.md)
-  §1), a partir de `scripts/catalogo-inicial/produtos.data.ts`.
+- [ ] 🏢 **Catálogo de 02/11/2026 em produção** (documento "Produtos, Preços
+  e Investimento"; no repositório desde 11/11/2026, em
+  `scripts/catalogo-inicial/produtos.data.ts`). Três passos, nesta ordem:
+  1. **Desativar os três pacotes fechados** em `/admin/produtos`.
+  2. **Editar os três planos pelo painel** (o script **pula produto que já
+     existe** e não tem `--atualizar`): parcelas (12, 12 e 3), descrição sem
+     "Pode ser parcelado em 3x" e a composição nova. Essencial: 2 modelos
+     padrão (eram 3) e 4 análises contratuais; Prime de 3 meses: 2 análises
+     (eram 4). [Manual do administrador](docs/manuais/admin.md) §1.
+  3. **Cadastrar os 23 avulsos**: `node scripts/cadastrar-catalogo-inicial.mjs
+     --prod` (cria só o que falta, pelo nome).
+- [ ] 🏢 **Confirmar com o escritório, do mesmo documento:** modelos de
+  contrato padrão nos planos Prime (6 e 4 na tabela, "a confirmar" na nota; os
+  6 levariam o Prime de 12 meses a 65 entregáveis, acima do teto de 60); o
+  entregável e o prazo da **reunião avulsa** (cadastrada com "Resumo da reunião
+  estratégica" e 180 dias, que o documento não define); o preço dela (R$ 868
+  na tabela, R$ 1.040 a R$ 1.130 no texto); e a troca para os preços do
+  **segundo trimestre**, que será pelo painel.
 - [ ] 👤 **Bateria do app inteiro** no celular e no desktop, por perfil, com os
   manuais como roteiro ([cliente](docs/manuais/cliente.md),
   [advogado](docs/manuais/advogado.md), [administrador](docs/manuais/admin.md)):

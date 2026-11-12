@@ -173,6 +173,10 @@ export const TEXTOS = {
      * As quatro perguntas da cópia de 05/10/2026 ("Copys da plataforma VFinal",
      * item 8), que substituem as seis anteriores. Cadastro, pagamento e
      * cancelamento continuam explicados nos termos de uso e na ficha do pedido.
+     *
+     * A quinta (11/11/2026) é o texto da seção 3 do documento "Produtos, Preços
+     * e Investimento": a plataforma não cobre processos, e o escritório só é
+     * citado aqui, onde a pessoa pergunta. Sem link, banner nem oferta.
      */
     perguntas: [
       {
@@ -197,6 +201,11 @@ export const TEXTOS = {
         resposta:
           'O trabalho jurídico continua sendo realizado por advogado. A principal diferença está na experiência: a LexIntegra concentra contratação, informações, documentos, reuniões, acompanhamento e entrega em um único ambiente, reduzindo etapas administrativas e dando maior previsibilidade ao cliente.',
       },
+      {
+        pergunta: 'A LexIntegra atua em processos judiciais?',
+        resposta:
+          'A LexIntegra não atua em processos. Se precisar de um, você pode contatar um advogado do Bastos & Colomba advogados – escritório que faz parte do mesmo grupo e é especializado em Direito Empresarial (multiservice).',
+      },
     ],
   },
 
@@ -212,6 +221,8 @@ export const TEXTOS = {
 
   servicos: {
     titulo: 'Serviços',
+    /** Em todo cartão de produto (seção 3 do documento de 02/11/2026). */
+    foraDoEscopo: 'Não inclui processos judiciais ou administrativos.',
     travado: {
       titulo: 'Os preços aparecem depois do cadastro',
       texto:
