@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import type { CartaoPedido } from 'shared/esquemas/pedido';
+import { ofereceReunioes } from 'shared/tipo-cobranca';
 import { ApiClienteService } from '../../autenticacao/api-cliente.service';
 import { Carregando } from '../../ui/carregando/carregando';
 import { EstadoVazio } from '../../ui/estado-vazio/estado-vazio';
@@ -93,6 +94,14 @@ export class ClientePedidos implements OnInit {
             entregavel: e.nome,
           })),
       ),
+  );
+
+  /** Alguma reuniao existe ou pode existir? Reuniao ja marcada sempre aparece. */
+  protected readonly temReunioes = computed(() =>
+    this.pedidos().some(
+      (pedido) =>
+        ofereceReunioes(pedido.snapshot) || pedido.reunioes.length > 0,
+    ),
   );
 
   protected readonly proximasReunioes = computed(

@@ -1,0 +1,34 @@
+@if (texto().length > 0) {
+<section class="sobre" aria-label="Sobre este serviço">
+  <button
+    type="button"
+    class="sobre__botao"
+    [attr.aria-expanded]="aberto()"
+    [attr.aria-controls]="idDoTexto"
+    (click)="aberto.set(!aberto())"
+  >
+    <app-icone
+      class="sobre__seta"
+      [class.sobre__seta--aberta]="aberto()"
+      nome="seta-direita"
+      tamanho="p"
+    />
+    Sobre este serviço
+  </button>
+
+  <!--
+    Sempre no DOM, so escondido: o `aria-controls` do botao precisa apontar para
+    um elemento que existe tambem com a secao fechada.
+
+    `[textContent]`, e nao interpolacao: o paragrafo preserva quebras de linha
+    (`pre-line`), e a interpolacao leva junto o espaco em branco que o
+    formatador poe em volta dela — uma linha vazia antes do texto.
+  -->
+  <p
+    class="sobre__texto"
+    [id]="idDoTexto"
+    [hidden]="!aberto()"
+    [textContent]="texto()"
+  ></p>
+</section>
+}
