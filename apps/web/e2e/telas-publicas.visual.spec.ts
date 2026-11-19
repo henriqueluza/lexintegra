@@ -86,6 +86,13 @@ const VITRINE = [
     quantidadeReunioes: 1,
     numeroRevisoesPermitidas: 2,
     parcelas: 1,
+    /*
+     * PRODUTO AINDA NAO CLASSIFICADO, de proposito: e como a API devolve o que
+     * foi gravado antes do lote de novembro de 2026 (sem tipo, sem descricao
+     * detalhada). O cartao dele nao tem o botao "+".
+     */
+    tipoCobranca: null,
+    descricaoDetalhada: '',
   },
 ];
 
@@ -266,16 +273,23 @@ const VITRINE_PARCELADA = [
     quantidadeReunioes: 2,
     numeroRevisoesPermitidas: 0,
     parcelas: 12,
+    tipoCobranca: 'assinatura',
+    descricaoDetalhada:
+      'Um advogado acompanha a empresa ao longo do ano.\n\nInclui a elaboração de contratos sob medida e duas reuniões de alinhamento.',
   },
   {
+    /* So assinatura parcela (novembro de 2026): era "Parecer avulso" em 7x. */
     id: 'parcelado-com-resto',
-    nome: 'Parecer avulso',
-    descricao: 'Parecer técnico sobre uma questão concreta.',
+    nome: 'Plano semestral de pareceres',
+    descricao: 'Pareceres técnicos sobre questões concretas, por seis meses.',
     precoCentavos: 180_000,
     entregaveis: ['Parecer'],
     quantidadeReunioes: 0,
     numeroRevisoesPermitidas: 1,
     parcelas: 7,
+    tipoCobranca: 'assinatura',
+    descricaoDetalhada:
+      'Você envia a questão e recebe o parecer fundamentado, com uma rodada de revisão.',
   },
   {
     id: 'a-vista',
@@ -286,6 +300,9 @@ const VITRINE_PARCELADA = [
     quantidadeReunioes: 1,
     numeroRevisoesPermitidas: 0,
     parcelas: 1,
+    tipoCobranca: 'avulso',
+    descricaoDetalhada:
+      'Uma hora de reunião por vídeo com um advogado, e a ata com os encaminhamentos.',
   },
 ];
 
@@ -317,6 +334,7 @@ async function liberadoComCarrinho(
         nome: produto.nome,
         precoCentavos: produto.precoCentavos,
         parcelas: produto.parcelas,
+        tipoCobranca: produto.tipoCobranca,
       })),
     },
   );
@@ -343,6 +361,88 @@ test.describe('regressao visual das formas de pagamento e parcelas', () => {
     await assentar(page);
 
     await expect(page).toHaveScreenshot('catalogo-com-parcelas.png', {
+      fullPage: true,
+    });
+  });
+
+  /**
+   * O BOTAO "+" DO CARTAO (ajuste 1), aberto no primeiro produto: a descricao
+   * detalhada aparece, o sinal vira "−" e os cartoes vizinhos continuam fechados.
+   */
+  test('catalogo com os detalhes de um cartao abertos', async ({ page }) => {
+    await page.route('**/api/vitrine', (rota) =>
+      rota.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(VITRINE_PARCELADA),
+      }),
+    );
+    await liberadoComCarrinho(page);
+    await page.goto('/servicos');
+    await page
+      .getByRole('button', {
+        name: 'Ver mais detalhes de Plano anual de assessoria',
+      })
+      .click();
+    await expect(
+      page.getByText('Um advogado acompanha a empresa ao longo do ano.'),
+    ).toBeVisible();
+    await assentar(page);
+
+    await expect(page).toHaveScreenshot('catalogo-detalhes-abertos.png', {
+      fullPage: true,
+    });
+  });
+
+  /** So assinatura no carrinho: o resumo anuncia a parcela. */
+  test('carrinho com assinatura', async ({ page }) => {
+    await liberadoComCarrinho(page, VITRINE_PARCELADA.slice(0, 1));
+    await page.goto('/carrinho');
+    await expect(page.locator('.resumo__parcelas')).toBeVisible();
+    await assentar(page);
+
+    await expect(page).toHaveScreenshot('carrinho-assinatura.png', {
+      fullPage: true,
+    });
+  });
+
+  /**
+   * CARRINHO MISTO (decisao de 18/11/2026): com um servico avulso, a compra vai
+   * a vista, e o resumo diz por que e como parcelar a assinatura.
+   */
+  test('carrinho misto, sem parcelamento', async ({ page }) => {
+    await liberadoComCarrinho(page, [
+      VITRINE_PARCELADA[0],
+      VITRINE_PARCELADA[2],
+    ]);
+    await page.goto('/carrinho');
+    await expect(page.locator('.resumo__sem-parcelas')).toBeVisible();
+    await expect(page.locator('.resumo__parcelas')).toHaveCount(0);
+    await assentar(page);
+
+    await expect(page).toHaveScreenshot('carrinho-misto.png', {
+      fullPage: true,
+    });
+  });
+
+  test('checkout com carrinho misto', async ({ page }) => {
+    await page.route('**/api/checkout/metodos', (rota) =>
+      rota.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ pix: true, cartao: true }),
+      }),
+    );
+    await liberadoComCarrinho(page, [
+      VITRINE_PARCELADA[0],
+      VITRINE_PARCELADA[2],
+    ]);
+    await page.goto('/checkout');
+    await expect(page.locator('.checkout__sem-parcelas')).toBeVisible();
+    await expect(page.locator('.checkout__parcelas')).toHaveCount(0);
+    await assentar(page);
+
+    await expect(page).toHaveScreenshot('checkout-carrinho-misto.png', {
       fullPage: true,
     });
   });

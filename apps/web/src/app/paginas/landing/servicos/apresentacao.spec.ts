@@ -1,4 +1,9 @@
-import { agruparItens, apresentar, plural } from './apresentacao';
+import {
+  agruparItens,
+  apresentar,
+  emParagrafos,
+  plural,
+} from './apresentacao';
 import type { ProdutoVitrine } from 'shared/esquemas/vitrine';
 
 const produto: ProdutoVitrine = {
@@ -10,6 +15,8 @@ const produto: ProdutoVitrine = {
   quantidadeReunioes: 0,
   numeroRevisoesPermitidas: 0,
   parcelas: 1,
+  tipoCobranca: 'assinatura',
+  descricaoDetalhada: '',
 };
 
 describe('Apresentação do catálogo, sem alterar os dados de compra', () => {
@@ -121,5 +128,41 @@ describe('Apresentação do catálogo, sem alterar os dados de compra', () => {
     });
     expect(ficha.busca).toContain('analises contratuais');
     expect(ficha.preco.replace(/\s/g, ' ')).toBe('R$ 1.200,00');
+  });
+
+  /**
+   * A DESCRICAO DETALHADA (ajuste 1), que o botao "+" do cartao abre. Vem no
+   * mesmo payload da vitrine e ja sai daqui em paragrafos.
+   */
+  describe('descrição detalhada', () => {
+    it('separa em parágrafos pela linha em branco e mantém a quebra simples', () => {
+      expect(
+        emParagrafos('Primeiro bloco.\nSegunda linha.\n\n  Segundo bloco.  \n\n\n'),
+      ).toEqual(['Primeiro bloco.\nSegunda linha.', 'Segundo bloco.']);
+    });
+
+    it('texto vazio não vira parágrafo', () => {
+      expect(emParagrafos('')).toEqual([]);
+      expect(emParagrafos('   \n\n  ')).toEqual([]);
+    });
+
+    it('entra na ficha e na busca', () => {
+      const ficha = apresentar({
+        ...produto,
+        descricaoDetalhada: 'Inclui a revisão de cláusulas de rescisão.',
+      });
+
+      expect(ficha.detalhada).toEqual([
+        'Inclui a revisão de cláusulas de rescisão.',
+      ]);
+      expect(ficha.busca).toContain('rescisao');
+    });
+
+    /** A API anterior ao campo não o manda; a tela nova não pode cair por isso. */
+    it('produto sem o campo fica sem parágrafo nenhum', () => {
+      const { descricaoDetalhada: _detalhada, ...antigo } = produto;
+
+      expect(apresentar(antigo as ProdutoVitrine).detalhada).toEqual([]);
+    });
   });
 });

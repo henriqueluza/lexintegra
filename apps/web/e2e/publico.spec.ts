@@ -36,6 +36,9 @@ const SERVICOS = [
     quantidadeReunioes: 1,
     numeroRevisoesPermitidas: 2,
     parcelas: 1,
+    tipoCobranca: 'avulso',
+    descricaoDetalhada:
+      'Lemos o contrato inteiro e devolvemos a minuta com as alterações marcadas.',
   },
 ];
 
