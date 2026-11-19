@@ -8,6 +8,10 @@
 //   2. `pnpm test:integration` valida cada um contra `esquemaNovoProduto`, o mesmo
 //      schema que a API usa para recusar. Dado inválido falha aqui, não em produção.
 //   3. Preços em CENTAVOS. R$ 2.500,00 é `250_000`, não `2500`.
+//   4. `tipoCobranca` (novembro de 2026): só `assinatura` parcela; `avulso` é
+//      sempre 1x. Há de propósito um avulso COM reunião (o parecer, a exceção
+//      decidida em 18/11/2026) e um avulso SEM reunião (a revisão de contrato),
+//      para a semente exercitar os dois cartões de pedido.
 //
 // Nada aqui é importado por `apps/web` nem por `apps/api`: o único consumo é
 // `scripts/semear-emulador.mjs` (que só fala com o emulador) e a suíte de
@@ -34,6 +38,9 @@ export const CATALOGO_FICTICIO: readonly NovoProduto[] = [
     intervaloMinimoReunioesDias: 7,
     numeroRevisoesPermitidas: 2,
     parcelas: 6,
+    tipoCobranca: 'assinatura',
+    descricaoDetalhada:
+      'Começamos por uma reunião para entender a sociedade: quem são os sócios, o que cada um aporta e como as decisões serão tomadas.\n\nCom isso redigimos a minuta, que você revisa até duas vezes. A segunda reunião fecha os pontos em aberto antes do registro.\n\nO registro na Junta Comercial não está incluído: entregamos o checklist para você ou seu contador protocolarem.',
   },
   {
     nome: 'Parecer Jurídico Trabalhista',
@@ -50,6 +57,9 @@ export const CATALOGO_FICTICIO: readonly NovoProduto[] = [
     intervaloMinimoReunioesDias: 0,
     numeroRevisoesPermitidas: 1,
     parcelas: 1,
+    tipoCobranca: 'avulso',
+    descricaoDetalhada:
+      'Você descreve a situação e envia os documentos; o advogado analisa o risco à luz da jurisprudência recente e escreve o parecer.\n\nO parecer traz a conclusão, os fundamentos e o que fazer na prática para reduzir a exposição. Uma reunião está incluída para tirar dúvidas sobre o texto entregue.',
   },
   {
     nome: 'Due Diligence Simplificada',
@@ -70,6 +80,9 @@ export const CATALOGO_FICTICIO: readonly NovoProduto[] = [
     intervaloMinimoReunioesDias: 15,
     numeroRevisoesPermitidas: 3,
     parcelas: 12,
+    tipoCobranca: 'assinatura',
+    descricaoDetalhada:
+      'Levantamos os passivos societários, trabalhistas e fiscais da empresa-alvo a partir dos documentos que ela fornecer.\n\nO trabalho é organizado em três entregas: o relatório por área, a matriz de contingências com estimativa de risco e o sumário executivo para quem decide.\n\nSão quatro reuniões ao longo do trabalho. O escopo é reduzido: não inclui auditoria contábil nem avaliação de ativos.',
   },
   {
     nome: 'Revisão de Contrato Comercial',
@@ -83,11 +96,14 @@ export const CATALOGO_FICTICIO: readonly NovoProduto[] = [
     textosOrientativos: [
       'Envie o contrato em formato editável, se possível — PDF digitalizado limita a marcação de alterações.',
     ],
-    quantidadeReunioes: 1,
+    quantidadeReunioes: 0,
     prazoValidadeReunioesDias: 90,
     intervaloMinimoReunioesDias: 0,
     numeroRevisoesPermitidas: 2,
-    parcelas: 7,
+    parcelas: 1,
+    tipoCobranca: 'avulso',
+    descricaoDetalhada:
+      'Você envia o contrato que recebeu da outra parte e nós devolvemos o mesmo arquivo com as cláusulas de risco marcadas e uma sugestão de redação para cada uma.\n\nA nota técnica explica, em linguagem direta, o que mudou e por quê. Não inclui negociação com a outra parte nem reunião.',
   },
   {
     nome: 'Adequação à LGPD',
@@ -109,5 +125,8 @@ export const CATALOGO_FICTICIO: readonly NovoProduto[] = [
     intervaloMinimoReunioesDias: 10,
     numeroRevisoesPermitidas: 2,
     parcelas: 10,
+    tipoCobranca: 'assinatura',
+    descricaoDetalhada:
+      'Começamos pelo diagnóstico: quais dados pessoais a empresa trata, onde ficam e quem tem acesso.\n\nA partir dele escrevemos a política de privacidade, o registro das operações de tratamento e o plano de resposta a incidentes, ajustados ao porte da empresa.\n\nSão três reuniões, uma em cada etapa. A implantação técnica nos sistemas fica com a equipe da empresa.',
   },
 ];

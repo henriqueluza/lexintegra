@@ -61,6 +61,7 @@ describe('GatewayPagamentoFalso', () => {
     const checkout = await gateway.criarCheckoutHospedado({
       itens: [{ produtoGatewayId: id, quantidade: 2 }],
       externalId: 'checkout-2',
+      maxParcelas: 3,
       urlRetorno: 'http://localhost:4200/checkout',
       urlConclusao: 'http://localhost:4200/checkout?id=checkout-2',
     });
@@ -70,7 +71,28 @@ describe('GatewayPagamentoFalso', () => {
     expect(gateway.cobrancas.get(checkout.cobrancaId)?.origem).toBe(
       'hospedado',
     );
+    expect(gateway.maxParcelas.get('checkout-2')).toBe(3);
   });
+
+  /** O falso recusa o que o adaptador real recusa: teto fora de 1 a 12. */
+  it.each([0, 13, 1.5])(
+    'checkout hospedado com teto de parcelas %s falha',
+    async (maxParcelas) => {
+      const gateway = new GatewayPagamentoFalso();
+      const id = await gateway.garantirProduto(PRODUTO);
+
+      await expect(
+        gateway.criarCheckoutHospedado({
+          itens: [{ produtoGatewayId: id, quantidade: 1 }],
+          externalId: 'checkout-4',
+          maxParcelas,
+          urlRetorno: 'u',
+          urlConclusao: 'u',
+        }),
+      ).rejects.toBeInstanceOf(ErroDoGateway);
+      expect(gateway.cobrancas.size).toBe(0);
+    },
+  );
 
   it('checkout hospedado com produto desconhecido falha', async () => {
     const gateway = new GatewayPagamentoFalso();
@@ -79,6 +101,7 @@ describe('GatewayPagamentoFalso', () => {
       gateway.criarCheckoutHospedado({
         itens: [{ produtoGatewayId: 'prod_nenhum', quantidade: 1 }],
         externalId: 'checkout-3',
+        maxParcelas: 1,
         urlRetorno: 'u',
         urlConclusao: 'u',
       }),

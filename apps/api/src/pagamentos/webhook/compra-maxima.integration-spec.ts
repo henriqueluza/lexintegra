@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import {
+  TETO_DESCRICAO_DETALHADA,
   TETO_ENTREGAVEIS_POR_PRODUTO,
   TETO_ITENS_CARRINHO,
   VERSAO_TERMOS_CHECKOUT,
@@ -67,6 +68,8 @@ const MAXIMO: NovoProduto = {
   intervaloMinimoReunioesDias: 365,
   numeroRevisoesPermitidas: 20,
   parcelas: 1,
+  tipoCobranca: 'assinatura',
+  descricaoDetalhada: texto('Descricao detalhada', TETO_DESCRICAO_DETALHADA),
 };
 
 let app: INestApplication;

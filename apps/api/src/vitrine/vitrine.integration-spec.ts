@@ -1,5 +1,5 @@
 import { UnauthorizedException, type ExecutionContext } from '@nestjs/common';
-import type { Firestore } from 'firebase-admin/firestore';
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import type { NovoProduto, NovoPreCadastro } from 'shared';
 import { firestoreDeTeste, limparEmuladores } from '../emulador.js';
 import { PreCadastrosService } from '../pre-cadastros/pre-cadastros.service.js';
@@ -30,6 +30,8 @@ function produto(nome: string): NovoProduto {
     intervaloMinimoReunioesDias: 7,
     numeroRevisoesPermitidas: 2,
     parcelas: 1,
+    tipoCobranca: 'assinatura',
+    descricaoDetalhada: 'Texto detalhado que o botao de detalhes abre.',
   };
 }
 
@@ -111,6 +113,7 @@ describe('vitrine liberada por pre-cadastro', () => {
 
     expect(Object.keys(item).sort()).toEqual([
       'descricao',
+      'descricaoDetalhada',
       'entregaveis',
       'id',
       'nome',
@@ -118,6 +121,47 @@ describe('vitrine liberada por pre-cadastro', () => {
       'parcelas',
       'precoCentavos',
       'quantidadeReunioes',
+      'tipoCobranca',
+    ]);
+  });
+
+  /**
+   * PARCELAMENTO SO EM ASSINATURA (ajuste 11), contra documentos que passaram
+   * pelo Firestore: o avulso sai a vista mesmo com parcelas gravadas por fora da
+   * API, e o produto ainda nao classificado continua anunciando o que anunciava.
+   */
+  it('anuncia a parcela pelo tipo gravado', async () => {
+    const plano = await produtos.criar(
+      { ...produto('A plano'), parcelas: 12 },
+      ADMIN,
+    );
+    const avulso = await produtos.criar(
+      { ...produto('B avulso'), tipoCobranca: 'avulso' },
+      ADMIN,
+    );
+    const legado = await produtos.criar(
+      { ...produto('C legado'), parcelas: 6 },
+      ADMIN,
+    );
+    await banco.collection('produtos').doc(avulso.id).update({ parcelas: 7 });
+    await banco.collection('produtos').doc(legado.id).update({
+      tipoCobranca: FieldValue.delete(),
+      descricaoDetalhada: FieldValue.delete(),
+    });
+
+    const publicados = await vitrine.listar();
+
+    expect(
+      publicados.map((item) => [
+        item.id,
+        item.tipoCobranca,
+        item.parcelas,
+        item.descricaoDetalhada === '',
+      ]),
+    ).toEqual([
+      [plano.id, 'assinatura', 12, false],
+      [avulso.id, 'avulso', 1, false],
+      [legado.id, null, 6, true],
     ]);
   });
 });

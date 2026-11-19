@@ -47,6 +47,9 @@ const PARECER: NovoProduto = {
   intervaloMinimoReunioesDias: 15,
   numeroRevisoesPermitidas: 1,
   parcelas: 1,
+  tipoCobranca: 'assinatura',
+  descricaoDetalhada:
+    'Texto detalhado do produto, com o que ele cobre e como funciona.',
 };
 
 const ADVOGADO = 'uid-advogado';

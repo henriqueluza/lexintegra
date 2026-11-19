@@ -1,5 +1,13 @@
 import { z } from 'zod';
 import { PARCELAS_MAXIMAS_NO_CARTAO } from '../formas-de-pagamento.js';
+import {
+  descricaoDetalhadaDe,
+  MINIMO_DESCRICAO_DETALHADA,
+  TETO_DESCRICAO_DETALHADA,
+  tipoCobrancaDe,
+  TIPOS_COBRANCA,
+  type TipoCobranca,
+} from '../tipo-cobranca.js';
 
 /**
  * Contrato do produto do catalogo (itens 2.5.1 a 2.5.4), compartilhado entre a
@@ -129,8 +137,8 @@ export const esquemaProduto = z.object({
    * o do painel do AbacatePay (`formas-de-pagamento.ts`): anunciar mais do que a
    * conta aceita seria propaganda enganosa. Um (o padrao) e "so a vista".
    *
-   * O site so ANUNCIA: o pedido do checkout hospedado nao leva campo de
-   * parcelas, e a pagina do gateway oferece o que o painel configura.
+   * O numero tambem vai ao gateway como teto (`card.maxInstallments`), desde
+   * o lote de novembro de 2026: ver `tipo-cobranca.ts` e o ADR-19.
    *
    * O PADRAO EXISTE PELOS DOCUMENTOS ANTIGOS. Produto gravado antes deste campo,
    * e snapshot de checkout aberto antes dele, chegam sem `parcelas`; com o
@@ -145,18 +153,79 @@ export const esquemaProduto = z.object({
       `O cartao parcela em ate ${String(PARCELAS_MAXIMAS_NO_CARTAO)} vezes.`,
     )
     .default(1),
+
+  /*
+   * OPCIONAL AQUI, OBRIGATORIO EM `esquemaNovoProduto`. Este schema e o que
+   * `PedidosService.preparar` usa para reidratar o snapshot guardado no
+   * checkout, e um checkout aberto antes do campo existir chega sem ele: se o
+   * tipo fosse exigido aqui, um pagamento confirmado depois do deploy viraria
+   * erro em vez de pedido. Ausente e "legado" (`tipo-cobranca.ts`).
+   */
+  tipoCobranca: z.enum(TIPOS_COBRANCA).optional(),
+
+  /* Mesma razao: vazia nos snapshots antigos, exigida no cadastro. */
+  descricaoDetalhada: z
+    .string()
+    .trim()
+    .max(
+      TETO_DESCRICAO_DETALHADA,
+      `A descricao detalhada pode ter no maximo ${String(TETO_DESCRICAO_DETALHADA)} caracteres.`,
+    )
+    .default(''),
 });
 
 /**
- * Criacao e edicao usam o MESMO schema, e `ativo` esta fora dos dois.
+ * O que o administrador envia para criar e para editar: o schema do produto com
+ * os dois campos do lote de novembro de 2026 EXIGIDOS, e a regra que cruza o
+ * tipo com as parcelas. `ativo` esta fora dos dois.
  *
  * Produto nasce ativo, e a ativacao e recurso proprio na API
  * (`POST`/`DELETE .../ativacao`), pela mesma razao que `status` esta fora de
  * `esquemaNovoAdvogado`: se `ativo` fosse campo do corpo, um `PUT` de edicao de
  * preco reativaria em silencio um produto que o administrador tinha tirado do ar.
+ *
+ * SAO DOIS SCHEMAS DESDE NOVEMBRO, e nao um. `esquemaProduto` continua tolerante
+ * porque le o que ja foi gravado; este e estrito porque e a porta de entrada. Um
+ * produto antigo sem tipo continua legivel e vendavel, mas editar qualquer campo
+ * dele obriga a classifica-lo.
  */
-export const esquemaNovoProduto = esquemaProduto;
-export type NovoProduto = z.infer<typeof esquemaProduto>;
+export const esquemaNovoProduto = esquemaProduto
+  .extend({
+    tipoCobranca: z.enum(
+      TIPOS_COBRANCA,
+      'Escolha se o produto e assinatura ou servico avulso.',
+    ),
+
+    /*
+     * `trim` antes do `min`: texto so com espacos tem comprimento e passaria
+     * por um minimo aplicado ao valor cru.
+     */
+    descricaoDetalhada: z
+      .string()
+      .trim()
+      .min(
+        MINIMO_DESCRICAO_DETALHADA,
+        `Detalhe o produto em pelo menos ${String(MINIMO_DESCRICAO_DETALHADA)} caracteres.`,
+      )
+      .max(
+        TETO_DESCRICAO_DETALHADA,
+        `A descricao detalhada pode ter no maximo ${String(TETO_DESCRICAO_DETALHADA)} caracteres.`,
+      ),
+  })
+  /*
+   * PARCELAMENTO SO EM ASSINATURA (ajuste 11), recusado aqui e nao so escondido
+   * na tela. O erro vai em `parcelas`, que e onde o formulario o mostra.
+   */
+  .superRefine((produto, contexto) => {
+    if (produto.tipoCobranca === 'avulso' && produto.parcelas > 1) {
+      contexto.addIssue({
+        code: 'custom',
+        path: ['parcelas'],
+        message: 'Servico avulso e sempre a vista: use 1 parcela.',
+      });
+    }
+  });
+export type NovoProduto = z.infer<typeof esquemaNovoProduto>;
 
 /** Filtro da listagem administrativa. Vira consulta indexada em `produtos`. */
 export const SITUACOES_PRODUTO = ['ativos', 'inativos', 'todos'] as const;
@@ -171,7 +240,7 @@ export const esquemaSituacao = z
  * O que o pedido congela do produto no momento do checkout (arquitetura 5.3,
  * item 2.5.9, regra inviolavel 5).
  *
- * Sao os dez campos do produto MENOS `ativo`: desativar um produto tira ele da
+ * Sao os doze campos do produto MENOS `ativo`: desativar um produto tira ele da
  * vitrine, nao cancela pedido de quem ja comprou. Os nomes sao identicos aos do
  * produto de proposito — a copia em `congelarProduto` fica mecanica, e um campo
  * novo que alguem esqueca de congelar vira erro de compilacao la, nao surpresa
@@ -192,14 +261,29 @@ export type SnapshotProduto = {
    * Nenhum leitor de pedido o usa: ele serve ao catalogo e ao checkout.
    */
   readonly parcelas: number;
+  /**
+   * Pedidos criados antes do lote de novembro de 2026 nao tem os dois campos
+   * abaixo, e NAO sao reescritos. Quem le usa `tipoCobrancaDe` e
+   * `descricaoDetalhadaDe` (`tipo-cobranca.ts`), nunca o campo cru: ausente e
+   * "legado", que se comporta como antes.
+   */
+  readonly tipoCobranca?: TipoCobranca;
+  readonly descricaoDetalhada?: string;
 };
 
 /**
- * O produto como pode estar gravado: documentos anteriores a `parcelas` nao o
- * tem. E o que `congelarProduto` aceita, para normalizar na leitura.
+ * O produto como pode estar gravado: documentos anteriores a `parcelas`, a
+ * `tipoCobranca` e a `descricaoDetalhada` nao os tem. E o que `congelarProduto`
+ * aceita, para normalizar na leitura. `null` no tipo e o que a API devolve para
+ * o produto ainda nao classificado (`ProdutoResumo`).
  */
-export type ProdutoGravado = Omit<SnapshotProduto, 'parcelas'> & {
+export type ProdutoGravado = Omit<
+  SnapshotProduto,
+  'parcelas' | 'tipoCobranca' | 'descricaoDetalhada'
+> & {
   readonly parcelas?: number;
+  readonly tipoCobranca?: TipoCobranca | null;
+  readonly descricaoDetalhada?: string;
 };
 
 /**
@@ -212,8 +296,12 @@ export type ProdutoGravado = Omit<SnapshotProduto, 'parcelas'> & {
  *
  * `parcelas` ausente vira 1 aqui, e nao no chamador: o Firestore recusa
  * `undefined`, e um produto antigo levado ao carrinho derrubaria o checkout.
+ * Pela mesma razao `tipoCobranca` so entra quando existe (a CHAVE fica de fora,
+ * em vez de ir como `undefined`) e a descricao detalhada ausente vira vazia.
  */
 export function congelarProduto(produto: ProdutoGravado): SnapshotProduto {
+  const tipoCobranca = tipoCobrancaDe(produto);
+
   return {
     nome: produto.nome,
     descricao: produto.descricao,
@@ -225,6 +313,8 @@ export function congelarProduto(produto: ProdutoGravado): SnapshotProduto {
     intervaloMinimoReunioesDias: produto.intervaloMinimoReunioesDias,
     numeroRevisoesPermitidas: produto.numeroRevisoesPermitidas,
     parcelas: produto.parcelas ?? 1,
+    ...(tipoCobranca === null ? {} : { tipoCobranca }),
+    descricaoDetalhada: descricaoDetalhadaDe(produto),
   };
 }
 
@@ -248,6 +338,10 @@ export type ProdutoResumo = {
   readonly intervaloMinimoReunioesDias: number;
   readonly numeroRevisoesPermitidas: number;
   readonly parcelas: number;
+  /** `null` no produto gravado antes do campo: ainda nao foi classificado. */
+  readonly tipoCobranca: TipoCobranca | null;
+  /** Vazia no produto gravado antes do campo. */
+  readonly descricaoDetalhada: string;
   readonly ativo: boolean;
   /** ISO 8601, ou `null` enquanto o carimbo do servidor nao materializou. */
   readonly criadoEm: string | null;

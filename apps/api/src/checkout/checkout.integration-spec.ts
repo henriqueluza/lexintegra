@@ -36,6 +36,9 @@ const PARECER: NovoProduto = {
   intervaloMinimoReunioesDias: 15,
   numeroRevisoesPermitidas: 2,
   parcelas: 1,
+  tipoCobranca: 'assinatura',
+  descricaoDetalhada:
+    'Texto detalhado do produto, com o que ele cobre e como funciona.',
 };
 
 const CHAVE = '7d3c2f7e-1b1a-4c5e-9a3f-2b8d9c0e1f2a';

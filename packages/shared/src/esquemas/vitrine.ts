@@ -1,3 +1,4 @@
+import { parcelasAnunciadas, type TipoCobranca } from '../tipo-cobranca.js';
 import type { ProdutoResumo } from './produto.js';
 
 /**
@@ -10,9 +11,9 @@ import type { ProdutoResumo } from './produto.js';
  * comercial do escritorio a quem so preencheu um formulario — e a rota nem tem
  * usuario autenticado para responsabilizar.
  *
- * Sem zod, sem import nenhum: e contrato de resposta, e o servidor e quem monta.
- * Isso tambem o torna importavel de qualquer lugar do frontend sem custo de
- * pacote.
+ * Sem zod: e contrato de resposta, e o servidor e quem monta. O unico import e
+ * `tipo-cobranca.ts`, que tambem nao tem zod. Isso o torna importavel de
+ * qualquer lugar do frontend sem custo de pacote.
  */
 export type ProdutoVitrine = {
   readonly id: string;
@@ -22,8 +23,18 @@ export type ProdutoVitrine = {
   readonly entregaveis: readonly string[];
   readonly quantidadeReunioes: number;
   readonly numeroRevisoesPermitidas: number;
-  /** Publico por decisao de 01/11/2026: o catalogo anuncia a parcela. */
+  /**
+   * Publico por decisao de 01/11/2026: o catalogo anuncia a parcela. Desde
+   * novembro sai ja como `parcelasAnunciadas`: avulso e sempre 1.
+   */
   readonly parcelas: number;
+  /** `null` no produto ainda nao classificado: a tela o trata como antes. */
+  readonly tipoCobranca: TipoCobranca | null;
+  /**
+   * O que o botao "+" do card abre (ajuste 1). Vem NESTE payload, e nao numa
+   * segunda chamada: o texto ja esta no card quando o cliente expande.
+   */
+  readonly descricaoDetalhada: string;
 };
 
 /**
@@ -45,6 +56,8 @@ export function paraVitrine(produto: ProdutoResumo): ProdutoVitrine {
     entregaveis: [...produto.entregaveis],
     quantidadeReunioes: produto.quantidadeReunioes,
     numeroRevisoesPermitidas: produto.numeroRevisoesPermitidas,
-    parcelas: produto.parcelas,
+    parcelas: parcelasAnunciadas(produto),
+    tipoCobranca: produto.tipoCobranca,
+    descricaoDetalhada: produto.descricaoDetalhada,
   };
 }

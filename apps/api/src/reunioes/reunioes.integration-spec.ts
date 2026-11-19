@@ -116,6 +116,7 @@ interface Compra {
   readonly quantidadeReunioes?: number;
   readonly intervaloMinimoReunioesDias?: number;
   readonly prazoValidadeReunioesDias?: number;
+  readonly tipoCobranca?: 'assinatura' | 'avulso';
 }
 
 async function comprar(opcoes: Compra = {}): Promise<string> {
@@ -136,6 +137,9 @@ async function comprar(opcoes: Compra = {}): Promise<string> {
       intervaloMinimoReunioesDias: opcoes.intervaloMinimoReunioesDias ?? 7,
       numeroRevisoesPermitidas: 2,
       parcelas: 1,
+      tipoCobranca: opcoes.tipoCobranca ?? 'assinatura',
+      descricaoDetalhada:
+        'Lemos o contrato inteiro e devolvemos a minuta com as alteracoes.',
     },
     ADMIN,
   );
@@ -276,6 +280,36 @@ describe('agendamento', () => {
     await expect(
       reunioes.agendar('pedido-1', CLIENTE, slotId, AGORA),
     ).rejects.toThrow(/prazo/);
+  });
+
+  /**
+   * PEDIDO SEM REUNIAO (lote de novembro de 2026, ajuste 9). Um servico avulso
+   * sem reuniao contratada: a API recusa o agendamento, com o motivo proprio, e
+   * o slot continua livre. Esconder o botao na tela nao e a defesa.
+   */
+  it('pedido avulso sem reuniao nao agenda, e o slot continua livre', async () => {
+    await comprar({ quantidadeReunioes: 0, tipoCobranca: 'avulso' });
+    const slotId = await publicarSlot(INICIO, FIM);
+
+    await expect(
+      reunioes.agendar('pedido-1', CLIENTE, slotId, AGORA),
+    ).rejects.toThrow('Este pedido não inclui reuniões.');
+
+    const slot = await banco.collection('disponibilidades').doc(slotId).get();
+    expect(slot.data()?.['reserva'] ?? null).toBeNull();
+    await expect(
+      horarios.listar('pedido-1', CLIENTE, null, null, AGORA),
+    ).resolves.toEqual([]);
+  });
+
+  /** EXCECAO DE 18/11/2026: avulso COM reuniao contratada agenda. */
+  it('pedido avulso com reuniao contratada agenda', async () => {
+    await comprar({ quantidadeReunioes: 1, tipoCobranca: 'avulso' });
+    const slotId = await publicarSlot(INICIO, FIM);
+
+    await expect(
+      reunioes.agendar('pedido-1', CLIENTE, slotId, AGORA),
+    ).resolves.toMatchObject({ id: 'r001' });
   });
 
   it('saldo esgotado e recusado', async () => {

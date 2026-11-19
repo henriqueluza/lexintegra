@@ -7,23 +7,31 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   FormArray,
   FormBuilder,
   FormControl,
   ReactiveFormsModule,
-  Validators,
 } from '@angular/forms';
-import type {
-  NovoProduto,
-  ProdutoResumo,
-  SituacaoProduto,
-} from 'shared/esquemas/produto';
+import { map } from 'rxjs';
+import type { ProdutoResumo, SituacaoProduto } from 'shared/esquemas/produto';
+import {
+  MINIMO_DESCRICAO_DETALHADA,
+  ROTULO_DO_TIPO_COBRANCA,
+  TETO_DESCRICAO_DETALHADA,
+  TIPOS_COBRANCA,
+  type TipoCobranca,
+} from 'shared/tipo-cobranca';
 import { ApiService } from '../../autenticacao/api.service';
 import { Botao } from '../../ui/botao/botao';
 import { Campo } from '../../ui/campo/campo';
 import { Cartao } from '../../ui/cartao/cartao';
+import {
+  GrupoOpcoes,
+  type OpcaoGrupo,
+} from '../../ui/grupo-opcoes/grupo-opcoes';
 import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
 import { Selecao, type OpcaoSelecao } from '../../ui/selecao/selecao';
 import {
@@ -32,7 +40,16 @@ import {
   type ColunaTabela,
 } from '../../ui/tabela/tabela';
 import { mensagemDoErro } from '../erros';
-import { paraCampoDePreco, paraCentavos, paraInteiro } from './valores';
+import {
+  aplicarVisibilidade,
+  campoDoServidor,
+  criarFormulario,
+  montarProduto,
+  mostraCamposDeReuniao,
+  mostraParcelas,
+  paraFormulario,
+  type CampoDoFormulario,
+} from './formulario-produto';
 
 /**
  * Catalogo de produtos, pelo administrador global (itens 2.5.1 a 2.5.4).
@@ -53,6 +70,7 @@ import { paraCampoDePreco, paraCentavos, paraInteiro } from './valores';
     Campo,
     Cartao,
     CelulaTabela,
+    GrupoOpcoes,
     MensagemErro,
     Selecao,
     Tabela,
@@ -67,6 +85,7 @@ export class AdminProdutos implements OnInit {
 
   protected readonly colunas: readonly ColunaTabela[] = [
     { chave: 'nome', rotulo: 'Produto' },
+    { chave: 'tipo', rotulo: 'Tipo' },
     { chave: 'preco', rotulo: 'Preço', alinhamento: 'fim' },
     { chave: 'composicao', rotulo: 'Composicao' },
     { chave: 'situacao', rotulo: 'Situação' },
@@ -97,21 +116,49 @@ export class AdminProdutos implements OnInit {
     nonNullable: true,
   });
 
-  protected readonly formulario = this.fb.nonNullable.group({
-    nome: ['', [Validators.required, Validators.minLength(3)]],
-    descricao: ['', [Validators.required, Validators.minLength(10)]],
-    preco: ['', [Validators.required]],
-    quantidadeReunioes: ['0', [Validators.required]],
-    prazoValidadeReunioesDias: ['365', [Validators.required]],
-    intervaloMinimoReunioesDias: ['0', [Validators.required]],
-    numeroRevisoesPermitidas: ['0', [Validators.required]],
-    parcelas: ['1', [Validators.required]],
-    entregaveis: this.fb.nonNullable.array<FormControl<string>>([]),
-    textosOrientativos: this.fb.nonNullable.array<FormControl<string>>([]),
-  });
+  protected readonly formulario = criarFormulario(this.fb);
+
+  protected readonly opcoesDeTipo: readonly OpcaoGrupo[] = TIPOS_COBRANCA.map(
+    (valor) => ({ valor, rotulo: ROTULO_DO_TIPO_COBRANCA[valor] }),
+  );
+
+  /** Erros 400 do servidor, por campo da tela; somem na proxima tentativa. */
+  private readonly errosDoServidor = signal<
+    Readonly<Partial<Record<CampoDoFormulario, string>>>
+  >({});
+
+  /*
+   * O que a tela precisa saber do formulario para esconder campos. `getRawValue`
+   * e nao `value`: campo escondido fica desabilitado e `value` o omitiria.
+   */
+  private readonly valores = toSignal(
+    this.formulario.valueChanges.pipe(map(() => this.formulario.getRawValue())),
+    { initialValue: this.formulario.getRawValue() },
+  );
+  protected readonly ehAvulso = computed(
+    () => this.valores().tipoCobranca === 'avulso',
+  );
+  protected readonly mostraParcelas = computed(() =>
+    mostraParcelas(this.valores().tipoCobranca),
+  );
+  protected readonly mostraReuniao = computed(() =>
+    mostraCamposDeReuniao(
+      this.valores().tipoCobranca,
+      this.valores().incluiReuniao,
+    ),
+  );
+  /** Conta depois de aparar, igual ao servidor: so espacos nao conta. */
+  protected readonly dicaDaDescricaoDetalhada = computed(
+    () =>
+      `É o texto que o cliente abre no botão + do catálogo. ${String(this.valores().descricaoDetalhada.trim().length)} de ${String(TETO_DESCRICAO_DETALHADA)}.`,
+  );
 
   constructor() {
     this.acrescentar('entregaveis');
+    aplicarVisibilidade(this.formulario);
+    this.formulario.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => aplicarVisibilidade(this.formulario));
     this.situacao.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe(() => void this.recarregar());
@@ -139,13 +186,15 @@ export class AdminProdutos implements OnInit {
   }
 
   /** Mesmos limites de `esquemaProduto`; o servidor valida de novo. */
-  protected erroDoCampo(nome: CampoDeTexto): string | null {
+  protected erroDoCampo(nome: CampoDoFormulario): string | null {
     const controle = this.formulario.controls[nome];
-    if (!controle.touched || controle.valid) return null;
-    if (controle.hasError('required')) return 'Campo obrigatório.';
-    return nome === 'nome'
-      ? 'O nome precisa de pelo menos 3 caracteres.'
-      : 'Descreva o produto em pelo menos 10 caracteres.';
+    if (controle.touched && controle.invalid) {
+      return (
+        MENSAGENS_DO_CAMPO[nome]?.(controle.errors ?? {}) ??
+        'Campo obrigatório.'
+      );
+    }
+    return this.errosDoServidor()[nome] ?? null;
   }
 
   protected precoFormatado(centavos: number): string {
@@ -156,6 +205,10 @@ export class AdminProdutos implements OnInit {
    * tipo de volta para chamar os auxiliares. Mesmo padrao de `tabela.secao.html`. */
   protected comoProduto(linha: Record<string, unknown>): ProdutoResumo {
     return linha as unknown as ProdutoResumo;
+  }
+
+  protected rotuloDoTipo(tipo: TipoCobranca): string {
+    return ROTULO_DO_TIPO_COBRANCA[tipo];
   }
 
   protected composicao(produto: ProdutoResumo): string {
@@ -170,24 +223,17 @@ export class AdminProdutos implements OnInit {
   protected editar(produto: ProdutoResumo): void {
     this.editando.set(produto.id);
     this.falhaDoFormulario.set(null);
+    this.errosDoServidor.set({});
 
     this.trocarLista('entregaveis', produto.entregaveis);
     this.trocarLista('textosOrientativos', produto.textosOrientativos);
-    this.formulario.patchValue({
-      nome: produto.nome,
-      descricao: produto.descricao,
-      preco: paraCampoDePreco(produto.precoCentavos),
-      quantidadeReunioes: String(produto.quantidadeReunioes),
-      prazoValidadeReunioesDias: String(produto.prazoValidadeReunioesDias),
-      intervaloMinimoReunioesDias: String(produto.intervaloMinimoReunioesDias),
-      numeroRevisoesPermitidas: String(produto.numeroRevisoesPermitidas),
-      parcelas: String(produto.parcelas),
-    });
+    this.formulario.patchValue(paraFormulario(produto));
   }
 
   protected cancelarEdicao(): void {
     this.editando.set(null);
     this.falhaDoFormulario.set(null);
+    this.errosDoServidor.set({});
     this.formulario.reset();
     this.trocarLista('entregaveis', ['']);
     this.trocarLista('textosOrientativos', []);
@@ -208,7 +254,7 @@ export class AdminProdutos implements OnInit {
       return;
     }
 
-    const dados = this.montarProduto();
+    const dados = montarProduto(this.formulario);
     if (dados === null) {
       this.falhaDoFormulario.set(
         'Confira os valores numéricos: preço em reais, e os demais em números inteiros.',
@@ -218,6 +264,7 @@ export class AdminProdutos implements OnInit {
 
     this.salvando.set(true);
     this.falhaDoFormulario.set(null);
+    this.errosDoServidor.set({});
     try {
       const id = this.editando();
       if (id === null) await this.api.criarProduto(dados);
@@ -227,6 +274,7 @@ export class AdminProdutos implements OnInit {
       await this.recarregar();
     } catch (erro) {
       this.falhaDoFormulario.set(mensagemDoErro(erro));
+      this.errosDoServidor.set(errosPorCampo(erro));
     } finally {
       this.salvando.set(false);
     }
@@ -245,38 +293,6 @@ export class AdminProdutos implements OnInit {
     } finally {
       this.emCurso.set(null);
     }
-  }
-
-  /**
-   * `null` quando algum numero nao converte. A API valida de novo com o mesmo
-   * schema — isto aqui e para a pessoa ver o erro antes de mandar, nao para
-   * substituir a validacao do servidor.
-   */
-  private montarProduto(): NovoProduto | null {
-    const bruto = this.formulario.getRawValue();
-    const precoCentavos = paraCentavos(bruto.preco);
-    const inteiros = {
-      quantidadeReunioes: paraInteiro(bruto.quantidadeReunioes),
-      prazoValidadeReunioesDias: paraInteiro(bruto.prazoValidadeReunioesDias),
-      intervaloMinimoReunioesDias: paraInteiro(
-        bruto.intervaloMinimoReunioesDias,
-      ),
-      numeroRevisoesPermitidas: paraInteiro(bruto.numeroRevisoesPermitidas),
-      parcelas: paraInteiro(bruto.parcelas),
-    };
-
-    if (precoCentavos === null || Object.values(inteiros).includes(null)) {
-      return null;
-    }
-
-    return {
-      nome: bruto.nome.trim(),
-      descricao: bruto.descricao.trim(),
-      precoCentavos,
-      entregaveis: limpar(bruto.entregaveis),
-      textosOrientativos: limpar(bruto.textosOrientativos),
-      ...(inteiros as Record<keyof typeof inteiros, number>),
-    };
   }
 
   /**
@@ -315,18 +331,37 @@ export class AdminProdutos implements OnInit {
   }
 }
 
-type CampoDeTexto =
-  | 'nome'
-  | 'descricao'
-  | 'preco'
-  | 'quantidadeReunioes'
-  | 'prazoValidadeReunioesDias'
-  | 'intervaloMinimoReunioesDias'
-  | 'numeroRevisoesPermitidas'
-  | 'parcelas';
+type Mensagens = (erros: Record<string, unknown>) => string;
 
-/** Campo de lista em branco e o rastro de um "adicionar" que a pessoa desistiu de
- * preencher, nao um item vazio que ela quis criar. */
-function limpar(valores: readonly string[]): string[] {
-  return valores.map((valor) => valor.trim()).filter((valor) => valor !== '');
+/** O texto de cada erro de cliente; o que nao esta aqui cai em "obrigatorio". */
+const MENSAGENS_DO_CAMPO: Partial<Record<CampoDoFormulario, Mensagens>> = {
+  nome: (e) =>
+    e['required'] ? OBRIGATORIO : 'O nome precisa de pelo menos 3 caracteres.',
+  descricao: (e) =>
+    e['required']
+      ? OBRIGATORIO
+      : 'Descreva o produto em pelo menos 10 caracteres.',
+  tipoCobranca: () => 'Escolha o tipo de cobrança.',
+  descricaoDetalhada: (e) =>
+    e['required']
+      ? OBRIGATORIO
+      : e['curta']
+        ? `Escreva pelo menos ${String(MINIMO_DESCRICAO_DETALHADA)} caracteres.`
+        : `Use no máximo ${String(TETO_DESCRICAO_DETALHADA)} caracteres.`,
+};
+
+const OBRIGATORIO = 'Campo obrigatório.';
+
+/** `{ erros: { campo: mensagem } }` do `ZodPipe`, so os campos que a tela tem. */
+function errosPorCampo(
+  erro: unknown,
+): Partial<Record<CampoDoFormulario, string>> {
+  if (!(erro instanceof HttpErrorResponse) || erro.status !== 400) return {};
+  const corpo = erro.error as { erros?: Record<string, string> } | null;
+  const saida: Partial<Record<CampoDoFormulario, string>> = {};
+  for (const [chave, mensagem] of Object.entries(corpo?.erros ?? {})) {
+    const campo = campoDoServidor(chave);
+    if (campo !== null) saida[campo] = mensagem;
+  }
+  return saida;
 }

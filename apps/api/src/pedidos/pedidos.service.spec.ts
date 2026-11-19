@@ -28,6 +28,9 @@ const DUE_DILIGENCE: NovoProduto = {
   intervaloMinimoReunioesDias: 15,
   numeroRevisoesPermitidas: 2,
   parcelas: 1,
+  tipoCobranca: 'assinatura',
+  descricaoDetalhada:
+    'Texto detalhado do produto, com o que ele cobre e como funciona.',
 };
 
 interface Arranjo {
@@ -81,7 +84,7 @@ async function comprarCom(
 
 describe('PedidosService', () => {
   describe('criacao', () => {
-    it('congela os dez campos do produto dentro do pedido', async () => {
+    it('congela os doze campos do produto dentro do pedido', async () => {
       const arranjo = montar();
       await comPedido(arranjo);
 
@@ -302,7 +305,30 @@ describe('PedidosService', () => {
       );
     });
 
-    /** Campo a mais no documento nao entra no pedido: `congelarProduto` lista os nove. */
+    /**
+     * CHECKOUT ABERTO ANTES DO LOTE DE NOVEMBRO DE 2026. O snapshot guardado em
+     * `checkouts` nao tem tipo nem descricao detalhada, e o pagamento pode ser
+     * confirmado depois do deploy (o PIX vale horas, o cartao mais). Recusar
+     * aqui seria dinheiro no gateway e nenhum pedido: o snapshot antigo vira
+     * pedido legado, sem a chave do tipo e com a descricao vazia.
+     */
+    it('aceita o snapshot anterior ao tipo de cobranca', () => {
+      const arranjo = montar();
+      const {
+        tipoCobranca: _tipo,
+        descricaoDetalhada: _detalhada,
+        ...antigo
+      } = DUE_DILIGENCE;
+
+      const [preparado] = arranjo.pedidos.preparar([
+        { ...DADOS, snapshot: antigo },
+      ]);
+
+      expect(preparado.snapshot).toEqual({ ...antigo, descricaoDetalhada: '' });
+      expect('tipoCobranca' in preparado.snapshot).toBe(false);
+    });
+
+    /** Campo a mais no documento nao entra no pedido: `congelarProduto` lista os doze. */
     it('descarta campo que nao faz parte do snapshot', () => {
       const arranjo = montar();
 
