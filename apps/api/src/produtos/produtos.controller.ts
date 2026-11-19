@@ -11,7 +11,6 @@ import {
 } from '@nestjs/common';
 import {
   esquemaNovoProduto,
-  esquemaProduto,
   esquemaSituacao,
   type NovoProduto,
   type ProdutoResumo,
@@ -71,7 +70,7 @@ export class ProdutosController {
   @HttpCode(200)
   editar(
     @Param('id') id: string,
-    @Body(new ZodPipe(esquemaProduto)) dados: NovoProduto,
+    @Body(new ZodPipe(esquemaNovoProduto)) dados: NovoProduto,
     @UsuarioAtual() admin: UsuarioAutenticado,
   ): Promise<ProdutoResumo> {
     return this.produtos.editar(id, dados, admin.uid);

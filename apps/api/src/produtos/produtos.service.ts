@@ -8,9 +8,12 @@ import {
 } from 'firebase-admin/firestore';
 import {
   congelarProduto,
+  descricaoDetalhadaDe,
+  tipoCobrancaDe,
   type NovoProduto,
   type ProdutoResumo,
   type SituacaoProduto,
+  type TipoCobranca,
 } from 'shared';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 
@@ -28,6 +31,13 @@ export interface DocumentoProduto {
   numeroRevisoesPermitidas: number;
   /** Ausente nos documentos gravados antes de 01/11/2026; vale 1. */
   parcelas?: number;
+  /**
+   * Ausentes nos documentos gravados antes do lote de novembro de 2026. O
+   * produto continua vendavel sem eles (legado, `tipo-cobranca.ts`), e editar
+   * qualquer campo obriga a preenche-los: o `PUT` usa o schema estrito.
+   */
+  tipoCobranca?: TipoCobranca;
+  descricaoDetalhada?: string;
   ativo: boolean;
   criadoEm: Timestamp | FieldValue;
   criadoPor: string;
@@ -104,7 +114,7 @@ export class ProdutosService {
   }
 
   /**
-   * Edicao substitui os dez campos do produto e mais nada.
+   * Edicao substitui os doze campos do produto e mais nada.
    *
    * Os campos vem de `congelarProduto`, que e o unico lugar que sabe quais sao —
    * a mesma funcao que o pedido usa para tirar o snapshot. Um campo novo no
@@ -189,6 +199,8 @@ function paraResumo(documento: DocumentSnapshot): ProdutoResumo {
     intervaloMinimoReunioesDias: dados.intervaloMinimoReunioesDias,
     numeroRevisoesPermitidas: dados.numeroRevisoesPermitidas,
     parcelas: dados.parcelas ?? 1,
+    tipoCobranca: tipoCobrancaDe(dados),
+    descricaoDetalhada: descricaoDetalhadaDe(dados),
     ativo: dados.ativo,
     criadoEm: emIso(dados.criadoEm),
     atualizadoEm: emIso(dados.atualizadoEm),

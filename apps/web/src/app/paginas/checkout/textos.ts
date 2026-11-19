@@ -31,7 +31,7 @@ export const TEXTOS_CHECKOUT = {
     titulo: 'Resumo',
     total: 'Total estimado',
     aviso:
-      'O valor é confirmado no momento do pagamento. Cada serviço vira um pedido separado, com reuniões e prazos próprios.',
+      'O valor é confirmado no momento do pagamento. Cada serviço vira um pedido separado, com acompanhamento e prazos próprios.',
   },
 
   formulario: {

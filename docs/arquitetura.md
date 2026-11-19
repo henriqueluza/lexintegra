@@ -619,6 +619,9 @@ roteiro.
 - **O cartão redireciona**, e a experiência deixa a plataforma no momento mais sensível da compra.
 - **O cartão depende de homologação da conta pelo AbacatePay, e isso não está no nosso controle.** Na rodada do sandbox (16/09/2026), o checkout hospedado com cartão foi recusado com `HTTP 400: CARD is not available for this store`. Não há endpoint para consultar ou pedir a habilitação, e nenhuma configuração visível no painel resolve — é processo da conta, com prazo de terceiro. Sem ela, **o cartão não funciona em ambiente nenhum, nem em produção**; o PIX não é afetado, e foi validado de ponta a ponta. Consequência para esta decisão: o caminho do cartão segue **não testado** contra o gateway, e com ele o nome do evento de conclusão (`checkout.completed` ou outro). A proteção enquanto isso é o alerta crítico de evento desconhecido, acima. O que fazer — quem pede a homologação, se ela vale por conta ou por ambiente, e o que a tela mostra se o lançamento chegar antes dela — está no "Só você" da Etapa 8, em `docs/plano-de-execucao.md`. **Decidido na B2 (decisões 3.4): se a homologação não sair antes do lançamento, o cartão aparece desabilitado com "em breve" e o lançamento segue só com PIX.** O interruptor é `PAGAMENTOS_CARTAO` (`habilitado | desabilitado`, obrigatória em produção, Terraform `pagamentos_cartao` com padrão `desabilitado`, `pagamentos/gateway/cartao.ts`). O servidor recusa `metodo: cartao` com 422 antes de qualquer leitura; a tela lê `GET /api/checkout/metodos` (pública no mesmo sentido do checkout: token do pré-cadastro e App Check) só para não oferecer o que vai ser recusado. Ligar é trocar o padrão da variável em PR, sem mudar código.
 
+
+**Emenda de 18/11/2026 — o teto de parcelas vai na cobrança (`card.maxInstallments`).** Até aqui o site só **anunciava** a parcela: o pedido de checkout hospedado não levava campo de parcelas, e a página do gateway oferecia até 12x em qualquer compra. A documentação da API v2 passou a descrever `card.maxInstallments` (inteiro de 1 a 12) em `POST /checkouts/create`, e o adaptador agora o envia em toda cobrança de cartão. O número sai de `parcelasDoCarrinho`, calculado **no servidor sobre os snapshots congelados** da intenção, nunca do navegador: o menor entre os itens, e 1 quando há um serviço avulso (o carrinho misto vai inteiro à vista, decisão de 18/11/2026, porque o gateway aceita um teto só por cobrança). É o que faz "parcelamento só em assinatura" valer fora da tela. Teto fora de 1 a 12 é recusado nos dois adaptadores antes de qualquer chamada. **Não provado no sandbox:** o campo veio da documentação, e a conferência (a página respeita o teto; o mínimo de R$ 10,00 por parcela que a documentação cita) está no CHECKLIST e em `docs/runbooks/checkout-sandbox.md`, seção 4.
+
 ---
 
 ### ADR-21 — Agendamento de reunião: as regras que o contrato não fixa
@@ -928,7 +931,7 @@ O webhook precisa criar o pagamento e todos os pedidos numa única transação. 
 
 ### 5.3 Snapshot imutável
 
-O item 2.5.9 exige que alterações de produto não retroajam. No momento da compra, o pedido copia para dentro de si os dez campos do produto — todos menos `ativo`, porque tirar um produto da vitrine não cancela a compra de quem já pagou:
+O item 2.5.9 exige que alterações de produto não retroajam. No momento da compra, o pedido copia para dentro de si os doze campos do produto — todos menos `ativo`, porque tirar um produto da vitrine não cancela a compra de quem já pagou:
 
 | Campo | Tipo |
 |---|---|
@@ -942,6 +945,12 @@ O item 2.5.9 exige que alterações de produto não retroajam. No momento da com
 | `intervaloMinimoReunioesDias` | inteiro ≥ 0 |
 | `numeroRevisoesPermitidas` | inteiro ≥ 0 (ver 5.6) |
 | `parcelas` | inteiro de 1 a 12, em quantas vezes o site anuncia no cartão (01/11/2026); ausente nos pedidos anteriores, vale 1 |
+| `tipoCobranca` | `assinatura` ou `avulso` (lote de novembro de 2026); **ausente nos pedidos anteriores**, que são "legado" |
+| `descricaoDetalhada` | string de 20 a 5000 caracteres no cadastro; vazia ou ausente nos pedidos anteriores |
+
+**Tipo de cobrança e descrição detalhada (lote de novembro de 2026, ajustes 1, 9 e 11).** `tipoCobranca` decide **uma** coisa, o parcelamento: só `assinatura` parcela no cartão, e `avulso` é sempre à vista, na tela e no teto que vai ao gateway (emenda ao ADR-19). **O nome não significa cobrança recorrente**: todo produto continua sendo compra única, e os eventos `subscription.*` do gateway continuam descartados. A regra pedida incluía "reunião só em assinatura"; ficou como exceção decidida em 18/11/2026, porque o catálogo tem a "Reunião avulsa estratégica": **quem diz se o pedido tem reunião é `quantidadeReunioes` do snapshot** (`ofereceReunioes`, em `packages/shared/src/tipo-cobranca.ts`), e o pedido sem reunião responde `sem-reunioes` ao agendamento, não "saldo esgotado".
+
+**Nenhum pedido foi reescrito.** Pedido e produto gravados antes dos dois campos não os têm; a leitura usa `tipoCobrancaDe` (que devolve `null`, "legado") e `descricaoDetalhadaDe` (que devolve vazio), e o legado se comporta como antes: anuncia as parcelas gravadas e honra o saldo de reuniões do snapshot. Por isso há **dois schemas** em `esquemas/produto.ts`: `esquemaProduto`, tolerante, reidrata o snapshot do checkout (um checkout aberto antes do deploy precisa virar pedido quando o pagamento chega); `esquemaNovoProduto`, estrito, é a porta de entrada do administrador, exige os dois campos e recusa avulso com mais de uma parcela. Produto antigo continua vendável sem tipo, e editar qualquer campo dele obriga a classificá-lo.
 
 **A unidade está no nome do campo, não só no comentário.** `precoCentavos` e não `preco`; `prazoValidadeReunioesDias` e não `prazoValidadeReunioes`. Trocar reais por centavos não falha em lugar nenhum — só cobra cem vezes menos, e o snapshot congela o engano para sempre.
 

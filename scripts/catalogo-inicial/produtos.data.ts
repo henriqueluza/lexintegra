@@ -15,6 +15,12 @@
 //      O teto e o do painel do AbacatePay (12).
 //   4. Mudar o NOME de um produto ja cadastrado faz o script cria-lo de novo.
 //      Renomeie pelo painel, e depois aqui.
+//   5. `tipoCobranca` (novembro de 2026): os tres planos sao `assinatura`, os
+//      demais `avulso`, como o proprio documento os chama. So assinatura
+//      parcela; a reuniao NAO segue o tipo (a reuniao avulsa e a excecao).
+//   6. `descricaoDetalhada` e o texto que o botao "+" do catalogo abre, e VEM
+//      DO ESCRITORIO. Enquanto estiver `AGUARDANDO_ESCRITORIO`, o script de
+//      cadastro recusa rodar: nao existe texto provisorio.
 
 //
 // FONTE (11/11/2026): "LexIntegra — Produtos, Precos e Investimento", de
@@ -32,6 +38,13 @@ import type { ProdutoInicial } from './expandir.js';
 
 // TODO: confirmar com o escritório (06/10/2026: mantido em zero por enquanto)
 export const REVISOES_PADRAO = 0;
+
+/**
+ * A descrição detalhada ainda não foi enviada pelo escritório (18/11/2026).
+ * Trocar por texto, produto a produto, quando chegar: `catalogo-inicial.spec.ts`
+ * conta quantos faltam.
+ */
+export const AGUARDANDO_ESCRITORIO = null;
 
 const ABRANGENCIA_DO_RELATORIO =
   'O relatório de distribuição cobre ações estaduais, federais e trabalhistas apenas na comarca do contratante, sem abrangência nacional.';
@@ -57,6 +70,8 @@ function avulso(
     intervaloMinimoReunioesDias: 0,
     numeroRevisoesPermitidas: REVISOES_PADRAO,
     parcelas: 1,
+    tipoCobranca: 'avulso',
+    descricaoDetalhada: AGUARDANDO_ESCRITORIO,
     entregaveis: [{ nome, quantidade: 1 }],
     textosOrientativos,
   };
@@ -74,6 +89,8 @@ export const CATALOGO_INICIAL: readonly ProdutoInicial[] = [
     intervaloMinimoReunioesDias: 0,
     numeroRevisoesPermitidas: REVISOES_PADRAO,
     parcelas: 12,
+    tipoCobranca: 'assinatura',
+    descricaoDetalhada: AGUARDANDO_ESCRITORIO,
     entregaveis: [
       {
         nome: 'Diagnóstico da operação (trabalhista OU regulatório da categoria)',
@@ -104,6 +121,8 @@ export const CATALOGO_INICIAL: readonly ProdutoInicial[] = [
     intervaloMinimoReunioesDias: 30,
     numeroRevisoesPermitidas: REVISOES_PADRAO,
     parcelas: 12,
+    tipoCobranca: 'assinatura',
+    descricaoDetalhada: AGUARDANDO_ESCRITORIO,
     entregaveis: [
       { nome: 'Diagnóstico jurídico da operação (completo)', quantidade: 1 },
       { nome: 'Contrato personalizado', quantidade: 24 },
@@ -133,6 +152,8 @@ export const CATALOGO_INICIAL: readonly ProdutoInicial[] = [
     intervaloMinimoReunioesDias: 45,
     numeroRevisoesPermitidas: REVISOES_PADRAO,
     parcelas: 3,
+    tipoCobranca: 'assinatura',
+    descricaoDetalhada: AGUARDANDO_ESCRITORIO,
     entregaveis: [
       { nome: 'Diagnóstico jurídico da operação (completo)', quantidade: 1 },
       { nome: 'Contrato personalizado', quantidade: 3 },
@@ -234,6 +255,10 @@ export const CATALOGO_INICIAL: readonly ProdutoInicial[] = [
       'Reunião avulsa estratégica',
       86_800,
     ), // R$ 868,00
+    /*
+     * AVULSO COM REUNIÃO, a exceção decidida em 18/11/2026: o tipo governa o
+     * parcelamento, e a reunião segue esta quantidade.
+     */
     quantidadeReunioes: 1,
     /*
      * A CONFIRMAR com o escritório: o schema exige ao menos um entregável, e o

@@ -13,6 +13,8 @@ const PRODUTO: ProdutoResumo = {
   intervaloMinimoReunioesDias: 7,
   numeroRevisoesPermitidas: 2,
   parcelas: 12,
+  tipoCobranca: 'assinatura',
+  descricaoDetalhada: 'Levantamos os contratos e apontamos os riscos.',
   ativo: true,
   criadoEm: '2026-01-01T00:00:00.000Z',
   atualizadoEm: '2026-02-01T00:00:00.000Z',
@@ -29,7 +31,32 @@ describe('paraVitrine', () => {
       quantidadeReunioes: 2,
       numeroRevisoesPermitidas: 2,
       parcelas: 12,
+      tipoCobranca: 'assinatura',
+      descricaoDetalhada: 'Levantamos os contratos e apontamos os riscos.',
     });
+  });
+
+  /**
+   * A vitrine publica a parcela JA DECIDIDA: avulso sai 1 mesmo que o documento
+   * traga outro numero. A tela nao tem como anunciar o que o servidor nao manda.
+   */
+  it('anuncia o avulso a vista, mesmo com parcelas gravadas', () => {
+    const vitrine = paraVitrine({ ...PRODUTO, tipoCobranca: 'avulso' });
+
+    expect(vitrine.parcelas).toBe(1);
+    expect(vitrine.tipoCobranca).toBe('avulso');
+  });
+
+  it('produto nao classificado segue anunciando o que anunciava', () => {
+    const vitrine = paraVitrine({
+      ...PRODUTO,
+      tipoCobranca: null,
+      descricaoDetalhada: '',
+    });
+
+    expect(vitrine.parcelas).toBe(12);
+    expect(vitrine.tipoCobranca).toBeNull();
+    expect(vitrine.descricaoDetalhada).toBe('');
   });
 
   /**

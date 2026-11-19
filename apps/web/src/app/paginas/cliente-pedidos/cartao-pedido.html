@@ -16,6 +16,9 @@
 
   <p class="cartao-pedido__descricao">{{ pedido().snapshot.descricao }}</p>
 
+  <!-- So desenha algo quando o snapshot tem a descricao detalhada (pedido antigo nao tem). -->
+  <app-sobre-o-servico [snapshot]="pedido().snapshot" />
+
   @if (pedido().snapshot.textosOrientativos.length > 0) {
   <ul class="cartao-pedido__orientacoes">
     @for (texto of pedido().snapshot.textosOrientativos; track texto) {
@@ -105,11 +108,13 @@
     A ACAO DE REUNIAO VIVE AQUI DENTRO, escopada a este pedido — nunca numa tela
     solta. Com dois pedidos ativos, uma tela de agendamento separada nao teria
     como saber qual saldo debitar (ADR-12, arquitetura 5.4), e
-    `app.routes.spec.ts` guarda o mesmo do lado das rotas.
+    `app.routes.spec.ts` guarda o mesmo do lado das rotas. O BLOCO INTEIRO SO
+    EXISTE EM PEDIDO COM REUNIAO (quantidade do snapshot): sem ela nao ha saldo,
+    botao nem texto de "indisponivel" para mostrar.
   -->
+  @if (temReunioes()) {
   <app-reunioes-do-pedido [pedido]="pedido()" (alterado)="recarregado.emit()" />
-
-  @if (detalhesAbertos()) {
+  } @if (detalhesAbertos()) {
   <section class="cartao-pedido__detalhes">
     @if (falha(); as mensagem) {
     <app-mensagem-erro>{{ mensagem }}</app-mensagem-erro>

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  conferirMaxParcelas,
   ErroDoGateway,
   type CheckoutHospedado,
   type CobrancaPix,
@@ -151,10 +152,18 @@ export class AbacatePayGateway implements GatewayPagamento {
     throw new ErroDoGateway(`criacao de produto recusada: ${criado.motivo}`);
   }
 
-  /** So cartao: o PIX vai pelo transparente, sem redirecionamento (ADR-19). */
+  /**
+   * So cartao: o PIX vai pelo transparente, sem redirecionamento (ADR-19).
+   *
+   * `card.maxInstallments` e o teto de parcelas desta cobranca. Numero fora de
+   * 1 a 12 nao sai daqui: mandar um teto invalido e torcer para o gateway
+   * recusar seria deixar a regra do parcelamento na mao de terceiro.
+   */
   async criarCheckoutHospedado(
     checkout: NovoCheckoutHospedado,
   ): Promise<CheckoutHospedado> {
+    conferirMaxParcelas(checkout.maxParcelas);
+
     const dados = this.exigir(
       await this.chamar('POST', '/checkouts/create', {
         items: checkout.itens.map((item) => ({
@@ -162,6 +171,7 @@ export class AbacatePayGateway implements GatewayPagamento {
           quantity: item.quantidade,
         })),
         methods: ['CARD'],
+        card: { maxInstallments: checkout.maxParcelas },
         externalId: checkout.externalId,
         returnUrl: checkout.urlRetorno,
         completionUrl: checkout.urlConclusao,

@@ -4,7 +4,7 @@
     Cancelar encerra este pedido e não devolve o valor pago. Para pedir a
     devolução, fale com o escritório.
   </p>
-  <p class="cancelamento__juridico">{{ textoJuridico }}</p>
+  <p class="cancelamento__juridico">{{ textoJuridico() }}</p>
   @if (falha(); as mensagem) {
   <app-mensagem-erro variante="linha">{{ mensagem }}</app-mensagem-erro>
   }
