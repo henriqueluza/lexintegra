@@ -45,13 +45,27 @@ num módulo, porque elas guardam as armadilhas de cada um.*
   em produção o confirma (`docs/runbooks/ligar-terceiros.md` 1.6 e 1.8).
 - **Preços e parcelas** (#90 e #94): `parcelas` é campo do produto (1 a 12,
   padrão 1), congelado no snapshot; o catálogo anuncia a parcela
-  (`shared/parcelamento`, resto na primeira) e "ou R$ X à vista". A página do
-  AbacatePay oferece até 12x em todo produto (configuração global do painel);
-  o campo só governa o que o site anuncia. Formas de pagamento numa fonte só
-  (`shared/formas-de-pagamento`). O catálogo do repositório (11/11/2026) são
-  3 planos e 23 avulsos, sem pacotes fechados; produção ainda tem os seis
-  produtos antigos (CHECKLIST): `scripts/cadastrar-catalogo-inicial.mjs`
-  **pula produto existente e não tem `--atualizar`**.
+  (`shared/parcelamento`, resto na primeira) e "ou R$ X à vista". Formas de
+  pagamento numa fonte só (`shared/formas-de-pagamento`). O catálogo do
+  repositório (11/11/2026) são 3 planos e 23 avulsos, sem pacotes fechados;
+  produção ainda tem os seis produtos antigos (CHECKLIST):
+  `scripts/cadastrar-catalogo-inicial.mjs` **pula produto existente e não tem
+  `--atualizar`**.
+- **Tipo de cobrança e descrição detalhada** (lote de novembro de 2026, Bloco
+  A, `feat/tipo-de-produto`): o produto tem `tipoCobranca` (`assinatura` |
+  `avulso`) e `descricaoDetalhada`, os dois no snapshot. **Só assinatura
+  parcela**: a vitrine anuncia avulso à vista, e a cobrança de cartão leva o
+  teto em `card.maxInstallments`, calculado no servidor sobre os snapshots
+  (`shared/tipo-cobranca`, emenda de 18/11/2026 ao ADR-19); carrinho com
+  avulso vai inteiro à vista. **O nome não é cobrança recorrente**, e **a
+  reunião não segue o tipo**: quem diz se o pedido tem reunião é a quantidade
+  do snapshot (há um avulso com reunião, exceção decidida em 18/11/2026).
+  Pedido e produto anteriores não têm os campos e **não foram reescritos**:
+  leia com `tipoCobrancaDe` e `descricaoDetalhadaDe`, nunca o campo cru.
+  `esquemaProduto` é tolerante (reidrata snapshot); `esquemaNovoProduto` é
+  estrito (cadastro). **`card.maxInstallments` ainda não foi provado no
+  sandbox**, e as 26 descrições detalhadas do catálogo aguardam o escritório
+  (o script de cadastro recusa rodar sem elas): CHECKLIST.
 - **Teams pela conta organizadora** desde o deploy de 02/11/2026 (#91):
   `INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"`. As salas são
   criadas por `operacional@` (`TEAMS_ORGANIZADOR_PADRAO`, literal no
@@ -105,9 +119,9 @@ escritório.
   mais `roles/editor` (29/09/2026), e a chave JSON da `firebase-adminsdk-fbsvc`
   foi apagada (30/09/2026). O repositório é privado desde 29/09/2026.
 
-**Pendências: a lista única é o [`CHECKLIST.md`](CHECKLIST.md)**, que desde
-02/11/2026 só tem duas listas abertas: **testes em produção** e
-**transferência**. Pendência nova entra lá, e em nenhum outro lugar.
+**Pendências: a lista única é o [`CHECKLIST.md`](CHECKLIST.md)**, com três
+listas abertas: o **lote de novembro** (14 ajustes do cliente, em sete blocos,
+desde 18/11/2026), os **testes em produção** e a **transferência**. Pendência nova entra lá, e em nenhum outro lugar.
 
 ## Stack
 

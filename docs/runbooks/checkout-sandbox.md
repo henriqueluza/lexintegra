@@ -234,13 +234,32 @@ guarda os códigos: pegue o `oobCode` mais recente de
 > em produção (`ligar-terceiros.md`, 1.6, passo 3), não aqui. Registre o
 > resultado na tabela quando ela acontecer.
 >
-> **Parcelas.** A página do AbacatePay oferece até 12x em todo produto (é
-> configuração global do painel). O campo `parcelas` do produto só governa o
-> que o site anuncia (`packages/shared/src/parcelamento.ts`); o checkout e o
-> pedido não guardam parcelas, e o webhook confere o `amount` da cobrança, não
-> o valor pago com juros. Na primeira compra parcelada, confira se a primeira
-> parcela da página do gateway difere em centavos da que o site anuncia (o
-> site põe o resto da divisão na primeira).
+> **Parcelas (emenda de 18/11/2026 ao ADR-19).** A cobrança de cartão leva
+> `card.maxInstallments`: o menor número de parcelas entre os itens, e **1
+> quando há um serviço avulso** no carrinho (só assinatura parcela). O número é
+> calculado no servidor, sobre os snapshots congelados
+> (`packages/shared/src/tipo-cobranca.ts`). O checkout e o pedido não guardam
+> em quantas vezes a pessoa pagou, e o webhook confere o `amount` da cobrança,
+> não o valor pago com juros.
+>
+> **A conferir nesta rodada, porque o campo veio só da documentação:**
+>
+> 1. carrinho só com um serviço **avulso**: a página do AbacatePay oferece
+>    **só à vista**;
+> 2. carrinho só com uma **assinatura** de 12x: a página oferece até 12x, e
+>    não mais que o número do produto quando ele for menor (3x no Prime de 3
+>    meses);
+> 3. carrinho **misto**: só à vista;
+> 4. a documentação cita **mínimo de R$ 10,00 por parcela**: uma assinatura
+>    barata pode ter menos opções na página do que o site anuncia. Se
+>    acontecer, registre aqui, porque o anúncio (`parcelamento.ts`) precisa
+>    acompanhar;
+> 5. a primeira parcela da página difere em centavos da que o site anuncia? (o
+>    site põe o resto da divisão na primeira).
+>
+> Se o gateway **recusar** o campo (HTTP 400 ao criar o checkout), o cartão
+> para de funcionar para todo mundo: desligue-o com `pagamentos_cartao =
+> "desabilitado"` e abra a correção.
 >
 > ⛔ **Bloqueada por homologação de conta na rodada de 16/09/2026.**
 >
