@@ -1,4 +1,5 @@
 import {
+  arquivoFoiEnviado,
   conferirPolitica,
   ESTADOS_ARQUIVO,
   esquemaPedidoDeUpload,
@@ -145,6 +146,25 @@ describe('tipoPelaExtensao', () => {
     ['a.doc', ''],
   ])('%s', (nome, tipo) => {
     expect(tipoPelaExtensao(nome)).toBe(tipo);
+  });
+});
+
+describe('arquivoFoiEnviado', () => {
+  /**
+   * `pendente_upload` e a URL assinada emitida, e nao o arquivo: o registro nasce
+   * antes do `PUT` e fica quando o `PUT` falha. Tratar isso como arquivo deixava
+   * o cliente confirmar a entrega do que nunca chegou ao bucket (19/11/2026).
+   */
+  it('so o envio pendente nao e arquivo enviado', () => {
+    expect(
+      ESTADOS_ARQUIVO.filter((estado) => !arquivoFoiEnviado(estado)),
+    ).toEqual(['pendente_upload']);
+  });
+
+  /** Chegar ao bucket nao e poder ser servido: sao duas perguntas (regra 6). */
+  it('arquivo em varredura ja foi enviado, e ainda nao pode ser servido', () => {
+    expect(arquivoFoiEnviado('pendente_scan')).toBe(true);
+    expect(podeSerServido('pendente_scan')).toBe(false);
   });
 });
 

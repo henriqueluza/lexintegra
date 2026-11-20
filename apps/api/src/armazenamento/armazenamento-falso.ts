@@ -5,12 +5,14 @@ import {
   type ServerResponse,
 } from 'node:http';
 import { Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
-import type {
-  Armazenamento,
-  Balde,
-  Objeto,
-  PedidoDeUrlDeEscrita,
-  PedidoDeUrlDeLeitura,
+import {
+  cabecalhosDaEscrita,
+  type Armazenamento,
+  type Balde,
+  type Objeto,
+  type PedidoDeUrlDeEscrita,
+  type PedidoDeUrlDeLeitura,
+  type UrlDeEscrita,
 } from './armazenamento.js';
 
 /**
@@ -22,10 +24,16 @@ import type {
  * confirmacao, veredito, movimentacao, exclusao — sem tocar a rede.
  *
  * O QUE ELE IMITA: a existencia do objeto, o conteudo, a movimentacao entre
- * baldes e a leitura de faixa. O QUE NAO IMITA: assinatura de URL de verdade
- * (as URLs sao textos reconheciveis), expiracao, e as recusas que o proprio
- * Cloud Storage faz por tipo e tamanho assinados. Essas so aparecem contra o
- * servico real.
+ * baldes, a leitura de faixa e — desde 19/11/2026 — AS RECUSAS DO `PUT`: o
+ * ouvinte so aceita escrita numa URL que ele emitiu, com os cabecalhos
+ * assinados iguais e o tamanho dentro da faixa. O QUE NAO IMITA: assinatura de
+ * URL de verdade (as URLs sao textos reconheciveis) e expiracao.
+ *
+ * POR QUE AS RECUSAS ENTRARAM. O falso aceitava qualquer `PUT`, e foi assim que
+ * um envio que nunca funcionou em producao passou por todas as jornadas: o
+ * navegador nao mandava o cabecalho de tamanho que a URL real exige (ver
+ * `UrlDeEscrita`). Um falso mais generoso que o real esconde defeito — a mesma
+ * licao do gateway falso com o travessao.
  *
  * DESDE A ETAPA 12 ELE PODE OUVIR HTTP (`ouvirEm`), e isso destravou o upload em
  * desenvolvimento. Ate aqui a URL devolvida era `https://falso.local/...`: o
@@ -44,6 +52,11 @@ const PREFIXO_LOCAL = '/armazenamento-falso';
 @Injectable()
 export class ArmazenamentoFalso implements Armazenamento, OnModuleDestroy {
   private readonly objetos = new Map<string, Uint8Array>();
+  /** O que cada URL de escrita emitida exige do `PUT`, por chave do objeto. */
+  private readonly escritas = new Map<
+    string,
+    Readonly<Record<string, string>>
+  >();
   private ouvinte: Server | null = null;
 
   /** Trilha das operacoes, para os testes afirmarem ORDEM — o mesmo papel de
@@ -60,12 +73,15 @@ export class ArmazenamentoFalso implements Armazenamento, OnModuleDestroy {
     );
   }
 
-  urlDeEscrita(pedido: PedidoDeUrlDeEscrita): Promise<string> {
+  urlDeEscrita(pedido: PedidoDeUrlDeEscrita): Promise<UrlDeEscrita> {
     const chave = chaveDe(pedido.objeto);
+    const cabecalhos = cabecalhosDaEscrita(pedido);
     this.operacoes.push(`escrita ${chave}`);
-    return Promise.resolve(
-      `${this.base()}/escrita/${chave}?tipo=${pedido.tipo}&max=${String(pedido.tamanhoMaximoBytes)}`,
-    );
+    this.escritas.set(chave, cabecalhos);
+    return Promise.resolve({
+      url: `${this.base()}/escrita/${chave}?tipo=${pedido.tipo}&max=${String(pedido.tamanhoMaximoBytes)}`,
+      cabecalhos,
+    });
   }
 
   urlDeLeitura(pedido: PedidoDeUrlDeLeitura): Promise<string> {
@@ -133,7 +149,17 @@ export class ArmazenamentoFalso implements Armazenamento, OnModuleDestroy {
       const partes: Buffer[] = [];
       requisicao.on('data', (parte: Buffer) => partes.push(parte));
       requisicao.on('end', () => {
-        this.objetos.set(chave, new Uint8Array(Buffer.concat(partes)));
+        const conteudo = new Uint8Array(Buffer.concat(partes));
+        const recusa = this.recusaDaEscrita(
+          chave,
+          requisicao.headers,
+          conteudo.byteLength,
+        );
+        if (recusa !== null) {
+          resposta.writeHead(recusa.status).end(recusa.motivo);
+          return;
+        }
+        this.objetos.set(chave, conteudo);
         resposta.writeHead(200).end();
       });
       return;
@@ -148,6 +174,54 @@ export class ArmazenamentoFalso implements Armazenamento, OnModuleDestroy {
     resposta
       .writeHead(200, { 'content-type': 'application/octet-stream' })
       .end(Buffer.from(conteudo));
+  }
+
+  /**
+   * Por que o Cloud Storage recusaria este `PUT`, ou `null` se aceitaria.
+   *
+   * Tres recusas, as do servico real:
+   *
+   * - 403 para URL que ninguem emitiu (la, assinatura invalida);
+   * - 400 quando um cabecalho ASSINADO nao veio, ou veio com outro valor (la,
+   *   `MalformedSecurityHeader` ou `SignatureDoesNotMatch`). E o caso que
+   *   derrubou o envio em producao;
+   * - 400 quando o corpo esta fora da faixa de `x-goog-content-length-range`
+   *   (la, `EntityTooSmall` e `EntityTooLarge`).
+   */
+  private recusaDaEscrita(
+    chave: string,
+    recebidos: IncomingMessage['headers'],
+    tamanho: number,
+  ): { status: number; motivo: string } | null {
+    const assinados = this.escritas.get(chave);
+    if (assinados === undefined) {
+      return { status: 403, motivo: 'URL de escrita nao emitida.' };
+    }
+
+    for (const [nome, valor] of Object.entries(assinados)) {
+      if (recebidos[nome.toLowerCase()] !== valor) {
+        return {
+          status: 400,
+          motivo: `MalformedSecurityHeader: ${nome} foi assinado e nao veio igual no PUT.`,
+        };
+      }
+    }
+
+    const [minimo, maximo] = (assinados['x-goog-content-length-range'] ?? '')
+      .split(',')
+      .map(Number);
+    if (
+      minimo !== undefined &&
+      maximo !== undefined &&
+      (tamanho < minimo || tamanho > maximo)
+    ) {
+      return {
+        status: 400,
+        motivo: tamanho < minimo ? 'EntityTooSmall' : 'EntityTooLarge',
+      };
+    }
+
+    return null;
   }
 
   lerPrimeirosBytes(objeto: Objeto, quantidade: number): Promise<Uint8Array> {

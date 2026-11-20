@@ -42,6 +42,43 @@ export interface PedidoDeUrlDeEscrita {
   readonly validadeSegundos: number;
 }
 
+/**
+ * A URL de escrita E OS CABECALHOS QUE FORAM ASSINADOS COM ELA.
+ *
+ * OS DOIS ANDAM JUNTOS, e isto e a correcao de um defeito (19/11/2026). A URL
+ * e assinada com `Content-Type` e `x-goog-content-length-range`, e cabecalho
+ * assinado precisa chegar no `PUT` IGUAL, senao o Cloud Storage recusa a
+ * escrita. Ate aqui a porta devolvia so a URL, o navegador mandava so o
+ * `Content-Type`, e NENHUM arquivo subia em producao: o unico envio tentado
+ * (teste manual de 13/11/2026) pediu a URL e nunca chegou a confirmacao.
+ * Nenhuma suite pegou, porque o armazenamento falso aceitava o `PUT` sem o
+ * cabecalho.
+ *
+ * Quem escreve na URL manda `cabecalhos` como veio, sem montar nome de
+ * cabecalho por conta propria: o que foi assinado e decisao deste lado.
+ */
+export interface UrlDeEscrita {
+  readonly url: string;
+  readonly cabecalhos: Readonly<Record<string, string>>;
+}
+
+/**
+ * Os cabecalhos que entram na assinatura, num lugar so.
+ *
+ * O adaptador do Cloud Storage assina a partir DESTE objeto e devolve o MESMO
+ * objeto; o falso confere o `PUT` contra ele. Um cabecalho novo na assinatura
+ * que nao passasse por aqui voltaria a quebrar o envio so em producao.
+ */
+export function cabecalhosDaEscrita(pedido: PedidoDeUrlDeEscrita): {
+  readonly 'Content-Type': string;
+  readonly 'x-goog-content-length-range': string;
+} {
+  return {
+    'Content-Type': pedido.tipo,
+    'x-goog-content-length-range': `1,${String(pedido.tamanhoMaximoBytes)}`,
+  };
+}
+
 export interface PedidoDeUrlDeLeitura {
   readonly objeto: Objeto;
   /** Vira `Content-Disposition: attachment; filename=...`. */
@@ -55,7 +92,7 @@ export interface Armazenamento {
   /** URL assinada para o navegador escrever DIRETO no bucket. O arquivo nunca
    * passa pela API — e o que economiza o recurso que o Cloud Run cobra
    * (arquitetura 7.3). */
-  urlDeEscrita(pedido: PedidoDeUrlDeEscrita): Promise<string>;
+  urlDeEscrita(pedido: PedidoDeUrlDeEscrita): Promise<UrlDeEscrita>;
 
   /** URL assinada de leitura, de curta duracao. NAO CHAME DIRETO: use
    * `arquivos/portao.ts`, que confere o estado antes. */

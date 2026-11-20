@@ -196,15 +196,16 @@ export class AdvogadoDemandas implements OnInit {
     const tipo = arquivo.type || tipoPelaExtensao(arquivo.name);
 
     await this.agir(entregavel.id, async () => {
-      const { url } = await this.api.pedirEnvioDeEntregavel(
+      const autorizado = await this.api.pedirEnvioDeEntregavel(
         pedidoId,
         entregavel.id,
         { nome: arquivo.name, tipo, tamanhoBytes: arquivo.size },
       );
 
       // O PUT antes da confirmacao: confirmar primeiro enfileiraria a varredura
-      // de um objeto que ainda nao existe.
-      await enviarParaUrlAssinada(url, arquivo, tipo);
+      // de um objeto que ainda nao existe. Os cabecalhos sao os que a API
+      // devolveu, inclusive o tipo declarado acima.
+      await enviarParaUrlAssinada(autorizado, arquivo);
       await this.api.confirmarEntregavel(pedidoId, entregavel.id);
     });
   }
