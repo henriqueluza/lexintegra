@@ -1087,6 +1087,14 @@ Fluxo: navegador envia direto ao bucket de quarentena via URL assinada de escrit
 
 Concluído o envio, a API enfileira a varredura. O scanner baixa, analisa e move para o bucket limpo ou descarta.
 
+**Errata de 19/11/2026 — a URL assinada vai com os cabeçalhos assinados, e `pendente_upload` não é arquivo.** O tipo e o tamanho máximo entram na assinatura como cabeçalhos (`Content-Type` e `x-goog-content-length-range`), e cabeçalho assinado precisa chegar igual no `PUT`. A API devolvia só a URL, o navegador mandava só o `Content-Type`, e **nenhum arquivo subiu em produção**: o único envio tentado, no teste manual de 13/11/2026, pediu a URL e nunca chegou à confirmação, e o bucket de quarentena estava vazio. Nenhuma suíte acusou, porque o armazenamento falso aceitava qualquer `PUT`. Três correções:
+
+- `Armazenamento.urlDeEscrita` devolve `{ url, cabecalhos }`, e os cabeçalhos devolvidos saem do **mesmo objeto** usado para assinar (`cabecalhosDaEscrita`). O navegador os envia como vieram (`enviarParaUrlAssinada`), sem escrever nome de cabeçalho por conta própria.
+- **O armazenamento falso recusa o que o Cloud Storage recusa**: escrita em URL não emitida, cabeçalho assinado ausente ou diferente, corpo fora da faixa. Com o envio no comportamento antigo, as três jornadas de arquivo falham contra ele.
+- **`pendente_upload` é a URL emitida, não o arquivo.** O registro nasce antes do `PUT` e fica quando o `PUT` falha. Ele fazia o cliente ler "em verificação de segurança" para sempre e, pior, deixava **confirmar a entrega** de um arquivo que nunca chegou, contra a regra inviolável 14. `arquivoFoiEnviado` (`packages/shared/src/esquemas/upload.ts`) é a pergunta única da tela e do servidor.
+
+A prova que falta é humana: o primeiro envio real depois do deploy (CHECKLIST).
+
 **Regra de ouro, codificada em um único lugar:** nada é servido enquanto o status não for `limpo`. O documento nasce como `pendente_scan`.
 
 **Tipos do advogado: PDF e DOCX, até 20 MB** (`docs/decisoes.md`, 3.1, construído no Bloco E da B2). `.doc` e `.docm` continuam recusados — pelo tipo e pela extensão já no pedido da URL, e pela estrutura na varredura. O tipo não é confiado à extensão nem ao `Content-Type`: depois do ClamAV e do magic bytes, o DOCX passa por uma conferência estrutural (`apps/api/src/varredura/docx.ts`) que lê por faixa o diretório central do ZIP e o `[Content_Types].xml`, exige `wordprocessingml.document.main+xml` e `word/document.xml`, e recusa `macroEnabled`, `vbaProject.bin`, entrada cifrada e ZIP64. Sem dependência nova. **O ClamAV cobre o DOCX como cobre o PDF:** a imagem usa a configuração padrão do `clamav-daemon` do Debian, com `ScanArchive` e `ScanOLE2` ligados e limite de 25 MB por arquivo, acima dos 20 MB do upload — o conteúdo do ZIP é varrido por dentro.
