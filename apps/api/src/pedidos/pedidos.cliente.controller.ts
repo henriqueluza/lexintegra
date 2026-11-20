@@ -20,6 +20,7 @@ import {
   type AnexoResumo,
   type CartaoPedido,
   type EntregavelResumo,
+  type EnvioAutorizado,
   type HorarioDisponivel,
   type NovaObservacao,
   type ObservacaoResumo,
@@ -309,7 +310,7 @@ export class PedidosClienteController {
     @Param('pedidoId') pedidoId: string,
     @Body(new ZodPipe(esquemaEnvioDeAnexos)) envio: EnvioDeAnexos,
     @UsuarioAtual() cliente: UsuarioAutenticado,
-  ): Promise<{ id: string; url: string; validoPorSegundos: number }[]> {
+  ): Promise<(EnvioAutorizado & { id: string })[]> {
     return this.anexos.pedirEnvio(pedidoId, cliente, envio.arquivos);
   }
 

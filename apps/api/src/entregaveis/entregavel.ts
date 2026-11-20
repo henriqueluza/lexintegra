@@ -1,5 +1,5 @@
 import type { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import { podeSerServido, prefixoDoFluxo } from 'shared';
+import { arquivoFoiEnviado, podeSerServido, prefixoDoFluxo } from 'shared';
 import type {
   EntregavelResumo,
   EstadoArquivo,
@@ -126,7 +126,12 @@ export function resumoDoEntregavel(
     ordem: dados.ordem,
     estado: dados.estado,
     revisoesUsadas: dados.revisoesUsadas,
-    temArquivo: arquivo !== null,
+    /*
+     * So depois de o arquivo CHEGAR ao bucket. `pendente_upload` e pedido de
+     * URL: se o `PUT` falhou, nao ha arquivo, e a tela nao pode dizer "em
+     * verificacao" nem oferecer a confirmacao (`arquivoFoiEnviado`).
+     */
+    temArquivo: arquivo !== null && arquivoFoiEnviado(arquivo.estado),
     /*
      * `podeSerServido` e a MESMA funcao que o portao consulta. A tela usa-la nao
      * a torna a fronteira — quem emite o link e `arquivos/portao.ts`, e e la que

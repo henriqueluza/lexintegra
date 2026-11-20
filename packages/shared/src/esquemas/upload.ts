@@ -131,6 +131,37 @@ export function podeSerServido(estado: EstadoArquivo): boolean {
   return estado === 'limpo';
 }
 
+/**
+ * O arquivo CHEGOU ao bucket? Tudo, menos `pendente_upload`.
+ *
+ * `pendente_upload` e so a intencao: a URL assinada foi emitida, e o registro
+ * nasce antes do `PUT` do navegador. Se o `PUT` falhar, o registro fica — e
+ * tratar isso como "ha arquivo" fazia o cliente ler "em verificacao de
+ * seguranca" para sempre e, pior, deixava CONFIRMAR A ENTREGA de um arquivo
+ * que nunca existiu (19/11/2026). Entregue so e alcancado depois do upload
+ * (regra inviolavel 14), e upload e arquivo no bucket, nao pedido de URL.
+ *
+ * A tela e o servidor perguntam a mesma coisa: a tela, para nao oferecer o
+ * botao; o servidor (`EntregaveisService`), para recusar a confirmacao.
+ */
+export function arquivoFoiEnviado(estado: EstadoArquivo): boolean {
+  return estado !== 'pendente_upload';
+}
+
+/**
+ * A autorizacao de UM envio direto ao bucket: a URL assinada e os cabecalhos
+ * que foram assinados com ela.
+ *
+ * O NAVEGADOR MANDA `cabecalhos` COMO VEIO. Cabecalho assinado que nao chega
+ * igual no `PUT` e recusa do Cloud Storage; ate 19/11/2026 a API devolvia so a
+ * URL e nenhum arquivo subia em producao (ver `UrlDeEscrita`, na API).
+ */
+export type EnvioAutorizado = {
+  readonly url: string;
+  readonly cabecalhos: Readonly<Record<string, string>>;
+  readonly validoPorSegundos: number;
+};
+
 export const esquemaPedidoDeUpload = z.object({
   nome: z
     .string()

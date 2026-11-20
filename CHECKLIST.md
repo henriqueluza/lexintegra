@@ -34,7 +34,14 @@ seguintes), e as reuniões depois de haver pedido distribuído.
   bate com a anunciada (`ligar-terceiros.md` 1.6, passo 3, e 1.8;
   [`checkout-sandbox.md`](docs/runbooks/checkout-sandbox.md), seção 4).
 - [ ] 👤 **URL assinada do primeiro arquivo real**
-  ([`limpeza-infra.md`](docs/runbooks/limpeza-infra.md) §3).
+  ([`limpeza-infra.md`](docs/runbooks/limpeza-infra.md) §3). **É a prova da
+  correção de 19/11/2026** (`fix/upload-url-assinada`): até ela, nenhum arquivo
+  subia em produção, porque o navegador não mandava o cabeçalho de tamanho que
+  a URL assinada exige. Enviar um PDF como advogado e um anexo como cliente, e
+  conferir nos dois que o arquivo passa a "disponível" depois de recarregar a
+  página. O entregável do teste de 13/11/2026 ficou com um envio pendente que
+  nunca chegou: ele deixa de aparecer como arquivo, e um envio novo o
+  substitui.
 - [ ] 👤 **EICAR:** o arquivo de teste reprova e nunca fica acessível em
   nenhum momento ([`scanner-indisponivel.md`](docs/runbooks/scanner-indisponivel.md)).
 - [ ] 👤 **Reunião de teste:** marcar, remarcar e cancelar; link do Teams e

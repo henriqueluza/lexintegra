@@ -126,6 +126,36 @@ describe('GcsArmazenamento', () => {
         },
       });
     });
+
+    /**
+     * O DEFEITO DE 19/11/2026. Cabecalho assinado precisa chegar IGUAL no `PUT`,
+     * e a porta devolvia so a URL: o navegador mandava o `Content-Type` e nao a
+     * faixa de tamanho, e o Cloud Storage recusava todo envio. Agora quem assina
+     * devolve o que assinou — o MESMO conjunto, nem um a menos, nem um a mais.
+     */
+    it('devolve os cabecalhos que assinou, junto da URL', async () => {
+      const escrita = await armazenamento.urlDeEscrita({
+        objeto: { balde: 'quarentena', caminho: 'anexos/p1/a1' },
+        tipo: 'application/pdf',
+        tamanhoMaximoBytes: 5_000_000,
+        validadeSegundos: 600,
+      });
+
+      expect(escrita.url).toBe('https://assinada/quarentena/anexos/p1/a1');
+      expect(escrita.cabecalhos).toEqual({
+        'Content-Type': 'application/pdf',
+        'x-goog-content-length-range': '1,5000000',
+      });
+
+      const assinado = registro.assinaturas[0] as {
+        contentType: string;
+        extensionHeaders: Record<string, string>;
+      };
+      expect({
+        'Content-Type': assinado.contentType,
+        ...assinado.extensionHeaders,
+      }).toEqual(escrita.cabecalhos);
+    });
   });
 
   describe('URL de leitura', () => {
@@ -245,6 +275,138 @@ describe('ArmazenamentoFalso', () => {
       'escrita quarentena:x',
       'leitura arquivos:x',
     ]);
+  });
+
+  it('devolve com a URL os cabecalhos que o PUT precisa mandar', async () => {
+    const falso = new ArmazenamentoFalso();
+
+    const escrita = await falso.urlDeEscrita({
+      objeto: { balde: 'quarentena', caminho: 'x' },
+      tipo: 'application/pdf',
+      tamanhoMaximoBytes: 10,
+      validadeSegundos: 60,
+    });
+
+    expect(escrita.url).toContain('/escrita/quarentena:x');
+    expect(escrita.cabecalhos).toEqual({
+      'Content-Type': 'application/pdf',
+      'x-goog-content-length-range': '1,10',
+    });
+  });
+
+  /**
+   * O FALSO RECUSA O QUE O CLOUD STORAGE RECUSA. Ele aceitava qualquer `PUT`, e
+   * foi assim que um envio que nunca funcionou em producao passou por todas as
+   * jornadas. Estes casos sao HTTP de verdade, contra o ouvinte que `pnpm dev` e
+   * as jornadas usam.
+   */
+  describe('o ouvinte HTTP confere o PUT', () => {
+    let falso: ArmazenamentoFalso;
+    let base: string;
+    let assinados: Readonly<Record<string, string>>;
+    const OBJETO = { balde: 'quarentena', caminho: 'anexos/p1/a1' } as const;
+    const original = process.env['NODE_ENV'];
+
+    beforeEach(async () => {
+      process.env['NODE_ENV'] = 'test';
+      falso = new ArmazenamentoFalso();
+      falso.ouvirEm(0);
+      const ouvinte = (
+        falso as unknown as {
+          ouvinte: {
+            once(evento: string, feito: () => void): void;
+            listening: boolean;
+            address(): { port: number };
+          };
+        }
+      ).ouvinte;
+      if (!ouvinte.listening) {
+        await new Promise<void>((feito) => ouvinte.once('listening', feito));
+      }
+      base = `http://127.0.0.1:${String(ouvinte.address().port)}`;
+
+      const escrita = await falso.urlDeEscrita({
+        objeto: OBJETO,
+        tipo: 'application/pdf',
+        tamanhoMaximoBytes: 10,
+        validadeSegundos: 60,
+      });
+      assinados = escrita.cabecalhos;
+    });
+
+    afterEach(() => {
+      falso.onModuleDestroy();
+      process.env['NODE_ENV'] = original;
+    });
+
+    function enviar(
+      cabecalhos: Record<string, string>,
+      corpo = '%PDF-1.4',
+      caminho = 'anexos/p1/a1',
+    ): Promise<Response> {
+      return fetch(
+        `${base}/armazenamento-falso/escrita/quarentena:${caminho}`,
+        {
+          method: 'PUT',
+          headers: cabecalhos,
+          body: corpo,
+        },
+      );
+    }
+
+    it('aceita o PUT com os cabecalhos assinados', async () => {
+      const resposta = await enviar({ ...assinados });
+
+      expect(resposta.status).toBe(200);
+      expect(await falso.existe(OBJETO)).toBe(true);
+    });
+
+    /** Exatamente o que o navegador fazia: so o tipo, sem a faixa de tamanho. */
+    it('recusa o PUT sem a faixa de tamanho assinada, e nada e gravado', async () => {
+      const resposta = await enviar({ 'Content-Type': 'application/pdf' });
+
+      expect(resposta.status).toBe(400);
+      expect(await resposta.text()).toMatch(/x-goog-content-length-range/);
+      expect(await falso.existe(OBJETO)).toBe(false);
+    });
+
+    it('recusa o PUT com outro tipo', async () => {
+      const resposta = await enviar({
+        ...assinados,
+        'Content-Type': 'application/x-msdownload',
+      });
+
+      expect(resposta.status).toBe(400);
+      expect(await falso.existe(OBJETO)).toBe(false);
+    });
+
+    it('recusa o PUT com a faixa de tamanho adulterada', async () => {
+      const resposta = await enviar({
+        ...assinados,
+        'x-goog-content-length-range': '1,999999999',
+      });
+
+      expect(resposta.status).toBe(400);
+      expect(await falso.existe(OBJETO)).toBe(false);
+    });
+
+    it('recusa corpo acima do teto assinado', async () => {
+      const resposta = await enviar({ ...assinados }, 'x'.repeat(11));
+
+      expect(resposta.status).toBe(400);
+      expect(await resposta.text()).toBe('EntityTooLarge');
+      expect(await falso.existe(OBJETO)).toBe(false);
+    });
+
+    it('recusa escrita em URL que ninguem emitiu', async () => {
+      const resposta = await enviar(
+        { ...assinados },
+        '%PDF-1.4',
+        'outro/caminho',
+      );
+
+      expect(resposta.status).toBe(403);
+    });
   });
 
   it('excluir objeto ausente nao estoura', async () => {

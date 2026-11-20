@@ -133,6 +133,10 @@ async function montar(opcoes: Partial<ApiDeTeste> = {}): Promise<{
               arquivos.map((_a, i) => ({
                 id: `anexo-${String(i)}`,
                 url: `https://bucket.example/quarentena/${String(i)}`,
+                cabecalhos: {
+                  'Content-Type': 'image/jpeg',
+                  'x-goog-content-length-range': '1,5242880',
+                },
                 validoPorSegundos: 600,
               })),
             );
@@ -391,8 +395,10 @@ describe('ClientePedidos', () => {
     it('pede a URL, escreve no bucket e so entao confirma', async () => {
       const original = globalThis.fetch;
       const puts: string[] = [];
-      globalThis.fetch = ((url: string) => {
+      const cabecalhosDosPuts: unknown[] = [];
+      globalThis.fetch = ((url: string, opcoes: RequestInit) => {
         puts.push(String(url));
+        cabecalhosDosPuts.push(opcoes.headers);
         return Promise.resolve({ ok: true, status: 200 } as Response);
       }) as unknown as typeof fetch;
 
@@ -408,6 +414,13 @@ describe('ClientePedidos', () => {
 
         expect(api.chamadas).toContain('pedirUrl p1: 1');
         expect(puts).toEqual(['https://bucket.example/quarentena/0']);
+        /* O PUT leva os cabecalhos ASSINADOS que a API devolveu, todos. */
+        expect(cabecalhosDosPuts).toEqual([
+          {
+            'Content-Type': 'image/jpeg',
+            'x-goog-content-length-range': '1,5242880',
+          },
+        ]);
         // A confirmacao vem DEPOIS do PUT: confirmar antes enfileiraria a
         // varredura de um objeto que ainda nao existe.
         expect(api.chamadas.indexOf('confirmar p1/anexo-0')).toBeGreaterThan(

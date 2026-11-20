@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import type { Bucket, File } from '@google-cloud/storage';
-import type {
-  Armazenamento,
-  Balde,
-  Objeto,
-  PedidoDeUrlDeEscrita,
-  PedidoDeUrlDeLeitura,
+import {
+  cabecalhosDaEscrita,
+  type Armazenamento,
+  type Balde,
+  type Objeto,
+  type PedidoDeUrlDeEscrita,
+  type PedidoDeUrlDeLeitura,
+  type UrlDeEscrita,
 } from './armazenamento.js';
 
 export type Baldes = Readonly<Record<Balde, Bucket>>;
@@ -49,7 +51,14 @@ export class GcsArmazenamento implements Armazenamento {
     return caminhos;
   }
 
-  async urlDeEscrita(pedido: PedidoDeUrlDeEscrita): Promise<string> {
+  async urlDeEscrita(pedido: PedidoDeUrlDeEscrita): Promise<UrlDeEscrita> {
+    /*
+     * UMA FONTE PARA O QUE SE ASSINA E O QUE SE DEVOLVE. O `Content-Type` vai em
+     * `contentType` e o resto em `extensionHeaders` porque e assim que a
+     * biblioteca os recebe; os dois saem do mesmo objeto que volta ao chamador.
+     */
+    const { 'Content-Type': tipo, ...extensao } = cabecalhosDaEscrita(pedido);
+
     const [url] = await this.arquivo(pedido.objeto).getSignedUrl({
       version: 'v4',
       action: 'write',
@@ -60,13 +69,16 @@ export class GcsArmazenamento implements Armazenamento {
        * a validacao de tipo do servidor seria conselho, nao regra — o navegador
        * pediria URL para um PDF e mandaria um executavel.
        */
-      contentType: pedido.tipo,
-      extensionHeaders: {
-        'x-goog-content-length-range': `1,${String(pedido.tamanhoMaximoBytes)}`,
-      },
+      contentType: tipo,
+      /*
+       * CABECALHO DE EXTENSAO ASSINADO E OBRIGATORIO NO `PUT`: o Cloud Storage
+       * confere que o cliente o mandou com o mesmo valor. Por isso ele volta ao
+       * chamador em `cabecalhos` (ver `UrlDeEscrita`).
+       */
+      extensionHeaders: extensao,
     });
 
-    return url;
+    return { url, cabecalhos: { 'Content-Type': tipo, ...extensao } };
   }
 
   async urlDeLeitura(pedido: PedidoDeUrlDeLeitura): Promise<string> {

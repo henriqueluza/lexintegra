@@ -1,3 +1,5 @@
+import type { EnvioAutorizado } from 'shared/esquemas/upload';
+
 /**
  * O `PUT` do arquivo direto no bucket, por URL assinada.
  *
@@ -11,24 +13,25 @@
  * Storage mandaria a credencial da sessao para um servico que nao e nosso — e a
  * assinatura da URL ja e a autorizacao daquela escrita.
  *
- * O `Content-Type` PRECISA bater com o que foi assinado. Ele entra na assinatura
- * (ver `GcsArmazenamento.urlDeEscrita`), entao um tipo diferente aqui e recusado
- * pelo proprio Cloud Storage — o que e a intencao: a validacao do servidor deixa
- * de ser conselho e vira regra.
+ * OS CABECALHOS SAO OS QUE A API DEVOLVEU, SEM TIRAR NEM POR. A URL e assinada
+ * com `Content-Type` e com a faixa de tamanho (`x-goog-content-length-range`), e
+ * cabecalho assinado precisa chegar IGUAL no `PUT`: um tipo diferente, ou um
+ * cabecalho faltando, e recusa do proprio Cloud Storage. E a intencao — a
+ * validacao do servidor deixa de ser conselho e vira regra.
+ *
+ * ATE 19/11/2026 ESTA FUNCAO MONTAVA O `Content-Type` SOZINHA e nao mandava a
+ * faixa de tamanho: nenhum arquivo subia em producao, e nada acusava, porque o
+ * armazenamento de desenvolvimento aceitava o `PUT` do mesmo jeito. Por isso
+ * nenhum nome de cabecalho fica escrito aqui: quem assina e quem diz o que
+ * mandar (`EnvioAutorizado`, em `shared`).
  */
 export async function enviarParaUrlAssinada(
-  url: string,
+  autorizado: Pick<EnvioAutorizado, 'url' | 'cabecalhos'>,
   arquivo: File,
-  /**
-   * O tipo que foi DECLARADO ao pedir a URL. Igual a `arquivo.type` quase
-   * sempre; diferente quando o navegador nao soube o tipo (acontece com DOCX)
-   * e a tela o deduziu pela extensao (`tipoPelaExtensao`).
-   */
-  tipo: string = arquivo.type,
 ): Promise<void> {
-  const resposta = await fetch(url, {
+  const resposta = await fetch(autorizado.url, {
     method: 'PUT',
-    headers: { 'Content-Type': tipo },
+    headers: { ...autorizado.cabecalhos },
     body: arquivo,
   });
 
@@ -36,7 +39,8 @@ export async function enviarParaUrlAssinada(
     /*
      * A mensagem nao carrega o corpo da resposta do Cloud Storage: ela traz o
      * caminho assinado, que identifica o pedido. O status basta para diagnosticar
-     * — 403 e assinatura expirada, 400 quase sempre e tamanho fora da faixa.
+     * — 403 e assinatura expirada ou invalida, 400 e cabecalho assinado que nao
+     * bateu ou tamanho fora da faixa.
      */
     throw new Error(
       `O envio do arquivo falhou (HTTP ${String(resposta.status)}).`,

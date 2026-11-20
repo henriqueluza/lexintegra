@@ -28,6 +28,7 @@ import {
 import { assinar } from '../pagamentos/webhook/assinatura.js';
 import { ProdutosService } from '../produtos/produtos.service.js';
 import { escutarNoLoopback } from '../arnes-http.js';
+import { arquivoChegou } from '../arnes-pedidos.js';
 
 const ANA = {
   nome: 'Ana Ribeiro Salgado',
@@ -192,6 +193,10 @@ async function levarAte(estado: EstadoEntregavel): Promise<void> {
     },
     ADVOGADO,
   );
+  await arquivoChegou(firestoreDeTeste(), {
+    pedidoId,
+    entregavelId: ENTREGAVEL,
+  });
   await http()
     .post(
       `${doEntregavel('pedidos')}/${estado === 'em_revisao' ? 'revisao' : 'confirmacao'}`,
@@ -264,9 +269,9 @@ describe('estorno e cancelamento com trabalho iniciado (ADR-12)', () => {
       });
       const depois = await retrato();
       expect(depois).toEqual(antes);
-      expect(app.get<GatewayPagamentoFalso>(GATEWAY_PAGAMENTO).estornos).toEqual(
-        [],
-      );
+      expect(
+        app.get<GatewayPagamentoFalso>(GATEWAY_PAGAMENTO).estornos,
+      ).toEqual([]);
       expect(
         Object.keys(depois['outbox'] as Record<string, unknown>).filter((id) =>
           id.startsWith('estorno-integral_'),
