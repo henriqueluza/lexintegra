@@ -7,6 +7,8 @@
   grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   grid-auto-flow: column;
   margin: 0;
+  padding: 0;
+  list-style: none;
   background: var(--superficie-elevada);
   border: var(--borda-fina) solid var(--divisor);
   border-radius: var(--raio-cartao);
@@ -25,8 +27,14 @@
   border-right: 0;
 }
 
-/* Na `dl`, o `dt` (rotulo) vem antes do `dd` (valor) no DOM; na tela o numero
-   fica em cima. A inversao e so visual. */
+/* O rotulo vem antes do valor no DOM, que e a ordem em que se le ("Parados: 3");
+   na tela o numero fica em cima. A inversao e so visual.
+
+   ERA UMA `dl`, e deixou de ser em 20/11/2026: `dt` e `dd` so podem ser filhos
+   diretos da `dl` ou de UMA `div` que agrupe o par, e aqui havia o icone ao lado
+   e uma segunda `div` em volta. O axe reprova (`definition-list`, `dlitem`), e
+   leitor de tela anunciava termo sem lista. Lista comum, com `role="list"`
+   porque `list-style: none` tira o papel de lista no VoiceOver. */
 .resumo__item > div {
   display: flex;
   flex-direction: column-reverse;
@@ -72,5 +80,52 @@
 
   .resumo__valor {
     font-size: var(--t-t3);
+  }
+}
+
+/*
+ * Cinco itens (ou mais) nao cabem em uma linha so abaixo de ~1200px: os rotulos
+ * se sobrepoem. O comportamento novo e OPT-IN pela quantidade, e nada fora desta
+ * classe muda: as telas de tres itens (`cliente-pedidos`, `advogado-demandas`)
+ * tem imagem de referencia que nao pode ser regravada.
+ *
+ * As divisorias usam o `gap` sobre o fundo do contêiner, e nao `border-right`,
+ * porque a borda direita de um item que quebra de linha ficaria no lugar errado.
+ */
+@media (max-width: 1200px) {
+  .resumo--muitos {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--borda-fina);
+    background: var(--divisor);
+  }
+
+  .resumo--muitos .resumo__item {
+    background: var(--superficie-elevada);
+    border-right: 0;
+  }
+
+  /* O item final sem par ocupa o resto da linha, sem deixar buraco. */
+  .resumo--muitos .resumo__item:last-child:nth-child(3n + 2) {
+    grid-column: span 2;
+  }
+
+  .resumo--muitos .resumo__item:last-child:nth-child(3n + 1) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .resumo--muitos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .resumo--muitos .resumo__item:last-child:nth-child(3n + 2),
+  .resumo--muitos .resumo__item:last-child:nth-child(3n + 1) {
+    grid-column: auto;
+  }
+
+  .resumo--muitos .resumo__item:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
   }
 }

@@ -52,3 +52,45 @@ test.describe('distribuicao', () => {
     await expect(page.getByText('Nenhuma demanda distribuída')).toBeVisible();
   });
 });
+
+/**
+ * O ADMINISTRADOR ENXERGA O QUE O ADVOGADO FEZ (lote de novembro, ajuste 5).
+ *
+ * Distribui, o advogado inicia o trabalho, e a tela "Andamento" mostra o
+ * entregavel em elaboracao, com o advogado, e a trilha com o passo de inicio. O
+ * que so a jornada prova: que a leitura do servidor (estado, trilha, vez) chega
+ * a tela ligada, sem nenhuma resposta escrita a mao.
+ */
+test.describe('andamento', () => {
+  test('o administrador ve o trabalho iniciado e a trilha', async ({
+    page,
+  }) => {
+    await entrar(page, CONTAS.admin);
+    await page.goto('/admin/distribuicao');
+    await page
+      .getByLabel(/Advogado para Parecer/i)
+      .selectOption({ label: 'Ana Souza' });
+    await page.getByRole('button', { name: 'Distribuir' }).first().click();
+    await expect(page.getByLabel(/Advogado para Parecer/i)).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Sair' }).click();
+    await entrar(page, CONTAS.advogado);
+    await page
+      .getByRole('button', { name: 'Iniciar trabalho' })
+      .first()
+      .click();
+
+    await page.getByRole('button', { name: 'Sair' }).click();
+    await entrar(page, CONTAS.admin);
+    await page.goto('/admin/andamento');
+
+    const linha = page
+      .getByRole('row')
+      .filter({ hasText: 'Em elaboração' })
+      .first();
+    await expect(linha).toContainText('Com o advogado');
+
+    await linha.getByRole('button', { name: /^Ver trilha/ }).click();
+    await expect(page.getByText('Advogado iniciou')).toBeVisible();
+  });
+});

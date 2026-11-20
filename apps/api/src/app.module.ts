@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AdvogadosModule } from './advogados/advogados.module.js';
+import { AndamentoModule } from './andamento/andamento.module.js';
 import { AnamneseModule } from './anamnese/anamnese.module.js';
 import { AlertasModule } from './alertas/alertas.module.js';
 import { AppCheckModule } from './app-check/app-check.module.js';
@@ -99,6 +100,8 @@ import { LgpdModule } from './lgpd/lgpd.module.js';
     PagamentosAdminModule,
     // B2 (decisoes.md 5.5): o terceiro escritor de claim, so de `admin`.
     AdministradoresModule,
+    // Lote de novembro (ajuste 5): o andamento dos advogados, so leitura.
+    AndamentoModule,
     ClientesModule,
     PedidosModule,
     EntregaveisModule,

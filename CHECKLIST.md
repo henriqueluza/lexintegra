@@ -17,6 +17,30 @@ desta página.
 
 ---
 
+## 0. Lote de novembro (ajustes pedidos pelo cliente)
+
+**Bloco D — o administrador vê o andamento dos advogados**
+(`feat/admin-visao-advogados`, tela `/admin/andamento`)
+
+- [ ] 🏢 **Responder: o administrador só acompanha, ou também lê o que o
+  advogado lê?** A tela mostra andamento (estado, desde quando, de quem é a
+  vez, trilha e reuniões) e **nenhum conteúdo**: nem observações, nem ficha,
+  nem nome de arquivo. Abrir conteúdo é mais uma rota de leitura, com
+  auditoria; agir em nome do advogado (iniciar, enviar, confirmar) contraria a
+  regra inviolável 14 e exigiria um ADR.
+- [ ] 🏢 **Confirmar o que conta como parado:** a vez é do advogado há 7 dias
+  ou mais (a tela também oferece 3, 15 e 30). O tempo do cliente decidindo
+  sobre um arquivo aparece, mas não conta como atraso do advogado.
+- [ ] 👤 Aprovar a imagem de referência nova da tela (`admin-andamento-*`,
+  lista no PR) e gerar de novo as capturas dos manuais
+  (`pnpm capturas:manuais`): o menu do administrador ganhou um item.
+- [ ] 👤 **Depois do deploy:** abrir `/admin/andamento` com os pedidos reais e
+  conferir que os entregáveis antigos mostram a data em "desde" (ela vem da
+  trilha, porque o campo `estadoDesde` só existe a partir deste deploy), e que
+  cada abertura deixa uma linha `andamento.consultado` em `auditoria/`.
+
+---
+
 ## 1. Testes em produção
 
 Na ordem: os de pagamento primeiro (cada compra vira pedido para os testes
