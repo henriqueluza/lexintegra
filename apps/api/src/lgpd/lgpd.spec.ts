@@ -178,6 +178,22 @@ it('simula impedimento com os caminhos e mantem arquivo nao limpo fora do pacote
   expect(pacote.toString()).toContain('%PDF-1.4');
 });
 
+/**
+ * BACKUP E DADO PESSOAL (lote de novembro de 2026, ADR-23). A exportacao do
+ * titular diz que os dados dele existem tambem nas copias do banco, e por
+ * quanto tempo: e o que permite responder com verdade a um pedido de
+ * eliminacao.
+ */
+it('a exportacao declara as copias do banco e a retencao maxima', async () => {
+  const pacote = (await servico.exportar('clientes', 'ana', ATOR)).toString();
+
+  expect(pacote).toContain('"copias"');
+  expect(pacote).toContain('"backupSemanalSemanas": 8');
+  expect(pacote).toContain('"backupDiarioDias": 7');
+  expect(pacote).toContain('"pitrDias": 7');
+  expect(pacote).toContain('"retencaoMaximaDias": 56');
+});
+
 it('controlador usa download e encaminha o ator autenticado', async () => {
   const controller = new LgpdController(servico, retencao);
   expect(await controller.exportar('clientes', 'ana', ATOR)).toBeInstanceOf(

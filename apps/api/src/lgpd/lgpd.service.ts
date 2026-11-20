@@ -13,6 +13,7 @@ import { agora } from '../relogio.js';
 import { InventarioTitular, type Inventario } from './inventario.service.js';
 import {
   MAPA_AUTH,
+  MAPA_COPIAS,
   MAPA_OBJETOS,
   MAPA_TITULAR,
   REFERENCIAS_TITULAR,
@@ -62,6 +63,7 @@ export class LgpdService {
       referencias: REFERENCIAS_TITULAR,
       objetos: MAPA_OBJETOS,
       auth: MAPA_AUTH,
+      copias: MAPA_COPIAS,
       conta:
         conta === null
           ? null

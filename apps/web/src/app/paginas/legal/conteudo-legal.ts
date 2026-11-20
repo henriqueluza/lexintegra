@@ -9,6 +9,19 @@ import { CONTATO_PUBLICO } from '../../shell/rodape-publico/contato-publico';
  * rodapé (o e-mail único desde 05/10/2026) e o encarregado. As versões de aceite já registradas não mudam com
  * esta página.
  */
+/**
+ * A data que aparece no topo de cada página. A política de privacidade diz que
+ * "a data no topo identifica a versão em vigor", então ela muda quando o TEXTO
+ * daquele documento muda, e só o dele: até novembro de 2026 era um literal
+ * único no template, para os dois.
+ *
+ * Privacidade: 19/11/2026, com o parágrafo das cópias de segurança (ADR-23).
+ */
+export const ATUALIZADO_EM = {
+  termos: '1º de outubro de 2026',
+  privacidade: '19 de novembro de 2026',
+} as const;
+
 const identificacao = {
   titulo: 'Identificação e contato',
   texto: `LexIntegra — CNPJ ${CONTATO_PUBLICO.cnpj}. O contato da plataforma é um só: ${CONTATO_PUBLICO.email}, para os serviços contratados, para o acesso à sua área e para os seus dados pessoais. Informe o número do pedido, se houver. As respostas aos e-mails automáticos da plataforma também chegam a esse endereço. Nunca envie senhas, códigos de acesso ou dados de cartão por esse canal.`,
