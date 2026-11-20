@@ -52,6 +52,18 @@ num módulo, porque elas guardam as armadilhas de cada um.*
   3 planos e 23 avulsos, sem pacotes fechados; produção ainda tem os seis
   produtos antigos (CHECKLIST): `scripts/cadastrar-catalogo-inicial.mjs`
   **pula produto existente e não tem `--atualizar`**.
+- **Backups do Firestore** (lote de novembro de 2026, Bloco G,
+  `feat/backup-firestore`, ADR-23): dois agendamentos nativos em
+  `firestore.tf`, diário guardado 7 dias e semanal guardado 8 semanas, mais o
+  PITR de 7 dias que já existia. **O alerta é de idade** (*Backup do Firestore
+  atrasado*): a sonda lê a API de administração (`sinais/backups.ts`) e
+  escreve `backupSegundos`; leitura recusada vira idade de 30 dias, de
+  propósito. As retenções têm par em `shared/politica-de-guarda`, que a
+  política de privacidade publica, e **um teste compara com o Terraform**. Os
+  arquivos dos buckets **não** têm backup, por decisão. Restaurar é humano
+  (`docs/runbooks/restaurar-backup.md`) e obriga a refazer as eliminações
+  LGPD posteriores à cópia. **Trocar produção para um banco restaurado não
+  está automatizado** (CHECKLIST).
 - **Teams pela conta organizadora** desde o deploy de 02/11/2026 (#91):
   `INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"`. As salas são
   criadas por `operacional@` (`TEAMS_ORGANIZADOR_PADRAO`, literal no

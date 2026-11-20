@@ -17,6 +17,37 @@ desta página.
 
 ---
 
+## 0. Lote de novembro (ajustes pedidos pelo cliente)
+
+**Bloco G — backups do Firestore** (`feat/backup-firestore`, ADR-23)
+
+- [ ] 🏢 **Confirmar a retenção dos backups:** a proposta aplicada é 7
+  backups diários e 8 semanais. Mudar é trocar duas variáveis do Terraform e
+  as constantes de `packages/shared/src/politica-de-guarda.ts`, juntas (um
+  teste recusa uma sem a outra).
+- [ ] 🤝 **Revisar o parágrafo novo da política de privacidade** (cópias de
+  segurança por até 8 semanas; o dado eliminado continua nas cópias até elas
+  expirarem; eliminações refeitas depois de uma restauração). É minuta, como
+  os demais textos.
+- [ ] 👤 **Depois do deploy:** conferir os dois agendamentos
+  (`gcloud firestore backups schedules list`), esperar o primeiro backup (até
+  24 h) e ver a métrica `backup-idade-segundos` receber pontos
+  ([`backup-atrasado.md`](docs/runbooks/backup-atrasado.md)).
+- [ ] 👤 **Teste de restauração**, com os tempos anotados no roteiro:
+  restaurar um backup num banco separado, comparar as contagens com
+  `scripts/contar-documentos-firestore.mjs` e **apagar o banco de teste**
+  ([`restaurar-backup.md`](docs/runbooks/restaurar-backup.md)).
+- [ ] 🤝 **Decidir se vale construir a troca de produção para um banco
+  restaurado.** Hoje a restauração cria um banco novo e a API só fala com
+  `(default)`: recuperar documentos está coberto, perda total do banco não
+  (`restaurar-backup.md`, seção 4).
+- [ ] 👤 Regravar e aprovar a referência visual da página de privacidade
+  (`privacidade-*`): ganhou um parágrafo e a data própria.
+- [ ] 🏢 Conferir na primeira fatura o custo dos backups (estimado em
+  centavos; o preço por GiB em São Paulo não foi confirmado).
+
+---
+
 ## 1. Testes em produção
 
 Na ordem: os de pagamento primeiro (cada compra vira pedido para os testes

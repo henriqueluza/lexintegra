@@ -519,7 +519,7 @@ Conferidas em 24/09/2026 com `gcloud scheduler jobs list` e
 | `varredor-outbox` | Scheduler, em [`outbox.tf`](../../infra/terraform/outbox.tf) | a cada minuto | `POST /api/interno/outbox/varredura`: reenfileira o que ficou sem tarefa | Registro perdido entre gravar e enfileirar não é mais entregue. Alerta *Outbox parado* |
 | `clamav-base-diaria` | Scheduler, em [`varredura.tf`](../../infra/terraform/varredura.tf) | 4h e 16h | Executa o job `clamav-atualizar-base`, que publica a base no bucket | A base envelhece e o scanner continua dizendo "limpo". Alertas *Base do ClamAV velha* e *sem publicação* |
 | `retencao-diaria` | Scheduler, em `varredura.tf` | 5h e 17h | `POST /api/interno/retencao`: aviso 7 dias antes (um por pedido) e, 30 dias depois de o último entregável chegar a `entregue` — nunca antes de 7 dias depois do aviso —, exclusão de todas as versões dos entregáveis e dos anexos do cliente. Pula pedido com contestação aberta. Duas vezes por dia por causa do alerta de ausência. **Desde 05/10/2026 roda também a rotina da política de guarda** (`lgpd/eliminacao.service.ts`): elimina o cadastro inicial sem conta 6 meses depois do último envio, abre a eliminação do cliente 5 anos depois do último pedido e executa as eliminações cujo aviso já deu 7 dias | Arquivos ficam além dos 30 dias; dados além da guarda. Alerta *Retencao parada*; falha da eliminação emite `lgpd.eliminacao-falhou` |
-| `sinais-operacionais` | Scheduler, em [`sinais.tf`](../../infra/terraform/sinais.tf) | a cada 5 minutos | `POST /api/interno/sinais`: mede e grava em log a idade do outbox, da quarentena e da reunião sem sala | As métricas ficam sem dado, e os alertas que dependem delas **não disparam**. Alerta *Sonda de sinais parada* |
+| `sinais-operacionais` | Scheduler, em [`sinais.tf`](../../infra/terraform/sinais.tf) | a cada 5 minutos | `POST /api/interno/sinais`: mede e grava em log a idade do outbox, da quarentena, da reunião sem sala e do backup mais recente do Firestore | As métricas ficam sem dado, e os alertas que dependem delas **não disparam**. Alerta *Sonda de sinais parada* |
 | fila `eventos` | Cloud Tasks, em `outbox.tf` | sob demanda | Entrega o outbox em `POST /api/interno/outbox`. Até 12 tentativas em 1 hora, backoff de 10 a 300 s | E-mail, sala e estorno param. Alerta *Outbox parado* |
 | fila `varredura` | Cloud Tasks, em `varredura.tf` | sob demanda | Chama `POST /api/interno/varredura`, que chama o scanner. Até 10 tentativas em 1 hora | Arquivo parado em quarentena. Alerta *Arquivo parado em quarentena* |
 | `clamav-atualizar-base` | Job do Cloud Run, em `varredura.tf` | pelo Scheduler | `freshclam` e publicação em `gs://lexintegra-clamav-db-36bda` | Mesmo que `clamav-base-diaria` |
@@ -584,6 +584,19 @@ O Firestore tem **PITR ligado** (`point_in_time_recovery_enablement` em
 continua recuperável por até 7 dias. A única coleção com TTL é `checkouts`
 (campo `apagarApos`).
 
+**Backups agendados do Firestore (desde o lote de novembro de 2026, ADR-23).**
+Dois agendamentos nativos, no mesmo `firestore.tf`: **diário, guardado 7
+dias**, e **semanal (domingo), guardado 8 semanas**. O horário é escolhido pelo
+Firestore. Ficam em `southamerica-east1`, não usam o Cloud Scheduler e não
+trazem as regras de segurança nem a TTL. **Os arquivos dos buckets não têm
+backup além do soft delete de 7 dias**, de propósito: a retenção apaga os
+entregáveis 30 dias depois da entrega, e uma cópia mais longa os traria de
+volta. Como restaurar, e o que refazer depois (inclusive as eliminações de
+titulares): [`restaurar-backup.md`](../runbooks/restaurar-backup.md). Os
+prazos são dado pessoal em cópia e estão na política de privacidade
+(`packages/shared/src/politica-de-guarda.ts`, conferido contra o Terraform por
+teste).
+
 ---
 
 ## 7. Painel e alertas
@@ -594,7 +607,7 @@ continua recuperável por até 7 dias. A única coleção com TTL é `checkouts`
   [`observabilidade.tf`](../../infra/terraform/observabilidade.tf). Cada
   política tem, no campo de documentação, o caminho do runbook dela.
 
-São **14 políticas**, todas por e-mail para `suportelexintegra@gmail.com`
+São **15 políticas**, todas por e-mail para `suportelexintegra@gmail.com`
 (canal *Suporte LexIntegra*). Nenhuma acorda ninguém.
 
 | Política | Dispara quando | O que significa | Runbook |
@@ -613,6 +626,7 @@ São **14 políticas**, todas por e-mail para `suportelexintegra@gmail.com`
 | Retencao parada | Nenhuma passagem da retenção concluída em 23 h | Arquivos e dados ficam além do prazo de guarda | [`retencao-parada.md`](../runbooks/retencao-parada.md) |
 | Sonda de sinais parada | A sonda não mede há 15 min | Três alertas ficam cegos: *Outbox parado*, *Arquivo parado em quarentena* e *Reuniao marcada sem sala do Teams* | [`sonda-parada.md`](../runbooks/sonda-parada.md) |
 | API fora do ar | O uptime check de `https://lexintegra.com.br/api/health` falha em duas regiões ou mais | O site abre, mas nada que dependa da API funciona | [`api-fora-do-ar.md`](../runbooks/api-fora-do-ar.md) |
+| Backup do Firestore atrasado | O backup mais recente tem mais de 30 h, por 1 h seguida (ou a sonda não conseguiu ler os backups) | O backup diário não saiu, um agendamento sumiu, ou a conta de runtime perdeu o papel de leitura. O PITR de 7 dias continua valendo | [`backup-atrasado.md`](../runbooks/backup-atrasado.md) |
 
 Uma credencial vencida ou revogada não tem alerta próprio: aparece como um dos
 alertas acima (*Reuniao marcada sem sala do Teams*, *Entrega de e-mail
@@ -716,12 +730,13 @@ Quem confirma é o dono da conta de faturamento, na primeira fatura.
 |---|---|---|---|
 | Cloud Run (API e scanner, `min = 0`) e job da base do ClamAV | 2 serviços, 1 job (2 execuções/dia) | R$ 0 dentro da cota gratuita | estimativa |
 | Firestore (com PITR de 7 dias) | 1 banco, 16 índices | R$ 0 a poucos reais; o PITR é SKU cobrada | estimativa |
+| Backups do Firestore | 2 agendamentos (diário, 7 dias; semanal, 8 semanas): até 15 cópias do banco | **Centavos por mês** enquanto o banco tiver dezenas de MB. Cobrado por GiB-mês de cópia; ⏳ o preço por GiB em São Paulo não foi confirmado, e a restauração é cobrada à parte, pelo tamanho do backup | estimativa |
 | Cloud Storage | 5 buckets (~1 GB na base do ClamAV) | R$ 0 a R$ 1 | estimativa |
 | Cloud Tasks | 2 filas | R$ 0 (1 milhão de operações gratuitas) | estimativa |
 | Cloud Scheduler | **4 jobs**, 1 acima dos 3 gratuitos | ~US$ 0,10 (~R$ 0,55) | preço público |
 | Secret Manager | 6 secrets, ~6 versões ativas | R$ 0 no limite das 6 gratuitas; US$ 0,06 por versão a mais | preço público |
 | KMS, Artifact Registry, Logging, Trace | 1 chave; ~1,75 GB de imagens; 30 dias de log e 186 dias de registros de acesso | R$ 1 a R$ 5 | estimativa |
-| Cloud Monitoring | **14 políticas**, 1 uptime check | R$ 0 até 31/08/2027; a partir de 01/09/2027, ~US$ 0,35 por política (~R$ 26 com uma métrica por política) | estimativa |
+| Cloud Monitoring | **15 políticas**, 1 uptime check | R$ 0 até 31/08/2027; a partir de 01/09/2027, ~US$ 0,35 por política (~R$ 26 com uma métrica por política) | estimativa |
 | Firebase Hosting e Auth | — | R$ 0 (Auth sem custo até 50 mil usuários ativos/mês) | preço público |
 | App Check (reCAPTCHA Enterprise) | 1 avaliação por interação pública | R$ 0 no volume previsto | estimativa |
 | Resend | plano gratuito | R$ 0, com **teto de 100 e-mails/dia** | plano atual |
