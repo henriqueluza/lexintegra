@@ -103,7 +103,7 @@ describe('navegacao da shell', () => {
    * administrativas, sem menu o administrador so chegaria as demais digitando a
    * URL.
    */
-  it('oferece as dez secoes administrativas ao admin', () => {
+  it('oferece as onze secoes administrativas ao admin', () => {
     const { fixture } = montar(
       { nome: 'Marcos', email: 'admin@x.test' },
       'admin',
@@ -114,6 +114,8 @@ describe('navegacao da shell', () => {
 
     expect(links.map((link) => link.textContent?.trim())).toEqual([
       'Distribuição',
+      /* Lote de novembro, ajuste 5. */
+      'Andamento',
       'Clientes',
       'Advogados',
       'Produtos',
@@ -210,6 +212,7 @@ describe('navegacao da shell', () => {
 
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/admin/distribuicao',
+      '/admin/andamento',
       '/admin/clientes',
       '/admin/advogados',
       '/admin/produtos',
