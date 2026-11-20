@@ -66,6 +66,13 @@ export default {
      * em `+` mostraria ao cliente uma parcela que ninguem cobra.
      */
     'src/parcelamento.ts',
+    /*
+     * Lote de novembro, ajuste 5. De quem e a vez e ha quantos dias: e o numero
+     * com que o administrador cobra um advogado. As bordas sao de milissegundo
+     * (arquivo enviado antes ou depois da retomada, o dia que vira) e de ordem
+     * (o arquivo esperando o cliente vem antes da falta de advogado).
+     */
+    'src/andamento.ts',
   ],
 
   /*
