@@ -9,11 +9,11 @@ painéis de terceiros) está em [`operacao.md`](../entrega/operacao.md) e nos
 > As imagens foram feitas num ambiente de teste, com empresas e pessoas
 > fictícias.
 
-O menu tem duas partes: o trabalho de rotina (**Distribuição, Clientes,
-Advogados, Produtos, Estornos, Administradores**) e, sob **Quando algo
-falha**, as telas de exceção (**Contestações, Pagamentos, Entregas,
+O menu tem duas partes: o trabalho de rotina (**Distribuição, Andamento,
+Clientes, Advogados, Produtos, Estornos, Administradores**) e, sob **Quando
+algo falha**, as telas de exceção (**Contestações, Pagamentos, Entregas,
 Reuniões**). Toda ação sobre contas e pagamentos fica registrada no log de
-auditoria.
+auditoria, e também cada consulta à tela de **Andamento**.
 
 ---
 
@@ -80,6 +80,37 @@ a poder marcar reuniões.
 
 Trocar o advogado de um pedido com reunião futura marcada é recusado: cancele
 a reunião antes.
+
+### Andamento: o que cada advogado tem em mãos
+
+Em **Andamento** (`/admin/andamento`) há uma linha por entregável de cada
+pedido: em que estado está, **desde quando**, há quantos dias e **de quem é a
+vez**.
+
+| De quem é a vez | O que significa |
+|---|---|
+| **Com o advogado** | O entregável foi solicitado, está em elaboração sem arquivo enviado, ou voltou de um pedido de revisão |
+| **Aguardando o cliente** | O advogado enviou o arquivo e o cliente ainda não confirmou nem pediu revisão |
+| **Sem advogado** | O pedido não foi distribuído (ou voltou para a fila). Resolva em **Distribuição** |
+| **Sem pendência** | Entregue, ou pedido cancelado, estornado ou pausado por contestação |
+
+- **Parado** é o entregável que está **com o advogado** há 7 dias ou mais. O
+  prazo é escolhido na própria tela (3, 7, 15 ou 30 dias). A contagem recomeça
+  quando o pedido muda de advogado. O tempo do cliente decidindo aparece na
+  linha, mas não conta como atraso do advogado.
+- Os números do topo resumem: parados, aguardando o cliente, em revisão,
+  pedidos presos com **advogado suspenso** (a suspensão não redistribui nada:
+  redistribua em **Distribuição**) e reuniões sem sala.
+- Os filtros de situação, estado, produto, cliente e prazo agem sobre o que já
+  foi carregado. Só o filtro de **advogado** consulta de novo, e é ele que
+  alcança pedidos mais antigos que os 200 mais recentes.
+- **Ver trilha** mostra, por entregável, cada mudança de estado com a data, e
+  as reuniões do pedido.
+
+A tela é **só de leitura**: não há como iniciar trabalho, enviar arquivo ou
+confirmar entrega por ela, e ela não mostra o conteúdo do trabalho
+(observações, ficha, arquivos). Cada abertura da tela e cada trilha aberta
+ficam no log de auditoria, com quem consultou.
 
 ## 4. Clientes
 
