@@ -450,6 +450,16 @@ describe('resumoDoAndamento', () => {
       advogadoId: 'uid-bruno',
       entregaveis: [entregavel({ estado: 'entregue' })],
     }),
+    /*
+     * Um SEGUNDO pedido preso com o Bruno. Com um so, trocar o filtro por "o que
+     * NAO esta com o advogado" contava o entregue acima e dava o mesmo 1, e
+     * contar pedidos sem olhar o id tambem: a analise de mutacao achou os dois.
+     */
+    pedido({
+      id: 'p7',
+      advogadoId: 'uid-bruno',
+      entregaveis: [entregavel({ estadoDesde: ha(1) })],
+    }),
   ];
 
   const linhas = linhasDoAndamento(pedidos, AGORA, 7);
@@ -460,7 +470,7 @@ describe('resumoDoAndamento', () => {
       aguardandoCliente: 1,
       emRevisao: 1,
       semAdvogado: 1,
-      pedidosComAdvogadoSuspenso: 1,
+      pedidosComAdvogadoSuspenso: 2,
     });
   });
 
