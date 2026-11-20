@@ -30,6 +30,14 @@ export const ACOES_AUDITADAS = [
   'administrador.removido',
   'lgpd.retencao-legal.registrada',
   'lgpd.retencao-legal.removida',
+  /*
+   * Lote de novembro, ajuste 5: as duas primeiras LEITURAS auditadas. A tela de
+   * andamento mostra o trabalho de todos os advogados e o nome de todos os
+   * clientes, e o detalhe abre a trilha de um pedido — quem olhou fica aqui.
+   * Ver `registrarConsulta`.
+   */
+  'andamento.consultado',
+  'pedido.consultado',
 ] as const;
 
 export type AcaoAuditada = (typeof ACOES_AUDITADAS)[number];
@@ -59,5 +67,27 @@ export function auditar(
     antes: registro.antes,
     depois: registro.depois,
     em: FieldValue.serverTimestamp(),
+  });
+}
+
+/**
+ * A linha de auditoria de uma LEITURA, que nao tem transacao propria onde
+ * pendurar o registro.
+ *
+ * Abre uma transacao curta, so de escrita, e ESPERA: quem chama grava antes de
+ * devolver o que leu, e se a gravacao falhar a requisicao falha junto. Consulta
+ * sem registro nao acontece — o contrario (devolver e registrar depois, sem
+ * esperar) deixaria exatamente as leituras que deram problema fora da trilha.
+ *
+ * `antes` e sempre `null`: leitura nao muda nada. `depois` leva o que foi
+ * consultado (o pedido, o filtro, a quantidade), nunca o conteudo devolvido.
+ */
+export async function registrarConsulta(
+  db: Firestore,
+  consulta: Pick<RegistroDeAuditoria, 'acao' | 'atorUid' | 'alvo' | 'depois'>,
+): Promise<void> {
+  await db.runTransaction((transacao) => {
+    auditar(db, transacao, { ...consulta, antes: null });
+    return Promise.resolve();
   });
 }

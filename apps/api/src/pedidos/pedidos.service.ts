@@ -218,6 +218,7 @@ export class PedidosService {
       revisoesUsadas: 0,
       arquivoAtual: null,
       transicoes: 1,
+      estadoDesde: FieldValue.serverTimestamp(),
       atualizadoEm: FieldValue.serverTimestamp(),
     } satisfies DocumentoEntregavel);
 

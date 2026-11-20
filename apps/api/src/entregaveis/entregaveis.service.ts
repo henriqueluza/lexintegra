@@ -201,6 +201,8 @@ export class EntregaveisService {
             ? entregavel.revisoesUsadas + 1
             : entregavel.revisoesUsadas,
         transicoes: sequencia,
+        /* O mesmo instante da transicao gravada logo abaixo: mesma transacao. */
+        estadoDesde: FieldValue.serverTimestamp(),
         atualizadoEm: FieldValue.serverTimestamp(),
       });
 
