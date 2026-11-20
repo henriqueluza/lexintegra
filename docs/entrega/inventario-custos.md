@@ -73,7 +73,10 @@ download gera uma URL assinada e uma leitura.
 - **PITR ligado** (`POINT_IN_TIME_RECOVERY_ENABLED`, 7 dias de recuperação). O
   README do Terraform registra que o PITR é uma SKU cobrada;
 - proteção contra exclusão ligada;
-- **nenhum backup agendado** no Terraform;
+- **2 backups agendados** (`google_firestore_backup_schedule`, lote de
+  novembro de 2026): diário com retenção de 7 dias e semanal com retenção de
+  8 semanas. No regime, **até 15 cópias do banco** ao mesmo tempo, cobradas
+  por GiB-mês de cópia. A restauração é SKU à parte, pelo tamanho do backup;
 - **16 índices compostos**: 13 em `firestore.tf` e 3 em `sinais.tf`, dos quais
   5 são de grupo de coleções. Mais 1 campo com **TTL**, `checkouts.apagarApos`
   (`google_firestore_field.checkouts_ttl`). A TTL apaga sem custo de exclusão.
@@ -81,7 +84,9 @@ download gera uma URL assinada e uma leitura.
 Leituras recorrentes, independentes de usuário:
 
 - o varredor consulta o outbox a cada minuto (`outbox.tf`);
-- a sonda faz quatro consultas indexadas a cada 5 minutos (`sinais.tf`);
+- a sonda faz quatro consultas indexadas a cada 5 minutos (`sinais.tf`) e,
+  desde novembro de 2026, duas chamadas à API de administração do Firestore
+  (lista de backups e de agendamentos), sem custo de leitura de documento;
 - a retenção varre os pedidos uma vez por dia.
 
 ## 5. Segurança e chaves
@@ -99,7 +104,7 @@ Tudo em `observabilidade.tf`, salvo indicação.
 | Item | Quantidade |
 |---|---|
 | Métricas personalizadas por log | **8**: `alertas-criticos`, `outbox-atraso-segundos`, `quarentena-atraso-segundos`, `outbox-entregas`, `clamav-base-idade-horas`, `reuniao-sem-sala-segundos`, `webhook-recusado`, `retencao-passagens` |
-| Políticas de alerta | **14** no código (a `disponibilidade_sem_link` saiu no #91). Três são de correspondência de log, uma condição cada; as demais têm condição sobre métrica. A arquitetura, seção 12, registra que o Monitoring passa a cobrar alertas a partir de 01/09/2027 |
+| Políticas de alerta | **15** no código (a de backup atrasado entrou em novembro de 2026) (a `disponibilidade_sem_link` saiu no #91). Três são de correspondência de log, uma condição cada; as demais têm condição sobre métrica. A arquitetura, seção 12, registra que o Monitoring passa a cobrar alertas a partir de 01/09/2027 |
 | Uptime check | **1**, `API LexIntegra (/api/health)`, a cada **300 s**, a partir de várias regiões |
 | Painel | 1 (`paineis/operacao.json`) |
 | Canal de notificação | **2** e-mails: *Suporte LexIntegra* (`suportelexintegra@gmail.com`, recebe todos os alertas) e *Desenvolvimento (PROVISORIO)*, que só existe com o secret do GitHub definido e não recebe nenhum alerta |

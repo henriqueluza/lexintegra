@@ -23,6 +23,57 @@ resource "google_firestore_database" "default" {
   }
 }
 
+# --- Backups agendados (lote de novembro de 2026, ajuste 12; ADR-23) -----------
+#
+# Os backups NATIVOS do Firestore: um agendamento diario e um semanal, que e o
+# maximo que o servico aceita por banco. Nao usam o Cloud Scheduler — o
+# agendamento e recurso do proprio banco — e ficam na mesma regiao dele
+# (`southamerica-east1`). O horario e escolhido pelo Firestore e varia de um dia
+# para o outro; nao ha como fixa-lo.
+#
+# O QUE CADA UM COBRE. O PITR, acima, volta a QUALQUER minuto dos ultimos 7
+# dias: e a resposta ao erro percebido rapido. O diario repete essa janela como
+# segunda copia, independente do PITR. O semanal e o que estende a recuperacao a
+# 8 semanas — o erro percebido um mes depois, que antes nao tinha conserto.
+#
+# O QUE O BACKUP NAO TRAZ: regras de seguranca e politicas de TTL. As duas estao
+# no repositorio (`firestore.rules` e `google_firestore_field.checkouts_ttl`),
+# e o roteiro de restauracao diz como reaplica-las
+# (docs/runbooks/restaurar-backup.md).
+#
+# BACKUP E DADO PESSOAL. Cada copia guarda os dados de todos os titulares ate
+# expirar, e uma eliminacao feita hoje continua nos backups ja tirados por ate
+# `backup_semanal_retencao_semanas`. Isso esta na politica de privacidade, e os
+# numeros daqui e os de la sao conferidos um contra o outro por teste
+# (`packages/shared/src/politica-de-guarda.spec.ts`).
+#
+# `deletion_policy = "PREVENT"`: tirar o bloco do codigo nao pode apagar o
+# agendamento em silencio. Excluir o agendamento nao apaga os backups ja
+# tirados, mas deixa de tirar os proximos — e ninguem perceberia ate precisar.
+resource "google_firestore_backup_schedule" "diario" {
+  project  = var.project_id
+  database = google_firestore_database.default.name
+
+  retention = "${var.backup_diario_retencao_dias * 86400}s"
+
+  daily_recurrence {}
+
+  deletion_policy = "PREVENT"
+}
+
+resource "google_firestore_backup_schedule" "semanal" {
+  project  = var.project_id
+  database = google_firestore_database.default.name
+
+  retention = "${var.backup_semanal_retencao_semanas * 7 * 86400}s"
+
+  weekly_recurrence {
+    day = "SUNDAY"
+  }
+
+  deletion_policy = "PREVENT"
+}
+
 # Indices compostos entram aqui, como google_firestore_index, conforme as consultas
 # forem escritas. A arquitetura (secao 10) exige que sejam declarados no Terraform: o
 # emulador diverge do servico real em comportamento de indice composto, e uma consulta

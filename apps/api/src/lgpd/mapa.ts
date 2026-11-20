@@ -1,3 +1,10 @@
+import {
+  DIAS_RECUPERACAO_PITR,
+  RETENCAO_BACKUP_DIARIO_DIAS,
+  RETENCAO_BACKUP_SEMANAL_SEMANAS,
+  SEMANAS_MAXIMAS_EM_COPIA,
+} from 'shared';
+
 /**
  * Fonte unica do inventario, da exportacao, da simulacao e do EXECUTOR de
  * eliminacao. A `guarda` de cada grupo e a politica de 05/10/2026
@@ -109,6 +116,31 @@ export const MAPA_OBJETOS = {
   baldes: ['quarentena', 'arquivos'],
   prefixos: ['anexos', 'entregaveis'],
   guarda: 'eliminavel',
+} as const;
+
+/**
+ * AS COPIAS DO BANCO (lote de novembro de 2026, ADR-23). Os backups agendados e
+ * o PITR do Firestore guardam TODAS as colecoes de `MAPA_TITULAR`, sem
+ * distincao de `guarda`: uma copia e o banco inteiro num instante.
+ *
+ * NAO HA ELIMINACAO SELETIVA DENTRO DE UMA COPIA. O dado eliminado sai da
+ * plataforma na hora e continua nas copias ja tiradas ate elas expirarem — no
+ * maximo `retencaoMaximaDias`. O executor nao toca em copia nenhuma; o que
+ * existe e o dever de REFAZER as eliminacoes posteriores quando uma copia e
+ * restaurada (docs/runbooks/restaurar-backup.md).
+ *
+ * Entra na exportacao do titular para a resposta ao pedido dizer a verdade: os
+ * dados dele existem tambem aqui, e ate quando.
+ */
+export const MAPA_COPIAS = {
+  origem: 'Backups agendados e PITR do Firestore',
+  cobre: 'todas as colecoes do mapa',
+  backupDiarioDias: RETENCAO_BACKUP_DIARIO_DIAS,
+  backupSemanalSemanas: RETENCAO_BACKUP_SEMANAL_SEMANAS,
+  pitrDias: DIAS_RECUPERACAO_PITR,
+  retencaoMaximaDias: SEMANAS_MAXIMAS_EM_COPIA * 7,
+  eliminacao:
+    'Expira sozinha. Depois de restaurar uma copia, as eliminacoes posteriores a ela sao refeitas.',
 } as const;
 
 export const MAPA_AUTH = {

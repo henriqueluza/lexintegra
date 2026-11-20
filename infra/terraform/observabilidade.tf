@@ -160,6 +160,30 @@ resource "google_logging_metric" "quarentena_atraso" {
   }
 }
 
+# A idade do backup mais recente do Firestore, medida pela mesma sonda (ADR-23).
+# O Firestore nao emite metrica nem log de "backup agendado falhou": o que da
+# para saber e ha quanto tempo existe um backup pronto. Baldes de uma hora ate
+# 48 horas; acima disso cai no balde de transbordo, que e o que o alerta quer.
+resource "google_logging_metric" "backup_idade" {
+  project         = var.project_id
+  name            = "backup-idade-segundos"
+  filter          = "resource.type=\"cloud_run_revision\" AND jsonPayload.sinal=\"sinais\""
+  value_extractor = "EXTRACT(jsonPayload.backupSegundos)"
+  bucket_options {
+    linear_buckets {
+      num_finite_buckets = 48
+      width              = 3600
+      offset             = 0
+    }
+  }
+
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "DISTRIBUTION"
+    unit        = "s"
+  }
+}
+
 # Entrega do outbox, com o desfecho como rotulo. O nome do sinal e estavel de
 # proposito: casar a MENSAGEM quebraria na primeira vez que alguem a melhorasse.
 resource "google_logging_metric" "outbox_entregas" {
@@ -439,6 +463,56 @@ resource "google_monitoring_alert_policy" "quarentena_parada" {
       comparison      = "COMPARISON_GT"
       threshold_value = var.limite_quarentena_minutos * 60
       duration        = "0s"
+
+      aggregations {
+        alignment_period   = "600s"
+        per_series_aligner = "ALIGN_PERCENTILE_99"
+      }
+    }
+  }
+}
+
+# BACKUP DO FIRESTORE ATRASADO (ADR-23).
+#
+# E UM ALERTA DE IDADE, e nao de falha, porque o servico nao avisa quando um
+# backup agendado falha. A sonda mede ha quanto tempo existe um backup pronto;
+# antes do primeiro backup, mede a idade do agendamento — assim o dia do deploy
+# nao alarma, e um agendamento que nunca produz backup alarma. Sem agendamento
+# nenhum, ou com a API recusando a leitura, a sonda escreve uma idade-sentinela
+# de 30 dias: o alerta falha FECHADO.
+#
+# `duration` de uma hora: uma recusa passageira da API de administracao vira um
+# ponto alto isolado, e nao e motivo de e-mail. Uma hora seguida acima do
+# limite e.
+#
+# A sonda parada e outro alerta (`sonda_parada`): sem ponto nenhum, este aqui
+# nao tem o que comparar.
+resource "google_monitoring_alert_policy" "backup_atrasado" {
+  project               = var.project_id
+  display_name          = "Backup do Firestore atrasado"
+  combiner              = "OR"
+  notification_channels = local.canais_por_alerta["backup-atrasado"]
+
+  documentation {
+    content = <<-EOT
+      O backup mais recente do Firestore tem mais de ${var.limite_backup_horas} horas,
+      ou a sonda nao conseguiu ler os backups (nesse caso ela escreve uma idade de 30
+      dias, de proposito). O backup diario nao tem horario fixo, mas nao deveria
+      passar de um dia e pouco. Enquanto isto estiver aberto, a recuperacao alem de 7
+      dias (PITR) depende de backups cada vez mais velhos.
+
+      Runbook: docs/runbooks/backup-atrasado.md
+    EOT
+  }
+
+  conditions {
+    display_name = "idade do backup mais recente acima do limite"
+
+    condition_threshold {
+      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.backup_idade.name}\" AND resource.type=\"cloud_run_revision\""
+      comparison      = "COMPARISON_GT"
+      threshold_value = var.limite_backup_horas * 3600
+      duration        = "3600s"
 
       aggregations {
         alignment_period   = "600s"

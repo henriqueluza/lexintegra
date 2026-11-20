@@ -1,6 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { TERMOS_PUBLICOS, PRIVACIDADE_PUBLICA } from './conteudo-legal';
+import {
+  ATUALIZADO_EM,
+  PRIVACIDADE_PUBLICA,
+  TERMOS_PUBLICOS,
+} from './conteudo-legal';
 @Component({
   selector: 'app-legal',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -22,4 +26,7 @@ export class Legal {
   protected readonly secoes = this.termos
     ? TERMOS_PUBLICOS
     : PRIVACIDADE_PUBLICA;
+  protected readonly atualizadoEm = this.termos
+    ? ATUALIZADO_EM.termos
+    : ATUALIZADO_EM.privacidade;
 }

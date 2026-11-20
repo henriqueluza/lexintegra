@@ -2,6 +2,11 @@ import { Timestamp } from 'firebase-admin/firestore';
 import type { Firestore } from 'firebase-admin/firestore';
 import { FirestoreFalso } from '../firestore-falso.js';
 import type { ModoReunioes } from '../reunioes/sala/modo.js';
+import {
+  IDADE_DESCONHECIDA_SEGUNDOS,
+  type EstadoDosBackups,
+  type LeitorDeBackups,
+} from './backups.js';
 import { SinaisService } from './sinais.service.js';
 
 const AGORA = Date.parse('2026-09-18T12:00:00.000Z');
@@ -15,18 +20,27 @@ interface Linha {
   readonly campos: Record<string, unknown>;
 }
 
-function montar(modo: ModoReunioes = 'desligado'): {
+function montar(
+  modo: ModoReunioes = 'desligado',
+  backups: LeitorDeBackups | null = null,
+): {
   servico: SinaisService;
   banco: FirestoreFalso;
   linhas: Linha[];
+  avisos: Linha[];
 } {
   const banco = new FirestoreFalso();
   const linhas: Linha[] = [];
-  const servico = new SinaisService(banco as unknown as Firestore, {
-    modo,
-    graph: null,
-    organizadorPadrao: null,
-  });
+  const avisos: Linha[] = [];
+  const servico = new SinaisService(
+    banco as unknown as Firestore,
+    {
+      modo,
+      graph: null,
+      organizadorPadrao: null,
+    },
+    backups,
+  );
   /*
    * As metricas do Monitoring leem o LOG, e nao o retorno: e a linha com
    * `sinal` que precisa existir. O registrador e trocado so aqui, no teste.
@@ -34,8 +48,10 @@ function montar(modo: ModoReunioes = 'desligado'): {
   (servico as unknown as { log: unknown }).log = {
     log: (mensagem: string, campos: Record<string, unknown>) =>
       linhas.push({ mensagem, campos }),
+    warn: (mensagem: string, campos: Record<string, unknown>) =>
+      avisos.push({ mensagem, campos }),
   };
-  return { banco, servico, linhas };
+  return { banco, servico, linhas, avisos };
 }
 
 function linhasDoSinal(linhas: Linha[], sinal: string): Linha[] {
@@ -50,6 +66,7 @@ describe('SinaisService', () => {
       outboxSegundos: 0,
       quarentenaSegundos: 0,
       reuniaoSemSalaSegundos: 0,
+      backupSegundos: 0,
     });
   });
 
@@ -234,5 +251,94 @@ describe('SinaisService', () => {
     await servico.medir(AGORA);
 
     expect(linhasDoSinal(linhas, 'disponibilidade.sem-link')).toEqual([]);
+  });
+
+  /**
+   * A IDADE DO BACKUP MAIS RECENTE (lote de novembro de 2026, ADR-23). O unico
+   * sinal que vem de outra API. A regra da idade esta em `backups.spec.ts`; aqui
+   * e o que a sonda faz com ela.
+   */
+  describe('backup do Firestore', () => {
+    const HORA = 3_600_000;
+
+    function leitor(estado: EstadoDosBackups | Error): LeitorDeBackups & {
+      chamadas: number;
+    } {
+      return {
+        chamadas: 0,
+        ler() {
+          this.chamadas += 1;
+          return estado instanceof Error
+            ? Promise.reject(estado)
+            : Promise.resolve(estado);
+        },
+      };
+    }
+
+    it('escreve a idade do backup no log que a metrica le', async () => {
+      const { servico, linhas } = montar(
+        'desligado',
+        leitor({
+          backups: [{ pronto: true, tiradoEm: AGORA - 20 * HORA }],
+          agendamentosCriadosEm: [AGORA - 500 * HORA],
+        }),
+      );
+
+      const { backupSegundos } = await servico.medir(AGORA);
+
+      expect(backupSegundos).toBe(20 * 3600);
+      expect(linhasDoSinal(linhas, 'sinais')[0]?.campos['backupSegundos']).toBe(
+        20 * 3600,
+      );
+    });
+
+    /**
+     * SOB EMULADOR o leitor e `null`: nao ha backup, e a sonda nao pode chamar a
+     * API de administracao de producao a partir de um processo de teste.
+     */
+    it('sem leitor, escreve zero', async () => {
+      const { servico } = montar('desligado', null);
+
+      expect((await servico.medir(AGORA)).backupSegundos).toBe(0);
+    });
+
+    /**
+     * A FALHA NAO DERRUBA A SONDA. A API de administracao recusando nao pode
+     * levar junto as medicoes do Firestore — a metrica do outbox ficaria sem
+     * ponto, e o alerta que dispararia seria o da sonda parada.
+     */
+    it('leitura recusada vira idade desconhecida, e os outros sinais saem', async () => {
+      const recusado = leitor(new Error('403 PERMISSION_DENIED'));
+      const { servico, banco, linhas, avisos } = montar('desligado', recusado);
+      banco.documentos.set('outbox/e1', {
+        estado: 'pendente',
+        criadoEm: minutosAtras(30),
+        varrerApos: minutosAtras(1),
+      });
+
+      const medicao = await servico.medir(AGORA);
+
+      expect(medicao.backupSegundos).toBe(IDADE_DESCONHECIDA_SEGUNDOS);
+      expect(medicao.outboxSegundos).toBe(30 * 60);
+      expect(linhasDoSinal(linhas, 'sinais')).toHaveLength(1);
+      expect(avisos).toEqual([
+        {
+          mensagem: 'backups do Firestore ilegiveis',
+          campos: {
+            sinal: 'sinais.backup-ilegivel',
+            motivo: '403 PERMISSION_DENIED',
+          },
+        },
+      ]);
+    });
+
+    it('le os backups uma vez por medicao', async () => {
+      const contado = leitor({ backups: [], agendamentosCriadosEm: [AGORA] });
+      const { servico } = montar('desligado', contado);
+
+      await servico.medir(AGORA);
+
+      expect(contado.chamadas).toBe(1);
+    });
   });
 });

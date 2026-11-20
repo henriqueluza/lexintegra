@@ -6,12 +6,18 @@ import {
   CONFIGURACAO_REUNIOES,
   type ConfiguracaoReunioes,
 } from '../reunioes/sala/modo.js';
+import {
+  IDADE_DESCONHECIDA_SEGUNDOS,
+  idadeDoBackup,
+  LEITOR_DE_BACKUPS,
+  type LeitorDeBackups,
+} from './backups.js';
 import { idadeDaReuniaoSemSala } from './reunioes.js';
 
 /**
  * O que a sonda mede, em segundos. Zero quando nao ha nada esperando.
  *
- * SEMPRE OS DOIS CAMPOS, inclusive zerados. Omitir o campo quando nao ha
+ * SEMPRE TODOS OS CAMPOS, inclusive zerados. Omitir o campo quando nao ha
  * pendencia faria a metrica ficar sem ponto, e "sem dado" e indistinguivel de
  * "sonda parada" — a politica de alerta leria as duas situacoes do mesmo jeito.
  */
@@ -20,6 +26,13 @@ export interface Sinais {
   readonly quarentenaSegundos: number;
   /** Reuniao em `reservada_sem_link` ha mais tempo (`sinais/reunioes.ts`). */
   readonly reuniaoSemSalaSegundos: number;
+  /**
+   * Idade do backup pronto mais recente do Firestore (`sinais/backups.ts`,
+   * ADR-23). E o unico sinal que NAO vem do banco: vem da API de administracao.
+   * Zero sob emulador, onde nao ha backup; `IDADE_DESCONHECIDA_SEGUNDOS` quando
+   * a leitura falha.
+   */
+  readonly backupSegundos: number;
 }
 
 /**
@@ -47,6 +60,8 @@ export class SinaisService {
     @Inject(FIRESTORE) private readonly db: Firestore,
     @Inject(CONFIGURACAO_REUNIOES)
     private readonly reunioes: ConfiguracaoReunioes,
+    @Inject(LEITOR_DE_BACKUPS)
+    private readonly backups: LeitorDeBackups | null,
   ) {}
 
   async medir(agora: number = Date.now()): Promise<Sinais> {
@@ -61,6 +76,7 @@ export class SinaisService {
         this.reunioes.modo === 'sem-sala'
           ? 0
           : await idadeDaReuniaoSemSala(this.db, agora),
+      backupSegundos: await this.idadeDoBackup(agora),
     };
 
     this.log.log('sinais operacionais', { sinal: 'sinais', ...sinais });
@@ -132,6 +148,30 @@ export class SinaisService {
     ]);
 
     return Math.max(anexos, entregaveis);
+  }
+
+  /**
+   * Idade do backup mais recente, ou a idade desconhecida se a leitura falhar.
+   *
+   * A FALHA NAO SOBE. Este e o unico sinal que depende de outra API, e uma
+   * recusa dela nao pode levar junto as tres medicoes do Firestore: a sonda
+   * responderia 500, nenhuma metrica receberia ponto, e o alerta que dispararia
+   * seria o da sonda parada — apontando para o lugar errado. A falha vira a
+   * idade desconhecida, que e alta de proposito, e um aviso no log dizendo por
+   * que; a politica so alarma se isso durar uma hora.
+   */
+  private async idadeDoBackup(agora: number): Promise<number> {
+    if (this.backups === null) return 0;
+
+    try {
+      return idadeDoBackup(await this.backups.ler(), agora);
+    } catch (erro) {
+      this.log.warn('backups do Firestore ilegiveis', {
+        sinal: 'sinais.backup-ilegivel',
+        motivo: erro instanceof Error ? erro.message : 'motivo desconhecido',
+      });
+      return IDADE_DESCONHECIDA_SEGUNDOS;
+    }
   }
 
   private async idadeDoMaisAntigo(
