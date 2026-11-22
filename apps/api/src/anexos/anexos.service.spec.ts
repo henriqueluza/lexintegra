@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Firestore } from 'firebase-admin/firestore';
-import type { PedidoDeUpload } from 'shared';
+import { POLITICA_UPLOAD, type PedidoDeUpload } from 'shared';
 import { ArmazenamentoFalso } from '../armazenamento/armazenamento-falso.js';
 import { FirestoreFalso } from '../firestore-falso.js';
 import {
@@ -72,6 +72,28 @@ describe('AnexosService — fluxo do cliente', () => {
       expect(emitidas).toHaveLength(2);
       expect(emitidas[0].url).toContain('escrita');
       expect(emitidas[0].validoPorSegundos).toBeGreaterThan(0);
+    });
+
+    /**
+     * A URL VAI COM OS CABECALHOS ASSINADOS (19/11/2026): o tipo de CADA arquivo
+     * e a faixa de tamanho do fluxo do cliente. Sem eles no `PUT`, o Cloud
+     * Storage recusa o envio.
+     */
+    it('devolve, com cada URL, os cabecalhos que o PUT precisa mandar', async () => {
+      const { anexos } = montar();
+
+      const emitidas = await anexos.pedirEnvio('pedido-1', CLIENTE, [PDF, JPG]);
+
+      expect(emitidas.map((emitida) => emitida.cabecalhos)).toEqual([
+        {
+          'Content-Type': PDF.tipo,
+          'x-goog-content-length-range': `1,${String(POLITICA_UPLOAD['anexo-cliente'].tamanhoMaximoBytes)}`,
+        },
+        {
+          'Content-Type': JPG.tipo,
+          'x-goog-content-length-range': `1,${String(POLITICA_UPLOAD['anexo-cliente'].tamanhoMaximoBytes)}`,
+        },
+      ]);
     });
 
     /**

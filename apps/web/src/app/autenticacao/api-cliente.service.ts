@@ -4,7 +4,10 @@ import { firstValueFrom } from 'rxjs';
 import type { FichaAnamnese, SituacaoAnamnese } from 'shared/anamnese';
 import type { AnexoResumo } from 'shared/esquemas/anexo';
 import type { HorarioDisponivel, ReuniaoResumo } from 'shared/esquemas/reuniao';
-import type { PedidoDeUpload } from 'shared/esquemas/upload';
+import type {
+  EnvioAutorizado,
+  PedidoDeUpload,
+} from 'shared/esquemas/upload';
 import type {
   NovaObservacao,
   ObservacaoResumo,
@@ -200,9 +203,9 @@ export class ApiClienteService {
   pedirEnvioDeAnexos(
     pedidoId: string,
     arquivos: readonly PedidoDeUpload[],
-  ): Promise<{ id: string; url: string; validoPorSegundos: number }[]> {
+  ): Promise<(EnvioAutorizado & { id: string })[]> {
     return firstValueFrom(
-      this.http.post<{ id: string; url: string; validoPorSegundos: number }[]>(
+      this.http.post<(EnvioAutorizado & { id: string })[]>(
         `/api/pedidos/${encodeURIComponent(pedidoId)}/anexos`,
         { arquivos },
       ),

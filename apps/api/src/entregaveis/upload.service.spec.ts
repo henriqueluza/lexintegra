@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Firestore } from 'firebase-admin/firestore';
-import type { PedidoDeUpload } from 'shared';
+import { POLITICA_UPLOAD, type PedidoDeUpload } from 'shared';
 import { ArmazenamentoFalso } from '../armazenamento/armazenamento-falso.js';
 import { FirestoreFalso } from '../firestore-falso.js';
 import { FilaFalsa } from '../tarefas/fila.js';
@@ -164,6 +164,23 @@ describe('UploadDeEntregavelService — o segundo fluxo', () => {
         'pedidos/pedido-1/entregaveis/001',
       )?.['arquivoAtual'] as { caminho: string };
       expect(arquivo.caminho).toBe('entregaveis/pedido-1/001/v2');
+    });
+
+    /**
+     * A URL VAI COM OS CABECALHOS ASSINADOS (19/11/2026): o tipo declarado e a
+     * faixa de tamanho do fluxo do advogado. Sem eles no `PUT`, o Cloud Storage
+     * recusa, e foi assim que nenhum entregavel subiu em producao.
+     */
+    it('devolve, com a URL, os cabecalhos que o PUT precisa mandar', async () => {
+      const { upload } = montar();
+
+      const emitida = await upload.pedirEnvio(ALVO, ADVOGADO, PDF);
+
+      expect(emitida.url).toContain('escrita');
+      expect(emitida.cabecalhos).toEqual({
+        'Content-Type': PDF.tipo,
+        'x-goog-content-length-range': `1,${String(POLITICA_UPLOAD['entregavel-advogado'].tamanhoMaximoBytes)}`,
+      });
     });
 
     /** Regra inviolavel 6: nasce longe de `limpo`. */

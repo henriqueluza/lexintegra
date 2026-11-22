@@ -226,7 +226,7 @@ export class CartaoPedidoComponent {
         );
 
         for (const [indice, emitida] of emitidas.entries()) {
-          await enviarParaUrlAssinada(emitida.url, arquivos[indice]);
+          await enviarParaUrlAssinada(emitida, arquivos[indice]);
           await this.api.confirmarAnexo(this.pedido().id, emitida.id);
         }
 

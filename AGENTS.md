@@ -261,6 +261,15 @@ tsconfig.deps.json existe só para o dependency-cruiser resolver `shared` na fon
   definição. **Não desligue a imutabilidade** — ela é o que torna a imagem
   auditável; o que estava errado era o pipeline supor que publicar sempre dá
   certo.
+- **A URL assinada de escrita vai com os cabeçalhos assinados, e o armazenamento
+  falso confere** (errata de 19/11/2026 em `docs/arquitetura.md`, 7.3). O tipo e
+  o teto de tamanho entram na assinatura como cabeçalhos, e o `PUT` precisa
+  mandá-los iguais: `urlDeEscrita` devolve `{ url, cabecalhos }` e o navegador
+  envia `cabecalhos` como veio. Até essa data o navegador mandava só o
+  `Content-Type` e **nenhum arquivo subia em produção**, sem nenhum teste
+  acusar, porque o falso aceitava qualquer `PUT`. Ao mexer na assinatura, mude
+  `cabecalhosDaEscrita`, que é a fonte única. E **`pendente_upload` não é
+  arquivo enviado**: a pergunta é `arquivoFoiEnviado`, na tela e no servidor.
 - **Toda variável do root module do Terraform precisa de `default` — e isso é
   lint** (`pnpm lint` → `scripts/conferir-defaults-terraform.mjs`). O deploy tem
   um apply **parcial** logo no começo ("Garantir o Artifact Registry"), porque a

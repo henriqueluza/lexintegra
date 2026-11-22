@@ -118,6 +118,11 @@ async function montar(opcoes: Partial<ApiDeTeste> = {}): Promise<{
             api.tipos.push(arquivo.tipo);
             return Promise.resolve({
               url: 'https://bucket.example/quarentena/e1',
+              /* Os cabecalhos assinados: o tipo DECLARADO e a faixa de tamanho. */
+              cabecalhos: {
+                'Content-Type': arquivo.tipo,
+                'x-goog-content-length-range': '1,20971520',
+              },
               versao: 1,
               validoPorSegundos: 900,
             });
@@ -367,10 +372,11 @@ describe('AdvogadoDemandas', () => {
     it('DOCX sem tipo do navegador: deduz pela extensao, no pedido e no PUT', async () => {
       const original = globalThis.fetch;
       const tiposDoPut: string[] = [];
+      const faixasDoPut: string[] = [];
       globalThis.fetch = ((_url: string, opcoes: RequestInit) => {
-        tiposDoPut.push(
-          (opcoes.headers as Record<string, string>)['Content-Type'],
-        );
+        const cabecalhos = opcoes.headers as Record<string, string>;
+        tiposDoPut.push(cabecalhos['Content-Type']);
+        faixasDoPut.push(cabecalhos['x-goog-content-length-range']);
         return Promise.resolve({ ok: true, status: 200 } as Response);
       }) as unknown as typeof fetch;
 
@@ -395,6 +401,12 @@ describe('AdvogadoDemandas', () => {
           'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
         expect(api.tipos).toEqual([docx]);
         expect(tiposDoPut).toEqual([docx]);
+        /*
+         * A faixa de tamanho tambem e assinada: sem ela no PUT o Cloud Storage
+         * recusa, e foi assim que nenhum arquivo subiu em producao ate
+         * 19/11/2026.
+         */
+        expect(faixasDoPut).toEqual(['1,20971520']);
       } finally {
         globalThis.fetch = original;
       }

@@ -6,7 +6,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
-import { conferirPolitica, POLITICA_UPLOAD, type PedidoDeUpload } from 'shared';
+import {
+  conferirPolitica,
+  POLITICA_UPLOAD,
+  type EnvioAutorizado,
+  type PedidoDeUpload,
+} from 'shared';
 import {
   ARMAZENAMENTO,
   type Armazenamento,
@@ -70,7 +75,7 @@ export class UploadDeEntregavelService {
     alvo: { pedidoId: string; entregavelId: string },
     advogadoUid: string,
     arquivo: PedidoDeUpload,
-  ): Promise<{ url: string; versao: number; validoPorSegundos: number }> {
+  ): Promise<EnvioAutorizado & { versao: number }> {
     const problema = conferirPolitica(FLUXO, [arquivo]);
     if (problema !== null) throw new BadRequestException(problema);
 
@@ -94,14 +99,18 @@ export class UploadDeEntregavelService {
       advogadoUid,
     );
 
-    const url = await this.armazenamento.urlDeEscrita({
+    const escrita = await this.armazenamento.urlDeEscrita({
       objeto: { balde: 'quarentena', caminho },
       tipo: arquivo.tipo,
       tamanhoMaximoBytes: POLITICA_UPLOAD[FLUXO].tamanhoMaximoBytes,
       validadeSegundos: VALIDADE_DA_ESCRITA_SEGUNDOS,
     });
 
-    return { url, versao, validoPorSegundos: VALIDADE_DA_ESCRITA_SEGUNDOS };
+    return {
+      ...escrita,
+      versao,
+      validoPorSegundos: VALIDADE_DA_ESCRITA_SEGUNDOS,
+    };
   }
 
   async confirmarEnvio(

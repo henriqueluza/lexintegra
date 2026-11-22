@@ -4,7 +4,7 @@ import { firestoreDeTeste, limparEmuladores } from '../emulador.js';
 import { PedidosService } from '../pedidos/pedidos.service.js';
 import { ProdutosService } from '../produtos/produtos.service.js';
 import { EntregaveisService } from './entregaveis.service.js';
-import { comSnapshot } from '../arnes-pedidos.js';
+import { arquivoChegou, comSnapshot } from '../arnes-pedidos.js';
 
 const ADMIN = 'uid-admin';
 const CLIENTE = 'uid-cliente';
@@ -76,6 +76,7 @@ async function ateAguardandoCliente(revisoes = 1): Promise<void> {
     },
     ADVOGADO,
   );
+  await arquivoChegou(banco, ALVO);
 }
 
 async function estado(): Promise<string> {
@@ -90,6 +91,39 @@ describe('maquina de estados contra o Firestore', () => {
     expect(await estado()).toBe('em_elaboracao');
     await entregaveis.confirmarEntrega(ALVO, CLIENTE);
     expect(await estado()).toBe('entregue');
+  });
+
+  /**
+   * ENTREGUE SO DEPOIS DO UPLOAD (regra inviolavel 14), contra o banco de
+   * verdade. O registro do arquivo nasce em `pendente_upload` quando a URL
+   * assinada e emitida; se o `PUT` nao chegar, ele fica. Ate 19/11/2026 a
+   * confirmacao so conferia que o registro existia, e o pedido chegava a
+   * `entregue` — com a retencao contando — sem arquivo nenhum no bucket.
+   */
+  it('nao entrega arquivo que nao chegou ao bucket, nem inicia a retencao', async () => {
+    await comprar(1);
+    await entregaveis.iniciarTrabalho(ALVO, ADVOGADO);
+    await entregaveis.registrarArquivo(
+      ALVO,
+      {
+        nome: 'parecer.pdf',
+        tipo: 'application/pdf',
+        tamanhoBytes: 1000,
+        caminho: 'entregaveis/pedido-1/001/parecer',
+      },
+      ADVOGADO,
+    );
+
+    await expect(entregaveis.confirmarEntrega(ALVO, CLIENTE)).rejects.toThrow(
+      /ainda nao tem arquivo enviado/,
+    );
+    await expect(entregaveis.pedirRevisao(ALVO, CLIENTE)).rejects.toThrow(
+      /ainda nao tem arquivo enviado/,
+    );
+
+    expect(await estado()).toBe('em_elaboracao');
+    const pedido = await banco.collection('pedidos').doc('pedido-1').get();
+    expect(pedido.data()?.['retencaoPendente']).not.toBe(true);
   });
 
   /**
@@ -180,6 +214,7 @@ describe('maquina de estados contra o Firestore', () => {
         },
         ADVOGADO,
       );
+      await arquivoChegou(banco, ALVO);
 
       await expect(entregaveis.pedirRevisao(ALVO, CLIENTE)).rejects.toThrow(
         /Saldo de revisoes esgotado/,
@@ -253,6 +288,7 @@ describe('maquina de estados contra o Firestore', () => {
         },
         ADVOGADO,
       );
+      await arquivoChegou(banco, ALVO);
 
       const trilha = await banco.collection(`${CAMINHO}/transicoes`).get();
       expect(trilha.size).toBe(2);
