@@ -1,13 +1,13 @@
-<dl class="resumo">
+<ul class="resumo" role="list" [class.resumo--muitos]="itens().length > 3">
   @for (item of itens(); track item.rotulo) {
-  <div class="resumo__item">
+  <li class="resumo__item">
     <span class="resumo__icone" aria-hidden="true"
       ><app-icone [nome]="item.icone" tamanho="p"
     /></span>
     <div>
-      <dt class="resumo__rotulo">{{ item.rotulo }}</dt>
-      <dd class="resumo__valor">{{ item.valor }}</dd>
+      <span class="resumo__rotulo">{{ item.rotulo }}</span>
+      <strong class="resumo__valor">{{ item.valor }}</strong>
     </div>
-  </div>
+  </li>
   }
-</dl>
+</ul>

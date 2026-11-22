@@ -1,0 +1,168 @@
+<section class="andamento">
+  <h1>Andamento</h1>
+  <p class="pagina-descricao">
+    O que cada advogado tem em mãos, desde quando e de quem é a vez. Só leitura:
+    o andamento muda pelas ações do advogado e do cliente.
+  </p>
+
+  @if (resposta() !== null) {
+  <app-resumo [itens]="itensResumo()" />
+  <p class="andamento__nota">
+    Os números do topo contam tudo o que foi carregado, sem os filtros abaixo.
+  </p>
+  <nav class="andamento__atalhos" aria-label="Telas relacionadas">
+    <a class="andamento__atalho" routerLink="/admin/reunioes"
+      >Reuniões sem sala</a
+    >
+    <a class="andamento__atalho" routerLink="/admin/distribuicao"
+      ><span
+        [textContent]="'Pedidos sem advogado (' + semAdvogado() + ')'"
+      ></span
+    ></a>
+  </nav>
+  }
+
+  <div class="andamento__filtros">
+    <app-selecao
+      rotulo="Advogado"
+      [formControl]="advogado"
+      [opcoes]="opcoesAdvogado()"
+    />
+    <app-selecao
+      rotulo="Situação"
+      [formControl]="situacao"
+      [opcoes]="opcoesSituacao"
+    />
+    <app-selecao
+      rotulo="Estado do entregável"
+      [formControl]="estado"
+      [opcoes]="opcoesEstado"
+    />
+    <app-selecao
+      rotulo="Produto"
+      [formControl]="produto"
+      [opcoes]="opcoesProduto()"
+    />
+    <app-campo
+      rotulo="Cliente"
+      [formControl]="cliente"
+      marcador="Nome do cliente"
+      dica="Acento e maiúscula não importam."
+    />
+    <app-selecao
+      rotulo="Parado há"
+      [formControl]="limite"
+      [opcoes]="opcoesLimite"
+      dica="Vale para o advogado: tempo do cliente e da fila não contam."
+    />
+  </div>
+
+  @if (resposta()?.cortado) {
+  <p class="andamento__corte" role="note">
+    <app-icone nome="alerta" tamanho="p" />
+    <span
+      >Mostrando os 200 pedidos mais recentes. Filtre por advogado para ver os
+      mais antigos.</span
+    >
+  </p>
+  } @if (falha()) {
+  <app-mensagem-erro variante="bloco">
+    Não foi possível carregar o andamento. Recarregue a página.
+  </app-mensagem-erro>
+  } @else {
+  <p
+    class="andamento__contagem"
+    aria-live="polite"
+    [textContent]="carregando() ? 'Carregando…' : contagem()"
+  ></p>
+
+  <app-tabela
+    legenda="Entregáveis em andamento"
+    [colunas]="colunas"
+    [linhas]="linhas()"
+    [carregando]="carregando()"
+    [mensagemVazia]="mensagemVazia()"
+  >
+    <ng-template appCelulaTabela let-linha let-coluna="coluna">
+      @let item = comoLinha(linha); @switch (coluna.chave) { @case ('pedido') {
+      <div class="andamento__celula">
+        <span class="andamento__forte">{{ item.produto }}</span>
+        <span class="andamento__apoio">{{ item.cliente }}</span>
+        <span
+          class="andamento__apoio"
+          [textContent]="'Pedido ' + codigo(item.pedidoId)"
+        ></span>
+      </div>
+      } @case ('entregavel') { {{ item.entregavel }} } @case ('estado') {
+      <app-selo-estado [estado]="item.estado" [comMedidor]="false" />
+      } @case ('vez') {
+      <div class="andamento__celula">
+        <span>{{ rotuloDaVez[item.vez] }}</span>
+        @if (item.advogadoId !== null) {
+        <span class="andamento__apoio"
+          >{{ nomeDoAdvogado(item) }}@if (advogadoSuspenso(item)) { · Suspenso
+          }</span
+        >
+        } @if (item.parado) {
+        <span class="andamento__parado"
+          ><app-icone nome="alerta" tamanho="p" /> Parado</span
+        >
+        } @if (nota(item); as aviso) {
+        <span class="andamento__apoio">{{ aviso }}</span>
+        }
+      </div>
+      } @case ('tempo') {
+      <div class="andamento__celula">
+        <span class="andamento__forte">{{ dias(item.dias) }}</span>
+        <span class="andamento__apoio">{{ quando(item.desde) }}</span>
+      </div>
+      } @case ('trilha') {
+      <button
+        type="button"
+        class="andamento__trilha-botao"
+        [attr.data-trilha-do-pedido]="item.pedidoId"
+        [attr.aria-expanded]="estaAberto(item.pedidoId)"
+        [attr.aria-controls]="idDoPainel(item.pedidoId)"
+        [attr.aria-label]="(estaAberto(item.pedidoId) ? 'Ocultar trilha' : 'Ver trilha') + ' do pedido ' + codigo(item.pedidoId)"
+        (click)="alternar(item.pedidoId)"
+      >
+        {{ estaAberto(item.pedidoId) ? 'Ocultar trilha' : 'Ver trilha' }}
+      </button>
+      } }
+    </ng-template>
+  </app-tabela>
+
+  @if (abertos().size > 0) {
+  <h2 class="andamento__subtitulo">Trilhas abertas</h2>
+  }
+  <div class="andamento__trilhas">
+    @for (pedido of pedidosVisiveis(); track pedido.pedidoId) {
+    <div
+      class="andamento__painel"
+      tabindex="-1"
+      [id]="idDoPainel(pedido.pedidoId)"
+      [hidden]="!estaAberto(pedido.pedidoId)"
+    >
+      <div class="andamento__painel-topo">
+        <h3
+          class="andamento__painel-titulo"
+          [textContent]="'Pedido ' + codigo(pedido.pedidoId) + ' · ' + pedido.produto + ' · ' + pedido.cliente"
+        ></h3>
+        <button
+          type="button"
+          class="andamento__trilha-botao"
+          (click)="fechar(pedido.pedidoId)"
+        >
+          Fechar trilha
+        </button>
+      </div>
+      <app-detalhe-andamento
+        [carregando]="detalheDe(pedido.pedidoId)?.situacao === 'carregando'"
+        [falha]="detalheDe(pedido.pedidoId)?.situacao === 'erro'"
+        [detalhe]="detalheDe(pedido.pedidoId)?.dados ?? null"
+      />
+    </div>
+    }
+  </div>
+  }
+</section>

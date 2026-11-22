@@ -93,6 +93,20 @@ num módulo, porque elas guardam as armadilhas de cada um.*
   `suportelexintegra@gmail.com`, plano gratuito (100 por dia). Todos os
   alertas vão para o mesmo endereço; nenhum acorda alguém (lint).
 
+**O administrador vê o andamento dos advogados** (lote de novembro, ajuste 5,
+branch `feat/admin-visao-advogados`): `/admin/andamento`, sobre
+`GET /api/admin/andamento` e `.../pedidos/{id}` (`apps/api/src/andamento/`).
+**Só leitura e só andamento**: o módulo não importa nada que escreva em
+entregável, não devolve observação, ficha, nome de arquivo nem link de sala, e
+`controladores.spec.ts` confere que o controlador só tem `GET`. De quem é a vez
+e o que é "parado" são regras puras em `shared/andamento`, calculadas na tela
+com o relógio do servidor (`geradoEm`). O entregável ganhou **`estadoDesde`**
+(escrito na criação e em cada transição; `atualizadoEm` não serve, o upload o
+reescreve); documento anterior ao campo responde pela última transição da
+trilha, sem migração. As duas rotas são as primeiras **leituras auditadas**
+(`registrarConsulta`, esperada antes da resposta). Teto de 200 pedidos por
+carga, sem índice novo.
+
 **Documentação completa:** o índice é [`docs/README.md`](docs/README.md)
 (caminho principal, arquitetura em uma página, todos os documentos). Entrega em
 `docs/entrega/` (operação com os modos e como desligar cada um, credenciais,
@@ -162,6 +176,7 @@ apps/web/          Angular 22, pré-renderização estática das rotas públicas
   src/app/paginas/advogado-disponibilidade/ grade semanal (ADR-06)
   src/app/paginas/advogado-agenda/ o que os clientes marcaram, so o futuro
   src/app/paginas/admin-distribuicao/ caixa de entrada e atribuicao
+  src/app/paginas/admin-andamento/ o trabalho dos advogados, so leitura; filtros no navegador
   src/app/paginas/admin-clientes/ busca e filtro (item 2.5.8)
   src/app/paginas/admin-entregas/ painel do outbox: o que falhou e o reenvio
   src/app/paginas/admin-reunioes/ reunioes sem sala; o reenvio passa pelo outbox
@@ -184,6 +199,7 @@ apps/api/          NestJS 12 (ESM-only), prefixo global /api
   src/contas-cliente/ segundo escritor de claim (regra 17), só `cliente`
   src/administradores/ terceiro escritor de claim (regra 17, B2), só `admin`
   src/auditoria/    log de auditoria das ações administrativas (B2), append-only
+  src/andamento/    o admin lê o andamento dos advogados; só GET, com leitura auditada
   src/estornos/     estorno do admin, manual ou integral via outbox
   src/anamnese/      ficha inicial (definitiva-v1); uma por cliente, sem reescrita
   src/entregaveis/  máquina de estados do ADR-11 e a trilha de transições

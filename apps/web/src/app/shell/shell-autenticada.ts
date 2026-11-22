@@ -61,6 +61,8 @@ export class ShellAutenticada {
     if (perfil === 'admin') {
       return [
         { rota: '/admin/distribuicao', rotulo: 'Distribuição', icone: 'rota' },
+        /* Lote de novembro, ajuste 5: o que os advogados tem em maos. */
+        { rota: '/admin/andamento', rotulo: 'Andamento', icone: 'relogio' },
         { rota: '/admin/clientes', rotulo: 'Clientes', icone: 'usuarios' },
         { rota: '/admin/advogados', rotulo: 'Advogados', icone: 'usuario' },
         { rota: '/admin/produtos', rotulo: 'Produtos', icone: 'grade' },

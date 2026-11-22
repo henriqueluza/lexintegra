@@ -527,6 +527,71 @@ describe('EntregaveisService', () => {
     });
   });
 
+  /**
+   * Lote de novembro, ajuste 5. `estadoDesde` e o que a tela do administrador
+   * mostra como "desde quando", e so vale se for escrito por TRANSICAO e por mais
+   * nada. O dublê nao materializa o carimbo do servidor, entao o campo e marcado
+   * com um valor reconhecivel e o teste olha quem o troca.
+   */
+  describe('desde quando esta no estado', () => {
+    function marcar(banco: FirestoreFalso): void {
+      banco.documentos.set(CAMINHO, {
+        ...banco.documentos.get(CAMINHO),
+        estadoDesde: 'MARCA',
+      });
+    }
+
+    function desde(banco: FirestoreFalso): unknown {
+      return banco.documentos.get(CAMINHO)?.['estadoDesde'];
+    }
+
+    it('cada transicao reescreve o campo, com o carimbo da propria trilha', async () => {
+      const { banco, entregaveis } = await montar();
+
+      marcar(banco);
+      await entregaveis.iniciarTrabalho(ALVO, ADVOGADO);
+      expect(desde(banco)).not.toBe('MARCA');
+      expect(desde(banco)).toEqual(
+        banco.documentos.get(`${CAMINHO}/transicoes/0002`)?.['em'],
+      );
+
+      await entregaveis.registrarArquivo(ALVO, { nome: 'v1.pdf' }, ADVOGADO);
+      marcar(banco);
+      await entregaveis.pedirRevisao(ALVO, CLIENTE);
+      expect(desde(banco)).not.toBe('MARCA');
+
+      marcar(banco);
+      await entregaveis.retomarTrabalho(ALVO, ADVOGADO);
+      expect(desde(banco)).not.toBe('MARCA');
+
+      marcar(banco);
+      await entregaveis.confirmarEntrega(ALVO, CLIENTE);
+      expect(desde(banco)).not.toBe('MARCA');
+    });
+
+    /** "Em elaboracao ha 20 dias" nao pode virar "ha 2 horas" a cada arquivo. */
+    it('o upload NAO toca no campo', async () => {
+      const { banco, entregaveis } = await montar();
+      await entregaveis.iniciarTrabalho(ALVO, ADVOGADO);
+      marcar(banco);
+
+      await entregaveis.registrarArquivo(ALVO, { nome: 'v1.pdf' }, ADVOGADO);
+
+      expect(desde(banco)).toBe('MARCA');
+    });
+
+    it('transicao recusada nao toca no campo', async () => {
+      const { banco, entregaveis } = await montar();
+      marcar(banco);
+
+      await expect(entregaveis.confirmarEntrega(ALVO, CLIENTE)).rejects.toThrow(
+        ConflictException,
+      );
+
+      expect(desde(banco)).toBe('MARCA');
+    });
+  });
+
   describe('alvo inexistente', () => {
     const AUSENTE = { pedidoId: 'pedido-1', entregavelId: '999' };
 

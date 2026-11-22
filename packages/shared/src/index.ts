@@ -6,6 +6,7 @@
  * nas duas pontas — nao ha decisao de modelagem sendo antecipada.
  */
 export * from './anamnese.js';
+export * from './andamento.js';
 export * from './carrinho.js';
 export * from './cnpj.js';
 export * from './codigo-do-pedido.js';
@@ -15,6 +16,7 @@ export * from './evento-outbox.js';
 export * from './esquemas/advogado.js';
 export * from './esquemas/administrador.js';
 export * from './esquemas/anamnese.js';
+export * from './esquemas/andamento.js';
 export * from './esquemas/anexo.js';
 export * from './esquemas/checkout.js';
 export * from './esquemas/cliente.js';

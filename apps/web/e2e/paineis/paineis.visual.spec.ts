@@ -240,4 +240,87 @@ test.describe('regressao visual dos paineis', () => {
       fullPage: true,
     });
   });
+
+  /**
+   * O ANDAMENTO COM UMA LINHA PARADA, E COM O TEMPO FIXO.
+   *
+   * A tela conta dias a partir de `geradoEm` e das datas dos entregaveis; a
+   * semente carimba as datas com o relogio da pilha, e a imagem so seria estavel
+   * se esse relogio nunca andasse. Em vez de depender disso, a intercepcao pega a
+   * resposta REAL (a forma da API continua chegando inteira) e fixa so os campos
+   * de TEMPO: `geradoEm` e os instantes de cada entregavel e de cada pedido. O
+   * primeiro pedido DISTRIBUIDO recua para 19 dias antes, de modo que haja ao
+   * menos uma linha "Parada" com o limite padrao de sete.
+   */
+  test('admin-andamento', async ({ page }) => {
+    await entrar(page, CONTAS.admin);
+
+    const AGORA = '2026-11-20T12:00:00.000Z';
+    const ANTIGO = '2026-11-01T12:00:00.000Z';
+    const RECENTE = '2026-11-18T12:00:00.000Z';
+
+    await page.route('**/api/admin/andamento', async (rota) => {
+      const resposta = await rota.fetch();
+      /* Resposta de erro passa como veio: a tela mostra a falha, e o teste a ve. */
+      if (resposta.status() !== 200) {
+        await rota.fulfill({ response: resposta });
+        return;
+      }
+      const corpo = (await resposta.json()) as {
+        pedidos: {
+          advogadoId: string | null;
+          atribuidoEm: string | null;
+          criadoEm: string | null;
+          entregaveis: Record<string, unknown>[];
+        }[];
+      };
+      /*
+       * "Parado" e so a vez do ADVOGADO: quem recua no tempo e o primeiro pedido
+       * ja distribuido, e nao o primeiro da lista, que na semente esta na fila.
+       */
+      const parado = corpo.pedidos.findIndex(
+        (pedido) => pedido.advogadoId !== null,
+      );
+
+      await rota.fulfill({
+        response: resposta,
+        json: {
+          ...corpo,
+          geradoEm: AGORA,
+          pedidos: corpo.pedidos.map((pedido, i) => {
+            const quando = i === parado ? ANTIGO : RECENTE;
+            return {
+              ...pedido,
+              criadoEm: quando,
+              atribuidoEm: pedido.atribuidoEm === null ? null : quando,
+              entregaveis: pedido.entregaveis.map((entregavel) => ({
+                ...entregavel,
+                estadoDesde: quando,
+                arquivoEnviadoEm:
+                  entregavel['arquivoEnviadoEm'] === null ? null : quando,
+              })),
+            };
+          }),
+        },
+      });
+    });
+
+    await page.goto('/admin/andamento');
+
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Andamento' }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Parado', { exact: true }).first(),
+    ).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(
+      () =>
+        new Promise((resolve) => requestAnimationFrame(() => resolve(null))),
+    );
+
+    await expect(page).toHaveScreenshot('admin-andamento.png', {
+      fullPage: true,
+    });
+  });
 });

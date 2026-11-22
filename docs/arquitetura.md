@@ -1004,6 +1004,10 @@ O item 2.5.8 exige busca por nome, e-mail ou produto contratado. O documento do 
 
 Enquanto o volume estiver na casa das centenas, busca por substring é resolvida carregando e filtrando no servidor.
 
+**Andamento dos advogados (lote de novembro, ajuste 5).** A tela `/admin/andamento` segue a mesma estratégia: `GET /api/admin/andamento` lê os 200 pedidos mais recentes (ou os de um advogado, pelo índice `advogadoId + criadoEm` que a lista de demandas já usa) e os entregáveis de cada um; estado, produto, cliente e o limite de "parado há N dias" são filtrados **no navegador**, com as regras puras de `packages/shared/src/andamento.ts` e o relógio do servidor (`geradoEm`). Nenhum índice novo. O filtro por nome de cliente não vai à query string de propósito: ela fica no registro de acesso.
+
+**Onde isso deixa de servir, com número.** Cada carga lê até 200 pedidos mais os entregáveis de cada um, e mais uma leitura por entregável anterior a `estadoDesde` (5.6). Por volta de **200 pedidos em aberto, ou 5 mil entregáveis por carga**, a tela leva segundos para abrir, cobra milhares de leituras a cada abertura e começa a esconder pedido antigo ainda em andamento (a resposta avisa quando o teto cortou, e o filtro por advogado alcança os mais antigos dele). O passo seguinte é guardar um resumo de andamento no documento do pedido, escrito na transação da transição, e paginar por ele.
+
 ### 5.6 Status de entregáveis
 
 Ver ADR-11. Os status são fixos no código (`solicitado`, `em_elaboracao`, `em_revisao`, `entregue`), não configuráveis pelo administrador. O que o pedido congela do produto, quanto a isso, é apenas o **número de revisões contratadas** — um inteiro, definido por produto e copiado para o pedido no checkout, seguindo a mesma lógica de imutabilidade do restante do snapshot (5.3).
@@ -1021,6 +1025,7 @@ A subcoleção `transicoes` registra quem mudou, de qual status para qual e quan
 | `revisoesUsadas` | contador; o limite vem de `pedido.snapshot.numeroRevisoesPermitidas`, nunca do produto vivo |
 | `arquivoAtual` | `null` até o primeiro upload; `{ nome, versao, enviadoPor, enviadoEm }` depois |
 | `transicoes` | quantas transições já foram registradas; dá o id da próxima |
+| `estadoDesde` | quando o entregável **entrou** no estado atual; escrito na criação e em cada transição, na mesma transação (lote de novembro) |
 
 `pedidos/{id}/entregaveis/{id}/transicoes/{sequencia}` — id é a sequência com zero à esquerda (`0001`). Como ele sai do contador lido na mesma transação, duas chamadas concorrentes calculam a mesma sequência e a segunda estoura em vez de sobrescrever a trilha da primeira:
 
@@ -1035,6 +1040,10 @@ A subcoleção `transicoes` registra quem mudou, de qual status para qual e quan
 
 A trilha registra **mudança de estado**. Upload não muda estado (ver ADR-11), então não entra nela — a trilha do arquivo é `arquivoAtual.versao`.
 
+**`estadoDesde` não é `atualizadoEm` (lote de novembro, ajuste 5).** `atualizadoEm` é reescrito pelo upload e pela varredura, que não mudam o estado: usado como "desde quando", "em elaboração há 20 dias" viraria "há 2 horas" a cada arquivo enviado. **Nada foi migrado**: o entregável anterior ao campo tem o mesmo instante na última transição da trilha, cujo id sai do contador `transicoes`, e a leitura busca lá. É uma leitura a mais só para os antigos, e ela some sozinha, porque a primeira transição escreve o campo.
+
+**De quem é a vez.** O estado sozinho não diz quem precisa agir, e a tela do administrador existe para isso (`packages/shared/src/andamento.ts`): `em_elaboracao` com arquivo é a vez do **cliente**, mas só se o arquivo chegou **depois** da entrada no estado — depois de uma revisão o advogado retoma com a versão recusada ainda em `arquivoAtual`. Pedido sem advogado é a vez da **distribuição**; entregue, cancelado, estornado ou pausado por contestação não é de ninguém. **"Parado"** é só a vez do advogado há N dias inteiros ou mais (N escolhido na tela: 3, 7, 15 ou 30; padrão 7); o relógio recomeça quando o pedido muda de mãos, e o tempo do cliente decidindo aparece, mas não conta como atraso do advogado.
+
 ---
 
 ## 6. Segurança e fronteiras de confiança
@@ -1048,6 +1057,8 @@ Quatro fronteiras, cada uma com forma distinta de autenticação:
 **3. Autenticada** — cliente e advogado, separados por custom claim no token do Firebase Auth. Pelos itens 2.6.1 e 2.6.2, o advogado só enxerga o que lhe foi distribuído — e a **Etapa 4 fixou onde isso é verificado**: nos guards e serviços da API, não nas regras do Firestore. A razão está em 6.1.
 
 **4. Administrativa** — administrador global, provisionado fora da aplicação conforme o 2.4.2, sem autocadastro possível. **Emenda da B2 (decisões 5.5):** um administrador pode convidar outro dentro da plataforma (`/admin/administradores`, `AdministradoresService`, o terceiro escritor de claim da regra 17, só de `admin`). O convidado define a própria senha por link (ADR-07). Remover tira a claim e revoga os tokens; a plataforma recusa remover o último administrador e remover a si mesmo, com a contagem sobre `administradores/{uid}` lida na transação. Convite e remoção ficam em `auditoria/`. Continua sem autocadastro: só quem já é administrador convida.
+
+**O administrador vê o andamento dos advogados, e não age nele (lote de novembro, ajuste 5).** `GET /api/admin/andamento` e `GET /api/admin/andamento/pedidos/{id}` (`apps/api/src/andamento/`) são as únicas rotas, as duas de leitura: o módulo não importa nada que escreva em entregável, e `controladores.spec.ts` confere que o controlador só tem `GET`. Iniciar trabalho, enviar arquivo e confirmar entrega continuam sendo eventos do advogado e do cliente (regra inviolável 14). A resposta leva **andamento, não conteúdo**: nenhuma observação, ficha, nome de arquivo ou link de sala. Se o administrador deve ler o que o advogado lê é decisão do escritório ainda em aberto (CHECKLIST). **Perfil errado recebe 403**, como em toda a superfície administrativa, e não 404: quem recusa é o `PerfisGuard` global, e o caminho da rota está no pacote público do frontend, então um 404 só aqui seria uma exceção que não esconde nada. Os dois identificadores que chegam do navegador são validados por lista de caracteres, porque viram segmento de caminho no Firestore.
 
 ### 6.1 Regras do Firestore
 
@@ -1155,6 +1166,8 @@ Pelos itens 2.4.3 a 2.4.7, apenas o administrador global cria acessos de advogad
 **Edição (B2, decisões 4.1).** `PUT /api/admin/advogados/{uid}` edita nome, e-mail e `organizadorTeams` (`advogados/edicao.service.ts`; até `feat/ligar-teams` o campo se chamava `usuarioTeams`, e era conferido no Graph com `User.Read.All` — a conferência saiu, e só o formato GUID é validado, ver a errata de B no ADR-21). Trocar o e-mail atualiza o Auth **antes** da transação (efeito externo, regra 2; 409 se o endereço é de outra conta) e, na transação, grava o documento, a linha de auditoria e o evento `acesso-advogado-atualizado`, com a chave na versão do acesso — cada troca, o seu e-mail. Não mexe na claim, no status nem na distribuição: a atribuição mora no pedido, pelo uid, e o uid não muda.
 
 **Log de auditoria (B2).** `auditoria/{id}` guarda `acao`, `atorUid`, `alvo`, `antes`, `depois` e `em`, escrito na mesma transação da ação administrativa (`auditoria/auditoria.ts`). É append-only: nenhuma rota altera ou apaga. Está no mapa da LGPD pelo `alvo`.
+
+**Leitura auditada (lote de novembro, ajuste 5).** As duas rotas de andamento são as primeiras **leituras** que deixam linha: `andamento.consultado`, uma por carga da lista, com o filtro de advogado e a quantidade de pedidos, e `pedido.consultado`, uma por pedido aberto no detalhe, com o **cliente** como `alvo` — é o que faz a consulta aparecer na exportação LGPD daquele titular. Leitura não tem transação onde pendurar o registro, então `registrarConsulta` abre uma só de escrita e é **esperada antes de a resposta sair**: se a gravação falha, a leitura falha. `antes` é sempre `null`, e `depois` leva o que foi consultado, nunca o conteúdo devolvido.
 
 Suspensão precisa revogar tokens ativos, não apenas marcar um campo — senão o advogado suspenso continua acessando até o token expirar.
 

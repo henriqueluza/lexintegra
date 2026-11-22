@@ -169,6 +169,24 @@ describe('PedidosService', () => {
     });
 
     /**
+     * Lote de novembro, ajuste 5. O entregavel ja nasce sabendo desde quando
+     * esta em `solicitado`: e o mesmo carimbo da origem da trilha, na mesma
+     * transacao.
+     */
+    it('o entregavel nasce com `estadoDesde`, o carimbo da propria trilha', async () => {
+      const arranjo = montar();
+      await comPedido(arranjo);
+
+      const caminho = `${COLECAO_PEDIDOS}/pedido-1/entregaveis/001`;
+      const desde = arranjo.banco.documentos.get(caminho)?.['estadoDesde'];
+
+      expect(desde).toBeDefined();
+      expect(desde).toEqual(
+        arranjo.banco.documentos.get(`${caminho}/transicoes/0001`)?.['em'],
+      );
+    });
+
+    /**
      * A GRAVACAO NAO LE NADA (Etapa 8). O snapshot foi congelado no checkout e
      * chega pronto; a transacao da confirmacao so escreve. Um `get produtos/...`
      * dentro dela seria o snapshot sendo tirado de novo, na hora da confirmacao

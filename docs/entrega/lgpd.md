@@ -265,7 +265,7 @@ eliminação). A coluna **Grupo** diz a guarda (seção 3).
 | `outbox` | `destinatarioUid` | tipo do evento e estado; **sem** endereço nem link (ADR-03) | `contrato` | Idem |
 | `aceites-de-termos` | `usuarioUid` | versão aceita e data | `contrato` | Idem |
 | `disponibilidades` | `reserva.pedidoId` | dado do **advogado**; a reserva aponta o pedido | `limpar_referencia` | Perde só a referência |
-| `auditoria` | `alvo` | quem fez a ação administrativa; na edição de advogado, e-mail antes e depois | `trilha` | Nunca (append-only) |
+| `auditoria` | `alvo` | quem fez a ação administrativa; na edição de advogado, e-mail antes e depois; e qual administrador **consultou** o andamento de um pedido do titular (`pedido.consultado`, desde o lote de novembro) | `trilha` | Nunca (append-only) |
 | `solicitacoes-lgpd` | `titularChave` (pseudônimo) | o protocolo do atendimento | `trilha` | Nunca: é a prova do atendimento |
 | `retencoes-legais` | pseudônimo do titular | `motivo` e `descricao` em texto livre | fora do mapa | Removida pelo administrador (`DELETE .../retencao-legal`) |
 | `advogados`, `administradores` | — | nome e e-mail da **equipe** | fora do mapa do cliente | Contrato de trabalho de cada um (seção 4) |

@@ -83,6 +83,26 @@ parcelamento só em assinatura, reunião conforme o pedido)
 - [ ] 🏢 Conferir na primeira fatura o custo dos backups (estimado em
   centavos; o preço por GiB em São Paulo não foi confirmado).
 
+**Bloco D — o administrador vê o andamento dos advogados**
+(`feat/admin-visao-advogados`, tela `/admin/andamento`)
+
+- [ ] 🏢 **Responder: o administrador só acompanha, ou também lê o que o
+  advogado lê?** A tela mostra andamento (estado, desde quando, de quem é a
+  vez, trilha e reuniões) e **nenhum conteúdo**: nem observações, nem ficha,
+  nem nome de arquivo. Abrir conteúdo é mais uma rota de leitura, com
+  auditoria; agir em nome do advogado (iniciar, enviar, confirmar) contraria a
+  regra inviolável 14 e exigiria um ADR.
+- [ ] 🏢 **Confirmar o que conta como parado:** a vez é do advogado há 7 dias
+  ou mais (a tela também oferece 3, 15 e 30). O tempo do cliente decidindo
+  sobre um arquivo aparece, mas não conta como atraso do advogado.
+- [ ] 👤 Aprovar a imagem de referência nova da tela (`admin-andamento-*`,
+  lista no PR) e gerar de novo as capturas dos manuais
+  (`pnpm capturas:manuais`): o menu do administrador ganhou um item.
+- [ ] 👤 **Depois do deploy:** abrir `/admin/andamento` com os pedidos reais e
+  conferir que os entregáveis antigos mostram a data em "desde" (ela vem da
+  trilha, porque o campo `estadoDesde` só existe a partir deste deploy), e que
+  cada abertura deixa uma linha `andamento.consultado` em `auditoria/`.
+
 **Perguntas dos blocos seguintes, para levar ao escritório antes de cada um**
 
 - [ ] 🏢 **Bloco B (anamnese).** O que é a "anamnese inicial" a tirar da
@@ -97,8 +117,6 @@ parcelamento só em assinatura, reunião conforme o pedido)
   quando o documento fica disponível (hoje não existe, e o ajuste 14 o
   pressupõe)? Quantas observações por dia se espera (o Resend gratuito envia
   100 e-mails por dia)?
-- [ ] 🏢 **Bloco D (visão do admin).** O administrador só vê a área dos
-  advogados, ou também age em nome deles?
 - [ ] 🏢 **Bloco E (upload).** A conversão de PDF em DOCX vale para os
   arquivos do advogado, do cliente ou dos dois, e PDF escaneado converte?
   Aprovar o custo mensal de qualquer mudança no antivírus ou do serviço de

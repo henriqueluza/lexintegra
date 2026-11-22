@@ -77,6 +77,13 @@ export default {
      * codigos quando `parcelas` e 1.
      */
     'src/tipo-cobranca.ts',
+    /*
+     * Lote de novembro, ajuste 5. De quem e a vez e ha quantos dias: e o numero
+     * com que o administrador cobra um advogado. As bordas sao de milissegundo
+     * (arquivo enviado antes ou depois da retomada, o dia que vira) e de ordem
+     * (o arquivo esperando o cliente vem antes da falta de advogado).
+     */
+    'src/andamento.ts',
   ],
 
   /*
@@ -101,6 +108,18 @@ export default {
    * monta o instante a partir da propria constante, entao a suite inteira
    * continuava verde com a janela valendo 24 SEGUNDOS. O valor passou a ser
    * afirmado uma vez, em milissegundos, contra o que o ADR-12 diz em portugues.
+   */
+  /*
+   * LOTE DE NOVEMBRO (20/11/2026), com `andamento.ts` dentro: 97.47% (423 de
+   * 434). A primeira corrida deu 97.00% e achou dois sobreviventes REAIS no
+   * resumo, mortos com um segundo pedido preso a advogado suspenso — com um so,
+   * contar o pedido errado dava o mesmo numero. Os seis que ficam em
+   * `andamento.ts` sao a mesma familia dos de `regras-reuniao.ts`: guardas de
+   * `null` que a aritmetica do JavaScript ja resolve do mesmo jeito (`null > x`
+   * e falso, `Date.parse(null)` e `NaN`, `suspensos.has(null)` e falso), e um
+   * `>` contra `>=` entre dois instantes IGUAIS, onde as duas respostas sao o
+   * mesmo instante. Nenhum input possivel distingue os codigos; os testes que os
+   * matariam defenderiam o numero.
    */
   thresholds: { high: 95, low: 85, break: 96 },
 

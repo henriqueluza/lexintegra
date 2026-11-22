@@ -98,6 +98,9 @@ export const MAPA_TITULAR = {
    * administrativas. O `alvo` e o uid de quem foi editado (advogado,
    * administrador), a cobranca do pagamento resolvido ou a chave do titular na
    * retencao legal; `antes`/`depois` podem levar e-mail de membro da equipe.
+   * Desde o lote de novembro (ajuste 5) o `alvo` tambem e o uid do CLIENTE cujo
+   * pedido o administrador abriu na tela de andamento (`pedido.consultado`): e
+   * por este campo que a exportacao do titular mostra quem consultou.
    * Append-only: nenhum caminho o apaga, nem a eliminacao total.
    */
   auditoria: {

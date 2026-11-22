@@ -698,6 +698,7 @@ primeiro acesso a essa tela; até lá, ele não aparece na contagem.
 | Editar advogado (nome, e-mail, ID do Teams) | `/admin/advogados` | `PUT /api/admin/advogados/{uid}` | Trocar o e-mail atualiza o login e manda link de acesso ao endereço novo (outbox). Não redistribui pedidos. Fica no log de auditoria |
 | Suspender e reativar acesso | `/admin/advogados` | `POST`/`DELETE /api/admin/advogados/{uid}/suspensao` | Revoga tokens na hora. Responde 409 se houver reunião futura (ADR-21, D) |
 | Distribuir pedido | `/admin/distribuicao` | `POST`/`DELETE /api/admin/pedidos/{id}/atribuicao` | 409 com reunião futura marcada |
+| Acompanhar o andamento dos advogados | `/admin/andamento` | `GET /api/admin/andamento` (`?advogado=`), `GET /api/admin/andamento/pedidos/{id}` | Só leitura, sem conteúdo do trabalho. Até 200 pedidos por carga. Cada consulta fica no log de auditoria (`andamento.consultado`, `pedido.consultado`) |
 | Produtos | `/admin/produtos` | `/api/admin/produtos` | Não há exclusão, só desativação |
 | Estornar pedido | `/admin/estornos` | `POST /api/admin/pedidos/{id}/estorno` | Só sem trabalho iniciado, sem reunião já realizada e fora de contestação; a recusa diz o motivo. Reunião futura é cancelada junto. Isolado: a devolução é **manual**. Registre com `POST /api/admin/estornos/{id}/execucao-manual` |
 | Reenviar e-mail ou evento | `/admin/entregas` | `POST /api/admin/outbox/{id}/reenvio` | Só `falhou` ou `abandonado`. Passa pelo mesmo arrendamento (regra 3). Ver [`outbox-parado.md`](../runbooks/outbox-parado.md) |
