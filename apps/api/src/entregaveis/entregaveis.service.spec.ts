@@ -556,6 +556,8 @@ describe('EntregaveisService', () => {
       );
 
       await entregaveis.registrarArquivo(ALVO, { nome: 'v1.pdf' }, ADVOGADO);
+      /* Envio pendente nao e arquivo enviado: a revisao exige que ele chegue. */
+      arquivoChegou(banco);
       marcar(banco);
       await entregaveis.pedirRevisao(ALVO, CLIENTE);
       expect(desde(banco)).not.toBe('MARCA');

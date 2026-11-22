@@ -93,6 +93,12 @@ num módulo, porque elas guardam as armadilhas de cada um.*
   `suportelexintegra@gmail.com`, plano gratuito (100 por dia). Todos os
   alertas vão para o mesmo endereço; nenhum acorda alguém (lint).
 
+**Lote de novembro num PR só (22/11/2026).** Os quatro PRs prontos (#100
+Bloco A, #101 Bloco G, #102 correção do envio, #103 Bloco D) foram juntados em
+`feat/lote-novembro-integracao`, para um merge e um deploy. O que depende de
+pessoa antes e depois desse merge está na lista 0 do CHECKLIST. Os Blocos B,
+C, E e F não começaram.
+
 **O administrador vê o andamento dos advogados** (lote de novembro, ajuste 5,
 branch `feat/admin-visao-advogados`): `/admin/andamento`, sobre
 `GET /api/admin/andamento` e `.../pedidos/{id}` (`apps/api/src/andamento/`).

@@ -22,15 +22,39 @@ ajustes pedidos pelo cliente depois da entrada em produção.
 
 ## 0. Lote de novembro (ajustes pedidos pelo cliente)
 
-Catorze ajustes em sete blocos (A a G), um PR por bloco. O que está aqui é o
-que depende de pessoa; o que é código está no PR de cada bloco.
+Catorze ajustes em sete blocos (A a G). O que está aqui é o que depende de
+pessoa; o que é código está no PR de cada bloco.
+
+**Em 22/11/2026 os quatro PRs prontos viraram um só** (`feat/lote-novembro-integracao`,
+decisão do Henrique: um merge e um deploy): a correção do envio de arquivos
+(#102) e os Blocos A (#100), G (#101) e D (#103), com os conflitos resolvidos.
+Os Blocos B, C, E e F não começaram.
+
+**Antes do merge único**
+
+- [ ] 👤 **Provar `card.maxInstallments` no sandbox** (item do Bloco A, abaixo).
+  É o único risco do conjunto que pode parar venda: se o AbacatePay recusar o
+  campo, o pagamento por cartão para para todos. O PIX não é afetado.
+- [ ] 👤 **Regravar as referências visuais dos painéis**
+  (`pnpm --filter web test:visual paineis --update-snapshots`). As 30 das telas
+  de admin mudam só pelo item "Andamento" no menu e foram **aprovadas em
+  22/11/2026**; as do Bloco A (cartão do pedido e formulário de produto, lista
+  no #100) precisam do seu olhar antes. O CI não roda a regressão dos painéis,
+  então nada acusa se ficarem como estão.
+- [ ] 👤 **Regravar ou aceitar vermelhas as referências públicas** que o Bloco A
+  (12 comparações: catálogo, carrinho e checkout) e o Bloco G (3: página de
+  privacidade) mudaram de propósito. Estas o CI acusa: o job de regressão
+  visual do PR único fica vermelho até serem regravadas
+  (`pnpm --filter web test:visual:gravar`).
 
 **Bloco A — tipo de produto** (`feat/tipo-de-produto`: descrição detalhada,
 parcelamento só em assinatura, reunião conforme o pedido)
 
 - [ ] 🏢 **Enviar a descrição detalhada dos 26 produtos** do catálogo (é o
-  texto que o botão **+** abre; de 20 a 5000 caracteres cada). Até chegarem, o
-  PR fica em rascunho e `scripts/cadastrar-catalogo-inicial.mjs` recusa rodar.
+  texto que o botão **+** abre; de 20 a 5000 caracteres cada). O código sobe sem
+  elas (decisão de 22/11/2026), mas até chegarem
+  `scripts/cadastrar-catalogo-inicial.mjs` recusa rodar, e os produtos que já
+  estão em produção seguem sem texto detalhado.
   A lista dos produtos está no PR; os textos entram em
   `scripts/catalogo-inicial/produtos.data.ts`, no lugar de
   `AGUARDANDO_ESCRITORIO`.
@@ -45,7 +69,9 @@ parcelamento só em assinatura, reunião conforme o pedido)
   cinco itens de "Parcelas"): avulso só à vista, assinatura até o número do
   produto, carrinho misto à vista, o mínimo de R$ 10,00 por parcela e os
   centavos da primeira. O campo veio só da documentação do AbacatePay; se o
-  gateway o recusar, o cartão para para todos.
+  gateway o recusar, o cartão para para todos. O teto de 12 parcelas é o do
+  campo `parcelas` do produto (1 a 12), confirmado pelo Henrique em 22/11/2026;
+  o que falta provar é o gateway aceitar o campo, não o número.
 - [ ] 🏢 **Classificar os produtos que já estão em produção**, depois do
   deploy: em `/admin/produtos` eles aparecem com o selo **Sem tipo**. Os três
   planos são **Assinatura**; os três pacotes fechados antigos são desativados
@@ -95,9 +121,11 @@ parcelamento só em assinatura, reunião conforme o pedido)
 - [ ] 🏢 **Confirmar o que conta como parado:** a vez é do advogado há 7 dias
   ou mais (a tela também oferece 3, 15 e 30). O tempo do cliente decidindo
   sobre um arquivo aparece, mas não conta como atraso do advogado.
-- [ ] 👤 Aprovar a imagem de referência nova da tela (`admin-andamento-*`,
-  lista no PR) e gerar de novo as capturas dos manuais
-  (`pnpm capturas:manuais`): o menu do administrador ganhou um item.
+- [x] 👤 Aprovar a imagem de referência nova da tela (`admin-andamento-*`) e a
+  mudança das 30 referências de admin — aprovado em 22/11/2026. Regravar é o
+  item de "Antes do merge único", acima.
+- [ ] 👤 Gerar de novo as capturas dos manuais (`pnpm capturas:manuais`): o
+  menu do administrador ganhou um item.
 - [ ] 👤 **Depois do deploy:** abrir `/admin/andamento` com os pedidos reais e
   conferir que os entregáveis antigos mostram a data em "desde" (ela vem da
   trilha, porque o campo `estadoDesde` só existe a partir deste deploy), e que
