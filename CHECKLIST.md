@@ -30,22 +30,20 @@ decisão do Henrique: um merge e um deploy): a correção do envio de arquivos
 (#102) e os Blocos A (#100), G (#101) e D (#103), com os conflitos resolvidos.
 Os Blocos B, C, E e F não começaram.
 
-**Antes do merge único**
+**Antes e logo depois do merge único**
 
-- [ ] 👤 **Provar `card.maxInstallments` no sandbox** (item do Bloco A, abaixo).
-  É o único risco do conjunto que pode parar venda: se o AbacatePay recusar o
-  campo, o pagamento por cartão para para todos. O PIX não é afetado.
-- [ ] 👤 **Regravar as referências visuais dos painéis**
-  (`pnpm --filter web test:visual paineis --update-snapshots`). As 30 das telas
-  de admin mudam só pelo item "Andamento" no menu e foram **aprovadas em
-  22/11/2026**; as do Bloco A (cartão do pedido e formulário de produto, lista
-  no #100) precisam do seu olhar antes. O CI não roda a regressão dos painéis,
-  então nada acusa se ficarem como estão.
-- [ ] 👤 **Regravar ou aceitar vermelhas as referências públicas** que o Bloco A
-  (12 comparações: catálogo, carrinho e checkout) e o Bloco G (3: página de
-  privacidade) mudaram de propósito. Estas o CI acusa: o job de regressão
-  visual do PR único fica vermelho até serem regravadas
-  (`pnpm --filter web test:visual:gravar`).
+- [ ] 👤 **Provar `card.maxInstallments`, em produção, logo depois do deploy**
+  (decisão do Henrique em 22/11/2026: sem a rodada no sandbox). Com um plano no
+  carrinho, escolher cartão: a página do AbacatePay precisa abrir e oferecer
+  até 12 vezes (3 no Prime de 3 meses). Com um serviço avulso, só à vista. Não
+  é preciso pagar. Se a página não abrir, reverter o merge ou desligar o cartão
+  (`pagamentos_cartao = "desabilitado"`); o PIX não é afetado.
+- [x] 👤 **Regravar as referências visuais** — feito pelo Henrique em
+  22/11/2026: 15 públicas (catálogo, checkout e privacidade; eram o vermelho do
+  CI) e 39 dos painéis (as dez telas de admin, pelo item "Andamento" no menu, e
+  as do Bloco A: cartão do pedido e formulário de produto). A de
+  `admin-advogados` na largura estreita era, na `main`, a captura de um erro de
+  carregamento; a nova é a tela carregada.
 
 **Bloco A — tipo de produto** (`feat/tipo-de-produto`: descrição detalhada,
 parcelamento só em assinatura, reunião conforme o pedido)
@@ -64,7 +62,8 @@ parcelamento só em assinatura, reunião conforme o pedido)
   parcelamento; (2) carrinho com assinatura e serviço avulso vai inteiro à
   vista no cartão, com aviso (o AbacatePay aceita um limite de parcelas só por
   cobrança).
-- [ ] 👤 **Provar `card.maxInstallments` no sandbox, antes do merge**
+- [ ] 👤 **Provar `card.maxInstallments`** (em produção, logo depois do deploy:
+  ver o primeiro item desta lista; o roteiro completo, para o sandbox, é este)
   ([`checkout-sandbox.md`](docs/runbooks/checkout-sandbox.md), seção 4, os
   cinco itens de "Parcelas"): avulso só à vista, assinatura até o número do
   produto, carrinho misto à vista, o mínimo de R$ 10,00 por parcela e os
