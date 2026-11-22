@@ -66,6 +66,24 @@ export default {
      * em `+` mostraria ao cliente uma parcela que ninguem cobra.
      */
     'src/parcelamento.ts',
+    /*
+     * Lote de novembro de 2026. Quem parcela e quem nao parcela, o teto que vai
+     * ao gateway e o que e pedido "legado": um `===` virado em `!==` aqui faz o
+     * servico avulso sair em doze vezes, ou a assinatura sair a vista, sem
+     * nenhuma tela quebrar.
+     *
+     * Medido em 19/11/2026: 49 de 50. O sobrevivente e EQUIVALENTE — em
+     * `parcelasAnunciadas`, `parcelas >= 1` virado em `> 1` devolve 1 nos dois
+     * codigos quando `parcelas` e 1.
+     */
+    'src/tipo-cobranca.ts',
+    /*
+     * Lote de novembro, ajuste 5. De quem e a vez e ha quantos dias: e o numero
+     * com que o administrador cobra um advogado. As bordas sao de milissegundo
+     * (arquivo enviado antes ou depois da retomada, o dia que vira) e de ordem
+     * (o arquivo esperando o cliente vem antes da falta de advogado).
+     */
+    'src/andamento.ts',
   ],
 
   /*
@@ -90,6 +108,20 @@ export default {
    * monta o instante a partir da propria constante, entao a suite inteira
    * continuava verde com a janela valendo 24 SEGUNDOS. O valor passou a ser
    * afirmado uma vez, em milissegundos, contra o que o ADR-12 diz em portugues.
+   */
+  /*
+   * LOTE DE NOVEMBRO, com `tipo-cobranca.ts` e `andamento.ts` dentro: 97.57%
+   * (482 de 494), medido em 22/11/2026 com os blocos juntos. Sozinho, o bloco
+   * de `andamento.ts` media 97.47% (423 de 434) em 20/11/2026. A primeira
+   * corrida dele deu 97.00% e achou dois sobreviventes REAIS no
+   * resumo, mortos com um segundo pedido preso a advogado suspenso — com um so,
+   * contar o pedido errado dava o mesmo numero. Os seis que ficam em
+   * `andamento.ts` sao a mesma familia dos de `regras-reuniao.ts`: guardas de
+   * `null` que a aritmetica do JavaScript ja resolve do mesmo jeito (`null > x`
+   * e falso, `Date.parse(null)` e `NaN`, `suspensos.has(null)` e falso), e um
+   * `>` contra `>=` entre dois instantes IGUAIS, onde as duas respostas sao o
+   * mesmo instante. Nenhum input possivel distingue os codigos; os testes que os
+   * matariam defenderiam o numero.
    */
   thresholds: { high: 95, low: 85, break: 96 },
 

@@ -181,6 +181,15 @@ cd infra/terraform && terraform init && terraform plan
 - **PITR do Firestore** é uma SKU cobrada que não consta na tabela de custos da
   arquitetura (seção 12). No volume previsto é fração de centavo, mas está
   registrado aqui para não virar surpresa na fatura.
+- **Backups agendados do Firestore** (lote de novembro de 2026, ADR-23): dois
+  `google_firestore_backup_schedule` em `firestore.tf`, com
+  `deletion_policy = "PREVENT"`. As retenções são variáveis
+  (`backup_diario_retencao_dias`, `backup_semanal_retencao_semanas`) e **têm um
+  par em `packages/shared/src/politica-de-guarda.ts`**, que é o que a política
+  de privacidade publica: um teste compara os dois, então mudar um sem o outro
+  quebra `pnpm test`. Criar agendamento é coberto por `roles/datastore.owner`,
+  que a `terraform-ci` já tem; a conta de runtime ganhou dois papéis **só de
+  leitura** para a sonda medir a idade do backup.
 - **`gs://lexintegra-tfstate` (sem sufixo) não existe mais.** Era sobra do
   bootstrap, vazia e fora deste Terraform, com nome quase igual ao do bucket de
   state verdadeiro (`lexintegra-tfstate-36bda`, em `backend.tf`). Foi removido à

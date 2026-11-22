@@ -86,7 +86,7 @@ flowchart LR
 | **Resend** | E-mails, de `suporte@notificacoes.lexintegra.com.br`, com resposta para o suporte | `apps/api/src/email/` |
 | **AbacatePay** | PIX transparente e cartão pelo checkout hospedado; webhook autenticado por segredo e HMAC | `apps/api/src/pagamentos/` |
 | **Microsoft Graph** | Uma sala do Teams por reunião, na conta organizadora do escritório; convidados entram sem conta | `apps/api/src/reunioes/sala/` |
-| **Observabilidade** | Log estruturado, trace, 14 alertas por e-mail para `suportelexintegra@gmail.com` e um painel | `infra/terraform/observabilidade.tf` |
+| **Observabilidade** | Log estruturado, trace, 15 alertas por e-mail para `suportelexintegra@gmail.com` e um painel | `infra/terraform/observabilidade.tf` |
 
 O detalhe de cada decisão está em [`arquitetura.md`](arquitetura.md) (ADRs).
 
@@ -143,6 +143,8 @@ runbook.
 | [api-fora-do-ar](runbooks/api-fora-do-ar.md) | O uptime check falhou |
 | [retencao-parada](runbooks/retencao-parada.md) | A retenção diária não concluiu |
 | [sonda-parada](runbooks/sonda-parada.md) | A sonda de sinais parou |
+| [backup-atrasado](runbooks/backup-atrasado.md) | O backup mais recente do Firestore tem mais de 30 horas |
+| [restaurar-backup](runbooks/restaurar-backup.md) | Voltar o banco a um estado anterior, ou ensaiar a restauração |
 | [deploy-recusado](runbooks/deploy-recusado.md) | Pipeline vermelho, revisão que não sobe |
 | [lgpd-titular](runbooks/lgpd-titular.md) | Pedido de exportação ou eliminação de titular |
 | [alerta-artificial](runbooks/alerta-artificial.md) | Provar que um alerta chega |

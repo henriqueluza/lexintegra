@@ -15,6 +15,8 @@ const PARECER: ProdutoVitrine = {
   quantidadeReunioes: 2,
   numeroRevisoesPermitidas: 2,
   parcelas: 1,
+  tipoCobranca: 'assinatura',
+  descricaoDetalhada: '',
 };
 
 const liberado = signal(false);
@@ -319,6 +321,143 @@ describe('Servicos', () => {
    * O carrinho (Etapa 8). Nao chama a API: o contador de `listar` e o unico
    * caminho de rede deste componente, e ele continua em um.
    */
+  /**
+   * O BOTAO "+" DO CARTAO (ajuste 1). Abre a descricao detalhada, que ja esta no
+   * DOM desde a primeira renderizacao: expandir nao busca nada.
+   */
+  describe('detalhes do cartão', () => {
+    const DETALHADO: ProdutoVitrine = {
+      ...PARECER,
+      descricaoDetalhada:
+        'Levantamos os contratos vigentes.\n\nApontamos os riscos por prioridade.',
+    };
+
+    function botao(fixture: ComponentFixture<Servicos>): HTMLButtonElement {
+      const achado = (
+        fixture.nativeElement as HTMLElement
+      ).querySelector<HTMLButtonElement>('.expansor');
+      if (achado === null) throw new Error('esperava o botão de detalhes');
+      return achado;
+    }
+
+    function detalhes(fixture: ComponentFixture<Servicos>): HTMLElement | null {
+      return (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
+        '.produto__detalhada',
+      );
+    }
+
+    it('nasce fechado, com o texto já no DOM e escondido', async () => {
+      resposta = [DETALHADO];
+      const fixture = montar();
+      await liberar(fixture);
+
+      expect(botao(fixture).getAttribute('aria-expanded')).toBe('false');
+      expect(detalhes(fixture)?.hidden).toBe(true);
+      expect(detalhes(fixture)?.querySelectorAll('p')).toHaveLength(2);
+      expect(pedidos).toBe(1);
+    });
+
+    it('diz no nome acessível de que produto são os detalhes', async () => {
+      resposta = [DETALHADO];
+      const fixture = montar();
+      await liberar(fixture);
+
+      const controle = botao(fixture);
+      expect(controle.getAttribute('aria-label')).toBe(
+        'Ver mais detalhes de Parecer de risco trabalhista',
+      );
+      expect(controle.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'Mais detalhes',
+      );
+      /* WCAG 2.5.3: o texto visível está contido no nome acessível. */
+      expect(controle.getAttribute('aria-label')?.toLowerCase()).toContain(
+        'mais detalhes',
+      );
+    });
+
+    it('aponta para a região que controla', async () => {
+      resposta = [DETALHADO];
+      const fixture = montar();
+      await liberar(fixture);
+
+      const alvo = botao(fixture).getAttribute('aria-controls') ?? '';
+      const regiao = (
+        fixture.nativeElement as HTMLElement
+      ).ownerDocument.getElementById(alvo);
+      expect(regiao?.contains(detalhes(fixture))).toBe(true);
+    });
+
+    it('abre e fecha, trocando o sinal e o rótulo, sem nova chamada', async () => {
+      resposta = [DETALHADO];
+      const fixture = montar();
+      await liberar(fixture);
+
+      botao(fixture).click();
+      fixture.detectChanges();
+
+      expect(botao(fixture).getAttribute('aria-expanded')).toBe('true');
+      expect(botao(fixture).getAttribute('aria-label')).toBe(
+        'Ver menos detalhes de Parecer de risco trabalhista',
+      );
+      expect(detalhes(fixture)?.hidden).toBe(false);
+      expect(texto(fixture)).toContain('Apontamos os riscos por prioridade.');
+
+      botao(fixture).click();
+      fixture.detectChanges();
+
+      expect(botao(fixture).getAttribute('aria-expanded')).toBe('false');
+      expect(detalhes(fixture)?.hidden).toBe(true);
+      expect(pedidos).toBe(1);
+    });
+
+    it('é um botão de verdade: alcançável e acionável pelo teclado', async () => {
+      resposta = [DETALHADO];
+      const fixture = montar();
+      await liberar(fixture);
+
+      const controle = botao(fixture);
+      expect(controle.tagName).toBe('BUTTON');
+      expect(controle.type).toBe('button');
+      expect(controle.tabIndex).toBe(0);
+    });
+
+    /** Abrir um cartão não abre os vizinhos. */
+    it('cada cartão abre sozinho', async () => {
+      resposta = [
+        DETALHADO,
+        { ...DETALHADO, id: 'produto-2', nome: 'Outro serviço' },
+      ];
+      const fixture = montar();
+      await liberar(fixture);
+
+      botao(fixture).click();
+      fixture.detectChanges();
+
+      const regioes = (
+        fixture.nativeElement as HTMLElement
+      ).querySelectorAll<HTMLElement>('.produto__detalhada');
+      expect([...regioes].map((regiao) => regiao.hidden)).toEqual([
+        false,
+        true,
+      ]);
+    });
+
+    /**
+     * Produto gravado antes do campo: sem texto detalhado, e com poucos itens,
+     * não há o que abrir. Um "+" que não abre nada é pior que nenhum.
+     */
+    it('produto sem descrição detalhada e com poucos itens não tem botão', async () => {
+      resposta = [PARECER];
+      const fixture = montar();
+      await liberar(fixture);
+
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('.expansor'),
+      ).toBeNull();
+      expect(detalhes(fixture)).toBeNull();
+    });
+  });
+
   describe('carrinho', () => {
     function botoes(
       fixture: ComponentFixture<Servicos>,

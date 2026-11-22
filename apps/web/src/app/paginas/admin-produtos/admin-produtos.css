@@ -99,3 +99,48 @@
   color: var(--estado-alerta);
   font-weight: var(--peso-medio);
 }
+
+/* "Inclui reuniao": mesma voz das opcoes de `app-grupo-opcoes`, so que sozinha. */
+.produtos__marcar {
+  display: flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio);
+  color: var(--texto);
+  font-size: var(--t-menor);
+  line-height: var(--altura-densa);
+  cursor: pointer;
+}
+
+.produtos__marcar:has(.produtos__marcar-controle:checked) {
+  border-color: var(--acento);
+  background: var(--acento-fundo);
+}
+
+.produtos__marcar-controle {
+  margin: 0;
+  flex: none;
+  accent-color: var(--acento);
+}
+
+.produtos__tipo {
+  font-size: var(--t-menor);
+  color: var(--texto-2);
+}
+
+/* Selo com TEXTO: produto que o escritorio ainda precisa classificar. */
+.produtos__selo-atencao {
+  display: inline-flex;
+  font-size: var(--t-micro);
+  font-weight: var(--peso-medio);
+  line-height: var(--altura-densa);
+  padding: var(--selo-preenchimento);
+  border-radius: var(--selo-raio);
+  border: var(--borda-fina) solid var(--selo-borda);
+  color: var(--selo-ela-cor);
+  background: var(--selo-ela-fundo);
+  white-space: nowrap;
+}

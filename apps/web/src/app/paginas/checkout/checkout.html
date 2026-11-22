@@ -39,6 +39,10 @@
       </p>
       @if (condicaoNoCartao()) {
       <p class="checkout__parcelas">{{ condicaoNoCartao() }}</p>
+      } @if (avisoSemParcelamento()) {
+      <p class="checkout__auxiliar checkout__sem-parcelas">
+        {{ avisoSemParcelamento() }}
+      </p>
       }
       <p class="checkout__auxiliar">{{ textos.resumo.aviso }}</p>
     </section>

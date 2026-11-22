@@ -44,6 +44,8 @@ interface Opcoes {
   itens?: number;
   /** Parcelas de cada item do carrinho; 1 por padrao. */
   parcelas?: number;
+  /** Acrescenta um servico avulso ao carrinho, depois dos outros itens. */
+  comAvulso?: boolean;
   retorno?: string | null;
   resposta?: CheckoutIniciado | Error | HttpErrorResponse;
   /** B2, decisoes.md 3.4: o que `GET /api/checkout/metodos` responde. */
@@ -136,6 +138,22 @@ async function montar(opcoes: Opcoes = {}): Promise<Cenario> {
       quantidadeReunioes: 1,
       numeroRevisoesPermitidas: 1,
       parcelas: opcoes.parcelas ?? 1,
+      tipoCobranca: 'assinatura',
+      descricaoDetalhada: '',
+    });
+  }
+  if (opcoes.comAvulso === true) {
+    carrinho.adicionar({
+      id: 'produto-avulso',
+      nome: 'Servico avulso',
+      descricao: 'x',
+      precoCentavos: 20_000,
+      entregaveis: ['x'],
+      quantidadeReunioes: 0,
+      numeroRevisoesPermitidas: 0,
+      parcelas: 1,
+      tipoCobranca: 'avulso',
+      descricaoDetalhada: '',
     });
   }
 
@@ -613,6 +631,56 @@ describe('Checkout', () => {
       fixture.detectChanges();
 
       expect(condicao(fixture)).toBe('');
+    });
+
+    function aviso(fixture: ComponentFixture<Checkout>): string {
+      const elemento = (fixture.nativeElement as HTMLElement).querySelector(
+        '.checkout__sem-parcelas',
+      );
+      return (elemento?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    }
+
+    /**
+     * CARRINHO MISTO (decisao de 18/11/2026): um servico avulso leva a compra
+     * inteira para a vista. A tela para de anunciar a parcela e diz por que —
+     * e o servidor manda o mesmo teto ao gateway.
+     */
+    it('com um avulso no carrinho, nao anuncia parcela e explica', async () => {
+      const { fixture } = await montar({ parcelas: 12, comAvulso: true });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(condicao(fixture)).toBe('');
+      expect(aviso(fixture)).toContain('o pagamento no cartão é à vista');
+    });
+
+    it('sem avulso, nao mostra o aviso', async () => {
+      const { fixture } = await montar({ parcelas: 12 });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(aviso(fixture)).toBe('');
+    });
+
+    it('so avulsos nao tem parcelamento a perder: sem aviso', async () => {
+      const { fixture } = await montar({ itens: 0, comAvulso: true });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(condicao(fixture)).toBe('');
+      expect(aviso(fixture)).toBe('');
+    });
+
+    it('com o cartao fora do ar, o aviso do avulso nao aparece', async () => {
+      const { fixture } = await montar({
+        parcelas: 12,
+        comAvulso: true,
+        cartao: false,
+      });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(aviso(fixture)).toBe('');
     });
   });
 

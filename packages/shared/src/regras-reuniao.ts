@@ -261,6 +261,7 @@ export function reuniaoFuturaAtiva(
  * segunda bateria de `if`s — e as duas discordariam na primeira mudanca.
  */
 export const IMPEDIMENTOS_PARA_AGENDAR = [
+  'sem-reunioes',
   'pedido-inativo',
   'pedido-pausado',
   'pedido-nao-distribuido',
@@ -282,6 +283,7 @@ export type ImpedimentoParaAgendar = (typeof IMPEDIMENTOS_PARA_AGENDAR)[number];
 export const MOTIVO_DO_IMPEDIMENTO: Readonly<
   Record<ImpedimentoParaAgendar, string>
 > = {
+  'sem-reunioes': 'Este pedido não inclui reuniões.',
   'pedido-inativo': 'Este pedido foi cancelado ou estornado.',
   'pedido-pausado':
     'Este pedido está pausado por uma contestação do pagamento. As reuniões voltam a ser marcadas quando ela terminar.',
@@ -316,12 +318,30 @@ export interface DadosDoAgendamento {
   readonly ignorarReuniaoId?: string;
 }
 
-export function impedimentoParaAgendar(
+/**
+ * O que impede QUALQUER reuniao neste pedido, antes de olhar para o horario.
+ *
+ * PEDIDO SEM REUNIAO VEM ANTES DE TUDO (lote de novembro de 2026, ajuste 9). Um
+ * servico avulso, ou o plano que nao inclui reuniao, respondia "saldo
+ * esgotado" — verdade aritmetica e mentira para o cliente, que nunca teve
+ * saldo. E a primeira conferencia porque nenhuma das outras muda a resposta:
+ * nao ha o que marcar, com o pedido ativo ou nao.
+ */
+function impedimentoDoPedido(
   dados: DadosDoAgendamento,
 ): ImpedimentoParaAgendar | null {
+  if (dados.quantidadeContratada <= 0) return 'sem-reunioes';
   if (dados.situacao !== 'ativo') return 'pedido-inativo';
   if (dados.contestacaoAberta === true) return 'pedido-pausado';
   if (!dados.distribuido) return 'pedido-nao-distribuido';
+  return null;
+}
+
+export function impedimentoParaAgendar(
+  dados: DadosDoAgendamento,
+): ImpedimentoParaAgendar | null {
+  const doPedido = impedimentoDoPedido(dados);
+  if (doPedido !== null) return doPedido;
 
   const saldo = saldoDeReunioes(dados.quantidadeContratada, dados.reunioes);
   /*

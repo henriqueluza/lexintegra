@@ -1,5 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Timestamp, type Firestore } from 'firebase-admin/firestore';
+import { MOTIVO_DO_IMPEDIMENTO } from 'shared';
 import { FirestoreFalso } from '../firestore-falso.js';
 import { EnfileiradorDeEventos } from '../outbox/enfileirador.service.js';
 import { FilaFalsa } from '../tarefas/fila.js';
@@ -310,6 +311,57 @@ describe('ReunioesService.agendar', () => {
     );
   });
 
+  /**
+   * PEDIDO SEM REUNIAO (lote de novembro de 2026, ajuste 9): servico avulso, ou
+   * plano que nao inclui reuniao. A API recusa, e diz a verdade: nunca houve
+   * saldo, entao "ja foram usadas" seria mentira.
+   */
+  it('pedido sem reuniao recusa o agendamento com o motivo proprio', async () => {
+    const { servico, banco } = montar({
+      pedido: {
+        snapshot: {
+          nome: 'Analise contratual',
+          quantidadeReunioes: 0,
+          prazoValidadeReunioesDias: 180,
+          intervaloMinimoReunioesDias: 0,
+          numeroRevisoesPermitidas: 0,
+          parcelas: 1,
+          tipoCobranca: 'avulso',
+        },
+      },
+    });
+
+    await expect(servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA)).rejects.toThrow(
+      MOTIVO_DO_IMPEDIMENTO['sem-reunioes'],
+    );
+    expect(
+      [...banco.documentos.keys()].filter((chave) =>
+        chave.startsWith(`pedidos/${PEDIDO}/reunioes/`),
+      ),
+    ).toEqual([]);
+  });
+
+  /** EXCECAO DE 18/11/2026: avulso COM reuniao (a reuniao avulsa) agenda. */
+  it('avulso com reuniao contratada agenda normalmente', async () => {
+    const { servico } = montar({
+      pedido: {
+        snapshot: {
+          nome: 'Reuniao avulsa estrategica',
+          quantidadeReunioes: 1,
+          prazoValidadeReunioesDias: 180,
+          intervaloMinimoReunioesDias: 0,
+          numeroRevisoesPermitidas: 0,
+          parcelas: 1,
+          tipoCobranca: 'avulso',
+        },
+      },
+    });
+
+    await expect(
+      servico.agendar(PEDIDO, CLIENTE, SLOT, AGORA),
+    ).resolves.toBeDefined();
+  });
+
   it('horario com menos de 24h de antecedencia e recusado', async () => {
     const { servico } = montar();
     const tarde = Date.parse(INICIO) - 3_600_000;
@@ -460,7 +512,7 @@ describe('HorariosService.listar', () => {
     ).resolves.toEqual([]);
   });
 
-  it('devolve vazio com o saldo esgotado', async () => {
+  it('devolve vazio para o pedido sem reuniao', async () => {
     const { horarios } = montar({
       pedido: {
         snapshot: {

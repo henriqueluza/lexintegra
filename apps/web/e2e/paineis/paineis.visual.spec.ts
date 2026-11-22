@@ -148,4 +148,179 @@ test.describe('regressao visual dos paineis', () => {
       fullPage: true,
     });
   });
+
+  /**
+   * PEDIDO SEM REUNIAO (lote de novembro de 2026, ajuste 9): servico avulso, ou
+   * plano que nao inclui reuniao. O cartao perde o bloco de reunioes inteiro e o
+   * painel "Proximas reunioes" some. A captura abre tambem "Sobre este servico",
+   * a descricao detalhada congelada no pedido (ajuste 1).
+   *
+   * Como no teste acima, so um campo da resposta REAL e trocado: a semente nao
+   * tem pedido sem reuniao, e o resto do cartao continua vindo da API.
+   */
+  test('cliente-pedidos-sem-reuniao', async ({ page }) => {
+    await entrar(page, CONTAS.cliente);
+
+    await page.route('**/api/pedidos', async (rota) => {
+      const resposta = await rota.fetch();
+      const cartoes = (await resposta.json()) as {
+        snapshot: Record<string, unknown>;
+      }[];
+
+      await rota.fulfill({
+        response: resposta,
+        json: cartoes.map((cartao) => ({
+          ...cartao,
+          snapshot: { ...cartao.snapshot, quantidadeReunioes: 0 },
+          reunioes: [],
+          saldoDeReunioes: 0,
+        })),
+      });
+    });
+
+    await page.goto('/painel');
+
+    await expect(page.getByRole('heading').first()).toBeVisible();
+    await expect(page.getByText('Próximas reuniões')).toHaveCount(0);
+    const sobre = page
+      .getByRole('button', { name: 'Sobre este serviço' })
+      .first();
+    /*
+     * So um clique que a tela ja hidratada recebeu abre a secao. O clique so
+     * se repete enquanto ela estiver fechada: um segundo clique a fecharia.
+     */
+    await expect(async () => {
+      if ((await sobre.getAttribute('aria-expanded')) !== 'true') {
+        await sobre.click();
+      }
+      await expect(sobre).toHaveAttribute('aria-expanded', 'true', {
+        timeout: 1_000,
+      });
+    }).toPass({ timeout: 15_000 });
+    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(
+      () =>
+        new Promise((resolve) => requestAnimationFrame(() => resolve(null))),
+    );
+
+    await expect(page).toHaveScreenshot('cliente-pedidos-sem-reuniao.png', {
+      fullPage: true,
+    });
+  });
+
+  /**
+   * O FORMULARIO DE PRODUTO EM "SERVICO AVULSO" (ajustes 9 e 11): as parcelas
+   * somem (avulso e sempre a vista) e os tres campos de reuniao ficam atras de
+   * "Inclui reuniao". A captura de `admin-produtos` acima e a do formulario
+   * antes de escolher o tipo.
+   */
+  test('admin-produtos-avulso', async ({ page }) => {
+    await entrar(page, CONTAS.admin);
+    await page.goto('/admin/produtos');
+
+    await expect(page.getByRole('heading').first()).toBeVisible();
+    /*
+     * Antes da hidratacao o clique no radio nao muda o estado do formulario
+     * (mesmo motivo de `e2e/hidratacao.ts`): repete ate a tela responder.
+     */
+    await expect(async () => {
+      await page.getByLabel('Serviço avulso').check({ timeout: 1_000 });
+      await expect(page.getByLabel('Inclui reunião')).toBeVisible({
+        timeout: 500,
+      });
+    }).toPass({ timeout: 15_000 });
+    await expect(page.getByLabel(/Parcelas/)).toHaveCount(0);
+    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(
+      () =>
+        new Promise((resolve) => requestAnimationFrame(() => resolve(null))),
+    );
+
+    await expect(page).toHaveScreenshot('admin-produtos-avulso.png', {
+      fullPage: true,
+    });
+  });
+
+  /**
+   * O ANDAMENTO COM UMA LINHA PARADA, E COM O TEMPO FIXO.
+   *
+   * A tela conta dias a partir de `geradoEm` e das datas dos entregaveis; a
+   * semente carimba as datas com o relogio da pilha, e a imagem so seria estavel
+   * se esse relogio nunca andasse. Em vez de depender disso, a intercepcao pega a
+   * resposta REAL (a forma da API continua chegando inteira) e fixa so os campos
+   * de TEMPO: `geradoEm` e os instantes de cada entregavel e de cada pedido. O
+   * primeiro pedido DISTRIBUIDO recua para 19 dias antes, de modo que haja ao
+   * menos uma linha "Parada" com o limite padrao de sete.
+   */
+  test('admin-andamento', async ({ page }) => {
+    await entrar(page, CONTAS.admin);
+
+    const AGORA = '2026-11-20T12:00:00.000Z';
+    const ANTIGO = '2026-11-01T12:00:00.000Z';
+    const RECENTE = '2026-11-18T12:00:00.000Z';
+
+    await page.route('**/api/admin/andamento', async (rota) => {
+      const resposta = await rota.fetch();
+      /* Resposta de erro passa como veio: a tela mostra a falha, e o teste a ve. */
+      if (resposta.status() !== 200) {
+        await rota.fulfill({ response: resposta });
+        return;
+      }
+      const corpo = (await resposta.json()) as {
+        pedidos: {
+          advogadoId: string | null;
+          atribuidoEm: string | null;
+          criadoEm: string | null;
+          entregaveis: Record<string, unknown>[];
+        }[];
+      };
+      /*
+       * "Parado" e so a vez do ADVOGADO: quem recua no tempo e o primeiro pedido
+       * ja distribuido, e nao o primeiro da lista, que na semente esta na fila.
+       */
+      const parado = corpo.pedidos.findIndex(
+        (pedido) => pedido.advogadoId !== null,
+      );
+
+      await rota.fulfill({
+        response: resposta,
+        json: {
+          ...corpo,
+          geradoEm: AGORA,
+          pedidos: corpo.pedidos.map((pedido, i) => {
+            const quando = i === parado ? ANTIGO : RECENTE;
+            return {
+              ...pedido,
+              criadoEm: quando,
+              atribuidoEm: pedido.atribuidoEm === null ? null : quando,
+              entregaveis: pedido.entregaveis.map((entregavel) => ({
+                ...entregavel,
+                estadoDesde: quando,
+                arquivoEnviadoEm:
+                  entregavel['arquivoEnviadoEm'] === null ? null : quando,
+              })),
+            };
+          }),
+        },
+      });
+    });
+
+    await page.goto('/admin/andamento');
+
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Andamento' }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Parado', { exact: true }).first(),
+    ).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(
+      () =>
+        new Promise((resolve) => requestAnimationFrame(() => resolve(null))),
+    );
+
+    await expect(page).toHaveScreenshot('admin-andamento.png', {
+      fullPage: true,
+    });
+  });
 });

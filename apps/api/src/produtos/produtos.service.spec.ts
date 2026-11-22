@@ -17,6 +17,9 @@ const PARECER: NovoProduto = {
   intervaloMinimoReunioesDias: 7,
   numeroRevisoesPermitidas: 2,
   parcelas: 1,
+  tipoCobranca: 'assinatura',
+  descricaoDetalhada:
+    'Texto detalhado do produto, com o que ele cobre e como funciona.',
 };
 
 function montar(): { servico: ProdutosService; banco: FirestoreFalso } {
@@ -55,6 +58,23 @@ describe('ProdutosService', () => {
     it('devolve o produto ja ativo', async () => {
       const { servico } = montar();
       expect((await servico.criar(PARECER, ADMIN)).ativo).toBe(true);
+    });
+
+    it('grava o tipo de cobranca e a descricao detalhada', async () => {
+      const { servico, banco } = montar();
+
+      const resumo = await servico.criar(
+        { ...PARECER, tipoCobranca: 'avulso' },
+        ADMIN,
+      );
+
+      expect(
+        banco.documentos.get(`${COLECAO_PRODUTOS}/${resumo.id}`),
+      ).toMatchObject({
+        tipoCobranca: 'avulso',
+        descricaoDetalhada: PARECER.descricaoDetalhada,
+      });
+      expect(resumo.tipoCobranca).toBe('avulso');
     });
 
     it('escreve uma vez so, na colecao de produtos', async () => {
@@ -120,6 +140,50 @@ describe('ProdutosService', () => {
       const { servico } = montar();
       await servico.criar(PARECER, ADMIN);
       expect((await servico.listar('todos'))[0].criadoEm).toBeNull();
+    });
+  });
+
+  /**
+   * PRODUTO GRAVADO ANTES DO LOTE DE NOVEMBRO DE 2026: sem tipo e sem descricao
+   * detalhada. Continua legivel e vendavel, e a API o devolve como "nao
+   * classificado" (`null`), que e o que a lista do administrador marca.
+   */
+  describe('produto legado', () => {
+    async function comLegado(): Promise<{
+      servico: ProdutosService;
+      id: string;
+    }> {
+      const { servico, banco } = montar();
+      const { id } = await servico.criar(PARECER, ADMIN);
+      const chave = `${COLECAO_PRODUTOS}/${id}`;
+      const {
+        tipoCobranca: _tipo,
+        descricaoDetalhada: _detalhada,
+        ...antigo
+      } = banco.documentos.get(chave) as Record<string, unknown>;
+      banco.documentos.set(chave, antigo);
+      return { servico, id };
+    }
+
+    it('e devolvido sem tipo e com a descricao detalhada vazia', async () => {
+      const { servico, id } = await comLegado();
+
+      expect(await servico.obter(id)).toMatchObject({
+        tipoCobranca: null,
+        descricaoDetalhada: '',
+        parcelas: 1,
+      });
+    });
+
+    it('ganha os dois campos na primeira edicao', async () => {
+      const { servico, id } = await comLegado();
+
+      await servico.editar(id, { ...PARECER, tipoCobranca: 'avulso' }, ADMIN);
+
+      expect(await servico.obter(id)).toMatchObject({
+        tipoCobranca: 'avulso',
+        descricaoDetalhada: PARECER.descricaoDetalhada,
+      });
     });
   });
 

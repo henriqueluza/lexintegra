@@ -341,7 +341,14 @@ describe('impedimentoParaAgendar', () => {
     ['pedido-inativo', { situacao: 'estornado' as const }],
     ['pedido-pausado', { contestacaoAberta: true }],
     ['pedido-nao-distribuido', { distribuido: false }],
-    ['saldo-esgotado', { quantidadeContratada: 0 }],
+    ['sem-reunioes', { quantidadeContratada: 0 }],
+    [
+      'saldo-esgotado',
+      {
+        quantidadeContratada: 1,
+        reunioes: [reuniao('r001', iso(INICIO_MS + 60 * DIA))],
+      },
+    ],
     ['fora-da-janela', { fimDaJanelaMs: INICIO_MS - 1 }],
     ['antecedencia-minima', { agoraMs: INICIO_MS - 1000 }],
     ['intervalo-minimo', { reunioes: [reuniao('r001', iso(INICIO_MS + DIA))] }],
@@ -360,9 +367,38 @@ describe('impedimentoParaAgendar', () => {
       impedimentoParaAgendar({
         ...base,
         distribuido: false,
-        quantidadeContratada: 0,
+        quantidadeContratada: 1,
+        reunioes: [reuniao('r001', iso(INICIO_MS + 60 * DIA))],
       }),
     ).toBe('pedido-nao-distribuido');
+  });
+
+  /**
+   * PEDIDO SEM REUNIAO (ajuste 9). Um servico avulso, ou o plano que nao inclui
+   * reuniao, nunca teve saldo: responder "ja foram usadas" e mentira. E vem antes
+   * de tudo, porque nenhuma outra condicao muda a resposta — nem o pedido
+   * cancelado, nem a contestacao, nem a falta de advogado.
+   */
+  it.each([
+    ['ativo e distribuido', {}],
+    ['cancelado', { situacao: 'cancelado' as const }],
+    ['pausado', { contestacaoAberta: true }],
+    ['sem advogado', { distribuido: false }],
+    ['remarcando', { ignorarReuniaoId: 'r001' }],
+  ])('pedido sem reuniao responde sem-reunioes (%s)', (_caso, alteracao) => {
+    expect(
+      impedimentoParaAgendar({
+        ...base,
+        ...alteracao,
+        quantidadeContratada: 0,
+      }),
+    ).toBe('sem-reunioes');
+  });
+
+  it('uma reuniao contratada ja nao e pedido sem reuniao', () => {
+    expect(
+      impedimentoParaAgendar({ ...base, quantidadeContratada: 1 }),
+    ).toBeNull();
   });
 
   /**

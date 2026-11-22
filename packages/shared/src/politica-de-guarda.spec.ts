@@ -5,9 +5,14 @@ import {
   ANOS_GUARDA_CLIENTE,
   DIAS_AVISO_ELIMINACAO,
   DIAS_GUARDA_REGISTROS_DE_ACESSO,
+  DIAS_RECUPERACAO_PITR,
   MESES_GUARDA_PRE_CADASTRO,
   MESES_GUARDA_REGISTROS_DE_ACESSO,
   PRAZO_DIREITOS_TITULAR_DIAS,
+  RETENCAO_BACKUP_DIARIO_DIAS,
+  RETENCAO_BACKUP_SEMANAL_SEMANAS,
+  SEMANAS_MAXIMAS_EM_COPIA,
+  TEXTO_COPIAS_DE_SEGURANCA,
   TEXTO_POLITICA_DE_GUARDA,
   ehMotivoRetencaoLegal,
   eliminacaoPermitidaEm,
@@ -90,14 +95,16 @@ describe('politica de guarda (decisoes.md 1.4 e 2.1, 05/10/2026)', () => {
       fimDaGuardaDoCliente(inicioDaGuardaVigenteDoCliente(agora)).getTime(),
     ).toBe(agora.getTime());
     expect(
-      inicioDaGuardaVigenteDoPreCadastro(d('2027-04-05T00:00:00Z')).toISOString(),
+      inicioDaGuardaVigenteDoPreCadastro(
+        d('2027-04-05T00:00:00Z'),
+      ).toISOString(),
     ).toBe('2026-10-05T00:00:00.000Z');
   });
 
   it('a eliminacao avisada so vem 7 dias depois do envio confirmado', () => {
-    expect(
-      eliminacaoPermitidaEm(d('2026-10-05T10:00:00Z')).toISOString(),
-    ).toBe('2026-10-12T10:00:00.000Z');
+    expect(eliminacaoPermitidaEm(d('2026-10-05T10:00:00Z')).toISOString()).toBe(
+      '2026-10-12T10:00:00.000Z',
+    );
   });
 
   it('reconhece so as tres excecoes decididas', () => {
@@ -113,9 +120,93 @@ describe('politica de guarda (decisoes.md 1.4 e 2.1, 05/10/2026)', () => {
     const privacidade = SECOES_PRIVACIDADE.map((s) => s.texto).join(' ');
     expect(privacidade).toContain(TEXTO_POLITICA_DE_GUARDA);
     expect(privacidade).toContain('em até 15 dias corridos');
-    expect(TEXTO_POLITICA_DE_GUARDA).toContain('5 anos depois do seu último pedido');
-    expect(TEXTO_POLITICA_DE_GUARDA).toContain('6 meses depois do último envio');
-    expect(TEXTO_POLITICA_DE_GUARDA).toContain('Marco Civil da Internet (art. 15)');
+    expect(TEXTO_POLITICA_DE_GUARDA).toContain(
+      '5 anos depois do seu último pedido',
+    );
+    expect(TEXTO_POLITICA_DE_GUARDA).toContain(
+      '6 meses depois do último envio',
+    );
+    expect(TEXTO_POLITICA_DE_GUARDA).toContain(
+      'Marco Civil da Internet (art. 15)',
+    );
     expect(TEXTO_POLITICA_DE_GUARDA).toContain('pelo menos 7 dias antes');
+  });
+
+  /**
+   * COPIAS DE SEGURANCA (lote de novembro de 2026, ADR-23). Backup e dado
+   * pessoal: cada copia guarda os dados de todos os titulares ate expirar. Os
+   * numeros que a politica de privacidade publica sao os da infraestrutura, e
+   * estes testes sao o que impede um de mudar sem o outro.
+   */
+  describe('copias de seguranca do banco', () => {
+    function terraform(arquivo: string): string {
+      return readFileSync(
+        fileURLToPath(
+          new URL(`../../../infra/terraform/${arquivo}`, import.meta.url),
+        ),
+        'utf8',
+      );
+    }
+
+    /** O `default` de uma variavel do Terraform, lido do bloco dela. */
+    function padraoDaVariavel(nome: string): string | undefined {
+      const bloco = new RegExp(
+        `variable "${nome}" \\{[\\s\\S]*?\\n\\}`,
+        'u',
+      ).exec(terraform('variables.tf'))?.[0];
+      return /\n\s*default\s*=\s*(\d+)/u.exec(bloco ?? '')?.[1];
+    }
+
+    it('fixa as retencoes propostas', () => {
+      expect(DIAS_RECUPERACAO_PITR).toBe(7);
+      expect(RETENCAO_BACKUP_DIARIO_DIAS).toBe(7);
+      expect(RETENCAO_BACKUP_SEMANAL_SEMANAS).toBe(8);
+    });
+
+    it('o Terraform guarda os backups pelo mesmo prazo das constantes', () => {
+      expect(padraoDaVariavel('backup_diario_retencao_dias')).toBe(
+        String(RETENCAO_BACKUP_DIARIO_DIAS),
+      );
+      expect(padraoDaVariavel('backup_semanal_retencao_semanas')).toBe(
+        String(RETENCAO_BACKUP_SEMANAL_SEMANAS),
+      );
+    });
+
+    /**
+     * As variaveis so valem se os dois agendamentos as usarem. Um literal no
+     * lugar da variavel passaria no teste acima e guardaria por outro prazo.
+     */
+    it('os dois agendamentos existem e leem as variaveis', () => {
+      const firestore = terraform('firestore.tf');
+
+      expect(firestore).toMatch(
+        /resource "google_firestore_backup_schedule" "diario"[\s\S]*?retention = "\$\{var\.backup_diario_retencao_dias \* 86400\}s"[\s\S]*?daily_recurrence \{\}/u,
+      );
+      expect(firestore).toMatch(
+        /resource "google_firestore_backup_schedule" "semanal"[\s\S]*?retention = "\$\{var\.backup_semanal_retencao_semanas \* 7 \* 86400\}s"[\s\S]*?weekly_recurrence \{/u,
+      );
+    });
+
+    it('o PITR continua ligado, com a janela que a constante diz', () => {
+      expect(terraform('firestore.tf')).toContain(
+        'point_in_time_recovery_enablement = "POINT_IN_TIME_RECOVERY_ENABLED"',
+      );
+    });
+
+    /** O prazo publicado e o MAIOR dos tres: e o pior caso para o titular. */
+    it('o prazo maximo em copia e o do backup semanal', () => {
+      expect(SEMANAS_MAXIMAS_EM_COPIA).toBe(RETENCAO_BACKUP_SEMANAL_SEMANAS);
+    });
+
+    it('a politica de privacidade diz o prazo e o que acontece com o eliminado', () => {
+      const privacidade = SECOES_PRIVACIDADE.map((s) => s.texto).join(' ');
+
+      expect(privacidade).toContain(TEXTO_COPIAS_DE_SEGURANCA);
+      expect(TEXTO_COPIAS_DE_SEGURANCA).toContain('por até 8 semanas');
+      expect(TEXTO_COPIAS_DE_SEGURANCA).toContain(
+        'continua nas cópias já feitas até que elas expirem',
+      );
+      expect(TEXTO_COPIAS_DE_SEGURANCA).toContain('são refeitas');
+    });
   });
 });

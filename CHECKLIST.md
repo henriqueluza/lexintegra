@@ -13,7 +13,141 @@ sobra é só o que exige produção real ou o escritório**, em duas listas, na
 ordem de execução. O histórico do que foi feito, item por item, está no fim
 desta página.
 
+**Desde 18/11/2026 há uma terceira lista, a 0:** o lote de novembro, com 14
+ajustes pedidos pelo cliente depois da entrada em produção.
+
 👤 = Henrique. 🏢 = escritório. 🤝 = os dois juntos.
+
+---
+
+## 0. Lote de novembro (ajustes pedidos pelo cliente)
+
+Catorze ajustes em sete blocos (A a G). O que está aqui é o que depende de
+pessoa; o que é código está no PR de cada bloco.
+
+**Em 22/11/2026 os quatro PRs prontos viraram um só** (`feat/lote-novembro-integracao`,
+decisão do Henrique: um merge e um deploy): a correção do envio de arquivos
+(#102) e os Blocos A (#100), G (#101) e D (#103), com os conflitos resolvidos.
+Os Blocos B, C, E e F não começaram.
+
+**Antes e logo depois do merge único**
+
+- [ ] 👤 **Provar `card.maxInstallments`, em produção, logo depois do deploy**
+  (decisão do Henrique em 22/11/2026: sem a rodada no sandbox). Com um plano no
+  carrinho, escolher cartão: a página do AbacatePay precisa abrir e oferecer
+  até 12 vezes (3 no Prime de 3 meses). Com um serviço avulso, só à vista. Não
+  é preciso pagar. Se a página não abrir, reverter o merge ou desligar o cartão
+  (`pagamentos_cartao = "desabilitado"`); o PIX não é afetado.
+- [x] 👤 **Regravar as referências visuais** — feito pelo Henrique em
+  22/11/2026: 15 públicas (catálogo, checkout e privacidade; eram o vermelho do
+  CI) e 39 dos painéis (as dez telas de admin, pelo item "Andamento" no menu, e
+  as do Bloco A: cartão do pedido e formulário de produto). A de
+  `admin-advogados` na largura estreita era, na `main`, a captura de um erro de
+  carregamento; a nova é a tela carregada.
+
+**Bloco A — tipo de produto** (`feat/tipo-de-produto`: descrição detalhada,
+parcelamento só em assinatura, reunião conforme o pedido)
+
+- [ ] 🏢 **Enviar a descrição detalhada dos 26 produtos** do catálogo (é o
+  texto que o botão **+** abre; de 20 a 5000 caracteres cada). O código sobe sem
+  elas (decisão de 22/11/2026), mas até chegarem
+  `scripts/cadastrar-catalogo-inicial.mjs` recusa rodar, e os produtos que já
+  estão em produção seguem sem texto detalhado.
+  A lista dos produtos está no PR; os textos entram em
+  `scripts/catalogo-inicial/produtos.data.ts`, no lugar de
+  `AGUARDANDO_ESCRITORIO`.
+- [ ] 🏢 **Confirmar duas decisões tomadas pelo Henrique em 18/11/2026:**
+  (1) serviço avulso pode ter reunião, como exceção (a "Reunião avulsa
+  estratégica" continua avulsa, com 1 reunião): o tipo governa só o
+  parcelamento; (2) carrinho com assinatura e serviço avulso vai inteiro à
+  vista no cartão, com aviso (o AbacatePay aceita um limite de parcelas só por
+  cobrança).
+- [ ] 👤 **Provar `card.maxInstallments`** (em produção, logo depois do deploy:
+  ver o primeiro item desta lista; o roteiro completo, para o sandbox, é este)
+  ([`checkout-sandbox.md`](docs/runbooks/checkout-sandbox.md), seção 4, os
+  cinco itens de "Parcelas"): avulso só à vista, assinatura até o número do
+  produto, carrinho misto à vista, o mínimo de R$ 10,00 por parcela e os
+  centavos da primeira. O campo veio só da documentação do AbacatePay; se o
+  gateway o recusar, o cartão para para todos. O teto de 12 parcelas é o do
+  campo `parcelas` do produto (1 a 12), confirmado pelo Henrique em 22/11/2026;
+  o que falta provar é o gateway aceitar o campo, não o número.
+- [ ] 🏢 **Classificar os produtos que já estão em produção**, depois do
+  deploy: em `/admin/produtos` eles aparecem com o selo **Sem tipo**. Os três
+  planos são **Assinatura**; os três pacotes fechados antigos são desativados
+  (item do catálogo, na lista 1) e não precisam de tipo. Cada edição pede
+  também a descrição detalhada ([manual do administrador](docs/manuais/admin.md) §1).
+- [ ] 👤 Aprovar as imagens de referência novas e as regravadas do Bloco A
+  (lista no PR), e gerar de novo as capturas dos manuais
+  (`pnpm capturas:manuais`): o formulário de produto e o cartão do pedido
+  mudaram.
+
+**Bloco G — backups do Firestore** (`feat/backup-firestore`, ADR-23)
+
+- [ ] 🏢 **Confirmar a retenção dos backups:** a proposta aplicada é 7
+  backups diários e 8 semanais. Mudar é trocar duas variáveis do Terraform e
+  as constantes de `packages/shared/src/politica-de-guarda.ts`, juntas (um
+  teste recusa uma sem a outra).
+- [ ] 🤝 **Revisar o parágrafo novo da política de privacidade** (cópias de
+  segurança por até 8 semanas; o dado eliminado continua nas cópias até elas
+  expirarem; eliminações refeitas depois de uma restauração). É minuta, como
+  os demais textos.
+- [ ] 👤 **Depois do deploy:** conferir os dois agendamentos
+  (`gcloud firestore backups schedules list`), esperar o primeiro backup (até
+  24 h) e ver a métrica `backup-idade-segundos` receber pontos
+  ([`backup-atrasado.md`](docs/runbooks/backup-atrasado.md)).
+- [ ] 👤 **Teste de restauração**, com os tempos anotados no roteiro:
+  restaurar um backup num banco separado, comparar as contagens com
+  `scripts/contar-documentos-firestore.mjs` e **apagar o banco de teste**
+  ([`restaurar-backup.md`](docs/runbooks/restaurar-backup.md)).
+- [ ] 🤝 **Decidir se vale construir a troca de produção para um banco
+  restaurado.** Hoje a restauração cria um banco novo e a API só fala com
+  `(default)`: recuperar documentos está coberto, perda total do banco não
+  (`restaurar-backup.md`, seção 4).
+- [ ] 👤 Regravar e aprovar a referência visual da página de privacidade
+  (`privacidade-*`): ganhou um parágrafo e a data própria.
+- [ ] 🏢 Conferir na primeira fatura o custo dos backups (estimado em
+  centavos; o preço por GiB em São Paulo não foi confirmado).
+
+**Bloco D — o administrador vê o andamento dos advogados**
+(`feat/admin-visao-advogados`, tela `/admin/andamento`)
+
+- [ ] 🏢 **Responder: o administrador só acompanha, ou também lê o que o
+  advogado lê?** A tela mostra andamento (estado, desde quando, de quem é a
+  vez, trilha e reuniões) e **nenhum conteúdo**: nem observações, nem ficha,
+  nem nome de arquivo. Abrir conteúdo é mais uma rota de leitura, com
+  auditoria; agir em nome do advogado (iniciar, enviar, confirmar) contraria a
+  regra inviolável 14 e exigiria um ADR.
+- [ ] 🏢 **Confirmar o que conta como parado:** a vez é do advogado há 7 dias
+  ou mais (a tela também oferece 3, 15 e 30). O tempo do cliente decidindo
+  sobre um arquivo aparece, mas não conta como atraso do advogado.
+- [x] 👤 Aprovar a imagem de referência nova da tela (`admin-andamento-*`) e a
+  mudança das 30 referências de admin — aprovado em 22/11/2026. Regravar é o
+  item de "Antes do merge único", acima.
+- [ ] 👤 Gerar de novo as capturas dos manuais (`pnpm capturas:manuais`): o
+  menu do administrador ganhou um item.
+- [ ] 👤 **Depois do deploy:** abrir `/admin/andamento` com os pedidos reais e
+  conferir que os entregáveis antigos mostram a data em "desde" (ela vem da
+  trilha, porque o campo `estadoDesde` só existe a partir deste deploy), e que
+  cada abertura deixa uma linha `andamento.consultado` em `auditoria/`.
+
+**Perguntas dos blocos seguintes, para levar ao escritório antes de cada um**
+
+- [ ] 🏢 **Bloco B (anamnese).** O que é a "anamnese inicial" a tirar da
+  página do advogado: o entregável com esse nome no Pacote 1 antigo, o botão
+  "Anamnese e observações", ou outra coisa (não existe etapa nem bloqueio no
+  fluxo)? A ficha hoje é uma por cliente (decisões 1.1): campos variáveis por
+  produto a tornam por pedido, é isso, e depende de PF ou PJ? Quais são os
+  campos fixos? O cliente só lê as respostas ou pode editar, e até quando?
+- [ ] 🏢 **Bloco C (e-mails).** Quem recebe o aviso de pedido novo: todos os
+  administradores ativos ou um endereço do escritório? Observação do cliente
+  em pedido ainda sem advogado avisa quem? Deve existir e-mail ao cliente
+  quando o documento fica disponível (hoje não existe, e o ajuste 14 o
+  pressupõe)? Quantas observações por dia se espera (o Resend gratuito envia
+  100 e-mails por dia)?
+- [ ] 🏢 **Bloco E (upload).** A conversão de PDF em DOCX vale para os
+  arquivos do advogado, do cliente ou dos dois, e PDF escaneado converte?
+  Aprovar o custo mensal de qualquer mudança no antivírus ou do serviço de
+  conversão (o PR traz os números).
 
 ---
 
@@ -34,7 +168,14 @@ seguintes), e as reuniões depois de haver pedido distribuído.
   bate com a anunciada (`ligar-terceiros.md` 1.6, passo 3, e 1.8;
   [`checkout-sandbox.md`](docs/runbooks/checkout-sandbox.md), seção 4).
 - [ ] 👤 **URL assinada do primeiro arquivo real**
-  ([`limpeza-infra.md`](docs/runbooks/limpeza-infra.md) §3).
+  ([`limpeza-infra.md`](docs/runbooks/limpeza-infra.md) §3). **É a prova da
+  correção de 19/11/2026** (`fix/upload-url-assinada`): até ela, nenhum arquivo
+  subia em produção, porque o navegador não mandava o cabeçalho de tamanho que
+  a URL assinada exige. Enviar um PDF como advogado e um anexo como cliente, e
+  conferir nos dois que o arquivo passa a "disponível" depois de recarregar a
+  página. O entregável do teste de 13/11/2026 ficou com um envio pendente que
+  nunca chegou: ele deixa de aparecer como arquivo, e um envio novo o
+  substitui.
 - [ ] 👤 **EICAR:** o arquivo de teste reprova e nunca fica acessível em
   nenhum momento ([`scanner-indisponivel.md`](docs/runbooks/scanner-indisponivel.md)).
 - [ ] 👤 **Reunião de teste:** marcar, remarcar e cancelar; link do Teams e
@@ -57,12 +198,15 @@ seguintes), e as reuniões depois de haver pedido distribuído.
   `scripts/catalogo-inicial/produtos.data.ts`). Três passos, nesta ordem:
   1. **Desativar os três pacotes fechados** em `/admin/produtos`.
   2. **Editar os três planos pelo painel** (o script **pula produto que já
-     existe** e não tem `--atualizar`): parcelas (12, 12 e 3), descrição sem
-     "Pode ser parcelado em 3x" e a composição nova. Essencial: 2 modelos
+     existe** e não tem `--atualizar`): tipo **Assinatura** e a descrição
+     detalhada (lote de novembro, lista 0), parcelas (12, 12 e 3), descrição
+     sem "Pode ser parcelado em 3x" e a composição nova. Essencial: 2 modelos
      padrão (eram 3) e 4 análises contratuais; Prime de 3 meses: 2 análises
      (eram 4). [Manual do administrador](docs/manuais/admin.md) §1.
   3. **Cadastrar os 23 avulsos**: `node scripts/cadastrar-catalogo-inicial.mjs
-     --prod` (cria só o que falta, pelo nome).
+     --prod` (cria só o que falta, pelo nome). **Só roda depois de as 26
+     descrições detalhadas chegarem** (lista 0): sem elas o script aborta
+     antes de gravar qualquer produto.
 - [ ] 🏢 **Confirmar com o escritório, do mesmo documento:** modelos de
   contrato padrão nos planos Prime (6 e 4 na tabela, "a confirmar" na nota; os
   6 levariam o Prime de 12 meses a 65 entregáveis, acima do teto de 60); o

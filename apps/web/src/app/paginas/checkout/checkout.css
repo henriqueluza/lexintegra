@@ -96,6 +96,15 @@
   color: var(--texto-3);
 }
 
+/* O mesmo aviso do carrinho misto, com o mesmo desenho (`publicas.css`). */
+.checkout__sem-parcelas {
+  padding: var(--s3);
+  color: var(--texto);
+  background: var(--acento-fundo);
+  border-left: var(--borda-media) solid var(--acento);
+  border-radius: var(--raio-selo);
+}
+
 .checkout__formulario,
 .checkout__pix {
   display: flex;

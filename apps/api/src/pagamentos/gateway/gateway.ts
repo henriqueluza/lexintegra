@@ -18,6 +18,7 @@
  * Firestore. Transacao e reexecutada sob contencao, e uma cobranca criada duas
  * vezes e dinheiro cobrado duas vezes.
  */
+import { PARCELAS_MAXIMAS_NO_CARTAO } from 'shared';
 
 export const GATEWAY_PAGAMENTO = Symbol('GATEWAY_PAGAMENTO');
 
@@ -74,6 +75,16 @@ export interface NovoCheckoutHospedado {
     readonly quantidade: number;
   }[];
   readonly externalId: string;
+  /**
+   * O teto de parcelas que a pagina do gateway oferece NESTA cobranca, de 1 a
+   * 12 (`card.maxInstallments`). Um e "so a vista".
+   *
+   * E O QUE FAZ O PARCELAMENTO SO EM ASSINATURA VALER NO SERVIDOR (lote de
+   * novembro de 2026, ajuste 11): ate ali o site so anunciava, e a pagina
+   * oferecia 12x em qualquer compra. Quem calcula e `parcelasDoCarrinho`, sobre
+   * os snapshots congelados, nunca sobre o que o navegador mandou.
+   */
+  readonly maxParcelas: number;
   /** Para onde o botao "voltar" da pagina do gateway leva. */
   readonly urlRetorno: string;
   /** Para onde o gateway manda a pessoa depois de pagar. */
@@ -125,6 +136,22 @@ export class ErroDoGateway extends Error {
   constructor(motivo: string) {
     super(motivo);
     this.name = 'ErroDoGateway';
+  }
+}
+
+/**
+ * O teto de parcelas e inteiro de 1 a 12, nos dois adaptadores. Falha como
+ * `ErroDoGateway` (503 para a tela): e defeito nosso, e a cobranca nao sai.
+ */
+export function conferirMaxParcelas(maxParcelas: number): void {
+  if (
+    !Number.isInteger(maxParcelas) ||
+    maxParcelas < 1 ||
+    maxParcelas > PARCELAS_MAXIMAS_NO_CARTAO
+  ) {
+    throw new ErroDoGateway(
+      `teto de parcelas invalido: ${String(maxParcelas)}`,
+    );
   }
 }
 

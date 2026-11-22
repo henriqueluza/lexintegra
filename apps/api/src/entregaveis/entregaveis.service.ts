@@ -13,6 +13,7 @@ import {
   type Transaction,
 } from 'firebase-admin/firestore';
 import {
+  arquivoFoiEnviado,
   TRANSICAO_DO_EVENTO,
   transicaoPermitida,
   type EntregavelResumo,
@@ -201,6 +202,8 @@ export class EntregaveisService {
             ? entregavel.revisoesUsadas + 1
             : entregavel.revisoesUsadas,
         transicoes: sequencia,
+        /* O mesmo instante da transicao gravada logo abaixo: mesma transacao. */
+        estadoDesde: FieldValue.serverTimestamp(),
         atualizadoEm: FieldValue.serverTimestamp(),
       });
 
@@ -312,7 +315,15 @@ export class EntregaveisService {
       );
     }
 
-    if (contexto.entregavel.arquivoAtual === null) {
+    /*
+     * `pendente_upload` NAO E ARQUIVO ENVIADO. O registro nasce quando a URL
+     * assinada e emitida, antes do `PUT`; se o `PUT` falha, ele fica. Sem esta
+     * conferencia o cliente confirmava a entrega de um arquivo que nunca chegou
+     * ao bucket, e `entregue` — que a regra inviolavel 14 so admite depois do
+     * upload — era alcancado sem upload nenhum.
+     */
+    const arquivo = contexto.entregavel.arquivoAtual;
+    if (arquivo === null || !arquivoFoiEnviado(arquivo.estado)) {
       throw new ConflictException(
         'O entregavel ainda nao tem arquivo enviado pelo advogado.',
       );

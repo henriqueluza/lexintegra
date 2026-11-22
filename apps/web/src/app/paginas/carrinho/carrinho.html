@@ -33,7 +33,11 @@
           <span class="itens__icone"><app-icone nome="documento" /></span>
           <div>
             <h2>{{ item.nome }}</h2>
-            <p>Um pedido individual para este serviço.</p>
+            <p>
+              @if (tipo(item)) {
+              <span class="itens__tipo">{{ tipo(item) }}</span>
+              } Um pedido individual para este serviço.
+            </p>
           </div>
           <strong>{{ preco(item.precoCentavos) }}</strong
           ><app-botao
@@ -53,6 +57,18 @@
       <strong class="total" aria-live="polite"
         >{{ preco(carrinho.totalIndicativoCentavos()) }}</strong
       >
+      <!--
+        A condicao do cartao muda quando um item sai do carrinho (tirar o
+        servico avulso devolve o parcelamento): a regiao e anunciada, como o
+        total. Sempre no DOM, para o leitor de tela ja a conhecer.
+      -->
+      <div class="resumo__condicao" aria-live="polite">
+        @if (condicaoNoCartao()) {
+        <p class="resumo__parcelas">{{ condicaoNoCartao() }}</p>
+        } @if (carrinho.avulsoImpedeParcelamento()) {
+        <p class="resumo__sem-parcelas">{{ avisoSemParcelamento }}</p>
+        }
+      </div>
       <p>
         Valor estimado. O preço final é confirmado no checkout. Cada serviço
         terá seu próprio acompanhamento.

@@ -47,6 +47,7 @@ export type NomeIcone =
   | 'mensagem'
   | 'predio'
   | 'mais'
+  | 'menos'
   | 'sair'
   | 'olho'
   | 'menu'
@@ -91,6 +92,7 @@ const TRACOS: Readonly<Record<NomeIcone, readonly string[]>> = {
   ],
   predio: ['M4 21V3h12v18', 'M16 10h4v11', 'M2 21h20', 'M8 7h4M8 11h4M8 15h4'],
   mais: ['M12 4v16', 'M4 12h16'],
+  menos: ['M4 12h16'],
   sair: ['M9 4H4v16h5', 'M8 12h13', 'M16 7l5 5-5 5'],
   olho: [
     'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z',

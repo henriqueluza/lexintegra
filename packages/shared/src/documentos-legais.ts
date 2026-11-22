@@ -1,5 +1,6 @@
 import {
   PRAZO_DIREITOS_TITULAR_DIAS,
+  TEXTO_COPIAS_DE_SEGURANCA,
   TEXTO_POLITICA_DE_GUARDA,
 } from './politica-de-guarda.js';
 import {
@@ -150,7 +151,7 @@ export const SECOES_PRIVACIDADE = [
   },
   {
     titulo: 'Por quanto tempo guardamos',
-    texto: `Os documentos entregues e os arquivos de apoio de cada pedido são excluídos 30 dias depois de todos os documentos do pedido terem a entrega confirmada, com aviso por e-mail pelo menos 7 dias antes; durante uma contestação do pagamento, a exclusão fica suspensa. ${TEXTO_POLITICA_DE_GUARDA}`,
+    texto: `Os documentos entregues e os arquivos de apoio de cada pedido são excluídos 30 dias depois de todos os documentos do pedido terem a entrega confirmada, com aviso por e-mail pelo menos 7 dias antes; durante uma contestação do pagamento, a exclusão fica suspensa. ${TEXTO_POLITICA_DE_GUARDA} ${TEXTO_COPIAS_DE_SEGURANCA}`,
   },
   {
     titulo: 'Seus direitos',

@@ -133,6 +133,10 @@ async function montar(opcoes: Partial<ApiDeTeste> = {}): Promise<{
               arquivos.map((_a, i) => ({
                 id: `anexo-${String(i)}`,
                 url: `https://bucket.example/quarentena/${String(i)}`,
+                cabecalhos: {
+                  'Content-Type': 'image/jpeg',
+                  'x-goog-content-length-range': '1,5242880',
+                },
                 validoPorSegundos: 600,
               })),
             );
@@ -391,8 +395,10 @@ describe('ClientePedidos', () => {
     it('pede a URL, escreve no bucket e so entao confirma', async () => {
       const original = globalThis.fetch;
       const puts: string[] = [];
-      globalThis.fetch = ((url: string) => {
+      const cabecalhosDosPuts: unknown[] = [];
+      globalThis.fetch = ((url: string, opcoes: RequestInit) => {
         puts.push(String(url));
+        cabecalhosDosPuts.push(opcoes.headers);
         return Promise.resolve({ ok: true, status: 200 } as Response);
       }) as unknown as typeof fetch;
 
@@ -408,6 +414,13 @@ describe('ClientePedidos', () => {
 
         expect(api.chamadas).toContain('pedirUrl p1: 1');
         expect(puts).toEqual(['https://bucket.example/quarentena/0']);
+        /* O PUT leva os cabecalhos ASSINADOS que a API devolveu, todos. */
+        expect(cabecalhosDosPuts).toEqual([
+          {
+            'Content-Type': 'image/jpeg',
+            'x-goog-content-length-range': '1,5242880',
+          },
+        ]);
         // A confirmacao vem DEPOIS do PUT: confirmar antes enfileiraria a
         // varredura de um objeto que ainda nao existe.
         expect(api.chamadas.indexOf('confirmar p1/anexo-0')).toBeGreaterThan(
@@ -600,5 +613,137 @@ describe('ClientePedidos', () => {
         expect(botaoCom(fixture, 'Cancelar pedido')).toBeUndefined();
       },
     );
+  });
+
+  /**
+   * REUNIAO E DESCRICAO DETALHADA (18/11/2026). Quem decide se o pedido tem
+   * reuniao e a QUANTIDADE do snapshot; pedido sem tipo (legado) segue como era.
+   */
+  describe('pedido com e sem reuniao', () => {
+    function comSnapshot(
+      id: string,
+      extra: Partial<CartaoPedido['snapshot']>,
+    ): CartaoPedido {
+      const base = pedido(id, [SOLICITADO_LOCAL], false);
+      return { ...base, snapshot: { ...base.snapshot, ...extra } };
+    }
+    const SOLICITADO_LOCAL = { ...SEM_ARQUIVO, estado: 'solicitado' as const };
+    const SEM_REUNIAO = {
+      tipoCobranca: 'avulso' as const,
+      quantidadeReunioes: 0,
+    };
+
+    it('pedido sem reuniao nao mostra o bloco de reunioes nem o saldo', async () => {
+      const { fixture } = await montar({
+        pedidos: [comSnapshot('p-1', SEM_REUNIAO)],
+      });
+
+      const texto = textoDe(fixture);
+      expect(
+        fixture.nativeElement.querySelector('app-reunioes-do-pedido'),
+      ).toBeNull();
+      expect(texto).not.toContain('usadas');
+      expect(texto).not.toContain('Marcar reunião');
+    });
+
+    it('avulso com uma reuniao mostra o bloco', async () => {
+      const { fixture } = await montar({
+        pedidos: [
+          comSnapshot('p-1', { ...SEM_REUNIAO, quantidadeReunioes: 1 }),
+        ],
+      });
+
+      expect(
+        fixture.nativeElement.querySelector('app-reunioes-do-pedido'),
+      ).not.toBeNull();
+    });
+
+    it('pedido legado, sem tipo, com reunioes segue igual', async () => {
+      const { fixture } = await montar({
+        pedidos: [pedido('p-1', [SEM_ARQUIVO])],
+      });
+
+      expect(textoDe(fixture)).toContain('usadas');
+    });
+
+    it('so um dos dois pedidos tem o bloco', async () => {
+      const { fixture } = await montar({
+        pedidos: [
+          comSnapshot('p-1', SEM_REUNIAO),
+          pedido('p-2', [SEM_ARQUIVO]),
+        ],
+      });
+
+      expect(
+        fixture.nativeElement.querySelectorAll('app-reunioes-do-pedido'),
+      ).toHaveLength(1);
+    });
+
+    it('sem nenhum pedido com reuniao, o painel de proximas reunioes some', async () => {
+      const { fixture } = await montar({
+        pedidos: [comSnapshot('p-1', SEM_REUNIAO)],
+      });
+
+      expect(textoDe(fixture)).not.toContain('Próximas reuniões');
+      expect(textoDe(fixture)).not.toContain('Você marca pelo cartão');
+    });
+
+    it('o cancelamento so fala de reuniao em pedido que tem reuniao', async () => {
+      const sem = await montar({
+        pedidos: [comSnapshot('p-1', SEM_REUNIAO)],
+      });
+      botaoCom(sem.fixture, 'Cancelar pedido')?.click();
+      sem.fixture.detectChanges();
+      expect(textoDe(sem.fixture)).toContain(
+        'Ao confirmar, este pedido será cancelado',
+      );
+      expect(textoDe(sem.fixture)).not.toContain('reuniões ainda futuras');
+
+      TestBed.resetTestingModule();
+      const com = await montar({
+        pedidos: [pedido('p-1', [SOLICITADO_LOCAL], false)],
+      });
+      botaoCom(com.fixture, 'Cancelar pedido')?.click();
+      com.fixture.detectChanges();
+      expect(textoDe(com.fixture)).toContain('reuniões ainda futuras');
+    });
+
+    it('mostra a descricao detalhada recolhida, preservando as quebras', async () => {
+      const { fixture } = await montar({
+        pedidos: [
+          comSnapshot('p-1', {
+            ...SEM_REUNIAO,
+            descricaoDetalhada: 'Primeira linha.\nSegunda linha.',
+          }),
+        ],
+      });
+
+      const botao = fixture.nativeElement.querySelector(
+        '.sobre__botao',
+      ) as HTMLButtonElement;
+      const texto = fixture.nativeElement.querySelector(
+        '.sobre__texto',
+      ) as HTMLElement;
+      expect(botao.getAttribute('aria-expanded')).toBe('false');
+      /* Fechada, a regiao existe e esta escondida: o `aria-controls` aponta para ela. */
+      expect(botao.getAttribute('aria-controls')).toBe(texto.id);
+      expect(texto.hidden).toBe(true);
+
+      botao.click();
+      fixture.detectChanges();
+
+      expect(botao.getAttribute('aria-expanded')).toBe('true');
+      expect(texto.hidden).toBe(false);
+      expect(texto.textContent).toBe('Primeira linha.\nSegunda linha.');
+    });
+
+    it('pedido antigo, sem descricao detalhada, nao mostra a secao', async () => {
+      const { fixture } = await montar({
+        pedidos: [pedido('p-1', [SEM_ARQUIVO])],
+      });
+
+      expect(fixture.nativeElement.querySelector('.sobre')).toBeNull();
+      expect(textoDe(fixture)).not.toContain('Sobre este serviço');
+    });
   });
 });

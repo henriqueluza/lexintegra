@@ -1,15 +1,18 @@
 import type { CanActivate, ExecutionContext, Type } from '@nestjs/common';
 import {
   BadRequestException,
+  RequestMethod,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import {
   GUARDS_METADATA,
+  METHOD_METADATA,
   ROUTE_ARGS_METADATA,
 } from '@nestjs/common/constants.js';
 import { Reflector } from '@nestjs/core';
 import type { Perfil } from 'shared';
 import { AdvogadosController } from './advogados/advogados.controller.js';
+import { AndamentoController } from './andamento/andamento.controller.js';
 import { AnamneseController } from './anamnese/anamnese.controller.js';
 import { ContestacoesAdminController } from './contestacoes/contestacoes.admin.controller.js';
 import { PagamentosAdminController } from './pagamentos/admin/pagamentos.admin.controller.js';
@@ -129,6 +132,7 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['contestacoes (B2)', ContestacoesAdminController],
     ['pagamentos problematicos (B2)', PagamentosAdminController],
     ['administradores (B2)', AdministradoresController],
+    ['andamento dos advogados (lote de novembro)', AndamentoController],
   ])(
     'a superficie administrativa de %s exige admin, na classe',
     (_nome, classe) => {
@@ -165,8 +169,33 @@ describe('anotacoes de seguranca dos controladores', () => {
     ['administradores.listar', AdministradoresController.prototype.listar],
     ['administradores.convidar', AdministradoresController.prototype.convidar],
     ['administradores.remover', AdministradoresController.prototype.remover],
+    ['andamento.listar', AndamentoController.prototype.listar],
+    ['andamento.detalhar', AndamentoController.prototype.detalhar],
   ])('o metodo administrativo %s nao se declara publico', (_nome, metodo) => {
     expect(reflector.get(CHAVE_PUBLICO, metodo)).toBeUndefined();
+  });
+
+  /**
+   * O ADMINISTRADOR VE O ANDAMENTO, E NAO AGE NELE (lote de novembro, ajuste 5).
+   * Um `POST` neste controlador seria o administrador disparando evento de
+   * entregavel em nome do advogado — a transicao manual que a regra inviolavel
+   * 14 proibe. A lista de metodos e lida do prototipo, e nao escrita aqui: um
+   * metodo novo entra na conferencia sem ninguem lembrar de acrescenta-lo.
+   */
+  it('o controlador de andamento so tem rotas de leitura', () => {
+    const metodos = Object.getOwnPropertyNames(
+      AndamentoController.prototype,
+    ).filter((nome) => nome !== 'constructor');
+
+    expect(metodos.sort()).toEqual(['detalhar', 'listar']);
+    for (const nome of metodos) {
+      const rota = (AndamentoController.prototype as Record<string, unknown>)[
+        nome
+      ] as object;
+      expect(Reflect.getMetadata(METHOD_METADATA, rota)).toBe(
+        RequestMethod.GET,
+      );
+    }
   });
 
   /**
@@ -522,7 +551,11 @@ describe('AdvogadosController', () => {
     const { controlador, chamadas } = montar();
     await controlador.editar(
       'uid-advogado',
-      { nome: 'Ana Souza', email: 'nova@escritorio.test', organizadorTeams: null },
+      {
+        nome: 'Ana Souza',
+        email: 'nova@escritorio.test',
+        organizadorTeams: null,
+      },
       ADMIN,
     );
     expect(chamadas).toEqual([

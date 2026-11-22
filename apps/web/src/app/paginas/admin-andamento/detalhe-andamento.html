@@ -1,0 +1,54 @@
+@if (carregando()) {
+<app-carregando
+  variante="tabela"
+  [linhas]="2"
+  rotulo="Carregando a trilha do pedido"
+/>
+} @else if (falha()) {
+<app-mensagem-erro variante="bloco">
+  Não foi possível carregar a trilha deste pedido. Feche e abra de novo.
+</app-mensagem-erro>
+} @else if (detalhe(); as dados) {
+<div class="detalhe">
+  @for (entregavel of dados.entregaveis; track entregavel.id) {
+  <section class="detalhe__bloco">
+    <h4 class="detalhe__titulo">{{ entregavel.nome }}</h4>
+    @if (entregavel.trilha.length === 0) {
+    <p class="detalhe__vazio">Sem passos registrados.</p>
+    } @else {
+    <ol class="detalhe__trilha">
+      @for (passo of entregavel.trilha; track $index) {
+      <li class="detalhe__passo">
+        <span class="detalhe__evento">{{ evento[passo.evento] }}</span>
+        <span class="detalhe__transicao">
+          @if (passo.de !== null && passo.de !== passo.para) { {{
+          estado[passo.de] }} → } {{ estado[passo.para] }}
+        </span>
+        <time class="detalhe__quando" [attr.datetime]="passo.em"
+          >{{ quando(passo.em) }}</time
+        >
+      </li>
+      }
+    </ol>
+    }
+  </section>
+  }
+  <section class="detalhe__bloco">
+    <h4 class="detalhe__titulo">Reuniões</h4>
+    @if (dados.reunioes.length === 0) {
+    <p class="detalhe__vazio">Nenhuma reunião neste pedido.</p>
+    } @else {
+    <ul class="detalhe__trilha">
+      @for (item of dados.reunioes; track item.id) {
+      <li class="detalhe__passo">
+        <span class="detalhe__evento"
+          >{{ horario(item.inicio, item.fim) }}</span
+        >
+        <span class="detalhe__transicao">{{ reuniao[item.estado] }}</span>
+      </li>
+      }
+    </ul>
+    }
+  </section>
+</div>
+}

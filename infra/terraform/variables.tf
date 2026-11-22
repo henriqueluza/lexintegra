@@ -368,3 +368,52 @@ variable "limite_base_clamav_horas" {
   type        = number
   default     = 48
 }
+
+# Backups do Firestore (lote de novembro de 2026, ADR-23) -------------------------
+
+variable "backup_diario_retencao_dias" {
+  description = <<-EOT
+    Por quantos dias o Firestore guarda cada backup DIARIO.
+
+    Proposta do lote de novembro (CHECKLIST), sujeita a orientacao do escritorio.
+    Mudar aqui exige mudar `RETENCAO_BACKUP_DIARIO_DIAS` em
+    `packages/shared/src/politica-de-guarda.ts`, que e o que a politica de
+    privacidade publica: um teste compara os dois e falha se divergirem.
+  EOT
+  type        = number
+  default     = 7
+
+  validation {
+    condition     = var.backup_diario_retencao_dias >= 1 && var.backup_diario_retencao_dias <= 98
+    error_message = "A retencao do backup diario vai de 1 a 98 dias (14 semanas e o teto do Firestore)."
+  }
+}
+
+variable "backup_semanal_retencao_semanas" {
+  description = <<-EOT
+    Por quantas semanas o Firestore guarda cada backup SEMANAL (tirado no domingo).
+
+    E a retencao MAXIMA de dado pessoal em backup, e por isso o numero que a
+    politica de privacidade cita (`RETENCAO_BACKUP_SEMANAL_SEMANAS`, conferido
+    por teste). O teto do servico e 14 semanas.
+  EOT
+  type        = number
+  default     = 8
+
+  validation {
+    condition     = var.backup_semanal_retencao_semanas >= 1 && var.backup_semanal_retencao_semanas <= 14
+    error_message = "A retencao do backup semanal vai de 1 a 14 semanas (teto do Firestore)."
+  }
+}
+
+variable "limite_backup_horas" {
+  description = <<-EOT
+    A partir de quantas horas sem backup novo o alerta dispara.
+
+    O backup diario nao tem horario fixo: o Firestore escolhe, e o intervalo
+    entre dois backups pode passar de 24 horas. 30 horas tolera essa folga sem
+    alarme falso e ainda avisa no mesmo dia em que o backup faltou.
+  EOT
+  type        = number
+  default     = 30
+}

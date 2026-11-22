@@ -17,6 +17,9 @@ const produto = {
   quantidadeReunioes: 2,
   numeroRevisoesPermitidas: 0,
   parcelas: 3,
+  tipoCobranca: 'assinatura',
+  descricaoDetalhada:
+    'Lemos os contratos em vigor.\n\nEntregamos o diagnóstico por prioridade.',
 };
 
 async function liberar(page: Page): Promise<void> {
@@ -48,6 +51,9 @@ test('ficha, expansão, busca interrompível e carrinho preservam os dados', asy
           entregaveis: [],
           descricao: '',
           quantidadeReunioes: 0,
+          parcelas: 1,
+          tipoCobranca: 'avulso',
+          descricaoDetalhada: '',
         },
       ],
     });
@@ -69,14 +75,34 @@ test('ficha, expansão, busca interrompível e carrinho preservam os dados', asy
   await expect(card.locator('.produto__total')).toHaveText(
     /ou R\$\s690,00 à vista/,
   );
-  await card.getByRole('button', { name: 'Ver tudo (6)' }).click();
+  /*
+   * O botao "+" (ajuste 1): o nome acessivel diz de que produto sao os
+   * detalhes, e a descricao detalhada ja esta no DOM, escondida, antes do
+   * clique — abrir nao faz chamada nenhuma.
+   */
+  const detalhes = card.locator('.produto__detalhada');
+  await expect(detalhes).toBeHidden();
+  await expect(detalhes).toContainText('Lemos os contratos em vigor.');
+  const mais = card.getByRole('button', {
+    name: 'Ver mais detalhes de Diagnóstico contratual',
+  });
+  await expect(mais).toHaveAttribute('aria-expanded', 'false');
+  await mais.focus();
+  await page.keyboard.press('Enter');
+  await expect(detalhes).toBeVisible();
   await expect(
     card.getByText('Análise contratual', { exact: true }),
   ).toBeVisible();
-  await card.getByRole('button', { name: 'Ver menos' }).click();
+  const menos = card.getByRole('button', {
+    name: 'Ver menos detalhes de Diagnóstico contratual',
+  });
+  await expect(menos).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Space');
+  await expect(detalhes).toBeHidden();
   await expect(
     card.getByText('Análise contratual', { exact: true }),
   ).toBeHidden();
+  expect(pedidos).toHaveLength(1);
   const busca = page.getByPlaceholder('Buscar um serviço');
   await busca.fill('nao-existe');
   await busca.fill('ANALISE');

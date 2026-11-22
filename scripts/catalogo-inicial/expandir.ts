@@ -30,6 +30,14 @@ export interface ProdutoInicial {
   readonly numeroRevisoesPermitidas: number;
   /** Em quantas vezes o site anuncia no cartao; 1 e so a vista. */
   readonly parcelas: number;
+  /** So assinatura parcela (`packages/shared/src/tipo-cobranca.ts`). */
+  readonly tipoCobranca: 'assinatura' | 'avulso';
+  /**
+   * O texto que o botao "+" do catalogo abre. `null` enquanto o escritorio nao
+   * enviar: o corpo sai SEM o campo, o schema o recusa, e o script de cadastro
+   * nao grava produto nenhum. Nao ha texto provisorio de proposito.
+   */
+  readonly descricaoDetalhada: string | null;
 }
 
 /** O corpo de `POST /api/admin/produtos` (`NovoProduto`, de `shared`). */
@@ -45,6 +53,9 @@ export interface CorpoDoProduto {
   readonly numeroRevisoesPermitidas: number;
   /** Em quantas vezes o site anuncia no cartao; 1 e so a vista. */
   readonly parcelas: number;
+  readonly tipoCobranca: 'assinatura' | 'avulso';
+  /** Ausente enquanto o texto do escritorio nao chegar. */
+  readonly descricaoDetalhada?: string;
 }
 
 /**
@@ -84,5 +95,9 @@ export function paraCorpo(produto: ProdutoInicial): CorpoDoProduto {
     intervaloMinimoReunioesDias: produto.intervaloMinimoReunioesDias,
     numeroRevisoesPermitidas: produto.numeroRevisoesPermitidas,
     parcelas: produto.parcelas,
+    tipoCobranca: produto.tipoCobranca,
+    ...(produto.descricaoDetalhada === null
+      ? {}
+      : { descricaoDetalhada: produto.descricaoDetalhada }),
   };
 }

@@ -4,6 +4,7 @@ import {
   dataLocal,
   impedimentoParaAgendar,
   mesDe,
+  ofereceReunioes,
   semanasDoMes,
   type HorarioDisponivel,
 } from 'shared';
@@ -70,6 +71,12 @@ export class HorariosService {
     agora: number = agora_(),
   ): Promise<HorarioDisponivel[]> {
     const pedido = await this.pedidoDoCliente(pedidoId, clienteUid);
+
+    /*
+     * Pedido sem reuniao (servico avulso, plano que nao inclui) nao tem horario
+     * a oferecer, e nao ha por que ler a grade do advogado para descobrir isso.
+     */
+    if (!ofereceReunioes(pedido.snapshot)) return [];
 
     /* Sem advogado atribuido nao ha grade para consultar. A tela diz por que. */
     if (pedido.advogadoId === null) return [];

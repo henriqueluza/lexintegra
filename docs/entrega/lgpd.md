@@ -179,8 +179,8 @@ um dia depois do deploy que a aplicou.
 
 | Ponto | Situação hoje |
 |---|---|
-| **PITR do Firestore** | Ligado (`infra/terraform/firestore.tf`). Um documento apagado é recuperável por até **7 dias**. A política precisa dizer se isso é aceitável e o que fazer se um backup for restaurado depois de uma eliminação |
-| **Backups agendados** | Nenhum. Não há `backup schedule` no Terraform. Se o escritório criar um, a política precisa cobrir |
+| **PITR do Firestore** | Ligado (`infra/terraform/firestore.tf`). Um documento apagado é recuperável por até **7 dias**. A política de privacidade passou a declarar as cópias (linha abaixo); o que fazer depois de uma restauração está no runbook |
+| **Backups agendados** | **Dois, desde o lote de novembro de 2026** (`infra/terraform/firestore.tf`, ADR-23): diário, guardado 7 dias, e semanal, guardado 8 semanas. Cada cópia tem **todos os dados de todos os titulares** e não permite eliminação seletiva: um titular eliminado hoje continua nas cópias já tiradas por até **8 semanas**. A política de privacidade diz isso (`TEXTO_COPIAS_DE_SEGURANCA`, minuta sujeita à revisão), a exportação do titular declara as cópias (`MAPA_COPIAS`), e **restaurar uma cópia obriga a refazer as eliminações posteriores a ela** ([`restaurar-backup.md`](../runbooks/restaurar-backup.md), seção 5). O controlador precisa confirmar os dois prazos |
 | **Versões antigas no bucket de arquivos** | O versionamento saiu no Bloco E, e a regra de ciclo de vida apaga as versões não atuais que sobraram (seção 3) |
 | **Soft delete do Cloud Storage** | Declarado em `storage.tf`: **7 dias** no bucket de arquivos (a janela de recuperação) e no de state; **zero** na quarentena, nos source maps e na base do ClamAV. Um arquivo excluído é recuperável por até 7 dias ([`operacao.md`](operacao.md), seção 6) |
 | **Logs** | Bucket `_Default` do Cloud Logging, com 30 dias. A aplicação não loga dado pessoal por regra, mas mensagens de terceiros podem conter. O motivo de falha de e-mail tem o endereço redigido. **Registros de acesso** (log de requisição da API: data, hora, IP, caminho) também no bucket `registros-de-acesso`, por 186 dias (Marco Civil, art. 15), sem o `webhookSecret` |
@@ -265,7 +265,7 @@ eliminação). A coluna **Grupo** diz a guarda (seção 3).
 | `outbox` | `destinatarioUid` | tipo do evento e estado; **sem** endereço nem link (ADR-03) | `contrato` | Idem |
 | `aceites-de-termos` | `usuarioUid` | versão aceita e data | `contrato` | Idem |
 | `disponibilidades` | `reserva.pedidoId` | dado do **advogado**; a reserva aponta o pedido | `limpar_referencia` | Perde só a referência |
-| `auditoria` | `alvo` | quem fez a ação administrativa; na edição de advogado, e-mail antes e depois | `trilha` | Nunca (append-only) |
+| `auditoria` | `alvo` | quem fez a ação administrativa; na edição de advogado, e-mail antes e depois; e qual administrador **consultou** o andamento de um pedido do titular (`pedido.consultado`, desde o lote de novembro) | `trilha` | Nunca (append-only) |
 | `solicitacoes-lgpd` | `titularChave` (pseudônimo) | o protocolo do atendimento | `trilha` | Nunca: é a prova do atendimento |
 | `retencoes-legais` | pseudônimo do titular | `motivo` e `descricao` em texto livre | fora do mapa | Removida pelo administrador (`DELETE .../retencao-legal`) |
 | `advogados`, `administradores` | — | nome e e-mail da **equipe** | fora do mapa do cliente | Contrato de trabalho de cada um (seção 4) |

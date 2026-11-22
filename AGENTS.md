@@ -45,13 +45,39 @@ num módulo, porque elas guardam as armadilhas de cada um.*
   em produção o confirma (`docs/runbooks/ligar-terceiros.md` 1.6 e 1.8).
 - **Preços e parcelas** (#90 e #94): `parcelas` é campo do produto (1 a 12,
   padrão 1), congelado no snapshot; o catálogo anuncia a parcela
-  (`shared/parcelamento`, resto na primeira) e "ou R$ X à vista". A página do
-  AbacatePay oferece até 12x em todo produto (configuração global do painel);
-  o campo só governa o que o site anuncia. Formas de pagamento numa fonte só
-  (`shared/formas-de-pagamento`). O catálogo do repositório (11/11/2026) são
-  3 planos e 23 avulsos, sem pacotes fechados; produção ainda tem os seis
-  produtos antigos (CHECKLIST): `scripts/cadastrar-catalogo-inicial.mjs`
-  **pula produto existente e não tem `--atualizar`**.
+  (`shared/parcelamento`, resto na primeira) e "ou R$ X à vista". Formas de
+  pagamento numa fonte só (`shared/formas-de-pagamento`). O catálogo do
+  repositório (11/11/2026) são 3 planos e 23 avulsos, sem pacotes fechados;
+  produção ainda tem os seis produtos antigos (CHECKLIST):
+  `scripts/cadastrar-catalogo-inicial.mjs` **pula produto existente e não tem
+  `--atualizar`**.
+- **Tipo de cobrança e descrição detalhada** (lote de novembro de 2026, Bloco
+  A, `feat/tipo-de-produto`): o produto tem `tipoCobranca` (`assinatura` |
+  `avulso`) e `descricaoDetalhada`, os dois no snapshot. **Só assinatura
+  parcela**: a vitrine anuncia avulso à vista, e a cobrança de cartão leva o
+  teto em `card.maxInstallments`, calculado no servidor sobre os snapshots
+  (`shared/tipo-cobranca`, emenda de 18/11/2026 ao ADR-19); carrinho com
+  avulso vai inteiro à vista. **O nome não é cobrança recorrente**, e **a
+  reunião não segue o tipo**: quem diz se o pedido tem reunião é a quantidade
+  do snapshot (há um avulso com reunião, exceção decidida em 18/11/2026).
+  Pedido e produto anteriores não têm os campos e **não foram reescritos**:
+  leia com `tipoCobrancaDe` e `descricaoDetalhadaDe`, nunca o campo cru.
+  `esquemaProduto` é tolerante (reidrata snapshot); `esquemaNovoProduto` é
+  estrito (cadastro). **`card.maxInstallments` ainda não foi provado no
+  sandbox**, e as 26 descrições detalhadas do catálogo aguardam o escritório
+  (o script de cadastro recusa rodar sem elas): CHECKLIST.
+- **Backups do Firestore** (lote de novembro de 2026, Bloco G,
+  `feat/backup-firestore`, ADR-23): dois agendamentos nativos em
+  `firestore.tf`, diário guardado 7 dias e semanal guardado 8 semanas, mais o
+  PITR de 7 dias que já existia. **O alerta é de idade** (*Backup do Firestore
+  atrasado*): a sonda lê a API de administração (`sinais/backups.ts`) e
+  escreve `backupSegundos`; leitura recusada vira idade de 30 dias, de
+  propósito. As retenções têm par em `shared/politica-de-guarda`, que a
+  política de privacidade publica, e **um teste compara com o Terraform**. Os
+  arquivos dos buckets **não** têm backup, por decisão. Restaurar é humano
+  (`docs/runbooks/restaurar-backup.md`) e obriga a refazer as eliminações
+  LGPD posteriores à cópia. **Trocar produção para um banco restaurado não
+  está automatizado** (CHECKLIST).
 - **Teams pela conta organizadora** desde o deploy de 02/11/2026 (#91):
   `INTEGRACAO_GRAPH_DESTRAVADA = true`, `reunioes_modo = "graph"`. As salas são
   criadas por `operacional@` (`TEAMS_ORGANIZADOR_PADRAO`, literal no
@@ -66,6 +92,26 @@ num módulo, porque elas guardam as armadilhas de cada um.*
   `suporte@notificacoes.lexintegra.com.br`, reply-to e único contato
   `suportelexintegra@gmail.com`, plano gratuito (100 por dia). Todos os
   alertas vão para o mesmo endereço; nenhum acorda alguém (lint).
+
+**Lote de novembro num PR só (22/11/2026).** Os quatro PRs prontos (#100
+Bloco A, #101 Bloco G, #102 correção do envio, #103 Bloco D) foram juntados em
+`feat/lote-novembro-integracao`, para um merge e um deploy. O que depende de
+pessoa antes e depois desse merge está na lista 0 do CHECKLIST. Os Blocos B,
+C, E e F não começaram.
+
+**O administrador vê o andamento dos advogados** (lote de novembro, ajuste 5,
+branch `feat/admin-visao-advogados`): `/admin/andamento`, sobre
+`GET /api/admin/andamento` e `.../pedidos/{id}` (`apps/api/src/andamento/`).
+**Só leitura e só andamento**: o módulo não importa nada que escreva em
+entregável, não devolve observação, ficha, nome de arquivo nem link de sala, e
+`controladores.spec.ts` confere que o controlador só tem `GET`. De quem é a vez
+e o que é "parado" são regras puras em `shared/andamento`, calculadas na tela
+com o relógio do servidor (`geradoEm`). O entregável ganhou **`estadoDesde`**
+(escrito na criação e em cada transição; `atualizadoEm` não serve, o upload o
+reescreve); documento anterior ao campo responde pela última transição da
+trilha, sem migração. As duas rotas são as primeiras **leituras auditadas**
+(`registrarConsulta`, esperada antes da resposta). Teto de 200 pedidos por
+carga, sem índice novo.
 
 **Documentação completa:** o índice é [`docs/README.md`](docs/README.md)
 (caminho principal, arquitetura em uma página, todos os documentos). Entrega em
@@ -105,9 +151,9 @@ escritório.
   mais `roles/editor` (29/09/2026), e a chave JSON da `firebase-adminsdk-fbsvc`
   foi apagada (30/09/2026). O repositório é privado desde 29/09/2026.
 
-**Pendências: a lista única é o [`CHECKLIST.md`](CHECKLIST.md)**, que desde
-02/11/2026 só tem duas listas abertas: **testes em produção** e
-**transferência**. Pendência nova entra lá, e em nenhum outro lugar.
+**Pendências: a lista única é o [`CHECKLIST.md`](CHECKLIST.md)**, com três
+listas abertas: o **lote de novembro** (14 ajustes do cliente, em sete blocos,
+desde 18/11/2026), os **testes em produção** e a **transferência**. Pendência nova entra lá, e em nenhum outro lugar.
 
 ## Stack
 
@@ -136,6 +182,7 @@ apps/web/          Angular 22, pré-renderização estática das rotas públicas
   src/app/paginas/advogado-disponibilidade/ grade semanal (ADR-06)
   src/app/paginas/advogado-agenda/ o que os clientes marcaram, so o futuro
   src/app/paginas/admin-distribuicao/ caixa de entrada e atribuicao
+  src/app/paginas/admin-andamento/ o trabalho dos advogados, so leitura; filtros no navegador
   src/app/paginas/admin-clientes/ busca e filtro (item 2.5.8)
   src/app/paginas/admin-entregas/ painel do outbox: o que falhou e o reenvio
   src/app/paginas/admin-reunioes/ reunioes sem sala; o reenvio passa pelo outbox
@@ -158,6 +205,7 @@ apps/api/          NestJS 12 (ESM-only), prefixo global /api
   src/contas-cliente/ segundo escritor de claim (regra 17), só `cliente`
   src/administradores/ terceiro escritor de claim (regra 17, B2), só `admin`
   src/auditoria/    log de auditoria das ações administrativas (B2), append-only
+  src/andamento/    o admin lê o andamento dos advogados; só GET, com leitura auditada
   src/estornos/     estorno do admin, manual ou integral via outbox
   src/anamnese/      ficha inicial (definitiva-v1); uma por cliente, sem reescrita
   src/entregaveis/  máquina de estados do ADR-11 e a trilha de transições
@@ -261,6 +309,15 @@ tsconfig.deps.json existe só para o dependency-cruiser resolver `shared` na fon
   definição. **Não desligue a imutabilidade** — ela é o que torna a imagem
   auditável; o que estava errado era o pipeline supor que publicar sempre dá
   certo.
+- **A URL assinada de escrita vai com os cabeçalhos assinados, e o armazenamento
+  falso confere** (errata de 19/11/2026 em `docs/arquitetura.md`, 7.3). O tipo e
+  o teto de tamanho entram na assinatura como cabeçalhos, e o `PUT` precisa
+  mandá-los iguais: `urlDeEscrita` devolve `{ url, cabecalhos }` e o navegador
+  envia `cabecalhos` como veio. Até essa data o navegador mandava só o
+  `Content-Type` e **nenhum arquivo subia em produção**, sem nenhum teste
+  acusar, porque o falso aceitava qualquer `PUT`. Ao mexer na assinatura, mude
+  `cabecalhosDaEscrita`, que é a fonte única. E **`pendente_upload` não é
+  arquivo enviado**: a pergunta é `arquivoFoiEnviado`, na tela e no servidor.
 - **Toda variável do root module do Terraform precisa de `default` — e isso é
   lint** (`pnpm lint` → `scripts/conferir-defaults-terraform.mjs`). O deploy tem
   um apply **parcial** logo no começo ("Garantir o Artifact Registry"), porque a

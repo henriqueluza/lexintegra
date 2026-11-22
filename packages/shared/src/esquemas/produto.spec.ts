@@ -1,6 +1,7 @@
 import {
   congelarProduto,
   esquemaNovoProduto,
+  esquemaProduto,
   esquemaSituacao,
   SITUACOES_PRODUTO,
   TETO_ENTREGAVEIS_POR_PRODUTO,
@@ -19,6 +20,9 @@ const VALIDO: NovoProduto = {
   intervaloMinimoReunioesDias: 7,
   numeroRevisoesPermitidas: 2,
   parcelas: 3,
+  tipoCobranca: 'assinatura',
+  descricaoDetalhada:
+    'Levantamos os contratos vigentes, apontamos os riscos e indicamos o que corrigir primeiro.',
 };
 
 describe('esquemaNovoProduto', () => {
@@ -120,6 +124,15 @@ describe('esquemaNovoProduto', () => {
     ['zero parcelas', { parcelas: 0 }],
     ['parcelas fracionadas', { parcelas: 2.5 }],
     ['parcelas acima do painel do AbacatePay', { parcelas: 13 }],
+    ['tipo de cobranca ausente', { tipoCobranca: undefined }],
+    ['tipo de cobranca desconhecido', { tipoCobranca: 'recorrente' }],
+    ['descricao detalhada ausente', { descricaoDetalhada: undefined }],
+    ['descricao detalhada vazia', { descricaoDetalhada: '' }],
+    ['descricao detalhada so com espacos', { descricaoDetalhada: ' '.repeat(80) }],
+    ['descricao detalhada curta', { descricaoDetalhada: 'a'.repeat(19) }],
+    ['descricao detalhada acima do teto', { descricaoDetalhada: 'a'.repeat(5001) }],
+    ['avulso parcelado', { tipoCobranca: 'avulso', parcelas: 2 }],
+    ['avulso em doze vezes', { tipoCobranca: 'avulso', parcelas: 12 }],
   ])('recusa %s', (_caso, alteracao) => {
     expect(
       esquemaNovoProduto.safeParse({ ...VALIDO, ...alteracao }).success,
@@ -153,6 +166,77 @@ describe('esquemaNovoProduto', () => {
     expect(campos).toEqual(['entregaveis', 'precoCentavos']);
   });
 
+  it('aceita a descricao detalhada nos dois limites, aparada', () => {
+    expect(
+      esquemaNovoProduto.parse({
+        ...VALIDO,
+        descricaoDetalhada: `  ${'a'.repeat(20)}  `,
+      }).descricaoDetalhada,
+    ).toBe('a'.repeat(20));
+    expect(
+      esquemaNovoProduto.safeParse({
+        ...VALIDO,
+        descricaoDetalhada: 'a'.repeat(5000),
+      }).success,
+    ).toBe(true);
+  });
+
+  /**
+   * PARCELAMENTO SO EM ASSINATURA (ajuste 11). A recusa mora no servidor: a tela
+   * esconde o campo, e esconder nunca e a unica defesa.
+   */
+  it('aceita avulso a vista e assinatura parcelada', () => {
+    expect(
+      esquemaNovoProduto.safeParse({
+        ...VALIDO,
+        tipoCobranca: 'avulso',
+        parcelas: 1,
+      }).success,
+    ).toBe(true);
+    expect(
+      esquemaNovoProduto.safeParse({
+        ...VALIDO,
+        tipoCobranca: 'assinatura',
+        parcelas: 12,
+      }).success,
+    ).toBe(true);
+  });
+
+  it('avulso sem parcelas informadas vale uma', () => {
+    const { parcelas: _parcelas, ...semParcelas } = VALIDO;
+    expect(
+      esquemaNovoProduto.parse({ ...semParcelas, tipoCobranca: 'avulso' })
+        .parcelas,
+    ).toBe(1);
+  });
+
+  it('pendura o erro do avulso parcelado em parcelas', () => {
+    const resultado = esquemaNovoProduto.safeParse({
+      ...VALIDO,
+      tipoCobranca: 'avulso',
+      parcelas: 6,
+    });
+
+    expect(
+      (resultado.error?.issues ?? []).map((problema) => problema.path.join('.')),
+    ).toEqual(['parcelas']);
+  });
+
+  /**
+   * EXCECAO DE 18/11/2026: avulso PODE ter reuniao (a "Reuniao avulsa
+   * estrategica"). O tipo governa o parcelamento, nao a reuniao.
+   */
+  it('aceita avulso com reuniao', () => {
+    expect(
+      esquemaNovoProduto.safeParse({
+        ...VALIDO,
+        tipoCobranca: 'avulso',
+        parcelas: 1,
+        quantidadeReunioes: 1,
+      }).success,
+    ).toBe(true);
+  });
+
   /**
    * `ativo` fica FORA do schema. Se entrasse pelo corpo, um `PUT` de edicao de
    * preco reativaria em silencio um produto tirado do ar de proposito — e a
@@ -168,6 +252,51 @@ describe('esquemaNovoProduto', () => {
 
     expect(analisado).toEqual(VALIDO);
     expect('ativo' in analisado).toBe(false);
+  });
+});
+
+/**
+ * O SCHEMA TOLERANTE e o que reidrata o snapshot do checkout
+ * (`PedidosService.preparar`). Um checkout aberto antes do deploy do lote de
+ * novembro chega sem os dois campos novos: recusa-lo aqui transformaria um
+ * pagamento confirmado em erro 500, com o dinheiro ja no gateway.
+ */
+describe('esquemaProduto (leitura do que ja foi gravado)', () => {
+  const {
+    tipoCobranca: _tipo,
+    descricaoDetalhada: _detalhada,
+    ...ANTIGO
+  } = VALIDO;
+
+  it('aceita o snapshot anterior ao tipo e a descricao detalhada', () => {
+    const lido = esquemaProduto.parse(ANTIGO);
+
+    expect(lido.tipoCobranca).toBeUndefined();
+    expect(lido.descricaoDetalhada).toBe('');
+  });
+
+  it('o mesmo corpo e recusado na porta de entrada', () => {
+    expect(esquemaNovoProduto.safeParse(ANTIGO).success).toBe(false);
+  });
+
+  it('preserva os dois campos quando o snapshot ja os tem', () => {
+    const lido = esquemaProduto.parse(VALIDO);
+
+    expect(lido.tipoCobranca).toBe('assinatura');
+    expect(lido.descricaoDetalhada).toBe(VALIDO.descricaoDetalhada);
+  });
+
+  it('continua recusando tipo desconhecido e texto acima do teto', () => {
+    expect(
+      esquemaProduto.safeParse({ ...ANTIGO, tipoCobranca: 'recorrente' })
+        .success,
+    ).toBe(false);
+    expect(
+      esquemaProduto.safeParse({
+        ...ANTIGO,
+        descricaoDetalhada: 'a'.repeat(5001),
+      }).success,
+    ).toBe(false);
   });
 });
 
@@ -199,8 +328,35 @@ describe('congelarProduto', () => {
     ...VALIDO,
   };
 
-  it('copia os dez campos do produto', () => {
+  it('copia os doze campos do produto', () => {
     expect(congelarProduto(RESUMO)).toEqual(VALIDO);
+  });
+
+  /**
+   * PRODUTO AINDA NAO CLASSIFICADO (gravado antes de novembro de 2026). A API o
+   * devolve com `tipoCobranca: null`; o snapshot sai SEM a chave, porque o
+   * Firestore recusa `undefined` e `null` gravado se passaria por classificacao.
+   */
+  it('produto legado congela sem a chave do tipo e com descricao vazia', () => {
+    const {
+      tipoCobranca: _tipo,
+      descricaoDetalhada: _detalhada,
+      ...antigo
+    } = RESUMO;
+
+    for (const legado of [antigo, { ...antigo, tipoCobranca: null }]) {
+      const snapshot = congelarProduto(legado);
+
+      expect('tipoCobranca' in snapshot).toBe(false);
+      expect(snapshot.descricaoDetalhada).toBe('');
+    }
+  });
+
+  it('congela o tipo avulso', () => {
+    expect(
+      congelarProduto({ ...RESUMO, tipoCobranca: 'avulso', parcelas: 1 })
+        .tipoCobranca,
+    ).toBe('avulso');
   });
 
   /**

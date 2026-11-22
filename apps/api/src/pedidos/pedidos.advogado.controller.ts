@@ -6,6 +6,7 @@ import {
   type AnamneseResumo,
   type DemandaResumo,
   type EntregavelResumo,
+  type EnvioAutorizado,
   type NovaObservacao,
   type ObservacaoResumo,
   type PedidoDeUpload,
@@ -136,7 +137,7 @@ export class PedidosAdvogadoController {
     @Param('entregavelId') entregavelId: string,
     @Body(new ZodPipe(esquemaPedidoDeUpload)) arquivo: PedidoDeUpload,
     @UsuarioAtual() advogado: UsuarioAutenticado,
-  ): Promise<{ url: string; versao: number; validoPorSegundos: number }> {
+  ): Promise<EnvioAutorizado & { versao: number }> {
     return this.upload.pedirEnvio(
       { pedidoId, entregavelId },
       advogado.uid,

@@ -32,6 +32,9 @@ const PRODUTO: NovoProduto = {
   intervaloMinimoReunioesDias: 0,
   numeroRevisoesPermitidas: 2,
   parcelas: 1,
+  tipoCobranca: 'assinatura',
+  descricaoDetalhada:
+    'Texto detalhado do produto, com o que ele cobre e como funciona.',
 };
 
 interface Arranjo {
@@ -88,6 +91,22 @@ async function montar(
   };
 }
 
+/**
+ * O `PUT` chegou ao bucket e o advogado confirmou o envio: e o que
+ * `UploadDeEntregavelService.confirmarEnvio` grava. `registrarArquivo` sozinho
+ * deixa o arquivo em `pendente_upload`, que e so a URL emitida — e ai NAO ha
+ * arquivo para o cliente decidir (`arquivoFoiEnviado`, 19/11/2026).
+ */
+function arquivoChegou(banco: FirestoreFalso): void {
+  const documento = banco.documentos.get(CAMINHO) as {
+    arquivoAtual: Record<string, unknown>;
+  };
+  banco.documentos.set(CAMINHO, {
+    ...documento,
+    arquivoAtual: { ...documento.arquivoAtual, estado: 'pendente_scan' },
+  });
+}
+
 /** Leva o entregavel ate `em_elaboracao` com arquivo enviado — o unico ponto de
  * onde o cliente pode confirmar ou pedir revisao. */
 async function ateAguardandoCliente(revisoes = 2): Promise<Arranjo> {
@@ -98,6 +117,7 @@ async function ateAguardandoCliente(revisoes = 2): Promise<Arranjo> {
     { nome: 'minuta.pdf' },
     ADVOGADO,
   );
+  arquivoChegou(arranjo.banco);
   return arranjo;
 }
 
@@ -119,6 +139,7 @@ describe('EntregaveisService', () => {
         ADVOGADO,
       );
       expect(estado(banco)).toBe('em_elaboracao');
+      arquivoChegou(banco);
 
       const final = await entregaveis.confirmarEntrega(ALVO, CLIENTE);
       expect(final.estado).toBe('entregue');
@@ -265,6 +286,51 @@ describe('EntregaveisService', () => {
     });
 
     /**
+     * ENTREGUE SO DEPOIS DO UPLOAD (regra inviolavel 14), e upload e arquivo no
+     * bucket. `registrarArquivo` deixa `arquivoAtual` em `pendente_upload`: a URL
+     * assinada foi emitida e o `PUT` ainda nao aconteceu — ou falhou, como falhou
+     * todo envio em producao ate 19/11/2026. Ate ali o servidor aceitava a
+     * confirmacao so por existir o registro, e o cliente confirmava a entrega de
+     * um arquivo que nunca chegou.
+     */
+    it('recusa confirmar a entrega de arquivo que nao chegou ao bucket', async () => {
+      const { banco, entregaveis } = await montar();
+      await entregaveis.iniciarTrabalho(ALVO, ADVOGADO);
+      await entregaveis.registrarArquivo(
+        ALVO,
+        { nome: 'minuta.pdf' },
+        ADVOGADO,
+      );
+
+      await expect(entregaveis.confirmarEntrega(ALVO, CLIENTE)).rejects.toThrow(
+        /ainda nao tem arquivo enviado/,
+      );
+      await expect(entregaveis.pedirRevisao(ALVO, CLIENTE)).rejects.toThrow(
+        /ainda nao tem arquivo enviado/,
+      );
+      expect(estado(banco)).toBe('em_elaboracao');
+      expect(banco.documentos.get(CAMINHO)?.['revisoesUsadas']).toBe(0);
+    });
+
+    /** A tela pergunta a mesma coisa pelo resumo: sem arquivo, sem botao. */
+    it('o resumo so diz que ha arquivo depois de ele chegar', async () => {
+      const { banco, entregaveis } = await montar();
+      await entregaveis.iniciarTrabalho(ALVO, ADVOGADO);
+
+      const pedida = await entregaveis.registrarArquivo(
+        ALVO,
+        { nome: 'minuta.pdf' },
+        ADVOGADO,
+      );
+      expect(pedida.temArquivo).toBe(false);
+      expect(pedida.arquivoServivel).toBe(false);
+
+      arquivoChegou(banco);
+      const confirmada = await entregaveis.pedirRevisao(ALVO, CLIENTE);
+      expect(confirmada.temArquivo).toBe(true);
+    });
+
+    /**
      * Nao ha metodo `mudarEstado`. Este teste defende a AUSENCIA: um metodo que
      * aceitasse estado de destino seria a transicao manual que o ADR-11 proibe, e
      * nenhum outro teste quebraria se alguem o acrescentasse.
@@ -333,6 +399,7 @@ describe('EntregaveisService', () => {
       await entregaveis.pedirRevisao(ALVO, CLIENTE);
       await entregaveis.retomarTrabalho(ALVO, ADVOGADO);
       await entregaveis.registrarArquivo(ALVO, { nome: 'v2.pdf' }, ADVOGADO);
+      arquivoChegou(banco);
 
       await expect(entregaveis.pedirRevisao(ALVO, CLIENTE)).rejects.toThrow(
         /Saldo de revisoes esgotado/,
@@ -391,6 +458,7 @@ describe('EntregaveisService', () => {
         { nome: 'minuta.pdf' },
         ADVOGADO,
       );
+      arquivoChegou(banco);
 
       await produtos.editar(
         produtoOrigemId,
@@ -456,6 +524,73 @@ describe('EntregaveisService', () => {
         `update ${CAMINHO}`,
         `create ${CAMINHO}/transicoes/0002`,
       ]);
+    });
+  });
+
+  /**
+   * Lote de novembro, ajuste 5. `estadoDesde` e o que a tela do administrador
+   * mostra como "desde quando", e so vale se for escrito por TRANSICAO e por mais
+   * nada. O dublê nao materializa o carimbo do servidor, entao o campo e marcado
+   * com um valor reconhecivel e o teste olha quem o troca.
+   */
+  describe('desde quando esta no estado', () => {
+    function marcar(banco: FirestoreFalso): void {
+      banco.documentos.set(CAMINHO, {
+        ...banco.documentos.get(CAMINHO),
+        estadoDesde: 'MARCA',
+      });
+    }
+
+    function desde(banco: FirestoreFalso): unknown {
+      return banco.documentos.get(CAMINHO)?.['estadoDesde'];
+    }
+
+    it('cada transicao reescreve o campo, com o carimbo da propria trilha', async () => {
+      const { banco, entregaveis } = await montar();
+
+      marcar(banco);
+      await entregaveis.iniciarTrabalho(ALVO, ADVOGADO);
+      expect(desde(banco)).not.toBe('MARCA');
+      expect(desde(banco)).toEqual(
+        banco.documentos.get(`${CAMINHO}/transicoes/0002`)?.['em'],
+      );
+
+      await entregaveis.registrarArquivo(ALVO, { nome: 'v1.pdf' }, ADVOGADO);
+      /* Envio pendente nao e arquivo enviado: a revisao exige que ele chegue. */
+      arquivoChegou(banco);
+      marcar(banco);
+      await entregaveis.pedirRevisao(ALVO, CLIENTE);
+      expect(desde(banco)).not.toBe('MARCA');
+
+      marcar(banco);
+      await entregaveis.retomarTrabalho(ALVO, ADVOGADO);
+      expect(desde(banco)).not.toBe('MARCA');
+
+      marcar(banco);
+      await entregaveis.confirmarEntrega(ALVO, CLIENTE);
+      expect(desde(banco)).not.toBe('MARCA');
+    });
+
+    /** "Em elaboracao ha 20 dias" nao pode virar "ha 2 horas" a cada arquivo. */
+    it('o upload NAO toca no campo', async () => {
+      const { banco, entregaveis } = await montar();
+      await entregaveis.iniciarTrabalho(ALVO, ADVOGADO);
+      marcar(banco);
+
+      await entregaveis.registrarArquivo(ALVO, { nome: 'v1.pdf' }, ADVOGADO);
+
+      expect(desde(banco)).toBe('MARCA');
+    });
+
+    it('transicao recusada nao toca no campo', async () => {
+      const { banco, entregaveis } = await montar();
+      marcar(banco);
+
+      await expect(entregaveis.confirmarEntrega(ALVO, CLIENTE)).rejects.toThrow(
+        ConflictException,
+      );
+
+      expect(desde(banco)).toBe('MARCA');
     });
   });
 

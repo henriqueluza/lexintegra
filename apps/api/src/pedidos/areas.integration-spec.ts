@@ -16,7 +16,7 @@ import { ConsultaPedidosService } from './consulta.service.js';
 import { ConsultaReunioesService } from '../reunioes/consulta.service.js';
 import { DistribuicaoService } from './distribuicao.service.js';
 import { PedidosService, type NovoPedido } from './pedidos.service.js';
-import { comSnapshot } from '../arnes-pedidos.js';
+import { arquivoChegou, comSnapshot } from '../arnes-pedidos.js';
 import type { ConfiguracaoReunioes } from '../reunioes/sala/modo.js';
 
 /**
@@ -24,7 +24,11 @@ import type { ConfiguracaoReunioes } from '../reunioes/sala/modo.js';
  * com o Teams nao existir, e o cartao diz isso ao cliente em vez de oferecer um
  * botao que responde 503 — ver `CartaoPedido.agendamentoDisponivel`.
  */
-const LIGADO: ConfiguracaoReunioes = { modo: 'falso', graph: null, organizadorPadrao: '00000000-0000-4000-8000-000000000000' };
+const LIGADO: ConfiguracaoReunioes = {
+  modo: 'falso',
+  graph: null,
+  organizadorPadrao: '00000000-0000-4000-8000-000000000000',
+};
 
 const ADMIN = 'uid-admin';
 const CLARA = 'uid-clara';
@@ -197,6 +201,7 @@ describe('o cliente ve um cartao por pedido', () => {
       },
       ANA,
     );
+    await arquivoChegou(banco, alvo);
     await entregaveis.pedirRevisao(alvo, CLARA);
 
     const cartoes = await consulta.listarDoCliente(CLARA);
@@ -317,6 +322,7 @@ describe('o ciclo completo do entregavel', () => {
       },
       ANA,
     );
+    await arquivoChegou(banco, alvo);
     await entregaveis.confirmarEntrega(alvo, CLARA);
 
     cartao = await consulta.obterCartao('clara-contrato', CLARA);
@@ -344,6 +350,7 @@ describe('o ciclo completo do entregavel', () => {
       },
       ANA,
     );
+    await arquivoChegou(banco, alvo);
     await entregaveis.registrarArquivo(
       alvo,
       {
@@ -354,6 +361,7 @@ describe('o ciclo completo do entregavel', () => {
       },
       ANA,
     );
+    await arquivoChegou(banco, alvo);
 
     const trilha = await banco
       .collection('pedidos')

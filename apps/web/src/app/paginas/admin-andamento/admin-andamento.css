@@ -1,0 +1,141 @@
+/* Direcao B (Pauta) por heranca da shell autenticada. */
+.andamento__nota {
+  margin: 0;
+  max-width: var(--medida-texto);
+  color: var(--texto-3);
+  font-size: var(--t-mini);
+}
+
+.andamento__atalhos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s5);
+}
+
+.andamento__atalho {
+  color: var(--acento);
+  font-size: var(--t-menor);
+  font-weight: var(--peso-medio);
+  text-decoration: underline;
+  text-underline-offset: var(--s1);
+}
+
+.andamento__atalho:hover {
+  color: var(--acento-forte);
+}
+
+.andamento__filtros {
+  display: grid;
+  gap: var(--s4);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 48rem) {
+  .andamento__filtros {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.andamento__corte {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s2);
+  margin: 0;
+  padding: var(--s3) var(--s4);
+  border-left: var(--borda-media) solid var(--estado-alerta);
+  background: var(--estado-alerta-fundo);
+  color: var(--texto);
+  font-size: var(--t-menor);
+}
+
+.andamento__contagem {
+  margin: 0;
+  color: var(--texto-2);
+  font-size: var(--t-menor);
+}
+
+.andamento__celula {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s1);
+}
+
+.andamento__forte {
+  display: block;
+  font-weight: var(--peso-medio);
+  color: var(--texto);
+}
+
+.andamento__apoio {
+  display: block;
+  color: var(--texto-3);
+  font-size: var(--t-mini);
+}
+
+/* "Parado" e texto com icone, nao so cor: o aviso sobrevive sem distinguir tons. */
+.andamento__parado {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  margin-top: var(--s1);
+  padding: var(--selo-preenchimento);
+  border-radius: var(--selo-raio);
+  background: var(--estado-alerta-fundo);
+  color: var(--estado-alerta);
+  font-size: var(--t-micro);
+  font-weight: var(--peso-extra);
+}
+
+.andamento__trilha-botao {
+  padding: var(--botao-preenchimento-p);
+  border: var(--borda-fina) solid var(--divisor-forte);
+  border-radius: var(--raio);
+  background: transparent;
+  color: var(--acento);
+  font-family: var(--fonte-interface);
+  font-size: var(--t-mini);
+  font-weight: var(--botao-peso);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--duracao-rapida) ease,
+    color var(--duracao-rapida) ease;
+}
+
+.andamento__trilha-botao:hover {
+  background: var(--acento-fundo);
+}
+
+.andamento__subtitulo {
+  font-size: var(--t-t3);
+  font-weight: var(--peso-extra);
+}
+
+.andamento__trilhas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.andamento__painel {
+  padding: var(--s5);
+  border: var(--borda-fina) solid var(--divisor);
+  border-radius: var(--raio-cartao);
+  background: var(--superficie-elevada);
+}
+
+.andamento__painel-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s4);
+}
+
+.andamento__painel-titulo {
+  margin: 0;
+  font-size: var(--t-menor);
+  font-weight: var(--peso-extra);
+}

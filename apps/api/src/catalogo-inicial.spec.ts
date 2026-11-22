@@ -4,6 +4,7 @@ import {
   paraCorpo,
 } from '../../../scripts/catalogo-inicial/expandir.js';
 import {
+  AGUARDANDO_ESCRITORIO,
   CATALOGO_INICIAL,
   REVISOES_PADRAO,
 } from '../../../scripts/catalogo-inicial/produtos.data.js';
@@ -71,13 +72,52 @@ describe('catalogo inicial', () => {
     expect(JSON.stringify(CATALOGO_INICIAL)).not.toMatch(/pacote \d/i);
   });
 
+  /**
+   * A DESCRICAO DETALHADA VEM DO ESCRITORIO (decisao de 18/11/2026), e ate
+   * chegar o produto NAO passa no schema: e o que impede o script de cadastro de
+   * gravar um catalogo sem o texto. O que este teste garante e que essa e a
+   * UNICA coisa que falta: qualquer outro problema reprova aqui.
+   */
   it.each(CATALOGO_INICIAL.map((p) => [p.slug, p] as const))(
-    '%s passa no esquemaNovoProduto',
+    '%s passa no esquemaNovoProduto, a menos da descricao detalhada pendente',
     (_slug, produto) => {
       const resultado = esquemaNovoProduto.safeParse(paraCorpo(produto));
-      expect(resultado.error?.issues ?? []).toEqual([]);
+      const campos = (resultado.error?.issues ?? []).map((problema) =>
+        problema.path.join('.'),
+      );
+
+      expect(campos).toEqual(
+        produto.descricaoDetalhada === AGUARDANDO_ESCRITORIO
+          ? ['descricaoDetalhada']
+          : [],
+      );
     },
   );
+
+  /**
+   * QUANTOS FALTAM. O numero esta escrito para o teste falhar quando um texto
+   * chegar: quem o colocar atualiza a contagem, e o zero e o sinal de que este
+   * teste e a tolerancia acima podem sair (CHECKLIST, "Lote de novembro").
+   */
+  it('os 26 produtos aguardam a descricao detalhada do escritorio', () => {
+    expect(
+      CATALOGO_INICIAL.filter(
+        (p) => p.descricaoDetalhada === AGUARDANDO_ESCRITORIO,
+      ),
+    ).toHaveLength(26);
+  });
+
+  /** O proprio documento chama os tres de "assinatura" e os demais de avulso. */
+  it('os tres planos sao assinatura e os 23 restantes, avulsos', () => {
+    expect(CATALOGO_INICIAL.slice(0, 3).map((p) => p.tipoCobranca)).toEqual([
+      'assinatura',
+      'assinatura',
+      'assinatura',
+    ]);
+    expect(
+      CATALOGO_INICIAL.slice(3).every((p) => p.tipoCobranca === 'avulso'),
+    ).toBe(true);
+  });
 
   /** A contagem da secao 1 do documento de 02/11/2026, item a item. */
   it('os planos expandem para a contagem esperada de entregaveis', () => {

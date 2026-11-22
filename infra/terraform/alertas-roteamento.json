@@ -27,5 +27,6 @@
   "reuniao-sem-sala": "suporte",
   "webhook-recusado": "suporte",
   "retencao-parada": "suporte",
-  "sonda-parada": "suporte"
+  "sonda-parada": "suporte",
+  "backup-atrasado": "suporte"
 }

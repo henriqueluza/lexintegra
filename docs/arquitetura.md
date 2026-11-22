@@ -619,6 +619,9 @@ roteiro.
 - **O cartão redireciona**, e a experiência deixa a plataforma no momento mais sensível da compra.
 - **O cartão depende de homologação da conta pelo AbacatePay, e isso não está no nosso controle.** Na rodada do sandbox (16/09/2026), o checkout hospedado com cartão foi recusado com `HTTP 400: CARD is not available for this store`. Não há endpoint para consultar ou pedir a habilitação, e nenhuma configuração visível no painel resolve — é processo da conta, com prazo de terceiro. Sem ela, **o cartão não funciona em ambiente nenhum, nem em produção**; o PIX não é afetado, e foi validado de ponta a ponta. Consequência para esta decisão: o caminho do cartão segue **não testado** contra o gateway, e com ele o nome do evento de conclusão (`checkout.completed` ou outro). A proteção enquanto isso é o alerta crítico de evento desconhecido, acima. O que fazer — quem pede a homologação, se ela vale por conta ou por ambiente, e o que a tela mostra se o lançamento chegar antes dela — está no "Só você" da Etapa 8, em `docs/plano-de-execucao.md`. **Decidido na B2 (decisões 3.4): se a homologação não sair antes do lançamento, o cartão aparece desabilitado com "em breve" e o lançamento segue só com PIX.** O interruptor é `PAGAMENTOS_CARTAO` (`habilitado | desabilitado`, obrigatória em produção, Terraform `pagamentos_cartao` com padrão `desabilitado`, `pagamentos/gateway/cartao.ts`). O servidor recusa `metodo: cartao` com 422 antes de qualquer leitura; a tela lê `GET /api/checkout/metodos` (pública no mesmo sentido do checkout: token do pré-cadastro e App Check) só para não oferecer o que vai ser recusado. Ligar é trocar o padrão da variável em PR, sem mudar código.
 
+
+**Emenda de 18/11/2026 — o teto de parcelas vai na cobrança (`card.maxInstallments`).** Até aqui o site só **anunciava** a parcela: o pedido de checkout hospedado não levava campo de parcelas, e a página do gateway oferecia até 12x em qualquer compra. A documentação da API v2 passou a descrever `card.maxInstallments` (inteiro de 1 a 12) em `POST /checkouts/create`, e o adaptador agora o envia em toda cobrança de cartão. O número sai de `parcelasDoCarrinho`, calculado **no servidor sobre os snapshots congelados** da intenção, nunca do navegador: o menor entre os itens, e 1 quando há um serviço avulso (o carrinho misto vai inteiro à vista, decisão de 18/11/2026, porque o gateway aceita um teto só por cobrança). É o que faz "parcelamento só em assinatura" valer fora da tela. Teto fora de 1 a 12 é recusado nos dois adaptadores antes de qualquer chamada. **Não provado no sandbox:** o campo veio da documentação, e a conferência (a página respeita o teto; o mínimo de R$ 10,00 por parcela que a documentação cita) está no CHECKLIST e em `docs/runbooks/checkout-sandbox.md`, seção 4.
+
 ---
 
 ### ADR-21 — Agendamento de reunião: as regras que o contrato não fixa
@@ -864,6 +867,32 @@ acumuladas, ou quando a leitura aparecer no custo do Firestore. A saída é a fa
 **não** um estado novo na máquina, que mudaria a semântica do domínio para resolver um
 problema de leitura.
 
+
+### ADR-23 — Backups agendados do Firestore, com alerta por idade
+
+**Contexto (lote de novembro de 2026, ajuste 12).** O banco tinha uma defesa contra perda de dado: o PITR de 7 dias, ligado desde a Etapa 2. Ele resolve o erro percebido depressa e não resolve o que demora a aparecer — um documento estragado em outubro e notado em novembro não tinha conserto. O pedido era backup periódico, com retenção definida, alerta de falha e restauração ensaiada.
+
+**Decisões.**
+
+1. **Os backups são os nativos do Firestore**, declarados em `infra/terraform/firestore.tf`: um agendamento **diário, guardado 7 dias**, e um **semanal (domingo), guardado 8 semanas**. É o máximo que o serviço aceita por banco (um de cada), ficam na mesma região e **não usam o Cloud Scheduler**: o agendamento é recurso do próprio banco, e a conta de jobs da seção 8 não muda. Exportar para um bucket por rotina própria foi descartado: seria mais um job, mais um bucket com dado pessoal e mais um caminho a manter, para o mesmo resultado.
+2. **O PITR continua, e os dois se completam.** PITR volta a qualquer minuto dos últimos 7 dias; o backup semanal estende a recuperação a 8 semanas, com granularidade de uma semana. O diário é a segunda cópia da janela do PITR.
+3. **O alerta é de IDADE, e não de falha.** O Firestore não emite métrica nem log documentado quando um backup agendado falha. A sonda de sinais (`apps/api/src/sinais/backups.ts`) lê, pela API de administração, o backup pronto mais recente e escreve a idade; a política *Backup do Firestore atrasado* dispara acima de 30 horas, sustentadas por uma hora. Três detalhes de desenho:
+   - antes do primeiro backup, a idade medida é a do **agendamento**, para o dia do deploy não alarmar e um agendamento que nunca produz backup alarmar;
+   - sem agendamento, ou com a leitura recusada, a sonda escreve uma **idade desconhecida de 30 dias**: falha fechada. Zero ali significaria "tudo em dia" para sempre;
+   - a falha de leitura **não derruba os outros sinais** da sonda.
+4. **A conta de runtime só LISTA.** Ganhou `roles/datastore.backupsViewer` e `roles/datastore.backupSchedulesViewer`. Restaurar e apagar backup são operações humanas, com papéis que a aplicação não tem.
+5. **Os arquivos dos buckets não ganham backup.** O bucket de arquivos tem o soft delete de 7 dias, e a retenção apaga entregáveis e anexos 30 dias depois da entrega (decisões 2.2 e 2.3): qualquer cópia mais longa ressuscitaria o que a política mandou apagar. Versionamento de objeto foi retirado no Bloco E pelo mesmo motivo, e não volta.
+6. **Backup é dado pessoal, e os prazos são públicos.** Cada cópia guarda todos os titulares até expirar, sem eliminação seletiva. Os três prazos (PITR, diário, semanal) vivem em `packages/shared/src/politica-de-guarda.ts`, a política de privacidade publica o maior deles (8 semanas), a exportação do titular declara as cópias (`MAPA_COPIAS`), e **um teste compara as constantes com o Terraform**: mudar a retenção na infraestrutura sem mudar o texto público quebra a suíte.
+7. **Restaurar uma cópia obriga a refazer as eliminações posteriores a ela.** É passo do roteiro (`docs/runbooks/restaurar-backup.md`, seção 5), e é o que o texto da política promete.
+
+**Consequências.**
+
+- **A restauração cria sempre um banco novo**; não existe restaurar por cima. Recuperar alguns documentos a partir do banco restaurado é o caso coberto. **Trocar produção inteira para um banco restaurado não está automatizado nem ensaiado**: a API fala com `(default)`, e o id do banco não é configurável. Fica como pendência registrada, com os dois caminhos possíveis no roteiro.
+- **O backup não traz regras de segurança nem TTL.** As regras estão no repositório e negam tudo; a TTL de `checkouts` precisa ser recriada num banco restaurado.
+- **Um backup restaurado pode apontar para arquivo que a retenção já apagou.** É o esperado, e o download responde "não encontrado".
+- **Custo:** até 15 cópias do banco, cobradas por GiB-mês. Com o banco em dezenas de MB, centavos por mês. O preço por GiB em São Paulo não foi confirmado (seção 12).
+- **O teste de restauração é humano**, porque cria e apaga um banco no projeto de produção. Os tempos medidos entram no roteiro na primeira execução.
+
 ---
 
 ## 5. Modelo de dados
@@ -928,7 +957,7 @@ O webhook precisa criar o pagamento e todos os pedidos numa única transação. 
 
 ### 5.3 Snapshot imutável
 
-O item 2.5.9 exige que alterações de produto não retroajam. No momento da compra, o pedido copia para dentro de si os dez campos do produto — todos menos `ativo`, porque tirar um produto da vitrine não cancela a compra de quem já pagou:
+O item 2.5.9 exige que alterações de produto não retroajam. No momento da compra, o pedido copia para dentro de si os doze campos do produto — todos menos `ativo`, porque tirar um produto da vitrine não cancela a compra de quem já pagou:
 
 | Campo | Tipo |
 |---|---|
@@ -942,6 +971,12 @@ O item 2.5.9 exige que alterações de produto não retroajam. No momento da com
 | `intervaloMinimoReunioesDias` | inteiro ≥ 0 |
 | `numeroRevisoesPermitidas` | inteiro ≥ 0 (ver 5.6) |
 | `parcelas` | inteiro de 1 a 12, em quantas vezes o site anuncia no cartão (01/11/2026); ausente nos pedidos anteriores, vale 1 |
+| `tipoCobranca` | `assinatura` ou `avulso` (lote de novembro de 2026); **ausente nos pedidos anteriores**, que são "legado" |
+| `descricaoDetalhada` | string de 20 a 5000 caracteres no cadastro; vazia ou ausente nos pedidos anteriores |
+
+**Tipo de cobrança e descrição detalhada (lote de novembro de 2026, ajustes 1, 9 e 11).** `tipoCobranca` decide **uma** coisa, o parcelamento: só `assinatura` parcela no cartão, e `avulso` é sempre à vista, na tela e no teto que vai ao gateway (emenda ao ADR-19). **O nome não significa cobrança recorrente**: todo produto continua sendo compra única, e os eventos `subscription.*` do gateway continuam descartados. A regra pedida incluía "reunião só em assinatura"; ficou como exceção decidida em 18/11/2026, porque o catálogo tem a "Reunião avulsa estratégica": **quem diz se o pedido tem reunião é `quantidadeReunioes` do snapshot** (`ofereceReunioes`, em `packages/shared/src/tipo-cobranca.ts`), e o pedido sem reunião responde `sem-reunioes` ao agendamento, não "saldo esgotado".
+
+**Nenhum pedido foi reescrito.** Pedido e produto gravados antes dos dois campos não os têm; a leitura usa `tipoCobrancaDe` (que devolve `null`, "legado") e `descricaoDetalhadaDe` (que devolve vazio), e o legado se comporta como antes: anuncia as parcelas gravadas e honra o saldo de reuniões do snapshot. Por isso há **dois schemas** em `esquemas/produto.ts`: `esquemaProduto`, tolerante, reidrata o snapshot do checkout (um checkout aberto antes do deploy precisa virar pedido quando o pagamento chega); `esquemaNovoProduto`, estrito, é a porta de entrada do administrador, exige os dois campos e recusa avulso com mais de uma parcela. Produto antigo continua vendável sem tipo, e editar qualquer campo dele obriga a classificá-lo.
 
 **A unidade está no nome do campo, não só no comentário.** `precoCentavos` e não `preco`; `prazoValidadeReunioesDias` e não `prazoValidadeReunioes`. Trocar reais por centavos não falha em lugar nenhum — só cobra cem vezes menos, e o snapshot congela o engano para sempre.
 
@@ -969,6 +1004,10 @@ O item 2.5.8 exige busca por nome, e-mail ou produto contratado. O documento do 
 
 Enquanto o volume estiver na casa das centenas, busca por substring é resolvida carregando e filtrando no servidor.
 
+**Andamento dos advogados (lote de novembro, ajuste 5).** A tela `/admin/andamento` segue a mesma estratégia: `GET /api/admin/andamento` lê os 200 pedidos mais recentes (ou os de um advogado, pelo índice `advogadoId + criadoEm` que a lista de demandas já usa) e os entregáveis de cada um; estado, produto, cliente e o limite de "parado há N dias" são filtrados **no navegador**, com as regras puras de `packages/shared/src/andamento.ts` e o relógio do servidor (`geradoEm`). Nenhum índice novo. O filtro por nome de cliente não vai à query string de propósito: ela fica no registro de acesso.
+
+**Onde isso deixa de servir, com número.** Cada carga lê até 200 pedidos mais os entregáveis de cada um, e mais uma leitura por entregável anterior a `estadoDesde` (5.6). Por volta de **200 pedidos em aberto, ou 5 mil entregáveis por carga**, a tela leva segundos para abrir, cobra milhares de leituras a cada abertura e começa a esconder pedido antigo ainda em andamento (a resposta avisa quando o teto cortou, e o filtro por advogado alcança os mais antigos dele). O passo seguinte é guardar um resumo de andamento no documento do pedido, escrito na transação da transição, e paginar por ele.
+
 ### 5.6 Status de entregáveis
 
 Ver ADR-11. Os status são fixos no código (`solicitado`, `em_elaboracao`, `em_revisao`, `entregue`), não configuráveis pelo administrador. O que o pedido congela do produto, quanto a isso, é apenas o **número de revisões contratadas** — um inteiro, definido por produto e copiado para o pedido no checkout, seguindo a mesma lógica de imutabilidade do restante do snapshot (5.3).
@@ -986,6 +1025,7 @@ A subcoleção `transicoes` registra quem mudou, de qual status para qual e quan
 | `revisoesUsadas` | contador; o limite vem de `pedido.snapshot.numeroRevisoesPermitidas`, nunca do produto vivo |
 | `arquivoAtual` | `null` até o primeiro upload; `{ nome, versao, enviadoPor, enviadoEm }` depois |
 | `transicoes` | quantas transições já foram registradas; dá o id da próxima |
+| `estadoDesde` | quando o entregável **entrou** no estado atual; escrito na criação e em cada transição, na mesma transação (lote de novembro) |
 
 `pedidos/{id}/entregaveis/{id}/transicoes/{sequencia}` — id é a sequência com zero à esquerda (`0001`). Como ele sai do contador lido na mesma transação, duas chamadas concorrentes calculam a mesma sequência e a segunda estoura em vez de sobrescrever a trilha da primeira:
 
@@ -1000,6 +1040,10 @@ A subcoleção `transicoes` registra quem mudou, de qual status para qual e quan
 
 A trilha registra **mudança de estado**. Upload não muda estado (ver ADR-11), então não entra nela — a trilha do arquivo é `arquivoAtual.versao`.
 
+**`estadoDesde` não é `atualizadoEm` (lote de novembro, ajuste 5).** `atualizadoEm` é reescrito pelo upload e pela varredura, que não mudam o estado: usado como "desde quando", "em elaboração há 20 dias" viraria "há 2 horas" a cada arquivo enviado. **Nada foi migrado**: o entregável anterior ao campo tem o mesmo instante na última transição da trilha, cujo id sai do contador `transicoes`, e a leitura busca lá. É uma leitura a mais só para os antigos, e ela some sozinha, porque a primeira transição escreve o campo.
+
+**De quem é a vez.** O estado sozinho não diz quem precisa agir, e a tela do administrador existe para isso (`packages/shared/src/andamento.ts`): `em_elaboracao` com arquivo é a vez do **cliente**, mas só se o arquivo chegou **depois** da entrada no estado — depois de uma revisão o advogado retoma com a versão recusada ainda em `arquivoAtual`. Pedido sem advogado é a vez da **distribuição**; entregue, cancelado, estornado ou pausado por contestação não é de ninguém. **"Parado"** é só a vez do advogado há N dias inteiros ou mais (N escolhido na tela: 3, 7, 15 ou 30; padrão 7); o relógio recomeça quando o pedido muda de mãos, e o tempo do cliente decidindo aparece, mas não conta como atraso do advogado.
+
 ---
 
 ## 6. Segurança e fronteiras de confiança
@@ -1013,6 +1057,8 @@ Quatro fronteiras, cada uma com forma distinta de autenticação:
 **3. Autenticada** — cliente e advogado, separados por custom claim no token do Firebase Auth. Pelos itens 2.6.1 e 2.6.2, o advogado só enxerga o que lhe foi distribuído — e a **Etapa 4 fixou onde isso é verificado**: nos guards e serviços da API, não nas regras do Firestore. A razão está em 6.1.
 
 **4. Administrativa** — administrador global, provisionado fora da aplicação conforme o 2.4.2, sem autocadastro possível. **Emenda da B2 (decisões 5.5):** um administrador pode convidar outro dentro da plataforma (`/admin/administradores`, `AdministradoresService`, o terceiro escritor de claim da regra 17, só de `admin`). O convidado define a própria senha por link (ADR-07). Remover tira a claim e revoga os tokens; a plataforma recusa remover o último administrador e remover a si mesmo, com a contagem sobre `administradores/{uid}` lida na transação. Convite e remoção ficam em `auditoria/`. Continua sem autocadastro: só quem já é administrador convida.
+
+**O administrador vê o andamento dos advogados, e não age nele (lote de novembro, ajuste 5).** `GET /api/admin/andamento` e `GET /api/admin/andamento/pedidos/{id}` (`apps/api/src/andamento/`) são as únicas rotas, as duas de leitura: o módulo não importa nada que escreva em entregável, e `controladores.spec.ts` confere que o controlador só tem `GET`. Iniciar trabalho, enviar arquivo e confirmar entrega continuam sendo eventos do advogado e do cliente (regra inviolável 14). A resposta leva **andamento, não conteúdo**: nenhuma observação, ficha, nome de arquivo ou link de sala. Se o administrador deve ler o que o advogado lê é decisão do escritório ainda em aberto (CHECKLIST). **Perfil errado recebe 403**, como em toda a superfície administrativa, e não 404: quem recusa é o `PerfisGuard` global, e o caminho da rota está no pacote público do frontend, então um 404 só aqui seria uma exceção que não esconde nada. Os dois identificadores que chegam do navegador são validados por lista de caracteres, porque viram segmento de caminho no Firestore.
 
 ### 6.1 Regras do Firestore
 
@@ -1087,6 +1133,14 @@ Fluxo: navegador envia direto ao bucket de quarentena via URL assinada de escrit
 
 Concluído o envio, a API enfileira a varredura. O scanner baixa, analisa e move para o bucket limpo ou descarta.
 
+**Errata de 19/11/2026 — a URL assinada vai com os cabeçalhos assinados, e `pendente_upload` não é arquivo.** O tipo e o tamanho máximo entram na assinatura como cabeçalhos (`Content-Type` e `x-goog-content-length-range`), e cabeçalho assinado precisa chegar igual no `PUT`. A API devolvia só a URL, o navegador mandava só o `Content-Type`, e **nenhum arquivo subiu em produção**: o único envio tentado, no teste manual de 13/11/2026, pediu a URL e nunca chegou à confirmação, e o bucket de quarentena estava vazio. Nenhuma suíte acusou, porque o armazenamento falso aceitava qualquer `PUT`. Três correções:
+
+- `Armazenamento.urlDeEscrita` devolve `{ url, cabecalhos }`, e os cabeçalhos devolvidos saem do **mesmo objeto** usado para assinar (`cabecalhosDaEscrita`). O navegador os envia como vieram (`enviarParaUrlAssinada`), sem escrever nome de cabeçalho por conta própria.
+- **O armazenamento falso recusa o que o Cloud Storage recusa**: escrita em URL não emitida, cabeçalho assinado ausente ou diferente, corpo fora da faixa. Com o envio no comportamento antigo, as três jornadas de arquivo falham contra ele.
+- **`pendente_upload` é a URL emitida, não o arquivo.** O registro nasce antes do `PUT` e fica quando o `PUT` falha. Ele fazia o cliente ler "em verificação de segurança" para sempre e, pior, deixava **confirmar a entrega** de um arquivo que nunca chegou, contra a regra inviolável 14. `arquivoFoiEnviado` (`packages/shared/src/esquemas/upload.ts`) é a pergunta única da tela e do servidor.
+
+A prova que falta é humana: o primeiro envio real depois do deploy (CHECKLIST).
+
 **Regra de ouro, codificada em um único lugar:** nada é servido enquanto o status não for `limpo`. O documento nasce como `pendente_scan`.
 
 **Tipos do advogado: PDF e DOCX, até 20 MB** (`docs/decisoes.md`, 3.1, construído no Bloco E da B2). `.doc` e `.docm` continuam recusados — pelo tipo e pela extensão já no pedido da URL, e pela estrutura na varredura. O tipo não é confiado à extensão nem ao `Content-Type`: depois do ClamAV e do magic bytes, o DOCX passa por uma conferência estrutural (`apps/api/src/varredura/docx.ts`) que lê por faixa o diretório central do ZIP e o `[Content_Types].xml`, exige `wordprocessingml.document.main+xml` e `word/document.xml`, e recusa `macroEnabled`, `vbaProject.bin`, entrada cifrada e ZIP64. Sem dependência nova. **O ClamAV cobre o DOCX como cobre o PDF:** a imagem usa a configuração padrão do `clamav-daemon` do Debian, com `ScanArchive` e `ScanOLE2` ligados e limite de 25 MB por arquivo, acima dos 20 MB do upload — o conteúdo do ZIP é varrido por dentro.
@@ -1113,6 +1167,8 @@ Pelos itens 2.4.3 a 2.4.7, apenas o administrador global cria acessos de advogad
 
 **Log de auditoria (B2).** `auditoria/{id}` guarda `acao`, `atorUid`, `alvo`, `antes`, `depois` e `em`, escrito na mesma transação da ação administrativa (`auditoria/auditoria.ts`). É append-only: nenhuma rota altera ou apaga. Está no mapa da LGPD pelo `alvo`.
 
+**Leitura auditada (lote de novembro, ajuste 5).** As duas rotas de andamento são as primeiras **leituras** que deixam linha: `andamento.consultado`, uma por carga da lista, com o filtro de advogado e a quantidade de pedidos, e `pedido.consultado`, uma por pedido aberto no detalhe, com o **cliente** como `alvo` — é o que faz a consulta aparecer na exportação LGPD daquele titular. Leitura não tem transação onde pendurar o registro, então `registrarConsulta` abre uma só de escrita e é **esperada antes de a resposta sair**: se a gravação falha, a leitura falha. `antes` é sempre `null`, e `depois` leva o que foi consultado, nunca o conteúdo devolvido.
+
 Suspensão precisa revogar tokens ativos, não apenas marcar um campo — senão o advogado suspenso continua acessando até o token expirar.
 
 ---
@@ -1127,6 +1183,8 @@ O Cloud Scheduler dá três jobs gratuitos. **Hoje são quatro**, e o quarto é 
 4. **Sonda de sinais operacionais** — `POST /api/interno/sinais`, porque o Monitoring não consulta o Firestore. *Implementado na Etapa 12, US$ 0,10/mês.*
 
 Cada job além do terceiro custa US$ 0,10/mês — irrelevante em dinheiro, e relevante como sinal de que uma rotina nova está sendo criada. É esse sinal que importa, não a economia.
+
+**Os backups do Firestore não são job** (ADR-23): o agendamento é recurso do próprio banco, não passa pelo Cloud Scheduler e não entra nesta conta.
 
 **Duas rotinas que este documento previu e que NÃO existem, por decisão:**
 
@@ -1251,6 +1309,8 @@ Essa planilha (`LexIntegra-custos-mensais.xlsx`) já foi preparada como artefato
 
 **Duas notas da Etapa 12.** O quarto e o quinto jobs do Scheduler — retenção (Etapa 11) e sonda de sinais — custam US$ 0,10/mês cada; os três gratuitos já estavam ocupados. E o Cloud Monitoring passa a cobrar alertas **a partir de 1º de setembro de 2027** (US$ 0,35/mês por referência de métrica em política): com as oito políticas de hoje, algo em torno de US$ 3/mês. Nenhum dos dois muda a conta agora, e os dois precisam estar na planilha entregue à CONTRATANTE antes da aprovação do 6.2 — surpresa em fatura recorrente é o tipo de coisa que a cláusula 3.4 transforma em ligação para o CONTRATADO.
 
+**Backups do Firestore (ADR-23, novembro de 2026).** Dois agendamentos, até 15 cópias do banco ao mesmo tempo, cobradas por GiB-mês de cópia; a restauração é cobrada à parte, pelo tamanho do backup. Com o banco em dezenas de MB, é ordem de centavos por mês, e por isso não muda o total acima. O preço por GiB em São Paulo não foi confirmado: entra como estimativa em `docs/entrega/operacao.md`, seção 9, e na planilha.
+
 **Onde essa conta quebra.** Limite de 100 e-mails por dia do Resend no plano gratuito. É a trava mais provável de ser atingida primeiro, e ela **pausa o envio** em vez de cobrar excedente — o que significa cliente sem link de senha e sem confirmação de agendamento. Precisa de alerta antes do teto e de plano de contingência.
 
 ---
@@ -1272,6 +1332,8 @@ Essa planilha (`LexIntegra-custos-mensais.xlsx`) já foi preparada como artefato
 **Tensão não resolvida.** O direito de eliminação do titular colide com a obrigação de sigilo e conservação da cláusula 4.6 e com eventuais deveres de guarda da advocacia. A política de retenção precisa ser definida pelo controlador, não pelo desenvolvedor. A retenção de 30 dias dos entregáveis (seção 7.3) é uma peça dessa política, não a política inteira — falta ainda definir a retenção do restante dos dados do cliente (anamnese, cadastro) após o fim do contrato.
 
 **Exclusão automática: só `checkouts`.** É a única coleção com TTL — o documento some depois do vencimento da cobrança mais 48 horas (seção 5.1). Dois fatos que valem para a política, sem decidi-la: o Firestore apaga pela TTL normalmente em até 24 horas depois do prazo, e o **PITR está ligado** (`infra/terraform/firestore.tf`), então a versão apagada continua recuperável por até 7 dias. O restante — cadastro, pré-cadastro, anamnese, pedidos — não tem prazo automático, e isso é a tensão acima.
+
+**Cópias do banco (ADR-23, novembro de 2026).** Além do PITR, há backups agendados: diário guardado 7 dias e semanal guardado 8 semanas. São dado pessoal em cópia, sem eliminação seletiva: **um titular eliminado hoje continua nas cópias já tiradas por até 8 semanas**, e a política de privacidade diz isso. Restaurar uma cópia obriga a refazer as eliminações posteriores a ela (`docs/runbooks/restaurar-backup.md`).
 
 **Ponto operacional.** Apagar um titular no Firestore é varredura manual entre coleções, não `ON DELETE CASCADE`. Isso precisa ser uma rotina implementada e testada, não um procedimento improvisado quando o pedido chegar.
 

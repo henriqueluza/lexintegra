@@ -108,6 +108,21 @@
         <p class="produto__meta">{{ ficha.meta }}</p>
         } @if (ficha.descricao) {
         <p class="produto__descricao">{{ ficha.descricao }}</p>
+        } @if (ficha.detalhada.length) {
+        <!--
+          A descricao detalhada (ajuste 1) esta no DOM desde a primeira
+          renderizacao do cartao, so escondida: abrir o "+" nao busca nada.
+        -->
+        <div
+          class="produto__detalhada"
+          [hidden]="!abertos().has(ficha.produto.id)"
+        >
+          <!-- `[textContent]`: o paragrafo e `pre-line`, e a interpolacao
+          levaria junto o espaco em branco em volta dela. -->
+          @for (paragrafo of ficha.detalhada; track $index) {
+          <p [textContent]="paragrafo"></p>
+          }
+        </div>
         } @if (ficha.linhas.length) {
         <div class="produto__ficha">
           <p class="produto__rotulo">O que inclui</p>
@@ -122,18 +137,29 @@
             }
           </ul>
         </div>
-        } @if (ficha.linhas.length > 4 ||
+        } @if (ficha.detalhada.length || ficha.linhas.length > 4 ||
         descricoesLongas().has(ficha.produto.id)) {
+        <!--
+          O nome acessivel diz DE QUE produto sao os detalhes: numa lista de
+          botoes, vinte "Mais detalhes" iguais nao dizem nada a quem usa leitor
+          de tela. O texto visivel esta contido nele (WCAG 2.5.3).
+        -->
         <button
           class="expansor"
           type="button"
           [attr.aria-expanded]="abertos().has(ficha.produto.id)"
           [attr.aria-controls]="'detalhes-' + ficha.produto.id"
+          [attr.aria-label]="(abertos().has(ficha.produto.id) ? 'Ver menos detalhes de ' : 'Ver mais detalhes de ') + ficha.produto.nome"
           (click)="alternar(ficha.produto.id)"
         >
-          {{ abertos().has(ficha.produto.id) ? 'Ver menos' : 'Ver tudo (' +
-          ficha.linhas.length + ')' }}
-          <app-icone nome="seta-direita" tamanho="p" />
+          <span class="expansor__sinal" aria-hidden="true">
+            <app-icone
+              [nome]="abertos().has(ficha.produto.id) ? 'menos' : 'mais'"
+              tamanho="p"
+            />
+          </span>
+          {{ abertos().has(ficha.produto.id) ? 'Menos detalhes' : 'Mais
+          detalhes' }}
         </button>
         }
         <p class="produto__limite">{{ textos.servicos.foraDoEscopo }}</p>
@@ -154,8 +180,9 @@
           >
             {{ quantidade(ficha.produto.id) ? 'No carrinho (' +
             quantidade(ficha.produto.id) + ') · Adicionar mais' : 'Adicionar' }}
+            <!-- Sacola, e nao "+": o "+" do cartao e o dos detalhes. -->
             <app-icone
-              [nome]="quantidade(ficha.produto.id) ? 'confere' : 'mais'"
+              [nome]="quantidade(ficha.produto.id) ? 'confere' : 'sacola'"
               tamanho="p"
             />
           </button>

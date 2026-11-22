@@ -147,6 +147,14 @@ locals {
     # so escreve `advogado`. Elevacao a administrador continua sendo operacao
     # manual, fora da aplicacao (item 2.4.2).
     "roles/firebaseauth.admin",
+
+    # Lote de novembro de 2026 (ADR-23). SO LEITURA de metadados: a sonda de
+    # sinais lista os backups e os agendamentos para medir a idade do backup
+    # mais recente (`apps/api/src/sinais/backups.ts`). Nenhum dos dois papeis
+    # le o CONTEUDO de um backup, restaura ou apaga: restaurar e operacao
+    # humana, com `roles/datastore.restoreAdmin`, que a aplicacao nao tem.
+    "roles/datastore.backupsViewer",
+    "roles/datastore.backupSchedulesViewer",
   ]
 }
 

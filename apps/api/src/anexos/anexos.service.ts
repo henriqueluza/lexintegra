@@ -11,6 +11,7 @@ import {
   POLITICA_UPLOAD,
   prefixoDoFluxo,
   type AnexoResumo,
+  type EnvioAutorizado,
   type PedidoDeUpload,
 } from 'shared';
 import {
@@ -73,7 +74,7 @@ export class AnexosService {
     pedidoId: string,
     quem: QuemAcessa,
     arquivos: readonly PedidoDeUpload[],
-  ): Promise<{ id: string; url: string; validoPorSegundos: number }[]> {
+  ): Promise<(EnvioAutorizado & { id: string })[]> {
     const { referencia, pedido } = await this.acesso.exigirParaAlterar(
       pedidoId,
       quem,
@@ -117,7 +118,7 @@ export class AnexosService {
           criadoEm: FieldValue.serverTimestamp(),
         } satisfies DocumentoArquivo);
 
-        const url = await this.armazenamento.urlDeEscrita({
+        const escrita = await this.armazenamento.urlDeEscrita({
           objeto: { balde: 'quarentena', caminho },
           tipo: arquivo.tipo,
           tamanhoMaximoBytes: POLITICA_UPLOAD[FLUXO].tamanhoMaximoBytes,
@@ -126,7 +127,7 @@ export class AnexosService {
 
         return {
           id: documento.id,
-          url,
+          ...escrita,
           validoPorSegundos: VALIDADE_DA_ESCRITA_SEGUNDOS,
         };
       }),

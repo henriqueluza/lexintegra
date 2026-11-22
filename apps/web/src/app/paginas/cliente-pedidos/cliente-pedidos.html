@@ -77,6 +77,8 @@
         }
       </section>
 
+      <!-- Sem pedido com reuniao, o painel diria "voce marca pelo cartao" sem haver onde marcar. -->
+      @if (temReunioes()) {
       <section class="painel">
         <h2>Próximas reuniões</h2>
         @for (reuniao of proximasReunioes(); track reuniao.id) {
@@ -99,6 +101,7 @@
         </p>
         }
       </section>
+      }
     </aside>
   </div>
   }

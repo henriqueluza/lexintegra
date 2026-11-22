@@ -12,7 +12,10 @@ import type {
   ObservacaoResumo,
 } from 'shared/esquemas/observacao';
 import type { DemandaResumo, EntregavelResumo } from 'shared/esquemas/pedido';
-import type { PedidoDeUpload } from 'shared/esquemas/upload';
+import type {
+  EnvioAutorizado,
+  PedidoDeUpload,
+} from 'shared/esquemas/upload';
 
 /**
  * A area do advogado (itens 2.6.1 a 2.6.3).
@@ -104,13 +107,12 @@ export class ApiAdvogadoService {
     pedidoId: string,
     entregavelId: string,
     arquivo: PedidoDeUpload,
-  ): Promise<{ url: string; versao: number; validoPorSegundos: number }> {
+  ): Promise<EnvioAutorizado & { versao: number }> {
     return firstValueFrom(
-      this.http.post<{
-        url: string;
-        versao: number;
-        validoPorSegundos: number;
-      }>(`${entregavel(pedidoId, entregavelId)}/arquivo`, arquivo),
+      this.http.post<EnvioAutorizado & { versao: number }>(
+        `${entregavel(pedidoId, entregavelId)}/arquivo`,
+        arquivo,
+      ),
     );
   }
 

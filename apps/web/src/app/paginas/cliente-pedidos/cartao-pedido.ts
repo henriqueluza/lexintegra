@@ -10,6 +10,7 @@ import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import type { AnexoDeclarado, AnexoResumo } from 'shared/esquemas/anexo';
 import type { ObservacaoResumo } from 'shared/esquemas/observacao';
 import type { CartaoPedido, EntregavelResumo } from 'shared/esquemas/pedido';
+import { ofereceReunioes } from 'shared/tipo-cobranca';
 import { ApiClienteService } from '../../autenticacao/api-cliente.service';
 import { enviarParaUrlAssinada } from '../../comum/enviar-arquivo';
 import { paraReais } from '../../comum/moeda';
@@ -22,6 +23,7 @@ import { mensagemDoErro } from '../erros';
 import { anexosDeclarados, MAXIMO_ANEXOS } from './anexos-do-navegador';
 import { CancelamentoPedido } from './cancelamento-pedido';
 import { ReunioesDoPedido } from './reunioes-do-pedido';
+import { SobreOServico } from './sobre-o-servico';
 import { TEXTO_TERMO_DOWNLOAD } from './termo';
 
 /**
@@ -46,6 +48,7 @@ export const AVISO_DE_PAUSA =
     Campo,
     CancelamentoPedido,
     ReunioesDoPedido,
+    SobreOServico,
     Cartao,
     CartaoRodape,
     MensagemErro,
@@ -88,9 +91,15 @@ export class CartaoPedidoComponent {
    */
   protected situacao(): string {
     const { situacao, distribuido } = this.pedido();
-    if (situacao === 'cancelado') return 'Cancelado';
-    if (situacao === 'estornado') return 'Estornado';
+    if (situacao === 'cancelado' || situacao === 'estornado') {
+      return situacao === 'cancelado' ? 'Cancelado' : 'Estornado';
+    }
     return distribuido ? 'Em andamento' : 'Em análise';
+  }
+
+  /** A quantidade do snapshot decide, nao o tipo: ha avulso com uma reuniao. */
+  protected temReunioes(): boolean {
+    return ofereceReunioes(this.pedido().snapshot);
   }
 
   protected readonly observacao = new FormControl('', {
@@ -226,7 +235,7 @@ export class CartaoPedidoComponent {
         );
 
         for (const [indice, emitida] of emitidas.entries()) {
-          await enviarParaUrlAssinada(emitida.url, arquivos[indice]);
+          await enviarParaUrlAssinada(emitida, arquivos[indice]);
           await this.api.confirmarAnexo(this.pedido().id, emitida.id);
         }
 
