@@ -10,6 +10,12 @@ import {
 import { TETO_ITENS_CARRINHO } from 'shared/carrinho';
 import { PARCELAS_MAXIMAS_NO_CARTAO } from 'shared/formas-de-pagamento';
 import type { ProdutoVitrine } from 'shared/esquemas/vitrine';
+import {
+  avulsoImpedeParcelamento,
+  parcelasDoCarrinho,
+  TIPOS_COBRANCA,
+  type TipoCobranca,
+} from 'shared/tipo-cobranca';
 
 /** Mesmo prefixo da liberacao do pre-cadastro. */
 export const CHAVE_CARRINHO = 'lexintegra:carrinho';
@@ -31,6 +37,12 @@ export type ItemGuardado = {
    * guardado antes de 01/11/2026; vale 1.
    */
   readonly parcelas?: number;
+  /**
+   * So assinatura parcela (`shared/tipo-cobranca`). Ausente em carrinho
+   * guardado antes de novembro de 2026, e `null` no produto ainda nao
+   * classificado: nos dois casos vale o que `parcelas` ja dizia.
+   */
+  readonly tipoCobranca?: TipoCobranca | null;
 };
 
 interface CarrinhoGuardado {
@@ -73,12 +85,15 @@ export class CarrinhoService {
    * O parcelamento que o resumo anuncia para o carrinho inteiro: o MENOR entre
    * os itens. Anunciar o maior prometeria a um item mais parcelas do que o
    * escritorio oferece para ele. Com o carrinho vazio, 1.
+   *
+   * A CONTA E A DE `shared`, a mesma que o servidor refaz sobre os snapshots
+   * congelados e manda ao gateway como teto. Um servico avulso entre os itens
+   * leva a compra inteira para a vista (decisao de 18/11/2026).
    */
-  readonly parcelasNoCartao = computed(() =>
-    this.itens().reduce(
-      (menor, item) => Math.min(menor, item.parcelas ?? 1),
-      this.itens().length === 0 ? 1 : PARCELAS_MAXIMAS_NO_CARTAO,
-    ),
+  readonly parcelasNoCartao = computed(() => parcelasDoCarrinho(this.itens()));
+  /** Ha um avulso tirando o parcelamento de um item que parcelaria sozinho. */
+  readonly avulsoImpedeParcelamento = computed(() =>
+    avulsoImpedeParcelamento(this.itens()),
   );
 
   constructor() {
@@ -107,6 +122,8 @@ export class CarrinhoService {
           nome: produto.nome,
           precoCentavos: produto.precoCentavos,
           parcelas: produto.parcelas,
+          /* `?? null`: a API anterior ao campo nao o manda. */
+          tipoCobranca: produto.tipoCobranca ?? null,
         },
       ],
     });
@@ -191,7 +208,17 @@ function ehItem(valor: unknown): valor is ItemGuardado {
     typeof item['nome'] === 'string' &&
     typeof item['precoCentavos'] === 'number' &&
     Number.isInteger(item['precoCentavos']) &&
-    (item['parcelas'] === undefined || ehParcela(item['parcelas']))
+    (item['parcelas'] === undefined || ehParcela(item['parcelas'])) &&
+    ehTipo(item['tipoCobranca'])
+  );
+}
+
+/** Ausente e `null` valem; texto desconhecido descarta o carrinho. */
+function ehTipo(valor: unknown): boolean {
+  return (
+    valor === undefined ||
+    valor === null ||
+    (TIPOS_COBRANCA as readonly unknown[]).includes(valor)
   );
 }
 

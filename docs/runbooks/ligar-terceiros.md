@@ -215,10 +215,13 @@ não nasce; a proteção é o alerta `pagamento.webhook-evento-desconhecido` ou
 `pagamento.webhook-ilegivel`, e o evento pode ser reenviado pelos *Webhook
 Logs* depois da correção ([`webhook-fora-do-ar.md`](webhook-fora-do-ar.md)).
 
-**Parcelas.** A página do AbacatePay oferece até 12x em todo produto (é
-configuração global do painel). O campo `parcelas` do produto (1 a 12) só
-governa o que o site **anuncia**; o pedido não guarda parcelas, e o valor que
-o webhook confere é o `amount` da cobrança, igual ao total do checkout.
+**Parcelas (emenda de 18/11/2026 ao ADR-19).** A cobrança de cartão leva o
+teto de parcelas (`card.maxInstallments`): o menor número entre os itens do
+carrinho, e 1 quando há um serviço avulso, porque só assinatura parcela. O
+pedido não guarda em quantas vezes a pessoa pagou, e o valor que o webhook
+confere é o `amount` da cobrança, igual ao total do checkout. O campo veio da
+documentação do AbacatePay e ainda não foi visto funcionando: o roteiro da
+conferência está em [`checkout-sandbox.md`](checkout-sandbox.md), seção 4.
 
 **Voltar atrás:** PR com `pagamentos_modo = "desligado"` (a constante pode
 ficar `true`). Checkout e webhook voltam a responder 503; o AbacatePay reenvia

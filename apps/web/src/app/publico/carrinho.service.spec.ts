@@ -12,6 +12,8 @@ const PARECER: ProdutoVitrine = {
   quantidadeReunioes: 2,
   numeroRevisoesPermitidas: 2,
   parcelas: 1,
+  tipoCobranca: 'assinatura',
+  descricaoDetalhada: '',
 };
 
 const CONTRATO: ProdutoVitrine = {
@@ -162,6 +164,7 @@ describe('CarrinhoService', () => {
           nome: 'Parecer de risco trabalhista',
           precoCentavos: 250_000,
           parcelas: 1,
+          tipoCobranca: 'assinatura',
         },
       ],
     });
@@ -180,6 +183,67 @@ describe('CarrinhoService', () => {
 
     carrinho.adicionar({ ...CONTRATO, parcelas: 3 });
     expect(carrinho.parcelasNoCartao()).toBe(3);
+  });
+
+  /**
+   * PARCELAMENTO SO EM ASSINATURA (ajuste 11) e o carrinho misto (decisao de
+   * 18/11/2026): com um servico avulso entre os itens a compra inteira vai a
+   * vista. E a mesma conta que o servidor manda ao gateway como teto.
+   */
+  describe('tipo de cobranca', () => {
+    const PLANO: ProdutoVitrine = { ...PARECER, parcelas: 12 };
+    const AVULSO: ProdutoVitrine = {
+      ...CONTRATO,
+      tipoCobranca: 'avulso',
+      parcelas: 1,
+    };
+
+    it('um avulso leva o carrinho inteiro para a vista, e avisa', () => {
+      const carrinho = montar();
+      carrinho.adicionar(PLANO);
+      expect(carrinho.parcelasNoCartao()).toBe(12);
+      expect(carrinho.avulsoImpedeParcelamento()).toBe(false);
+
+      carrinho.adicionar(AVULSO);
+      expect(carrinho.parcelasNoCartao()).toBe(1);
+      expect(carrinho.avulsoImpedeParcelamento()).toBe(true);
+
+      carrinho.remover(1);
+      expect(carrinho.parcelasNoCartao()).toBe(12);
+      expect(carrinho.avulsoImpedeParcelamento()).toBe(false);
+    });
+
+    it('so avulsos: a vista, sem aviso', () => {
+      const carrinho = montar();
+      carrinho.adicionar(AVULSO);
+
+      expect(carrinho.parcelasNoCartao()).toBe(1);
+      expect(carrinho.avulsoImpedeParcelamento()).toBe(false);
+    });
+
+    it('guarda o tipo com o item', () => {
+      const carrinho = montar();
+      carrinho.adicionar(AVULSO);
+
+      expect(carrinho.itens()[0]?.tipoCobranca).toBe('avulso');
+      expect(
+        (
+          JSON.parse(localStorage.getItem(CHAVE_CARRINHO) ?? '{}') as {
+            itens: { tipoCobranca: string }[];
+          }
+        ).itens[0]?.tipoCobranca,
+      ).toBe('avulso');
+    });
+
+    /** A API anterior ao campo nao o manda: o item entra como nao classificado. */
+    it('produto sem tipo entra como nao classificado e segue as parcelas', () => {
+      const carrinho = montar();
+      const { tipoCobranca: _tipo, ...antigo } = PLANO;
+      carrinho.adicionar(antigo as ProdutoVitrine);
+
+      expect(carrinho.itens()[0]?.tipoCobranca).toBeNull();
+      expect(carrinho.parcelasNoCartao()).toBe(12);
+    });
   });
 
   it('trata carrinho guardado antes das parcelas como pagamento a vista', () => {
@@ -261,6 +325,20 @@ describe('CarrinhoService', () => {
       JSON.stringify({
         chave: 'c',
         itens: [{ produtoId: 'p', nome: 'P', precoCentavos: 100, parcelas: 1.5 }],
+      }),
+    ],
+    [
+      'tipo de cobranca desconhecido',
+      JSON.stringify({
+        chave: 'c',
+        itens: [
+          {
+            produtoId: 'p',
+            nome: 'P',
+            precoCentavos: 100,
+            tipoCobranca: 'recorrente',
+          },
+        ],
       }),
     ],
   ])('descarta o guardado com %s', (_caso, bruto) => {

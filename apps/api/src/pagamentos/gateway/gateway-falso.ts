@@ -1,4 +1,5 @@
 import {
+  conferirMaxParcelas,
   ErroDoGateway,
   PagamentosDesligados,
   type CheckoutHospedado,
@@ -38,6 +39,7 @@ export interface CobrancaRegistrada {
  * - descricao e nome com caractere que o gateway recusa dao erro aqui tambem
  *   (`texto-do-gateway.ts`) — foi assim que o travessao passou por toda a suite e
  *   so apareceu no sandbox.
+ * - teto de parcelas fora de 1 a 12 da erro aqui tambem.
  *
  * Os campos publicos existem para o teste inspecionar o que foi pedido.
  */
@@ -45,6 +47,8 @@ export class GatewayPagamentoFalso implements GatewayPagamento {
   readonly cobrancas = new Map<string, CobrancaRegistrada>();
   readonly produtos = new Map<string, ProdutoNoGateway & { id: string }>();
   readonly estornos: PedidoDeEstorno[] = [];
+  /** O teto de parcelas pedido em cada checkout hospedado, por `externalId`. */
+  readonly maxParcelas = new Map<string, number>();
   private proximo = 1;
   private falhasPendentes = 0;
   private valorForcado: number | null = null;
@@ -94,6 +98,8 @@ export class GatewayPagamentoFalso implements GatewayPagamento {
     checkout: NovoCheckoutHospedado,
   ): Promise<CheckoutHospedado> {
     this.consumirFalha('checkout hospedado');
+    conferirMaxParcelas(checkout.maxParcelas);
+    this.maxParcelas.set(checkout.externalId, checkout.maxParcelas);
     const valor = checkout.itens.reduce((soma, item) => {
       const produto = [...this.produtos.values()].find(
         (candidato) => candidato.id === item.produtoGatewayId,

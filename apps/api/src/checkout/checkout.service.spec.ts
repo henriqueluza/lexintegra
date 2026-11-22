@@ -5,7 +5,11 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import type { Auth } from 'firebase-admin/auth';
-import { Timestamp, type Firestore } from 'firebase-admin/firestore';
+import {
+  FieldValue,
+  Timestamp,
+  type Firestore,
+} from 'firebase-admin/firestore';
 import {
   VERSAO_TERMOS_CHECKOUT,
   type NovoCheckout,
@@ -47,6 +51,9 @@ const PARECER: NovoProduto = {
   intervaloMinimoReunioesDias: 15,
   numeroRevisoesPermitidas: 2,
   parcelas: 1,
+  tipoCobranca: 'assinatura',
+  descricaoDetalhada:
+    'Texto detalhado do produto, com o que ele cobre e como funciona.',
 };
 
 const CONTRATO: NovoProduto = {
@@ -660,6 +667,98 @@ describe('CheckoutService', () => {
       expect(gravado.apagarApos.toMillis()).toBe(
         AGORA + VALIDADE_CHECKOUT_HOSPEDADO_MS + FOLGA_ANTES_DE_APAGAR_MS,
       );
+    });
+
+    /**
+     * PARCELAMENTO SO EM ASSINATURA (ajuste 11), valendo no gateway e nao so na
+     * tela. O teto sai dos SNAPSHOTS que o servidor congelou — o corpo do
+     * checkout nao tem campo de parcelas, entao o navegador nao tem como pedir
+     * mais do que isto.
+     */
+    describe('teto de parcelas', () => {
+      async function tetoPara(
+        produtos: readonly Partial<NovoProduto>[],
+      ): Promise<number | undefined> {
+        const arranjo = await montar();
+        const itens = [];
+        for (const [indice, alteracao] of produtos.entries()) {
+          const { id } = await arranjo.produtos.criar(
+            {
+              ...PARECER,
+              nome: `Produto ${String(indice + 1)}`,
+              ...alteracao,
+            },
+            ADMIN,
+          );
+          itens.push({ produtoId: id });
+        }
+
+        const iniciado = await arranjo.servico.iniciar(
+          pedido(arranjo, { ...CARTAO, itens }),
+          LEAD,
+          AGORA,
+        );
+        return arranjo.gateway.maxParcelas.get(iniciado.checkoutId);
+      }
+
+      const PLANO_12 = { tipoCobranca: 'assinatura', parcelas: 12 } as const;
+      const PLANO_3 = { tipoCobranca: 'assinatura', parcelas: 3 } as const;
+      const AVULSO = { tipoCobranca: 'avulso', parcelas: 1 } as const;
+
+      it('assinatura sozinha parcela nas vezes do produto', async () => {
+        expect(await tetoPara([PLANO_12])).toBe(12);
+      });
+
+      it('avulso sozinho e a vista', async () => {
+        expect(await tetoPara([AVULSO])).toBe(1);
+      });
+
+      /** Decisao de 18/11/2026: o carrinho misto vai inteiro a vista. */
+      it('assinatura com avulso vai inteira a vista', async () => {
+        expect(await tetoPara([PLANO_12, AVULSO])).toBe(1);
+        expect(await tetoPara([AVULSO, PLANO_12])).toBe(1);
+      });
+
+      it('entre duas assinaturas vale a menor', async () => {
+        expect(await tetoPara([PLANO_12, PLANO_3])).toBe(3);
+      });
+    });
+
+    /**
+     * Um avulso gravado com parcelas (documento anterior a regra, ou editado por
+     * fora da API) continua a vista: quem decide e o tipo congelado.
+     */
+    it('avulso com parcelas gravadas no documento continua a vista', async () => {
+      const arranjo = await montar();
+      await arranjo.banco
+        .collection('produtos')
+        .doc(arranjo.parecer)
+        .update({ tipoCobranca: 'avulso', parcelas: 7 });
+
+      const iniciado = await arranjo.servico.iniciar(
+        pedido(arranjo, { ...CARTAO, itens: [{ produtoId: arranjo.parecer }] }),
+        LEAD,
+        AGORA,
+      );
+
+      expect(arranjo.gateway.maxParcelas.get(iniciado.checkoutId)).toBe(1);
+    });
+
+    /** Produto ainda nao classificado (legado) anuncia o que ja anunciava. */
+    it('produto legado, sem tipo, mantem as parcelas gravadas', async () => {
+      const arranjo = await montar();
+      await arranjo.banco
+        .collection('produtos')
+        .doc(arranjo.parecer)
+        .update({ tipoCobranca: FieldValue.delete(), parcelas: 6 });
+
+      const iniciado = await arranjo.servico.iniciar(
+        pedido(arranjo, { ...CARTAO, itens: [{ produtoId: arranjo.parecer }] }),
+        LEAD,
+        AGORA,
+      );
+
+      expect(arranjo.gateway.maxParcelas.get(iniciado.checkoutId)).toBe(6);
     });
 
     /**

@@ -12,10 +12,12 @@
  * Quem recusa a bandeira e a pagina do gateway. Esta lista diz o que o site
  * ANUNCIA, e tem que bater com o painel.
  *
- * O MESMO VALE PARA AS PARCELAS. O pedido de checkout hospedado nao leva campo
- * de parcelas (`abacatepay.gateway.ts`); a pagina do gateway oferece o que o
- * painel configura. `PARCELAS_MAXIMAS_NO_CARTAO` e o teto do que o produto pode
- * anunciar, e o esquema do produto o impoe.
+ * AS PARCELAS, SIM, DESDE NOVEMBRO DE 2026. O pedido de checkout hospedado leva
+ * `card.maxInstallments` (`abacatepay.gateway.ts`), calculado no servidor por
+ * `parcelasDoCarrinho` (`tipo-cobranca.ts`): so assinatura parcela, e a pagina
+ * do gateway nao oferece mais que o teto da cobranca.
+ * `PARCELAS_MAXIMAS_NO_CARTAO` e o teto do que o produto pode anunciar, e o
+ * esquema do produto e os dois adaptadores do gateway o impoem.
  *
  * ESTE ARQUIVO NAO IMPORTA ZOD: e lido pelo rodape, que esta em toda pagina
  * publica (ver `carrinho.ts`).
@@ -55,5 +57,5 @@ export const MARCAS_DO_CARTAO: readonly MarcaDePagamento[] = [
   ...CARTEIRAS_DO_CARTAO,
 ];
 
-/** Painel do AbacatePay: parcelamento em ate 12x no cartao. O Pix e a vista. */
+/** AbacatePay: parcelamento em ate 12x no cartao (`card.maxInstallments`). O Pix e a vista. */
 export const PARCELAS_MAXIMAS_NO_CARTAO = 12;

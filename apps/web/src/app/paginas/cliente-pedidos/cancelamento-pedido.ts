@@ -14,6 +14,7 @@ import {
   TEXTO_PRAZOS_ESTORNO,
 } from 'shared/regra-estorno';
 import { podeCancelar } from 'shared/situacao-pedido';
+import { ofereceReunioes } from 'shared/tipo-cobranca';
 import { ApiClienteService } from '../../autenticacao/api-cliente.service';
 import { Botao } from '../../ui/botao/botao';
 import { MensagemErro } from '../../ui/mensagem-erro/mensagem-erro';
@@ -22,14 +23,19 @@ import { mensagemDoErro } from '../erros';
 /**
  * O texto da confirmação (B2, decisoes.md 1.2 e 3.3). A parte da regra vem de
  * `shared/regra-estorno`, a mesma dos termos: cancelar e estornar são atos
- * diferentes, e quem cancela precisa ler isso antes de confirmar.
+ * diferentes, e quem cancela precisa ler isso antes de confirmar. A frase das
+ * reunioes so entra em pedido que tem reuniao (quantidade do snapshot).
  */
-export const TEXTO_CANCELAMENTO_JURIDICO = [
-  'Ao confirmar, este pedido será cancelado: ele não seguirá para elaboração, e as reuniões ainda futuras dele serão desmarcadas.',
-  TEXTO_CANCELAR_NAO_DEVOLVE,
-  TEXTO_PRAZOS_ESTORNO,
-  TEXTO_DIREITOS_PRESERVADOS,
-].join(' ');
+export function textoCancelamentoJuridico(comReunioes: boolean): string {
+  return [
+    comReunioes
+      ? 'Ao confirmar, este pedido será cancelado: ele não seguirá para elaboração, e as reuniões ainda futuras dele serão desmarcadas.'
+      : 'Ao confirmar, este pedido será cancelado: ele não seguirá para elaboração.',
+    TEXTO_CANCELAR_NAO_DEVOLVE,
+    TEXTO_PRAZOS_ESTORNO,
+    TEXTO_DIREITOS_PRESERVADOS,
+  ].join(' ');
+}
 
 /**
  * O cancelamento de um pedido pelo cliente (ADR-12), dentro do cartao dele.
@@ -56,7 +62,9 @@ export class CancelamentoPedido {
   readonly pedido = input.required<CartaoPedido>();
   readonly cancelado = output<void>();
 
-  protected readonly textoJuridico = TEXTO_CANCELAMENTO_JURIDICO;
+  protected readonly textoJuridico = computed(() =>
+    textoCancelamentoJuridico(ofereceReunioes(this.pedido().snapshot)),
+  );
   protected readonly confirmando = signal(false);
   protected readonly processando = signal(false);
   protected readonly falha = signal<string | null>(null);

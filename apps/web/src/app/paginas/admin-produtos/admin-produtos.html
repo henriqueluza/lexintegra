@@ -39,7 +39,38 @@
         [obrigatorio]="true"
       />
 
+      <app-campo
+        rotulo="Descrição detalhada"
+        formControlName="descricaoDetalhada"
+        [erro]="erroDoCampo('descricaoDetalhada')"
+        [dica]="dicaDaDescricaoDetalhada()"
+        [multilinha]="true"
+        [linhas]="8"
+        [obrigatorio]="true"
+      />
+
+      <app-grupo-opcoes
+        rotulo="Tipo de cobrança"
+        formControlName="tipoCobranca"
+        [opcoes]="opcoesDeTipo"
+        [erro]="erroDoCampo('tipoCobranca')"
+        dica="Só assinatura pode ser parcelada no cartão. Serviço avulso é sempre à vista."
+        [obrigatorio]="true"
+      />
+
+      @if (ehAvulso()) {
+      <label class="produtos__marcar">
+        <input
+          class="produtos__marcar-controle"
+          type="checkbox"
+          formControlName="incluiReuniao"
+        />
+        <span>Inclui reunião</span>
+      </label>
+      }
+
       <div class="produtos__campos produtos__campos--numeros">
+        @if (mostraReuniao()) {
         <app-campo
           rotulo="Reuniões incluídas"
           formControlName="quantidadeReunioes"
@@ -57,18 +88,21 @@
           [erro]="erroDoCampo('intervaloMinimoReunioesDias')"
           dica="Dias entre uma reunião e outra."
         />
+        }
         <app-campo
           rotulo="Revisões permitidas"
           formControlName="numeroRevisoesPermitidas"
           [erro]="erroDoCampo('numeroRevisoesPermitidas')"
           dica="Número de revisões incluídas para cada entregável."
         />
+        @if (mostraParcelas()) {
         <app-campo
           rotulo="Parcelas no cartão"
           formControlName="parcelas"
           [erro]="erroDoCampo('parcelas')"
           dica="De 1 a 12. Use 1 para só à vista."
         />
+        }
       </div>
 
       <!--
@@ -194,9 +228,13 @@
     [carregando]="carregando()"
   >
     <ng-template appCelulaTabela let-linha let-coluna="coluna">
-      @switch (coluna.chave) { @case ('preco') { {{
-      precoFormatado(comoProduto(linha).precoCentavos) }} } @case ('composicao')
-      {
+      @switch (coluna.chave) { @case ('tipo') { @if
+      (comoProduto(linha).tipoCobranca; as tipo) {
+      <span class="produtos__tipo">{{ rotuloDoTipo(tipo) }}</span>
+      } @else {
+      <span class="produtos__selo-atencao">Sem tipo</span>
+      } } @case ('preco') { {{ precoFormatado(comoProduto(linha).precoCentavos)
+      }} } @case ('composicao') {
       <span class="produtos__composicao"
         >{{ composicao(comoProduto(linha)) }}</span
       >

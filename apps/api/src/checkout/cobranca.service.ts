@@ -10,7 +10,7 @@ import {
   type DocumentReference,
   type Firestore,
 } from 'firebase-admin/firestore';
-import type { CheckoutIniciado } from 'shared';
+import { parcelasDoCarrinho, type CheckoutIniciado } from 'shared';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import { urlDaAplicacao } from '../outbox/link-de-senha.js';
 import {
@@ -133,6 +133,14 @@ export class CobrancaDoCheckout {
     const checkout = await this.gateway.criarCheckoutHospedado({
       itens,
       externalId: intencao.id,
+      /*
+       * O teto de parcelas sai dos SNAPSHOTS da intencao, que o servidor
+       * congelou: o navegador nao escolhe em quantas vezes a pagina oferece.
+       * Com um servico avulso entre os itens, a compra inteira vai a vista.
+       */
+      maxParcelas: parcelasDoCarrinho(
+        intencao.documento.itens.map((item) => item.snapshot),
+      ),
       urlRetorno: `${base}/checkout`,
       urlConclusao: `${base}/checkout?id=${encodeURIComponent(intencao.id)}`,
     });

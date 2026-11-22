@@ -292,6 +292,7 @@ describe('AbacatePayGateway', () => {
     const NOVO = {
       itens: [{ produtoGatewayId: 'prod_1', quantidade: 2 }],
       externalId: 'checkout-2',
+      maxParcelas: 12,
       urlRetorno: 'https://lexintegra.com.br/checkout',
       urlConclusao: 'https://lexintegra.com.br/checkout?id=checkout-2',
     };
@@ -319,12 +320,48 @@ describe('AbacatePayGateway', () => {
       expect(requisicoes[0].corpo).toEqual({
         items: [{ id: 'prod_1', quantity: 2 }],
         methods: ['CARD'],
+        card: { maxInstallments: 12 },
         externalId: 'checkout-2',
         returnUrl: NOVO.urlRetorno,
         completionUrl: NOVO.urlConclusao,
         metadata: { checkoutId: 'checkout-2' },
       });
     });
+
+    /**
+     * PARCELAMENTO SO EM ASSINATURA, NO SERVIDOR (lote de novembro de 2026). O
+     * teto vai em `card.maxInstallments`; com 1, a pagina do gateway so oferece
+     * a vista. Antes o site anunciava e a pagina oferecia 12x em tudo.
+     */
+    it('manda o teto de uma parcela quando a compra e a vista', async () => {
+      const { gateway, requisicoes } = gatewayCom([
+        ok({
+          id: 'bill_abc',
+          amount: 500_000,
+          url: 'https://pay.abacatepay.com/bill_abc',
+          devMode: true,
+        }),
+      ]);
+
+      await gateway.criarCheckoutHospedado({ ...NOVO, maxParcelas: 1 });
+
+      expect(requisicoes[0].corpo).toMatchObject({
+        card: { maxInstallments: 1 },
+      });
+    });
+
+    /** Teto invalido nao sai daqui: a regra nao fica na mao do gateway. */
+    it.each([0, 13, 2.5, -1, Number.NaN])(
+      'recusa o teto de parcelas %s sem chamar o gateway',
+      async (maxParcelas) => {
+        const { gateway, requisicoes } = gatewayCom([]);
+
+        await expect(
+          gateway.criarCheckoutHospedado({ ...NOVO, maxParcelas }),
+        ).rejects.toThrow(/teto de parcelas/);
+        expect(requisicoes).toHaveLength(0);
+      },
+    );
 
     it('descarta checkout real num processo de sandbox', async () => {
       const { gateway } = gatewayCom([

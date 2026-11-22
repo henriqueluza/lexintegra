@@ -41,3 +41,33 @@ export function descreverPreco(
     total: `${total} · 1ª parcela ${paraReais(conta.primeiraParcelaCentavos)}`,
   };
 }
+
+/**
+ * A linha do resumo do carrinho e do checkout: "ou em até 3x de R$ 230,00 no
+ * cartão". Vazia quando a compra nao parcela — avulso no carrinho, item a
+ * vista, ou total pequeno demais: nao se anuncia o que a pagina do gateway nao
+ * vai oferecer.
+ *
+ * As `parcelas` vem de `parcelasDoCarrinho` (`shared/tipo-cobranca`), a MESMA
+ * conta que o servidor manda ao gateway como teto.
+ */
+export function descreverCondicaoNoCartao(
+  totalCentavos: number,
+  parcelas: number,
+): string {
+  const preco = descreverPreco(totalCentavos, parcelas);
+  if (preco.total === '') return '';
+
+  const primeira = preco.total.split(' · ')[1];
+  return primeira === undefined
+    ? `ou em até ${preco.destaque} no cartão`
+    : `ou em até ${preco.destaque} no cartão (${primeira})`;
+}
+
+/**
+ * O aviso do carrinho misto (decisao de 18/11/2026): com um servico avulso
+ * entre os itens, a compra inteira vai a vista. Um texto so, para o carrinho e
+ * o checkout dizerem a mesma coisa.
+ */
+export const AVISO_AVULSO_SEM_PARCELAMENTO =
+  'Com um serviço avulso no carrinho, o pagamento no cartão é à vista. Para parcelar a assinatura, contrate-a em uma compra separada.';

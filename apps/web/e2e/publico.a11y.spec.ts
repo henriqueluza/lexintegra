@@ -53,6 +53,10 @@ test.describe('acessibilidade da area publica', () => {
             numeroRevisoesPermitidas: 2,
             /* Divisao que nao fecha: o axe ve a parcela e a linha do total. */
             parcelas: 6,
+            tipoCobranca: 'assinatura',
+            /* Com descricao detalhada, o axe ve o botao "+" e a regiao dele. */
+            descricaoDetalhada:
+              'Lemos o contrato inteiro.\n\nDevolvemos a minuta com as alterações marcadas.',
           },
         ]),
       }),
@@ -87,6 +91,16 @@ test.describe('acessibilidade da area publica', () => {
     await page.getByRole('button', { name: 'Liberar catálogo' }).click();
     await page.getByRole('link', { name: 'Explorar os serviços' }).click();
     await expect(page.getByText('Revisão de contrato comercial')).toBeVisible();
+
+    expect(await violacoes(page)).toEqual([]);
+
+    /* O cartao ABERTO pelo "+" (ajuste 1) passa pelo axe tambem. */
+    await page
+      .getByRole('button', {
+        name: 'Ver mais detalhes de Revisão de contrato comercial',
+      })
+      .click();
+    await expect(page.getByText('Lemos o contrato inteiro.')).toBeVisible();
 
     expect(await violacoes(page)).toEqual([]);
   });

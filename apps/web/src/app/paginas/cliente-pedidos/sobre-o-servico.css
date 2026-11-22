@@ -1,0 +1,43 @@
+/* Regra inviolavel 8: so token semantico. */
+.sobre {
+  margin-bottom: var(--s4);
+}
+
+.sobre__botao {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) 0;
+  border: 0;
+  background: transparent;
+  color: var(--acento);
+  font-family: var(--fonte-interface);
+  font-size: var(--t-menor);
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+}
+
+.sobre__seta {
+  display: inline-flex;
+  transition: transform var(--duracao-rapida) ease;
+}
+
+/* A seta gira para baixo ao abrir; `base.css` zera a duracao sob movimento reduzido. */
+.sobre__seta--aberta {
+  transform: rotate(90deg);
+}
+
+/* `pre-line` preserva as quebras do texto sem aceitar HTML; `overflow-wrap`
+ * protege os 360 px de uma palavra comprida. */
+.sobre__texto {
+  margin: var(--s2) 0 0;
+  max-width: var(--medida-texto);
+  color: var(--texto-2);
+  line-height: var(--altura-corpo);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.sobre__texto[hidden] {
+  display: none;
+}

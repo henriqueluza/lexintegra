@@ -1,4 +1,5 @@
 import type { ProdutoVitrine } from 'shared/esquemas/vitrine';
+import { descricaoDetalhadaDe } from 'shared/tipo-cobranca';
 import { descreverPreco } from '../../../comum/parcela';
 
 export interface LinhaFicha {
@@ -113,11 +114,27 @@ export interface FichaProduto {
   linhas: LinhaFicha[];
   meta: string;
   descricao: string;
+  /**
+   * A descricao detalhada (ajuste 1), em paragrafos: e o que o botao "+" do
+   * cartao abre. Vazia no produto gravado antes do campo existir.
+   */
+  detalhada: readonly string[];
   /** Em destaque: a parcela ("12x de R$ 590,00") ou, sem parcelamento, o total. */
   preco: string;
   /** Menor, embaixo: "ou R$ 7.080,00 à vista"; vazio quando `preco` ja e o total. */
   total: string;
   busca: string;
+}
+
+/**
+ * Um paragrafo por bloco separado por linha em branco. Quebra simples dentro do
+ * bloco fica como esta: o CSS a preserva (`white-space: pre-line`).
+ */
+export function emParagrafos(texto: string): string[] {
+  return texto
+    .split(/\n\s*\n/u)
+    .map((paragrafo) => paragrafo.trim())
+    .filter((paragrafo) => paragrafo !== '');
 }
 
 export function apresentar(produto: ProdutoVitrine): FichaProduto {
@@ -147,6 +164,12 @@ export function apresentar(produto: ProdutoVitrine): FichaProduto {
     });
   const descricao = produto.descricao ?? '';
   /*
+   * `descricaoDetalhadaDe`, e nao o campo cru, porque o Hosting e a API sao
+   * publicados em passos diferentes: por alguns minutos a tela nova pode
+   * conversar com a API anterior ao campo.
+   */
+  const detalhada = descricaoDetalhadaDe(produto);
+  /*
    * A parcela vem do campo `parcelas` do produto e da conta de `shared`, nao do
    * texto da descricao. Ate 01/11/2026 o "3x de R$ 245,00" era lido da
    * descricao por expressao regular — valor digitado a mao, que ninguem
@@ -161,10 +184,16 @@ export function apresentar(produto: ProdutoVitrine): FichaProduto {
     linhas,
     meta: meta.join(' · '),
     descricao: descricao.trim(),
+    detalhada: emParagrafos(detalhada),
     preco: destaque,
     total,
     busca: normalizar(
-      [produto.nome, descricao, ...linhas.map((item) => item.nome)].join(' '),
+      [
+        produto.nome,
+        descricao,
+        detalhada,
+        ...linhas.map((item) => item.nome),
+      ].join(' '),
     ),
   };
 }

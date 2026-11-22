@@ -1,4 +1,4 @@
-import type { Firestore } from 'firebase-admin/firestore';
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { CATALOGO_FICTICIO } from '../../../../scripts/dados-ficticios/catalogo-produtos.js';
 import { firestoreDeTeste, limparEmuladores } from '../emulador.js';
 import { ProdutosService } from '../produtos/produtos.service.js';
@@ -76,6 +76,9 @@ describe('snapshot imutavel contra o Firestore', () => {
         precoCentavos: 1,
         numeroRevisoesPermitidas: 99,
         parcelas: 1,
+        /* O tipo e a descricao detalhada tambem ficam congelados no pedido. */
+        tipoCobranca: 'avulso',
+        descricaoDetalhada: 'Outro texto detalhado, escrito depois da compra.',
         entregaveis: ['Um so'],
         textosOrientativos: [],
       },
@@ -94,7 +97,43 @@ describe('snapshot imutavel contra o Firestore', () => {
       intervaloMinimoReunioesDias: DUE_DILIGENCE.intervaloMinimoReunioesDias,
       numeroRevisoesPermitidas: DUE_DILIGENCE.numeroRevisoesPermitidas,
       parcelas: DUE_DILIGENCE.parcelas,
+      tipoCobranca: DUE_DILIGENCE.tipoCobranca,
+      descricaoDetalhada: DUE_DILIGENCE.descricaoDetalhada,
     });
+  });
+
+  /**
+   * PEDIDO ANTERIOR AO LOTE DE NOVEMBRO DE 2026. O produto foi gravado sem tipo
+   * e sem descricao detalhada; o pedido sai "legado" (sem a chave do tipo) e
+   * CLASSIFICAR O PRODUTO DEPOIS NAO O REESCREVE: quem comprou com reunioes
+   * continua com as reunioes do snapshot.
+   */
+  it('classificar o produto depois nao reescreve o pedido legado', async () => {
+    const { id } = await produtos.criar(DUE_DILIGENCE, ADMIN);
+    await banco.collection('produtos').doc(id).update({
+      tipoCobranca: FieldValue.delete(),
+      descricaoDetalhada: FieldValue.delete(),
+    });
+    await comprar(id);
+
+    await produtos.editar(
+      id,
+      {
+        ...DUE_DILIGENCE,
+        tipoCobranca: 'avulso',
+        parcelas: 1,
+        quantidadeReunioes: 0,
+      },
+      ADMIN,
+    );
+
+    const bruto = await banco.collection(COLECAO_PEDIDOS).doc('pedido-1').get();
+    const snapshot = bruto.data()?.['snapshot'] as Record<string, unknown>;
+    expect('tipoCobranca' in snapshot).toBe(false);
+    expect(snapshot['descricaoDetalhada']).toBe('');
+    expect(snapshot['quantidadeReunioes']).toBe(
+      DUE_DILIGENCE.quantidadeReunioes,
+    );
   });
 
   it('mantem os entregaveis do snapshot depois de o catalogo trocar de lista', async () => {

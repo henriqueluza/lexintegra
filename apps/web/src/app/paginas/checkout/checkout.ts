@@ -29,7 +29,10 @@ import { ApiCheckoutService } from '../../autenticacao/api-checkout.service';
 import { AppCheckService } from '../../autenticacao/app-check';
 import { SessaoService } from '../../autenticacao/sessao.service';
 import { paraReais } from '../../comum/moeda';
-import { descreverPreco } from '../../comum/parcela';
+import {
+  AVISO_AVULSO_SEM_PARCELAMENTO,
+  descreverCondicaoNoCartao,
+} from '../../comum/parcela';
 import { MarcasPagamento } from '../../ui/marcas-pagamento/marcas-pagamento';
 import { CarrinhoService } from '../../publico/carrinho.service';
 import { PreCadastroService } from '../../publico/pre-cadastro.service';
@@ -141,18 +144,24 @@ export class Checkout {
    * esta desligado ou nenhum item e parcelavel: nao se anuncia o que o
    * checkout recusa.
    */
-  protected readonly condicaoNoCartao = computed(() => {
-    if (!this.cartaoDisponivel()) return '';
-    const preco = descreverPreco(
-      this.carrinho.totalIndicativoCentavos(),
-      this.carrinho.parcelasNoCartao(),
-    );
-    if (preco.total === '') return '';
-    const primeira = preco.total.split(' · ')[1];
-    return primeira === undefined
-      ? `ou em até ${preco.destaque} no cartão`
-      : `ou em até ${preco.destaque} no cartão (${primeira})`;
-  });
+  protected readonly condicaoNoCartao = computed(() =>
+    this.cartaoDisponivel()
+      ? descreverCondicaoNoCartao(
+          this.carrinho.totalIndicativoCentavos(),
+          this.carrinho.parcelasNoCartao(),
+        )
+      : '',
+  );
+
+  /**
+   * Carrinho misto: o avulso leva a compra inteira para a vista. So aparece
+   * com o cartao no ar — com ele desligado nao ha parcelamento a perder.
+   */
+  protected readonly avisoSemParcelamento = computed(() =>
+    this.cartaoDisponivel() && this.carrinho.avulsoImpedeParcelamento()
+      ? AVISO_AVULSO_SEM_PARCELAMENTO
+      : '',
+  );
 
   /**
    * As marcas da fonte unica (`shared/formas-de-pagamento`). Com o cartao fora

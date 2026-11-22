@@ -66,6 +66,17 @@ export default {
      * em `+` mostraria ao cliente uma parcela que ninguem cobra.
      */
     'src/parcelamento.ts',
+    /*
+     * Lote de novembro de 2026. Quem parcela e quem nao parcela, o teto que vai
+     * ao gateway e o que e pedido "legado": um `===` virado em `!==` aqui faz o
+     * servico avulso sair em doze vezes, ou a assinatura sair a vista, sem
+     * nenhuma tela quebrar.
+     *
+     * Medido em 19/11/2026: 49 de 50. O sobrevivente e EQUIVALENTE — em
+     * `parcelasAnunciadas`, `parcelas >= 1` virado em `> 1` devolve 1 nos dois
+     * codigos quando `parcelas` e 1.
+     */
+    'src/tipo-cobranca.ts',
   ],
 
   /*

@@ -13,11 +13,48 @@ sobra é só o que exige produção real ou o escritório**, em duas listas, na
 ordem de execução. O histórico do que foi feito, item por item, está no fim
 desta página.
 
+**Desde 18/11/2026 há uma terceira lista, a 0:** o lote de novembro, com 14
+ajustes pedidos pelo cliente depois da entrada em produção.
+
 👤 = Henrique. 🏢 = escritório. 🤝 = os dois juntos.
 
 ---
 
 ## 0. Lote de novembro (ajustes pedidos pelo cliente)
+
+Catorze ajustes em sete blocos (A a G), um PR por bloco. O que está aqui é o
+que depende de pessoa; o que é código está no PR de cada bloco.
+
+**Bloco A — tipo de produto** (`feat/tipo-de-produto`: descrição detalhada,
+parcelamento só em assinatura, reunião conforme o pedido)
+
+- [ ] 🏢 **Enviar a descrição detalhada dos 26 produtos** do catálogo (é o
+  texto que o botão **+** abre; de 20 a 5000 caracteres cada). Até chegarem, o
+  PR fica em rascunho e `scripts/cadastrar-catalogo-inicial.mjs` recusa rodar.
+  A lista dos produtos está no PR; os textos entram em
+  `scripts/catalogo-inicial/produtos.data.ts`, no lugar de
+  `AGUARDANDO_ESCRITORIO`.
+- [ ] 🏢 **Confirmar duas decisões tomadas pelo Henrique em 18/11/2026:**
+  (1) serviço avulso pode ter reunião, como exceção (a "Reunião avulsa
+  estratégica" continua avulsa, com 1 reunião): o tipo governa só o
+  parcelamento; (2) carrinho com assinatura e serviço avulso vai inteiro à
+  vista no cartão, com aviso (o AbacatePay aceita um limite de parcelas só por
+  cobrança).
+- [ ] 👤 **Provar `card.maxInstallments` no sandbox, antes do merge**
+  ([`checkout-sandbox.md`](docs/runbooks/checkout-sandbox.md), seção 4, os
+  cinco itens de "Parcelas"): avulso só à vista, assinatura até o número do
+  produto, carrinho misto à vista, o mínimo de R$ 10,00 por parcela e os
+  centavos da primeira. O campo veio só da documentação do AbacatePay; se o
+  gateway o recusar, o cartão para para todos.
+- [ ] 🏢 **Classificar os produtos que já estão em produção**, depois do
+  deploy: em `/admin/produtos` eles aparecem com o selo **Sem tipo**. Os três
+  planos são **Assinatura**; os três pacotes fechados antigos são desativados
+  (item do catálogo, na lista 1) e não precisam de tipo. Cada edição pede
+  também a descrição detalhada ([manual do administrador](docs/manuais/admin.md) §1).
+- [ ] 👤 Aprovar as imagens de referência novas e as regravadas do Bloco A
+  (lista no PR), e gerar de novo as capturas dos manuais
+  (`pnpm capturas:manuais`): o formulário de produto e o cartão do pedido
+  mudaram.
 
 **Bloco G — backups do Firestore** (`feat/backup-firestore`, ADR-23)
 
@@ -45,6 +82,27 @@ desta página.
   (`privacidade-*`): ganhou um parágrafo e a data própria.
 - [ ] 🏢 Conferir na primeira fatura o custo dos backups (estimado em
   centavos; o preço por GiB em São Paulo não foi confirmado).
+
+**Perguntas dos blocos seguintes, para levar ao escritório antes de cada um**
+
+- [ ] 🏢 **Bloco B (anamnese).** O que é a "anamnese inicial" a tirar da
+  página do advogado: o entregável com esse nome no Pacote 1 antigo, o botão
+  "Anamnese e observações", ou outra coisa (não existe etapa nem bloqueio no
+  fluxo)? A ficha hoje é uma por cliente (decisões 1.1): campos variáveis por
+  produto a tornam por pedido, é isso, e depende de PF ou PJ? Quais são os
+  campos fixos? O cliente só lê as respostas ou pode editar, e até quando?
+- [ ] 🏢 **Bloco C (e-mails).** Quem recebe o aviso de pedido novo: todos os
+  administradores ativos ou um endereço do escritório? Observação do cliente
+  em pedido ainda sem advogado avisa quem? Deve existir e-mail ao cliente
+  quando o documento fica disponível (hoje não existe, e o ajuste 14 o
+  pressupõe)? Quantas observações por dia se espera (o Resend gratuito envia
+  100 e-mails por dia)?
+- [ ] 🏢 **Bloco D (visão do admin).** O administrador só vê a área dos
+  advogados, ou também age em nome deles?
+- [ ] 🏢 **Bloco E (upload).** A conversão de PDF em DOCX vale para os
+  arquivos do advogado, do cliente ou dos dois, e PDF escaneado converte?
+  Aprovar o custo mensal de qualquer mudança no antivírus ou do serviço de
+  conversão (o PR traz os números).
 
 ---
 
@@ -95,12 +153,15 @@ seguintes), e as reuniões depois de haver pedido distribuído.
   `scripts/catalogo-inicial/produtos.data.ts`). Três passos, nesta ordem:
   1. **Desativar os três pacotes fechados** em `/admin/produtos`.
   2. **Editar os três planos pelo painel** (o script **pula produto que já
-     existe** e não tem `--atualizar`): parcelas (12, 12 e 3), descrição sem
-     "Pode ser parcelado em 3x" e a composição nova. Essencial: 2 modelos
+     existe** e não tem `--atualizar`): tipo **Assinatura** e a descrição
+     detalhada (lote de novembro, lista 0), parcelas (12, 12 e 3), descrição
+     sem "Pode ser parcelado em 3x" e a composição nova. Essencial: 2 modelos
      padrão (eram 3) e 4 análises contratuais; Prime de 3 meses: 2 análises
      (eram 4). [Manual do administrador](docs/manuais/admin.md) §1.
   3. **Cadastrar os 23 avulsos**: `node scripts/cadastrar-catalogo-inicial.mjs
-     --prod` (cria só o que falta, pelo nome).
+     --prod` (cria só o que falta, pelo nome). **Só roda depois de as 26
+     descrições detalhadas chegarem** (lista 0): sem elas o script aborta
+     antes de gravar qualquer produto.
 - [ ] 🏢 **Confirmar com o escritório, do mesmo documento:** modelos de
   contrato padrão nos planos Prime (6 e 4 na tabela, "a confirmar" na nota; os
   6 levariam o Prime de 12 meses a 65 entregáveis, acima do teto de 60); o

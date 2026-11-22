@@ -16,6 +16,9 @@ const PARECER: ProdutoResumo = {
   intervaloMinimoReunioesDias: 0,
   numeroRevisoesPermitidas: 1,
   parcelas: 3,
+  tipoCobranca: 'assinatura',
+  descricaoDetalhada:
+    'Analise completa do risco trabalhista, com recomendacoes por etapa.',
   ativo: true,
   criadoEm: '2026-09-01T12:00:00.000Z',
   atualizadoEm: null,
@@ -100,10 +103,11 @@ async function montar(opcoes: Partial<ApiDeTeste> = {}): Promise<{
 
 type Interno = {
   formulario: {
-    patchValue: (v: Record<string, string>) => void;
+    patchValue: (v: Record<string, unknown>) => void;
+    getRawValue: () => Record<string, unknown>;
     controls: Record<
       string,
-      { clear?: () => void; push?: (c: unknown) => void }
+      { clear?: () => void; push?: (c: unknown) => void; enabled?: boolean }
     >;
   };
   situacao: { setValue: (v: string) => void };
@@ -121,9 +125,12 @@ function interno(fixture: ComponentFixture<AdminProdutos>): Interno {
   return fixture.componentInstance as unknown as Interno;
 }
 
+const DETALHADA =
+  'Analise completa do risco trabalhista, com recomendacoes por etapa.';
+
 function preencherValido(
   fixture: ComponentFixture<AdminProdutos>,
-  alteracoes: Record<string, string> = {},
+  alteracoes: Record<string, unknown> = {},
 ): void {
   const componente = interno(fixture);
   componente.formulario.patchValue({
@@ -135,6 +142,8 @@ function preencherValido(
     intervaloMinimoReunioesDias: '0',
     numeroRevisoesPermitidas: '1',
     parcelas: '3',
+    tipoCobranca: 'assinatura',
+    descricaoDetalhada: DETALHADA,
     ...alteracoes,
   });
   componente.lista('entregaveis').at(0).setValue('Parecer em PDF');
@@ -509,6 +518,338 @@ describe('AdminProdutos', () => {
     it('explica que a edicao nao retroage a pedidos ja feitos', async () => {
       const { fixture } = await montar({ lista: [PARECER] });
       expect(textoDaTela(fixture)).toContain('mantêm as condições contratadas');
+    });
+  });
+
+  describe('tipo de cobranca e descricao detalhada', () => {
+    const SEM_TIPO: ProdutoResumo = {
+      ...PARECER,
+      id: 'antigo',
+      tipoCobranca: null,
+      descricaoDetalhada: '',
+    };
+    const AVULSO: ProdutoResumo = {
+      ...PARECER,
+      id: 'avulso',
+      tipoCobranca: 'avulso',
+      quantidadeReunioes: 0,
+      parcelas: 1,
+    };
+
+    function rotulos(fixture: ComponentFixture<AdminProdutos>): string[] {
+      return [...fixture.nativeElement.querySelectorAll('app-campo label')].map(
+        (l) => (l as HTMLElement).textContent?.replace('*', '').trim() ?? '',
+      );
+    }
+
+    function marcados(fixture: ComponentFixture<AdminProdutos>): string[] {
+      return [
+        ...fixture.nativeElement.querySelectorAll(
+          'app-grupo-opcoes input:checked',
+        ),
+      ].map((i) => (i as HTMLInputElement).value);
+    }
+
+    it('produto novo nasce sem tipo marcado e recusa salvar sem escolher', async () => {
+      const { fixture, api } = await montar();
+      expect(marcados(fixture)).toEqual([]);
+
+      preencherValido(fixture, { tipoCobranca: '' });
+      await enviar(fixture);
+
+      expect(api.chamadas).toEqual(['listar todos']);
+      expect(textoDaTela(fixture)).toContain('Escolha o tipo de cobrança.');
+    });
+
+    it('explica que so assinatura parcela', async () => {
+      const { fixture } = await montar();
+      expect(textoDaTela(fixture)).toContain(
+        'Só assinatura pode ser parcelada no cartão. Serviço avulso é sempre à vista.',
+      );
+    });
+
+    it('assinatura mostra parcelas e reunioes e envia o que foi digitado', async () => {
+      const { fixture, api } = await montar();
+      preencherValido(fixture);
+      expect(rotulos(fixture)).toContain('Parcelas no cartão');
+      expect(rotulos(fixture)).toContain('Reuniões incluídas');
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector(
+          '.produtos__marcar',
+        ),
+      ).toBeNull();
+
+      await enviar(fixture);
+
+      expect(api.enviados[0]).toMatchObject({
+        tipoCobranca: 'assinatura',
+        descricaoDetalhada: DETALHADA,
+        parcelas: 3,
+        quantidadeReunioes: 1,
+      });
+    });
+
+    it('assinatura aceita zero reunioes', async () => {
+      const { fixture, api } = await montar();
+      preencherValido(fixture, { quantidadeReunioes: '0' });
+      await enviar(fixture);
+      expect(api.enviados[0].quantidadeReunioes).toBe(0);
+    });
+
+    it('avulso esconde parcelas e reunioes, e envia 1, 0 e 0', async () => {
+      const { fixture, api } = await montar();
+      preencherValido(fixture, { tipoCobranca: 'avulso' });
+
+      expect(rotulos(fixture)).not.toContain('Parcelas no cartão');
+      expect(rotulos(fixture)).not.toContain('Reuniões incluídas');
+      expect(rotulos(fixture)).not.toContain('Prazo das reuniões');
+      expect(rotulos(fixture)).not.toContain('Intervalo mínimo');
+      expect(textoDaTela(fixture)).toContain('Inclui reunião');
+
+      await enviar(fixture);
+
+      expect(api.enviados[0]).toMatchObject({
+        tipoCobranca: 'avulso',
+        parcelas: 1,
+        quantidadeReunioes: 0,
+        intervaloMinimoReunioesDias: 0,
+        prazoValidadeReunioesDias: 180,
+      });
+    });
+
+    it('avulso com "Inclui reunião" ligada mostra e envia os tres campos', async () => {
+      const { fixture, api } = await montar();
+      preencherValido(fixture, {
+        tipoCobranca: 'avulso',
+        incluiReuniao: true,
+        quantidadeReunioes: '1',
+        prazoValidadeReunioesDias: '90',
+        intervaloMinimoReunioesDias: '7',
+      });
+      expect(rotulos(fixture)).toContain('Reuniões incluídas');
+      expect(rotulos(fixture)).not.toContain('Parcelas no cartão');
+
+      await enviar(fixture);
+
+      expect(api.enviados[0]).toMatchObject({
+        parcelas: 1,
+        quantidadeReunioes: 1,
+        prazoValidadeReunioesDias: 90,
+        intervaloMinimoReunioesDias: 7,
+      });
+    });
+
+    /** Campo escondido com lixo nao pode travar um submit que ninguem corrige. */
+    it('valor invalido num campo escondido nao trava o envio', async () => {
+      const { fixture, api } = await montar();
+      preencherValido(fixture, {
+        parcelas: 'abc',
+        quantidadeReunioes: '',
+        intervaloMinimoReunioesDias: 'x',
+        prazoValidadeReunioesDias: 'y',
+        tipoCobranca: 'avulso',
+      });
+      await enviar(fixture);
+
+      expect(api.chamadas).toContain('criar');
+      expect(api.enviados[0]).toMatchObject({
+        parcelas: 1,
+        quantidadeReunioes: 0,
+        intervaloMinimoReunioesDias: 0,
+        prazoValidadeReunioesDias: 365,
+      });
+    });
+
+    it('trocar de avulso para assinatura devolve os campos escondidos', async () => {
+      const { fixture, api } = await montar();
+      preencherValido(fixture, { tipoCobranca: 'avulso' });
+      interno(fixture).formulario.patchValue({ tipoCobranca: 'assinatura' });
+      fixture.detectChanges();
+
+      expect(rotulos(fixture)).toContain('Parcelas no cartão');
+      expect(rotulos(fixture)).toContain('Reuniões incluídas');
+
+      await enviar(fixture);
+      expect(api.enviados[0]).toMatchObject({
+        parcelas: 3,
+        quantidadeReunioes: 1,
+      });
+    });
+
+    describe('descricao detalhada', () => {
+      it.each([
+        ['vazia', '', 'Campo obrigatório.'],
+        ['so com espacos', ' '.repeat(40), 'Campo obrigatório.'],
+        ['curta', 'Curta demais', 'pelo menos 20 caracteres'],
+        ['acima do teto', 'a'.repeat(5001), 'no máximo 5000 caracteres'],
+      ])('recusa %s', async (_nome, texto, mensagem) => {
+        const { fixture, api } = await montar();
+        preencherValido(fixture, { descricaoDetalhada: texto });
+        await enviar(fixture);
+
+        expect(api.chamadas).toEqual(['listar todos']);
+        expect(textoDaTela(fixture)).toContain(mensagem);
+      });
+
+      it('aceita 20 caracteres, apara e conta o texto aparado', async () => {
+        const { fixture, api } = await montar();
+        preencherValido(fixture, {
+          descricaoDetalhada: `  ${'a'.repeat(20)}  `,
+        });
+        expect(textoDaTela(fixture)).toContain('20 de 5000');
+        await enviar(fixture);
+        expect(api.enviados[0].descricaoDetalhada).toBe('a'.repeat(20));
+      });
+
+      it('aceita exatamente 5000 caracteres', async () => {
+        const { fixture, api } = await montar();
+        preencherValido(fixture, { descricaoDetalhada: 'b'.repeat(5000) });
+        await enviar(fixture);
+        expect(api.enviados[0].descricaoDetalhada).toHaveLength(5000);
+      });
+
+      it('mostra a ajuda e o contador, ligados ao campo por aria-describedby', async () => {
+        const { fixture } = await montar();
+        preencherValido(fixture);
+        const area = [
+          ...fixture.nativeElement.querySelectorAll('textarea'),
+        ].find((t) =>
+          (t as HTMLElement)
+            .closest('app-campo')
+            ?.textContent?.includes('Descrição detalhada'),
+        ) as HTMLTextAreaElement;
+        const id = area.getAttribute('aria-describedby') ?? '';
+        const dica = fixture.nativeElement.querySelector(
+          `#${id.split(' ')[0]}`,
+        );
+
+        expect(dica.textContent).toContain(
+          'É o texto que o cliente abre no botão + do catálogo.',
+        );
+        expect(dica.textContent).toContain(`${DETALHADA.length} de 5000`);
+      });
+    });
+
+    describe('edicao', () => {
+      it('carrega tipo e descricao detalhada', async () => {
+        const { fixture } = await montar({ lista: [PARECER] });
+        interno(fixture).editar(PARECER);
+        fixture.detectChanges();
+
+        expect(marcados(fixture)).toEqual(['assinatura']);
+        expect(valoresRenderizados(fixture, 'Descrição detalhada')).toEqual([
+          PARECER.descricaoDetalhada,
+        ]);
+      });
+
+      it('avulso com reuniao abre com "Inclui reunião" ligada', async () => {
+        const COM: ProdutoResumo = { ...AVULSO, quantidadeReunioes: 1 };
+        const { fixture, api } = await montar({ lista: [COM] });
+        interno(fixture).editar(COM);
+        fixture.detectChanges();
+
+        const caixa = fixture.nativeElement.querySelector(
+          '.produtos__marcar input',
+        ) as HTMLInputElement;
+        expect(caixa.checked).toBe(true);
+        expect(rotulos(fixture)).toContain('Reuniões incluídas');
+
+        await enviar(fixture);
+        expect(api.enviados[0].quantidadeReunioes).toBe(1);
+      });
+
+      it('avulso sem reuniao abre com a opcao desligada', async () => {
+        const { fixture } = await montar({ lista: [AVULSO] });
+        interno(fixture).editar(AVULSO);
+        fixture.detectChanges();
+
+        const caixa = fixture.nativeElement.querySelector(
+          '.produtos__marcar input',
+        ) as HTMLInputElement;
+        expect(caixa.checked).toBe(false);
+        expect(rotulos(fixture)).not.toContain('Reuniões incluídas');
+      });
+
+      it('produto legado abre sem tipo e exige os dois campos para salvar', async () => {
+        const { fixture, api } = await montar({ lista: [SEM_TIPO] });
+        interno(fixture).editar(SEM_TIPO);
+        fixture.detectChanges();
+
+        expect(marcados(fixture)).toEqual([]);
+        expect(valoresRenderizados(fixture, 'Descrição detalhada')).toEqual([
+          '',
+        ]);
+
+        await enviar(fixture);
+        expect(api.chamadas).toEqual(['listar todos']);
+        expect(textoDaTela(fixture)).toContain('Escolha o tipo de cobrança.');
+        expect(textoDaTela(fixture)).toContain('Campo obrigatório.');
+
+        interno(fixture).formulario.patchValue({
+          tipoCobranca: 'assinatura',
+          descricaoDetalhada: DETALHADA,
+        });
+        await enviar(fixture);
+        expect(api.chamadas).toContain('editar antigo');
+      });
+    });
+
+    describe('lista', () => {
+      it('mostra o tipo de cada produto e marca "Sem tipo" com texto', async () => {
+        const { fixture } = await montar({
+          lista: [PARECER, AVULSO, SEM_TIPO],
+        });
+        const texto = textoDaTela(fixture);
+
+        expect(texto).toContain('Assinatura');
+        expect(texto).toContain('Serviço avulso');
+        const selos = fixture.nativeElement.querySelectorAll(
+          '.produtos__selo-atencao',
+        );
+        expect(selos).toHaveLength(1);
+        expect(selos[0].textContent.trim()).toBe('Sem tipo');
+      });
+
+      it('nao marca "Sem tipo" quando todos tem tipo', async () => {
+        const { fixture } = await montar({ lista: [PARECER] });
+        expect(textoDaTela(fixture)).not.toContain('Sem tipo');
+      });
+    });
+
+    describe('erros do servidor', () => {
+      it.each([
+        ['parcelas', 'Produto avulso nao pode ser parcelado.'],
+        ['descricaoDetalhada', 'A descricao detalhada e curta.'],
+        ['tipoCobranca', 'Escolha o tipo de cobranca.'],
+      ])('mostra o erro de %s embaixo do campo', async (campo, mensagem) => {
+        const { fixture } = await montar({
+          erroAoSalvar: erroHttp(400, { erros: { [campo]: mensagem } }),
+        });
+        preencherValido(fixture);
+        await enviar(fixture);
+
+        const alvo = fixture.nativeElement.querySelector(
+          campo === 'tipoCobranca'
+            ? 'app-grupo-opcoes'
+            : 'app-campo:has([aria-invalid="true"])',
+        ) as HTMLElement | null;
+        expect(alvo?.textContent).toContain(mensagem);
+      });
+
+      it('limpa o erro do servidor na proxima tentativa', async () => {
+        const { fixture, api } = await montar({
+          erroAoSalvar: erroHttp(400, {
+            erros: { parcelas: 'Parcelas invalidas.' },
+          }),
+        });
+        preencherValido(fixture);
+        await enviar(fixture);
+        expect(textoDaTela(fixture)).toContain('Parcelas invalidas.');
+
+        api.erroAoSalvar = null;
+        await enviar(fixture);
+        expect(textoDaTela(fixture)).not.toContain('Parcelas invalidas.');
+      });
     });
   });
 });

@@ -32,17 +32,26 @@ na linha do produto.
 | Campo | O que é |
 |---|---|
 | Nome e descrição | O que o cliente vê no catálogo |
+| **Descrição detalhada** | O texto que o cliente abre no botão **+** do cartão do catálogo, e que fica guardado no pedido. Obrigatória, de 20 a 5000 caracteres. Uma linha em branco separa os parágrafos |
+| **Tipo de cobrança** | **Assinatura** (os planos) ou **Serviço avulso**. Obrigatório. **Só assinatura pode ser parcelada no cartão**; serviço avulso é sempre à vista. O nome não significa cobrança mensal: todo produto é pago de uma vez |
 | **Preço** | Em reais. O cliente paga esse valor, no PIX ou no cartão |
-| Reuniões incluídas | Quantas reuniões o pedido dá direito a marcar |
+| Reuniões incluídas | Quantas reuniões o pedido dá direito a marcar. Num **serviço avulso**, os três campos de reunião só aparecem se você marcar **Inclui reunião**; desmarcado, o produto é gravado sem reunião, e o cliente não vê o bloco de reuniões no pedido |
 | Prazo das reuniões | Em dias a partir da compra; depois disso, o saldo de reuniões vence |
 | Intervalo mínimo | Dias entre uma reunião e outra do mesmo pedido |
 | Revisões permitidas | Quantas revisões o cliente pode pedir **por documento** |
-| **Parcelas no cartão** | De 1 a 12. Use 1 para "só à vista". O catálogo anuncia a parcela ("6x de R$ 533,33"). **A página do AbacatePay oferece até 12x em todo produto** (é configuração do painel do AbacatePay); este campo só governa o que o site anuncia |
+| **Parcelas no cartão** | Só em **assinatura**: de 1 a 12, e 1 é "só à vista". O catálogo anuncia a parcela ("6x de R$ 533,33") e a página do AbacatePay oferece **no máximo** esse número. Em serviço avulso o campo some: é sempre à vista. Se o cliente puser uma assinatura e um serviço avulso no mesmo carrinho, a compra inteira vai à vista, e o carrinho avisa |
 | **Entregáveis** | Cada item vira um documento próprio no pedido, com estado e revisões. Pelo menos um, até 60 |
 | Textos orientativos | Dicas que o cliente lê no cartão do pedido. Opcionais |
 
 **O que for salvo vale só para compras novas.** Pedidos já comprados mantêm as
-condições da compra (preço, reuniões, revisões, entregáveis).
+condições da compra (preço, reuniões, revisões, entregáveis, tipo de cobrança
+e descrição detalhada).
+
+**Produto marcado "Sem tipo" na lista.** É um produto cadastrado antes de
+novembro de 2026, ainda sem tipo de cobrança nem descrição detalhada. Ele
+continua à venda como estava. Clique em **Editar**, escolha o tipo, escreva a
+descrição detalhada e salve: enquanto os dois não forem preenchidos, a edição
+não é aceita.
 
 Não há exclusão de produto: use **Desativar** para tirar da vitrine, e
 **Reativar** para voltar.
