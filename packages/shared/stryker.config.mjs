@@ -110,8 +110,10 @@ export default {
    * afirmado uma vez, em milissegundos, contra o que o ADR-12 diz em portugues.
    */
   /*
-   * LOTE DE NOVEMBRO (20/11/2026), com `andamento.ts` dentro: 97.47% (423 de
-   * 434). A primeira corrida deu 97.00% e achou dois sobreviventes REAIS no
+   * LOTE DE NOVEMBRO, com `tipo-cobranca.ts` e `andamento.ts` dentro: 97.57%
+   * (482 de 494), medido em 22/11/2026 com os blocos juntos. Sozinho, o bloco
+   * de `andamento.ts` media 97.47% (423 de 434) em 20/11/2026. A primeira
+   * corrida dele deu 97.00% e achou dois sobreviventes REAIS no
    * resumo, mortos com um segundo pedido preso a advogado suspenso — com um so,
    * contar o pedido errado dava o mesmo numero. Os seis que ficam em
    * `andamento.ts` sao a mesma familia dos de `regras-reuniao.ts`: guardas de
