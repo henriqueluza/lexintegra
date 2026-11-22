@@ -47,6 +47,31 @@ export const MESES_GUARDA_REGISTROS_DE_ACESSO = 6;
 export const DIAS_GUARDA_REGISTROS_DE_ACESSO = 186;
 
 /**
+ * CÓPIAS DE SEGURANÇA DO BANCO (lote de novembro de 2026, ADR-23).
+ *
+ * Não são prazo de GUARDA: são o tempo que uma cópia técnica leva para expirar.
+ * Entram aqui porque são dado pessoal do mesmo jeito, e porque mudam o que
+ * "eliminado" quer dizer — o dado sai da plataforma na hora e continua nas
+ * cópias já tiradas até elas vencerem. O número que a política de privacidade
+ * publica é o maior dos três.
+ *
+ * OS TRÊS VIVEM NO TERRAFORM (`infra/terraform/firestore.tf` e `variables.tf`),
+ * e o teste deste arquivo compara um com o outro: mudar a retenção lá sem mudar
+ * aqui deixaria a política pública dizendo um prazo que a infraestrutura não
+ * cumpre.
+ */
+export const DIAS_RECUPERACAO_PITR = 7;
+export const RETENCAO_BACKUP_DIARIO_DIAS = 7;
+export const RETENCAO_BACKUP_SEMANAL_SEMANAS = 8;
+
+/** O prazo máximo em que um dado eliminado ainda existe numa cópia. */
+export const SEMANAS_MAXIMAS_EM_COPIA = Math.max(
+  RETENCAO_BACKUP_SEMANAL_SEMANAS,
+  Math.ceil(RETENCAO_BACKUP_DIARIO_DIAS / 7),
+  Math.ceil(DIAS_RECUPERACAO_PITR / 7),
+);
+
+/**
  * Antecedência do aviso de eliminação, contada do ENVIO CONFIRMADO pelo
  * provedor (base aceita na B2). Enfileirar não prova envio.
  */
@@ -122,3 +147,16 @@ export const TEXTO_POLITICA_DE_GUARDA =
   `Os registros de acesso à plataforma (data, hora e endereço IP) são guardados por ${String(MESES_GUARDA_REGISTROS_DE_ACESSO)} meses, como exige o Marco Civil da Internet (art. 15). ` +
   'Esses prazos ficam suspensos enquanto houver obrigação legal ou regulatória que exija a guarda, processo judicial ou administrativo em curso ou pedido de autoridade competente. ' +
   `Ao fim de cada prazo, os dados são eliminados; quem tem conta recebe um e-mail de aviso pelo menos ${String(DIAS_AVISO_ELIMINACAO)} dias antes.`;
+
+/**
+ * O parágrafo das cópias de segurança da política de privacidade (ADR-23).
+ * MINUTA, como os demais textos jurídicos: sujeita à revisão do escritório.
+ *
+ * A última frase é compromisso operacional, e o roteiro o cumpre:
+ * `docs/runbooks/restaurar-backup.md` manda refazer as eliminações posteriores
+ * à cópia restaurada.
+ */
+export const TEXTO_COPIAS_DE_SEGURANCA =
+  `Para recuperar o serviço em caso de falha, mantemos cópias de segurança do banco de dados por até ${String(SEMANAS_MAXIMAS_EM_COPIA)} semanas. ` +
+  'Um dado eliminado deixa de existir na plataforma na hora, mas continua nas cópias já feitas até que elas expirem. ' +
+  'As cópias não são usadas para outra finalidade, e, se uma delas precisar ser restaurada, as eliminações feitas depois dela são refeitas.';

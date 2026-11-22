@@ -131,6 +131,13 @@ O que a lista de setembro pedia, e onde ficou (`apps/api/src/lgpd/eliminacao.ser
    que nao existe). URLs de upload ja emitidas expiram sozinhas. Restauracao de
    backup e dados de subprocessadores continuam procedimento humano
    (`lgpd.md`, secao 4).
+7. **Copias do banco (lote de novembro de 2026, ADR-23):** o executor NAO
+   apaga nada dentro de um backup, e nao ha como. O titular eliminado continua
+   nas copias ja tiradas por ate 8 semanas (`MAPA_COPIAS`, que a exportacao
+   declara). Ao responder a um pedido de eliminacao, diga isso: a politica de
+   privacidade publica o mesmo prazo. **Se uma copia for restaurada, toda
+   eliminacao posterior a ela precisa ser refeita** antes de o dado voltar a
+   producao (`restaurar-backup.md`, secao 5).
 
 ## Auditoria e verificacao
 

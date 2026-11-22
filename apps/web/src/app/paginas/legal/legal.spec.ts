@@ -43,8 +43,29 @@ describe('Documentos públicos', () => {
       expect(el.textContent).toContain(
         termos ? 'direitos legais' : 'Seus direitos',
       );
+      /*
+       * A data do topo e a do PROPRIO documento: a privacidade mudou em
+       * 19/11/2026 (copias de seguranca, ADR-23), e os termos nao.
+       */
+      expect(el.querySelector('.cabecalho .auxiliar')?.textContent).toBe(
+        termos
+          ? 'Atualizado em 1º de outubro de 2026.'
+          : 'Atualizado em 19 de novembro de 2026.',
+      );
     });
   }
+
+  /** Backup e dado pessoal: a politica publica diz o prazo das copias. */
+  it('a privacidade publica o prazo das cópias de segurança', () => {
+    const texto = PRIVACIDADE_PUBLICA.map((secao) => secao.texto).join(' ');
+
+    expect(texto).toContain(
+      'cópias de segurança do banco de dados por até 8 semanas',
+    );
+    expect(TERMOS_PUBLICOS.map((secao) => secao.texto).join(' ')).not.toContain(
+      'cópias de segurança',
+    );
+  });
 
   /**
    * B2, decisoes.md 1.3: encarregado e canal públicos (LGPD, art. 41). Desde

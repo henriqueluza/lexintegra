@@ -864,6 +864,32 @@ acumuladas, ou quando a leitura aparecer no custo do Firestore. A saída é a fa
 **não** um estado novo na máquina, que mudaria a semântica do domínio para resolver um
 problema de leitura.
 
+
+### ADR-23 — Backups agendados do Firestore, com alerta por idade
+
+**Contexto (lote de novembro de 2026, ajuste 12).** O banco tinha uma defesa contra perda de dado: o PITR de 7 dias, ligado desde a Etapa 2. Ele resolve o erro percebido depressa e não resolve o que demora a aparecer — um documento estragado em outubro e notado em novembro não tinha conserto. O pedido era backup periódico, com retenção definida, alerta de falha e restauração ensaiada.
+
+**Decisões.**
+
+1. **Os backups são os nativos do Firestore**, declarados em `infra/terraform/firestore.tf`: um agendamento **diário, guardado 7 dias**, e um **semanal (domingo), guardado 8 semanas**. É o máximo que o serviço aceita por banco (um de cada), ficam na mesma região e **não usam o Cloud Scheduler**: o agendamento é recurso do próprio banco, e a conta de jobs da seção 8 não muda. Exportar para um bucket por rotina própria foi descartado: seria mais um job, mais um bucket com dado pessoal e mais um caminho a manter, para o mesmo resultado.
+2. **O PITR continua, e os dois se completam.** PITR volta a qualquer minuto dos últimos 7 dias; o backup semanal estende a recuperação a 8 semanas, com granularidade de uma semana. O diário é a segunda cópia da janela do PITR.
+3. **O alerta é de IDADE, e não de falha.** O Firestore não emite métrica nem log documentado quando um backup agendado falha. A sonda de sinais (`apps/api/src/sinais/backups.ts`) lê, pela API de administração, o backup pronto mais recente e escreve a idade; a política *Backup do Firestore atrasado* dispara acima de 30 horas, sustentadas por uma hora. Três detalhes de desenho:
+   - antes do primeiro backup, a idade medida é a do **agendamento**, para o dia do deploy não alarmar e um agendamento que nunca produz backup alarmar;
+   - sem agendamento, ou com a leitura recusada, a sonda escreve uma **idade desconhecida de 30 dias**: falha fechada. Zero ali significaria "tudo em dia" para sempre;
+   - a falha de leitura **não derruba os outros sinais** da sonda.
+4. **A conta de runtime só LISTA.** Ganhou `roles/datastore.backupsViewer` e `roles/datastore.backupSchedulesViewer`. Restaurar e apagar backup são operações humanas, com papéis que a aplicação não tem.
+5. **Os arquivos dos buckets não ganham backup.** O bucket de arquivos tem o soft delete de 7 dias, e a retenção apaga entregáveis e anexos 30 dias depois da entrega (decisões 2.2 e 2.3): qualquer cópia mais longa ressuscitaria o que a política mandou apagar. Versionamento de objeto foi retirado no Bloco E pelo mesmo motivo, e não volta.
+6. **Backup é dado pessoal, e os prazos são públicos.** Cada cópia guarda todos os titulares até expirar, sem eliminação seletiva. Os três prazos (PITR, diário, semanal) vivem em `packages/shared/src/politica-de-guarda.ts`, a política de privacidade publica o maior deles (8 semanas), a exportação do titular declara as cópias (`MAPA_COPIAS`), e **um teste compara as constantes com o Terraform**: mudar a retenção na infraestrutura sem mudar o texto público quebra a suíte.
+7. **Restaurar uma cópia obriga a refazer as eliminações posteriores a ela.** É passo do roteiro (`docs/runbooks/restaurar-backup.md`, seção 5), e é o que o texto da política promete.
+
+**Consequências.**
+
+- **A restauração cria sempre um banco novo**; não existe restaurar por cima. Recuperar alguns documentos a partir do banco restaurado é o caso coberto. **Trocar produção inteira para um banco restaurado não está automatizado nem ensaiado**: a API fala com `(default)`, e o id do banco não é configurável. Fica como pendência registrada, com os dois caminhos possíveis no roteiro.
+- **O backup não traz regras de segurança nem TTL.** As regras estão no repositório e negam tudo; a TTL de `checkouts` precisa ser recriada num banco restaurado.
+- **Um backup restaurado pode apontar para arquivo que a retenção já apagou.** É o esperado, e o download responde "não encontrado".
+- **Custo:** até 15 cópias do banco, cobradas por GiB-mês. Com o banco em dezenas de MB, centavos por mês. O preço por GiB em São Paulo não foi confirmado (seção 12).
+- **O teste de restauração é humano**, porque cria e apaga um banco no projeto de produção. Os tempos medidos entram no roteiro na primeira execução.
+
 ---
 
 ## 5. Modelo de dados
@@ -1136,6 +1162,8 @@ O Cloud Scheduler dá três jobs gratuitos. **Hoje são quatro**, e o quarto é 
 
 Cada job além do terceiro custa US$ 0,10/mês — irrelevante em dinheiro, e relevante como sinal de que uma rotina nova está sendo criada. É esse sinal que importa, não a economia.
 
+**Os backups do Firestore não são job** (ADR-23): o agendamento é recurso do próprio banco, não passa pelo Cloud Scheduler e não entra nesta conta.
+
 **Duas rotinas que este documento previu e que NÃO existem, por decisão:**
 
 - **Expiração da janela de validade das reuniões** (item 2.7.2), listada aqui como job obrigatório até a Etapa 10. A janela é **calculada na leitura**, a partir de `criadoEm` do pedido mais o prazo do snapshot — uma rotina que "encerrasse saldos vencidos" seria uma peça móvel para produzir um número que a leitura já produz, e ainda poderia estar atrasada no momento em que alguém perguntasse.
@@ -1259,6 +1287,8 @@ Essa planilha (`LexIntegra-custos-mensais.xlsx`) já foi preparada como artefato
 
 **Duas notas da Etapa 12.** O quarto e o quinto jobs do Scheduler — retenção (Etapa 11) e sonda de sinais — custam US$ 0,10/mês cada; os três gratuitos já estavam ocupados. E o Cloud Monitoring passa a cobrar alertas **a partir de 1º de setembro de 2027** (US$ 0,35/mês por referência de métrica em política): com as oito políticas de hoje, algo em torno de US$ 3/mês. Nenhum dos dois muda a conta agora, e os dois precisam estar na planilha entregue à CONTRATANTE antes da aprovação do 6.2 — surpresa em fatura recorrente é o tipo de coisa que a cláusula 3.4 transforma em ligação para o CONTRATADO.
 
+**Backups do Firestore (ADR-23, novembro de 2026).** Dois agendamentos, até 15 cópias do banco ao mesmo tempo, cobradas por GiB-mês de cópia; a restauração é cobrada à parte, pelo tamanho do backup. Com o banco em dezenas de MB, é ordem de centavos por mês, e por isso não muda o total acima. O preço por GiB em São Paulo não foi confirmado: entra como estimativa em `docs/entrega/operacao.md`, seção 9, e na planilha.
+
 **Onde essa conta quebra.** Limite de 100 e-mails por dia do Resend no plano gratuito. É a trava mais provável de ser atingida primeiro, e ela **pausa o envio** em vez de cobrar excedente — o que significa cliente sem link de senha e sem confirmação de agendamento. Precisa de alerta antes do teto e de plano de contingência.
 
 ---
@@ -1280,6 +1310,8 @@ Essa planilha (`LexIntegra-custos-mensais.xlsx`) já foi preparada como artefato
 **Tensão não resolvida.** O direito de eliminação do titular colide com a obrigação de sigilo e conservação da cláusula 4.6 e com eventuais deveres de guarda da advocacia. A política de retenção precisa ser definida pelo controlador, não pelo desenvolvedor. A retenção de 30 dias dos entregáveis (seção 7.3) é uma peça dessa política, não a política inteira — falta ainda definir a retenção do restante dos dados do cliente (anamnese, cadastro) após o fim do contrato.
 
 **Exclusão automática: só `checkouts`.** É a única coleção com TTL — o documento some depois do vencimento da cobrança mais 48 horas (seção 5.1). Dois fatos que valem para a política, sem decidi-la: o Firestore apaga pela TTL normalmente em até 24 horas depois do prazo, e o **PITR está ligado** (`infra/terraform/firestore.tf`), então a versão apagada continua recuperável por até 7 dias. O restante — cadastro, pré-cadastro, anamnese, pedidos — não tem prazo automático, e isso é a tensão acima.
+
+**Cópias do banco (ADR-23, novembro de 2026).** Além do PITR, há backups agendados: diário guardado 7 dias e semanal guardado 8 semanas. São dado pessoal em cópia, sem eliminação seletiva: **um titular eliminado hoje continua nas cópias já tiradas por até 8 semanas**, e a política de privacidade diz isso. Restaurar uma cópia obriga a refazer as eliminações posteriores a ela (`docs/runbooks/restaurar-backup.md`).
 
 **Ponto operacional.** Apagar um titular no Firestore é varredura manual entre coleções, não `ON DELETE CASCADE`. Isso precisa ser uma rotina implementada e testada, não um procedimento improvisado quando o pedido chegar.
 
