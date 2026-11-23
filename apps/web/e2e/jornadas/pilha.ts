@@ -114,7 +114,16 @@ export async function entrar(page: Page, email: string): Promise<void> {
   await page.getByLabel('E-mail').fill(email);
   await page.getByLabel('Senha').fill(SENHA);
   await page.getByRole('button', { name: /entrar/i }).click();
-  await expect(page).not.toHaveURL(/\/entrar/);
+  /*
+   * 20 s, E NAO OS 5 s PADRAO. O PRIMEIRO login de uma execucao paga a pilha
+   * fria: o servidor de desenvolvimento compila o pedaco do login sob demanda,
+   * o SDK do Firebase chega por `import()` dinamico e a API atende a primeira
+   * requisicao. Medido em 22/11/2026: o primeiro teste de um arquivo rodado
+   * sozinho falhava aqui em toda execucao, e os outros oito passavam. Os logins
+   * seguintes terminam em menos de um segundo, entao o prazo maior so custa
+   * tempo quando o login esta quebrado de verdade.
+   */
+  await expect(page).not.toHaveURL(/\/entrar/, { timeout: 20_000 });
 }
 
 /**
