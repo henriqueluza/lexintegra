@@ -99,6 +99,19 @@ Bloco A, #101 Bloco G, #102 correção do envio, #103 Bloco D) foram juntados em
 pessoa antes e depois desse merge está na lista 0 do CHECKLIST. Os Blocos B,
 C, E e F não começaram.
 
+**A varredura é medida por fase** (lote de novembro, ajuste 13, branch
+`feat/medir-varredura`). Cada arquivo que recebe veredito deixa uma linha
+`arquivo.varrido` (`apps/api/src/varredura/medicao.ts`) com a duração de cada
+fase, e o scanner devolve as suas medidas junto do veredito e registra
+`scanner.pronto` ao subir. **É log, não span**, e a linha só tem números, o
+fluxo e o veredito. O registro do arquivo ganhou `confirmadoEm` e `varridoEm`
+(sem migração; `atualizadoEm` não serve, é sobrescrito). Quem lê é
+`scripts/medir-varredura.mjs`; o roteiro é `docs/runbooks/medir-varredura.md`.
+O script lê os campos por nome, e um teste (`medir-varredura.spec.ts`) quebra
+se a API renomear um deles. **A tela ainda não se atualiza sozinha** quando o
+arquivo é liberado: é o primeiro candidato a "lentidão percebida", e a correção
+vem depois da medição.
+
 **O administrador vê o andamento dos advogados** (lote de novembro, ajuste 5,
 branch `feat/admin-visao-advogados`): `/admin/andamento`, sobre
 `GET /api/admin/andamento` e `.../pedidos/{id}` (`apps/api/src/andamento/`).
