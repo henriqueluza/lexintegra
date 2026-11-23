@@ -19,6 +19,15 @@ fi
 
 : "${BUCKET_CLAMAV_DB:?BUCKET_CLAMAV_DB e obrigatorio}"
 
+# OS TRES INSTANTES DO BOOT (lote de novembro, ajuste 13), em milissegundos desde
+# 1970, exportados para o Node: comeco, base no disco e clamd com o socket aberto.
+# `servidor.ts` os transforma na linha `scanner.pronto` e no `bootMs` que
+# acompanha a primeira varredura (ver `src/medidas.ts`). So medem; nada aqui
+# muda a ordem nem a espera do boot. Se o `date` nao souber `%3N`, o valor sai
+# com o literal dentro e o Node o descarta, em vez de inventar uma duracao.
+BOOT_INICIO_MS=$(date +%s%3N)
+export BOOT_INICIO_MS
+
 mkdir -p /var/lib/clamav
 
 # NADA DE `2>/dev/null || true` AQUI. A versao anterior chamava `gcloud storage
@@ -46,6 +55,9 @@ elif [ "$CODIGO" -ne 0 ]; then
   exit "$CODIGO"
 fi
 
+BOOT_BASE_MS=$(date +%s%3N)
+export BOOT_BASE_MS
+
 chown -R clamav:clamav /var/lib/clamav
 
 # O pacote do Debian cria `/run/clamav` por systemd-tmpfiles, que nao roda em
@@ -71,5 +83,8 @@ done
 if [ ! -S /run/clamav/clamd.ctl ]; then
   echo "entrada: clamd nao abriu o socket; subindo assim mesmo, varreduras vao responder indisponivel" >&2
 fi
+
+BOOT_CLAMD_MS=$(date +%s%3N)
+export BOOT_CLAMD_MS
 
 exec node dist/servidor.js

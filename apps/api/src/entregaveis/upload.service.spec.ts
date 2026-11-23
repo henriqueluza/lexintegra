@@ -208,6 +208,10 @@ describe('UploadDeEntregavelService — o segundo fluxo', () => {
           'arquivoAtual.estado'
         ],
       ).toBe('pendente_scan');
+      /* De onde a medicao da varredura conta a espera na fila (ajuste 13). */
+      expect(
+        banco.documentos.get('pedidos/pedido-1/entregaveis/001'),
+      ).toHaveProperty(['arquivoAtual.confirmadoEm']);
       expect(fila.tarefas).toEqual([
         {
           fluxo: 'entregavel-advogado',

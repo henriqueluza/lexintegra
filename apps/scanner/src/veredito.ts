@@ -15,12 +15,16 @@
  * arquivo legitimo por falha de infraestrutura. Quem recebe `indisponivel` do
  * outro lado lanca, e o Cloud Tasks reentrega.
  */
+import type { MedidasDaVarredura } from './medidas.js';
+
 export type Veredito = 'limpo' | 'infectado' | 'indisponivel';
 
 export interface ResultadoDaVarredura {
   readonly veredito: Veredito;
   readonly assinatura?: string;
   readonly baseAtualizadaEm?: string;
+  /** Quanto cada parte levou (ajuste 13). Opcional: ver `medidas.ts`. */
+  readonly medidas?: MedidasDaVarredura;
 }
 
 export function interpretar(

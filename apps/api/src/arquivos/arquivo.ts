@@ -23,6 +23,14 @@ export interface DocumentoArquivo {
   enviadoPor: string;
   criadoEm: Timestamp | FieldValue;
   atualizadoEm?: Timestamp | FieldValue;
+  /**
+   * Quando o navegador confirmou o envio, e quando o veredito foi gravado (lote
+   * de novembro, ajuste 13). Sao os dois instantes de onde a medicao da
+   * varredura conta, e `atualizadoEm` nao serve para nenhum: cada escrita o
+   * sobrescreve. Ausentes em arquivo anterior aos campos; nada foi migrado.
+   */
+  confirmadoEm?: Timestamp | FieldValue;
+  varridoEm?: Timestamp | FieldValue;
   /** Preenchido quando o veredito recusa. Vai para o painel, nao para o titular. */
   motivo?: string;
 }

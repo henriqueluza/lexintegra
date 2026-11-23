@@ -45,6 +45,9 @@ export interface ArquivoEntregavel {
   caminho: string;
   enviadoPor: string;
   enviadoEm: Timestamp | FieldValue;
+  /** Ver `DocumentoArquivo`: confirmacao do envio e veredito, para a medicao. */
+  confirmadoEm?: Timestamp | FieldValue;
+  varridoEm?: Timestamp | FieldValue;
   /** Preenchido quando o veredito recusa. Vai para o painel, nao para o cliente. */
   motivo?: string;
 }

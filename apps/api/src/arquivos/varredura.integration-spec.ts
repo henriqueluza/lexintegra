@@ -1,5 +1,6 @@
-import { ForbiddenException } from '@nestjs/common';
-import type { Firestore } from 'firebase-admin/firestore';
+import { jest } from '@jest/globals';
+import { ForbiddenException, Logger } from '@nestjs/common';
+import { Timestamp, type Firestore } from 'firebase-admin/firestore';
 import { ESTADOS_ARQUIVO } from 'shared';
 import { CATALOGO_FICTICIO } from '../../../../scripts/dados-ficticios/catalogo-produtos.js';
 import { AnexosService } from '../anexos/anexos.service.js';
@@ -110,11 +111,7 @@ beforeEach(async () => {
     banco,
     new ClientesService(banco),
     new ConsultaReunioesService(banco),
-  ).atribuir(
-    'pedido-1',
-    ADVOGADO.uid,
-    ADMIN,
-  );
+  ).atribuir('pedido-1', ADVOGADO.uid, ADMIN);
 });
 
 /** Sobe um anexo ate o ponto de estar varrido, com o conteudo dado. */
@@ -145,6 +142,61 @@ describe('o ciclo completo do upload, contra o Firestore', () => {
     await expect(
       portao.linkDoAnexo({ pedidoId: 'pedido-1', anexoId }, CLIENTE),
     ).resolves.toMatchObject({ url: expect.stringContaining('leitura') });
+  });
+
+  /**
+   * Lote de novembro, ajuste 13. Os dois instantes de onde a medicao da
+   * varredura conta, com o carimbo do servidor materializado — o que o dublê em
+   * memoria nao imita. `atualizadoEm` nao serviria para nenhum dos dois.
+   */
+  it('o anexo guarda quando foi confirmado e quando foi varrido', async () => {
+    const anexoId = await anexarEVarrer(PDF);
+
+    const documento = await banco
+      .doc(`pedidos/pedido-1/anexos/${anexoId}`)
+      .get();
+    const { criadoEm, confirmadoEm, varridoEm } = documento.data() as Record<
+      string,
+      Timestamp
+    >;
+
+    expect(confirmadoEm).toBeInstanceOf(Timestamp);
+    expect(varridoEm).toBeInstanceOf(Timestamp);
+    expect(confirmadoEm.toMillis()).toBeGreaterThanOrEqual(criadoEm.toMillis());
+    expect(varridoEm.toMillis()).toBeGreaterThanOrEqual(
+      confirmadoEm.toMillis(),
+    );
+  });
+
+  /**
+   * A linha `arquivo.varrido` com instantes de verdade: as duracoes que dependem
+   * do documento saem como numero, e nao `null`. E a prova de que a medicao le
+   * os campos do jeito que o Firestore os devolve.
+   */
+  it('a linha de medicao sai com as duracoes preenchidas', async () => {
+    const espia = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+
+    try {
+      await anexarEVarrer(PDF);
+
+      const linhas = espia.mock.calls
+        .map((chamada) => chamada[1] as Record<string, unknown> | undefined)
+        .filter((campos) => campos?.['sinal'] === 'arquivo.varrido');
+
+      expect(linhas).toHaveLength(1);
+      expect(linhas[0]).toMatchObject({
+        fluxo: 'anexo-cliente',
+        veredito: 'limpo',
+        tamanhoBytes: 1000,
+        envioMs: expect.any(Number),
+        filaMs: expect.any(Number),
+        totalMs: expect.any(Number),
+      });
+    } finally {
+      espia.mockRestore();
+    }
   });
 
   /**
@@ -234,6 +286,25 @@ describe('o gate de termos, contra o Firestore', () => {
     );
     await varredura.processar(fila.tarefas[fila.tarefas.length - 1]);
   }
+
+  /** O mesmo par de instantes, no entregavel: DENTRO de `arquivoAtual`. */
+  it('o entregavel guarda quando foi confirmado e quando foi varrido', async () => {
+    await entregavelLimpo();
+
+    const documento = await banco.doc('pedidos/pedido-1/entregaveis/001').get();
+    const { enviadoEm, confirmadoEm, varridoEm } = (
+      documento.data() as { arquivoAtual: Record<string, Timestamp> }
+    ).arquivoAtual;
+
+    expect(confirmadoEm).toBeInstanceOf(Timestamp);
+    expect(varridoEm).toBeInstanceOf(Timestamp);
+    expect(confirmadoEm.toMillis()).toBeGreaterThanOrEqual(
+      enviadoEm.toMillis(),
+    );
+    expect(varridoEm.toMillis()).toBeGreaterThanOrEqual(
+      confirmadoEm.toMillis(),
+    );
+  });
 
   it('o download so libera depois do aceite, e o aceite fica registrado', async () => {
     await entregavelLimpo();

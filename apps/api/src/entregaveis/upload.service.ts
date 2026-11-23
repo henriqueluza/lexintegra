@@ -146,6 +146,8 @@ export class UploadDeEntregavelService {
 
     await referencia.update({
       'arquivoAtual.estado': 'pendente_scan',
+      /* De onde a medicao conta a espera na fila (`varredura/medicao.ts`). */
+      'arquivoAtual.confirmadoEm': FieldValue.serverTimestamp(),
       atualizadoEm: FieldValue.serverTimestamp(),
     });
 

@@ -1,4 +1,6 @@
-import type { Firestore } from 'firebase-admin/firestore';
+import { jest } from '@jest/globals';
+import { Logger } from '@nestjs/common';
+import { Timestamp, type Firestore } from 'firebase-admin/firestore';
 import { TIPO_DOCX } from 'shared';
 import { ArmazenamentoFalso } from '../armazenamento/armazenamento-falso.js';
 import { DOCX, TIPOS_DOCM, zip } from '../arnes-docx.js';
@@ -275,6 +277,214 @@ describe('VarreduraService', () => {
       await expect(varredura.processar(TAREFA_ANEXO)).resolves.toBe(
         'pendente_scan',
       );
+    });
+  });
+
+  /**
+   * Lote de novembro, ajuste 13: uma linha `arquivo.varrido` por arquivo que
+   * recebeu veredito, com a duracao de cada fase (`medicao.ts`). A conta de cada
+   * duracao tem teste proprio la; aqui o que se confere e QUANDO a linha sai, de
+   * onde vem cada instante e o que ela nao pode carregar.
+   */
+  describe('medicao', () => {
+    const ANEXO = 'pedidos/pedido-1/anexos/anexo-1';
+    const ENTREGAVEL = 'pedidos/pedido-1/entregaveis/001';
+
+    let espia: jest.SpiedFunction<Logger['log']>;
+
+    function linhas(): Record<string, unknown>[] {
+      return espia.mock.calls
+        .map((chamada) => chamada[1] as Record<string, unknown> | undefined)
+        .filter(
+          (campos): campos is Record<string, unknown> =>
+            campos?.['sinal'] === 'arquivo.varrido',
+        );
+    }
+
+    /** Os instantes como o Firestore os devolve: `Timestamp`, e nao numero. */
+    function comInstantes(banco: FirestoreFalso): void {
+      banco.documentos.set(ANEXO, {
+        ...banco.documentos.get(ANEXO),
+        criadoEm: Timestamp.fromMillis(1_000),
+        confirmadoEm: Timestamp.fromMillis(4_000),
+      });
+      const entregavel = banco.documentos.get(ENTREGAVEL) as {
+        arquivoAtual: Record<string, unknown>;
+      };
+      banco.documentos.set(ENTREGAVEL, {
+        ...entregavel,
+        arquivoAtual: {
+          ...entregavel.arquivoAtual,
+          enviadoEm: Timestamp.fromMillis(2_000),
+          confirmadoEm: Timestamp.fromMillis(7_000),
+        },
+      });
+    }
+
+    beforeEach(() => {
+      espia = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      espia.mockRestore();
+    });
+
+    it('arquivo limpo: uma linha, com o fluxo, o veredito e o que o scanner mediu', async () => {
+      const { banco, scanner, varredura } = montar();
+      comInstantes(banco);
+      scanner.responderCom({
+        veredito: 'limpo',
+        medidas: { frio: true, bootMs: 41_000, downloadMs: 180, clamMs: 95 },
+      });
+
+      await varredura.processar(TAREFA_ANEXO, 3);
+
+      expect(linhas()).toHaveLength(1);
+      expect(linhas()[0]).toMatchObject({
+        sinal: 'arquivo.varrido',
+        fluxo: 'anexo-cliente',
+        veredito: 'limpo',
+        tamanhoBytes: 100,
+        tentativa: 3,
+        envioMs: 3_000,
+        scannerFrio: true,
+        bootMs: 41_000,
+        downloadMs: 180,
+        clamMs: 95,
+      });
+      for (const fase of ['scannerMs', 'conferenciaMs', 'moverMs']) {
+        expect(linhas()[0][fase]).toEqual(expect.any(Number));
+      }
+    });
+
+    /** O campo de emissao tem nome diferente no entregavel (`enviadoEm`). */
+    it('no entregavel, o envio conta de `enviadoEm` ate a confirmacao', async () => {
+      const { banco, varredura } = montar();
+      comInstantes(banco);
+
+      await varredura.processar(TAREFA_ENTREGAVEL);
+
+      expect(linhas()[0]).toMatchObject({
+        fluxo: 'entregavel-advogado',
+        envioMs: 5_000,
+        tentativa: null,
+      });
+    });
+
+    it('infectado tambem deixa linha, sem conferencia nem movimentacao', async () => {
+      const { banco, scanner, varredura } = montar();
+      comInstantes(banco);
+      scanner.responderCom({ veredito: 'infectado', assinatura: 'Eicar-Test' });
+
+      await varredura.processar(TAREFA_ANEXO);
+
+      expect(linhas()).toHaveLength(1);
+      expect(linhas()[0]).toMatchObject({
+        veredito: 'infectado',
+        envioMs: 3_000,
+        conferenciaMs: null,
+        moverMs: null,
+      });
+    });
+
+    it('conteudo que nao bate com o tipo: linha de rejeitado, com a conferencia medida', async () => {
+      const { varredura } = montar(HTML);
+
+      await varredura.processar(TAREFA_ANEXO);
+
+      expect(linhas()).toHaveLength(1);
+      expect(linhas()[0]).toMatchObject({
+        veredito: 'rejeitado',
+        moverMs: null,
+      });
+      expect(linhas()[0]['conferenciaMs']).toEqual(expect.any(Number));
+    });
+
+    /** Nada foi migrado: arquivo anterior aos campos nao ganha duracao inventada. */
+    it('arquivo sem os instantes novos: o que depende deles sai null', async () => {
+      const { varredura } = montar();
+
+      await varredura.processar(TAREFA_ANEXO);
+
+      expect(linhas()[0]).toMatchObject({
+        envioMs: null,
+        filaMs: null,
+        totalMs: null,
+      });
+    });
+
+    /** Sem veredito, sem linha: a tentativa seguinte e que vai medir. */
+    it('scanner indisponivel nao deixa linha', async () => {
+      const { scanner, varredura } = montar();
+      scanner.responderCom({ veredito: 'indisponivel' });
+
+      await expect(varredura.processar(TAREFA_ANEXO)).rejects.toThrow();
+
+      expect(linhas()).toEqual([]);
+    });
+
+    it('tarefa repetida sobre objeto ja movido nao deixa segunda linha', async () => {
+      const { varredura } = montar();
+
+      await varredura.processar(TAREFA_ANEXO);
+      await varredura.processar(TAREFA_ANEXO);
+
+      expect(linhas()).toHaveLength(1);
+    });
+
+    it('medidas estranhas do scanner viram null, e a varredura vale do mesmo jeito', async () => {
+      const { scanner, varredura } = montar();
+      scanner.responderCom({
+        veredito: 'limpo',
+        medidas: { clamMs: -5, downloadMs: Number.NaN } as never,
+      });
+
+      expect(await varredura.processar(TAREFA_ANEXO)).toBe('limpo');
+
+      expect(linhas()[0]).toMatchObject({
+        clamMs: null,
+        downloadMs: null,
+        scannerFrio: null,
+      });
+    });
+
+    /** Nome de arquivo e dado pessoal, e o caminho identifica o pedido. */
+    it('a linha nao leva nome de arquivo nem caminho', async () => {
+      const { varredura } = montar();
+
+      await varredura.processar(TAREFA_ANEXO);
+
+      const texto = JSON.stringify(linhas()[0]);
+      expect(texto).not.toContain('doc.pdf');
+      expect(texto).not.toContain(TAREFA_ANEXO.caminho);
+      expect(texto).not.toContain('pedido-1');
+    });
+
+    it('grava `varridoEm` junto do veredito, nos dois fluxos', async () => {
+      const { banco, varredura } = montar();
+
+      await varredura.processar(TAREFA_ANEXO);
+      await varredura.processar(TAREFA_ENTREGAVEL);
+
+      expect(banco.documentos.get(ANEXO)).toHaveProperty('varridoEm');
+      /*
+       * O dublê guarda o caminho pontuado como CHAVE, sem aninhar; o campo
+       * aninhado de verdade e conferido contra o emulador, na integracao.
+       */
+      expect(banco.documentos.get(ENTREGAVEL)).toHaveProperty([
+        'arquivoAtual.varridoEm',
+      ]);
+    });
+
+    it('reprovado tambem ganha `varridoEm`', async () => {
+      const { banco, scanner, varredura } = montar();
+      scanner.responderCom({ veredito: 'infectado' });
+
+      await varredura.processar(TAREFA_ANEXO);
+
+      expect(banco.documentos.get(ANEXO)).toHaveProperty('varridoEm');
     });
   });
 });
