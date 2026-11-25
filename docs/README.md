@@ -140,6 +140,7 @@ runbook.
 | [reuniao-sem-link](runbooks/reuniao-sem-link.md) | Reunião marcada sem sala do Teams |
 | [secret-expirado](runbooks/secret-expirado.md) | Credencial vencida ou revogada; **o segredo do Graph vence em 01/11/2027** |
 | [scanner-indisponivel](runbooks/scanner-indisponivel.md) | Arquivo parado em quarentena, base do ClamAV velha |
+| [medir-varredura](runbooks/medir-varredura.md) | "A verificação de segurança é lenta": produzir amostras e ler a tabela de tempos por fase |
 | [api-fora-do-ar](runbooks/api-fora-do-ar.md) | O uptime check falhou |
 | [retencao-parada](runbooks/retencao-parada.md) | A retenção diária não concluiu |
 | [sonda-parada](runbooks/sonda-parada.md) | A sonda de sinais parou |

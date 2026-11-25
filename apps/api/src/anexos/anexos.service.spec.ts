@@ -195,12 +195,16 @@ describe('AnexosService — fluxo do cliente', () => {
     }
 
     it('passa a pendente_scan e enfileira a varredura', async () => {
-      const { anexos, fila, anexoId } = await ateConfirmar();
+      const { anexos, banco, fila, anexoId } = await ateConfirmar();
 
       await anexos.confirmarEnvio('pedido-1', anexoId, CLIENTE);
 
       const [anexo] = await anexos.listar('pedido-1', CLIENTE);
       expect(anexo.estado).toBe('pendente_scan');
+      /* De onde a medicao da varredura conta a espera na fila (ajuste 13). */
+      expect(
+        banco.documentos.get(`pedidos/pedido-1/anexos/${anexoId}`),
+      ).toHaveProperty('confirmadoEm');
       expect(fila.tarefas).toEqual([
         {
           fluxo: 'anexo-cliente',

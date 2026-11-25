@@ -21,8 +21,23 @@ import type { Objeto } from '../armazenamento/armazenamento.js';
  */
 export type Veredito = 'limpo' | 'infectado' | 'indisponivel';
 
+/**
+ * Quanto o scanner levou em cada parte (lote de novembro, ajuste 13). E
+ * OPCIONAL: o scanner falso e a versao anterior do contentor nao mandam, e a
+ * varredura vale do mesmo jeito. Quem le confere os valores (`medicao.ts`).
+ */
+export interface MedidasDoScanner {
+  /** Primeira varredura desta instancia depois de subir. */
+  readonly frio?: boolean;
+  /** Do comeco do script de entrada ate o servidor ouvir. So quando `frio`. */
+  readonly bootMs?: number;
+  readonly downloadMs?: number;
+  readonly clamMs?: number;
+}
+
 export interface ResultadoDaVarredura {
   readonly veredito: Veredito;
+  readonly medidas?: MedidasDoScanner;
   /** Nome da assinatura que casou, quando infectado. Vai para o painel. */
   readonly assinatura?: string;
   /** Quando a base do ClamAV foi atualizada. Alimenta o alerta de base velha

@@ -130,6 +130,20 @@ parcelamento só em assinatura, reunião conforme o pedido)
   trilha, porque o campo `estadoDesde` só existe a partir deste deploy), e que
   cada abertura deixa uma linha `andamento.consultado` em `auditoria/`.
 
+**Bloco E, parte 1 — medir a verificação de segurança** (`feat/medir-varredura`,
+ajuste 13; só instrumenta, não muda comportamento)
+
+- [ ] 👤 **Depois do deploy, produzir as amostras** pelo roteiro
+  [`medir-varredura.md`](docs/runbooks/medir-varredura.md): um envio a frio e
+  cinco a quente, nos dois fluxos e em dois tamanhos. Anotar quanto tempo a
+  tela levou para mostrar o resultado, porque isso nenhuma linha mede.
+- [ ] 👤 **Medir o App Check no checkout** pelas ferramentas do navegador
+  (roteiro, seção 4).
+- [ ] 🤝 **Ler a tabela e escolher a opção**
+  (`node scripts/medir-varredura.mjs plataforma-juridica-36bda 7`). Qualquer
+  opção com custo mensal vai para aprovação antes de ser aplicada. A
+  atualização automática da tela não tem custo e entra junto.
+
 **Perguntas dos blocos seguintes, para levar ao escritório antes de cada um**
 
 - [ ] 🏢 **Bloco B (anamnese).** O que é a "anamnese inicial" a tirar da

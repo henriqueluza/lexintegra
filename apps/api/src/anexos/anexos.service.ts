@@ -167,6 +167,8 @@ export class AnexosService {
 
     await alvo.update({
       estado: 'pendente_scan',
+      /* De onde a medicao conta a espera na fila (`varredura/medicao.ts`). */
+      confirmadoEm: FieldValue.serverTimestamp(),
       atualizadoEm: FieldValue.serverTimestamp(),
     });
 

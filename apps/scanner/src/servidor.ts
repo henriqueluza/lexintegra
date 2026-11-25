@@ -7,11 +7,28 @@ import { promisify } from 'node:util';
 import { Storage } from '@google-cloud/storage';
 import { SINAL_SEM_BASE, temBaseParaVarrer } from './base-do-clamav.js';
 import { idadeEmHoras, versaoDoClamd } from './idade-da-base.js';
+import {
+  criarMarcadorDeFrio,
+  cronometrar,
+  duracoesDoBoot,
+  instantesDoBoot,
+  medidasDaVarredura,
+} from './medidas.js';
 import { registrar } from './registrar.js';
 import { interpretar, type ResultadoDaVarredura } from './veredito.js';
 
 const executar = promisify(execFile);
 const armazenamento = new Storage();
+
+/*
+ * A medicao do ajuste 13 (ver `medidas.ts`). Os instantes do boot vem do script
+ * de entrada; `bootMs` so e conhecido depois de o servidor abrir a porta, e so
+ * acompanha a PRIMEIRA varredura da instancia.
+ */
+const agora = (): number => Date.now();
+const boot = instantesDoBoot(process.env);
+const primeiraVarredura = criarMarcadorDeFrio();
+let bootMs: number | null = null;
 
 /**
  * O contentor do ClamAV (arquitetura 3.2, ADR-18).
@@ -105,30 +122,47 @@ async function varrer(
    */
   const pasta = await mkdtemp(join(tmpdir(), 'varredura-'));
   const destino = join(pasta, 'objeto');
+  const frio = primeiraVarredura();
 
   try {
-    await armazenamento
-      .bucket(balde)
-      .file(caminho)
-      .download({ destination: destino });
+    const download = await cronometrar(agora, () =>
+      armazenamento
+        .bucket(balde)
+        .file(caminho)
+        .download({ destination: destino }),
+    );
 
-    try {
-      /*
-       * `clamdscan` e nao `clamscan`: o primeiro fala com o daemon, que ja tem as
-       * assinaturas carregadas. O segundo carregaria o ~1 GB a cada arquivo.
-       */
-      const { stdout } = await executar('clamdscan', ['--no-summary', destino]);
-      return {
-        ...interpretar(0, stdout),
-        baseAtualizadaEm: await baseCarregadaEm(),
-      };
-    } catch (erro) {
-      const falha = erro as { code?: number; stdout?: string };
-      return {
-        ...interpretar(falha.code ?? 2, falha.stdout ?? ''),
-        baseAtualizadaEm: await baseCarregadaEm(),
-      };
-    }
+    /*
+     * `clamdscan` e nao `clamscan`: o primeiro fala com o daemon, que ja tem as
+     * assinaturas carregadas. O segundo carregaria o ~1 GB a cada arquivo.
+     *
+     * Codigo de saida diferente de zero (virus ou erro) chega como excecao do
+     * `execFile`; ela vira valor AQUI DENTRO, para o cronometro medir os dois
+     * desfechos do mesmo jeito.
+     */
+    const clam = await cronometrar(agora, async () => {
+      try {
+        const { stdout } = await executar('clamdscan', [
+          '--no-summary',
+          destino,
+        ]);
+        return interpretar(0, stdout);
+      } catch (erro) {
+        const falha = erro as { code?: number; stdout?: string };
+        return interpretar(falha.code ?? 2, falha.stdout ?? '');
+      }
+    });
+
+    return {
+      ...clam.resultado,
+      baseAtualizadaEm: await baseCarregadaEm(),
+      medidas: medidasDaVarredura({
+        frio,
+        bootMs,
+        downloadMs: download.ms,
+        clamMs: clam.ms,
+      }),
+    };
   } finally {
     await rm(pasta, { recursive: true, force: true });
   }
@@ -180,6 +214,14 @@ const servidor = createServer((requisicao, resposta) => {
 
 servidor.listen(PORTA, () => {
   registrar('INFO', `scanner ouvindo em ${String(PORTA)}`);
+
+  /*
+   * Uma vez por instancia: quanto custou subir. E a fase que o usuario espera
+   * quando o servico estava parado, e ate aqui so existia em `echo`.
+   */
+  const duracoes = duracoesDoBoot(boot, agora());
+  bootMs = duracoes.bootMs;
+  registrar('INFO', 'scanner pronto', { sinal: 'scanner.pronto', ...duracoes });
 
   void semBase().then((vazia) => {
     if (vazia) {

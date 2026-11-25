@@ -1,6 +1,6 @@
 # Relatorio de qualidade
 
-Gerado por `pnpm relatorio:qualidade` em 2026-11-22.
+Gerado por `pnpm relatorio:qualidade` em 2026-11-23.
 
 Este relatorio LE o que as ferramentas ja produziram; ele nao reprova nada. Quem
 reprova e o limiar de cada uma, no lugar dela — cobertura no `jest.config.mjs`,
@@ -10,9 +10,9 @@ mutacao no `stryker.config.mjs`, complexidade e fronteiras no `pnpm lint`.
 
 | Pacote | Statements | Branches | Functions | Lines |
 |---|---|---|---|---|
-| API (NestJS) | 92.59% | 83.96% | 91.32% | 93.83% |
-| Web (Angular) | 96.34% | 88.95% | 93.6% | 97.32% |
-| Scanner (ClamAV) | 100% | 89.65% | 100% | 100% |
+| API (NestJS) | 92.67% | 84.13% | 91.62% | 93.93% |
+| Web (Angular) | 96.34% | 89.02% | 93.6% | 97.32% |
+| Scanner (ClamAV) | 100% | 92.85% | 100% | 100% |
 | shared | 97.63% | 97.72% | 99.45% | 97.53% |
 
 Rode `pnpm test:coverage` para atualizar.
@@ -32,7 +32,7 @@ Rode `pnpm mutacao` para atualizar.
 
 ## Complexidade ciclomatica
 
-Funcoes analisadas: **8597**. Limite do lint: **10**.
+Funcoes analisadas: **8751**. Limite do lint: **10**.
 
 | Complexidade | Funcao | Arquivo |
 |---|---|---|
@@ -49,7 +49,7 @@ Funcoes analisadas: **8597**. Limite do lint: **10**.
 
 ## Dependencias
 
-- Modulos no grafo: **777**
-- Dependencias: **3464**
+- Modulos no grafo: **785**
+- Dependencias: **3484**
 - Ciclos: **0**
 - Violacoes de fronteira: **0** erro(s), 0 aviso(s)

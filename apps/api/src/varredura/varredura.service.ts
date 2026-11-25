@@ -11,6 +11,7 @@ import {
   type Armazenamento,
   type Objeto,
 } from '../armazenamento/armazenamento.js';
+import type { DocumentoArquivo } from '../arquivos/arquivo.js';
 import { FIRESTORE } from '../firebase/firebase.module.js';
 import {
   SUBCOLECAO_ENTREGAVEIS,
@@ -19,7 +20,26 @@ import {
 import { COLECAO_PEDIDOS, SUBCOLECAO_ANEXOS } from '../pedidos/pedido.js';
 import type { TarefaDeVarredura } from './fila.js';
 import { problemaDoDocx } from './docx.js';
+import {
+  instantesDe,
+  Medicao,
+  SEM_INSTANTES,
+  type InstantesDoArquivo,
+} from './medicao.js';
 import { SCANNER, type Scanner } from './scanner.js';
+
+/** O que a varredura le do documento: o tipo declarado e os instantes. */
+interface Registro {
+  readonly tipo: string;
+  readonly instantes: InstantesDoArquivo;
+}
+
+/** O que acompanha uma execucao da rota interna de ponta a ponta. */
+interface Execucao {
+  readonly tarefa: TarefaDeVarredura;
+  readonly emQuarentena: Objeto;
+  readonly medicao: Medicao;
+}
 
 /**
  * O que a API faz com o veredito (ADR-18).
@@ -51,7 +71,15 @@ export class VarreduraService {
     @Inject(SCANNER) private readonly scanner: Scanner,
   ) {}
 
-  async processar(tarefa: TarefaDeVarredura): Promise<EstadoArquivo> {
+  /**
+   * `tentativa` e quantas vezes o Cloud Tasks ja tentou esta tarefa (zero na
+   * primeira; `null` quando quem chama nao sabe). So entra na medicao.
+   */
+  async processar(
+    tarefa: TarefaDeVarredura,
+    tentativa: number | null = null,
+  ): Promise<EstadoArquivo> {
+    const medicao = new Medicao(tentativa);
     const emQuarentena: Objeto = {
       balde: 'quarentena',
       caminho: tarefa.caminho,
@@ -69,7 +97,10 @@ export class VarreduraService {
       return 'pendente_scan';
     }
 
-    const resultado = await this.scanner.varrer(emQuarentena);
+    const resultado = await medicao.cronometrar('scannerMs', () =>
+      this.scanner.varrer(emQuarentena),
+    );
+    medicao.registrarScanner(resultado.medidas);
     this.registrarIdadeDaBase(resultado.baseAtualizadaEm);
 
     if (resultado.veredito === 'indisponivel') {
@@ -83,14 +114,13 @@ export class VarreduraService {
 
     if (resultado.veredito === 'infectado') {
       return this.reprovar(
-        tarefa,
-        emQuarentena,
+        { tarefa, emQuarentena, medicao },
         'infectado',
         `ClamAV: ${resultado.assinatura ?? 'assinatura nao informada'}`,
       );
     }
 
-    return this.conferirConteudo(tarefa, emQuarentena);
+    return this.conferirConteudo({ tarefa, emQuarentena, medicao });
   }
 
   /**
@@ -122,46 +152,65 @@ export class VarreduraService {
    * inteiro para olhar cinco bytes desfaria a economia de a API nao tocar no
    * arquivo (arquitetura 7.3).
    */
-  private async conferirConteudo(
-    tarefa: TarefaDeVarredura,
-    emQuarentena: Objeto,
-  ): Promise<EstadoArquivo> {
+  private async conferirConteudo(execucao: Execucao): Promise<EstadoArquivo> {
+    const { tarefa, emQuarentena, medicao } = execucao;
     const registro = await this.ler(tarefa);
     if (registro === null) {
       this.log.warn(`registro sumiu durante a varredura: ${tarefa.caminho}`);
       return 'pendente_scan';
     }
 
-    const inicio = await this.armazenamento.lerPrimeirosBytes(
-      emQuarentena,
-      BYTES_NECESSARIOS,
+    const inicio = await medicao.cronometrar('conferenciaMs', () =>
+      this.armazenamento.lerPrimeirosBytes(emQuarentena, BYTES_NECESSARIOS),
     );
 
     if (!conteudoBateComTipo(inicio, registro.tipo)) {
       return this.reprovar(
-        tarefa,
-        emQuarentena,
+        execucao,
         'rejeitado',
         `O conteudo nao corresponde ao tipo declarado (${registro.tipo}).`,
+        registro,
       );
     }
 
-    const estrutural = await this.problemaEstrutural(
-      registro.tipo,
-      emQuarentena,
+    const estrutural = await medicao.cronometrar('conferenciaMs', () =>
+      this.problemaEstrutural(registro.tipo, emQuarentena),
     );
     if (estrutural !== null) {
-      return this.reprovar(tarefa, emQuarentena, 'rejeitado', estrutural);
+      return this.reprovar(execucao, 'rejeitado', estrutural, registro);
     }
 
-    await this.armazenamento.mover(emQuarentena, {
-      balde: 'arquivos',
-      caminho: tarefa.caminho,
-    });
+    await medicao.cronometrar('moverMs', () =>
+      this.armazenamento.mover(emQuarentena, {
+        balde: 'arquivos',
+        caminho: tarefa.caminho,
+      }),
+    );
 
     await this.gravarEstado(tarefa, 'limpo');
     this.log.log(`arquivo liberado: ${tarefa.caminho}`);
+    this.registrarMedicao(execucao, 'limpo', registro);
     return 'limpo';
+  }
+
+  /**
+   * A linha `arquivo.varrido` (ver `medicao.ts`): uma por arquivo que recebeu
+   * veredito, com a duracao de cada fase. Sai DEPOIS de o estado estar gravado,
+   * para o total incluir a gravacao.
+   */
+  private registrarMedicao(
+    { tarefa, medicao }: Execucao,
+    veredito: EstadoArquivo,
+    registro: Registro | null,
+  ): void {
+    this.log.log(
+      'arquivo varrido',
+      medicao.linha(
+        tarefa.fluxo,
+        veredito,
+        registro?.instantes ?? SEM_INSTANTES,
+      ),
+    );
   }
 
   /**
@@ -183,13 +232,23 @@ export class VarreduraService {
 
   /** Descarta o objeto e registra o motivo. O documento FICA — e a trilha. */
   private async reprovar(
-    tarefa: TarefaDeVarredura,
-    emQuarentena: Objeto,
+    execucao: Execucao,
     estado: EstadoArquivo,
     motivo: string,
+    registro?: Registro | null,
   ): Promise<EstadoArquivo> {
+    const { tarefa, emQuarentena } = execucao;
     await this.armazenamento.excluir(emQuarentena);
     await this.gravarEstado(tarefa, estado, motivo);
+    /*
+     * O infectado e reprovado antes de o documento ser lido; a medicao o le
+     * agora, so pelos instantes. E a unica leitura que a medicao acrescenta.
+     */
+    this.registrarMedicao(
+      execucao,
+      estado,
+      registro === undefined ? await this.ler(tarefa) : registro,
+    );
 
     /*
      * O log registra o CAMINHO e o motivo tecnico, nunca o nome do arquivo — nome
@@ -211,18 +270,24 @@ export class VarreduraService {
       : pedido.collection(SUBCOLECAO_ENTREGAVEIS).doc(tarefa.alvoId);
   }
 
-  private async ler(
-    tarefa: TarefaDeVarredura,
-  ): Promise<{ tipo: string } | null> {
+  private async ler(tarefa: TarefaDeVarredura): Promise<Registro | null> {
     const documento = await this.referencia(tarefa).get();
     if (!documento.exists) return null;
 
     if (tarefa.fluxo === 'anexo-cliente') {
-      return documento.data() as { tipo: string };
+      const anexo = documento.data() as DocumentoArquivo;
+      return {
+        tipo: anexo.tipo,
+        instantes: instantesDe(anexo, anexo.criadoEm),
+      };
     }
 
     const arquivo = (documento.data() as DocumentoEntregavel).arquivoAtual;
-    return arquivo === null ? null : { tipo: arquivo.tipo };
+    if (arquivo === null) return null;
+    return {
+      tipo: arquivo.tipo,
+      instantes: instantesDe(arquivo, arquivo.enviadoEm),
+    };
   }
 
   /**
@@ -236,12 +301,21 @@ export class VarreduraService {
     estado: EstadoArquivo,
     motivo?: string,
   ): Promise<void> {
+    /*
+     * `varridoEm` e o instante do veredito, e so dele. `atualizadoEm` nao serve:
+     * qualquer escrita posterior no documento o leva junto.
+     */
     const campos =
       tarefa.fluxo === 'anexo-cliente'
-        ? { estado, motivo: motivo ?? null }
+        ? {
+            estado,
+            motivo: motivo ?? null,
+            varridoEm: FieldValue.serverTimestamp(),
+          }
         : {
             'arquivoAtual.estado': estado,
             'arquivoAtual.motivo': motivo ?? null,
+            'arquivoAtual.varridoEm': FieldValue.serverTimestamp(),
           };
 
     await this.referencia(tarefa).update({
